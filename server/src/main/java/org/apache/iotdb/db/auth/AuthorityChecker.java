@@ -124,15 +124,16 @@ public class AuthorityChecker {
       case GROUPBY:
       case SEQTABLESCAN:
       case TABLESCAN:
-      case INDEXQUERY:
+      case QUERY_INDEX:
       case MERGEQUERY:
       case AGGREGATION:
         return PrivilegeType.READ_TIMESERIES.ordinal();
       case DELETE:
+      case DROP_INDEX:
         return PrivilegeType.DELETE_TIMESERIES.ordinal();
       case INSERT:
       case LOADDATA:
-      case INDEX:
+      case CREATE_INDEX:
         return PrivilegeType.INSERT_TIMESERIES.ordinal();
       case UPDATE:
         return PrivilegeType.UPDATE_TIMESERIES.ordinal();

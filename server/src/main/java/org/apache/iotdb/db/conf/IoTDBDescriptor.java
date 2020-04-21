@@ -253,6 +253,10 @@ public class IoTDBDescriptor {
         conf.setConcurrentFlushThread(Runtime.getRuntime().availableProcessors());
       }
 
+      if (conf.getConcurrentIndexBuildThread() <= 0) {
+        conf.setConcurrentIndexBuildThread(Runtime.getRuntime().availableProcessors());
+      }
+
       conf.setConcurrentQueryThread(Integer
           .parseInt(properties.getProperty("concurrent_query_thread",
               Integer.toString(conf.getConcurrentQueryThread()))));

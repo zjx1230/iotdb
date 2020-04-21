@@ -21,6 +21,8 @@ package org.apache.iotdb.db.qp.strategy;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.runtime.SQLParserException;
+import org.apache.iotdb.db.index.common.IndexManagerException;
+import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.qp.constant.DatetimeUtils;
 import org.apache.iotdb.db.qp.constant.SQLConstant;
 import org.apache.iotdb.db.qp.logical.RootOperator;
@@ -57,6 +59,7 @@ public class LogicalGenerator extends SqlBaseBaseListener {
   private UpdateOperator updateOp;
   private QueryOperator queryOp;
   private DeleteDataOperator deleteDataOp;
+  private CreateIndexOperator createIndexOp;
 
   LogicalGenerator(ZoneId zoneId) {
     this.zoneId = zoneId;
@@ -858,6 +861,15 @@ public class LogicalGenerator extends SqlBaseBaseListener {
     initializedOperator = createTimeSeriesOperator;
   }
 
+  @Override public void enterIndexWithClause(SqlBaseParser.IndexWithClauseContext ctx) {
+    super.enterIndexWithClause(ctx);
+
+    try {
+      createIndexOp.setIndexType(IndexType.getIndexType(ctx.indeName.getText()));
+    } catch (IndexManagerException e) {
+      throw new SQLParserException(String.format("index type %s is not supported.", ctx.indeName.getText()));
+    }
+  }
   @Override
   public void enterInsertStatement(InsertStatementContext ctx) {
     super.enterInsertStatement(ctx);
@@ -929,6 +941,25 @@ public class LogicalGenerator extends SqlBaseBaseListener {
       selectOp.addSelectPath(path);
     }
     queryOp.setSelectOperator(selectOp);
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>The default implementation does nothing.</p>
+   */
+  @Override public void enterCreateIndex(SqlBaseParser.CreateIndexContext ctx) {
+    super.enterCreateIndex(ctx);
+    CreateIndexOperator createIndexOperator = new CreateIndexOperator(SQLConstant.TOK_CREATE_INDEX);
+    selectOp = new SelectOperator(SQLConstant.TOK_SELECT);
+    List<PrefixPathContext> prefixPaths = ctx.prefixPath();
+    for (PrefixPathContext prefixPath : prefixPaths) {
+      Path path = parsePrefixPath(prefixPath);
+      selectOp.addSelectPath(path);
+    }
+    createIndexOperator.setSelectOperator(selectOp);
+    initializedOperator = createIndexOperator;
+    operatorType = SQLConstant.TOK_CREATE_INDEX;
   }
 
   @Override
@@ -1016,8 +1047,13 @@ public class LogicalGenerator extends SqlBaseBaseListener {
       case SQLConstant.TOK_UPDATE:
         updateOp.setFilterOperator(whereOp.getChildren().get(0));
         break;
+      case SQLConstant.TOK_CREATE_INDEX:
+        createIndexOp.setFilterOperator(whereOp.getChildren().get(0));
+        long indexTime = parseCreateIndexFilter(createIndexOp);
+        deleteDataOp.setTime(indexTime);
+        break;
       default:
-        throw new SQLParserException("Where only support select, delete, update.");
+        throw new SQLParserException("Where only support select, delete, update, create index.");
     }
   }
 
@@ -1188,6 +1224,25 @@ public class LogicalGenerator extends SqlBaseBaseListener {
         && filterOperator.getTokenIntType() != SQLConstant.LESSTHANOREQUALTO) {
       throw new SQLParserException(
           "For delete command, where clause must be like : time < XXX or time <= XXX");
+    }
+    long time = Long.parseLong(((BasicFunctionOperator) filterOperator).getValue());
+    if (filterOperator.getTokenIntType() == SQLConstant.LESSTHAN) {
+      time = time - 1;
+    }
+    return time;
+  }
+
+  /**
+   * for delete command, time should only have an end time.
+   *
+   * @param operator delete logical plan
+   */
+  private long parseCreateIndexFilter(CreateIndexOperator operator) {
+    FilterOperator filterOperator = operator.getFilterOperator();
+    if (filterOperator.getTokenIntType() != SQLConstant.GREATERTHAN
+        && filterOperator.getTokenIntType() != SQLConstant.GREATERTHANOREQUALTO) {
+      throw new SQLParserException(
+          "For create index command, where clause must be like : time > XXX or time >= XXX");
     }
     long time = Long.parseLong(((BasicFunctionOperator) filterOperator).getValue());
     if (filterOperator.getTokenIntType() == SQLConstant.LESSTHAN) {

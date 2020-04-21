@@ -83,8 +83,6 @@ public class Planner {
       case DELETE_TIMESERIES:
       case LOADDATA:
       case INSERT:
-      case INDEX:
-      case INDEXQUERY:
       case GRANT_WATERMARK_EMBEDDING:
       case REVOKE_WATERMARK_EMBEDDING:
       case TTL:
@@ -97,6 +95,9 @@ public class Planner {
       case QUERY:
       case UPDATE:
       case DELETE:
+      case CREATE_INDEX:
+      case DROP_INDEX:
+      case QUERY_INDEX:
         SFWOperator root = (SFWOperator) operator;
         return optimizeSFWOperator(root);
       default:

@@ -33,8 +33,6 @@ statement
     | DELETE STORAGE GROUP fullPath (COMMA fullPath)* #deleteStorageGroup
     | SHOW METADATA #showMetadata // not support yet
     | DESCRIBE prefixPath #describePath // not support yet
-    | CREATE INDEX ON fullPath USING function=ID indexWithClause? whereClause? #createIndex //not support yet
-    | DROP INDEX function=ID ON fullPath #dropIndex //not support yet
     | MERGE #merge //not support yet
     | CREATE USER userName=ID password=STRING_LITERAL #createUser
     | ALTER USER userName=(ROOT|ID) SET PASSWORD password=STRING_LITERAL #alterUser
@@ -75,18 +73,15 @@ statement
     | LOAD FILE autoCreateSchema? #loadFiles
     | REMOVE FILE #removeFile
     | MOVE FILE FILE #moveFile
-    | SELECT INDEX func=ID //not support yet
-    LR_BRACKET
-    p1=fullPath COMMA p2=fullPath COMMA n1=timeValue COMMA n2=timeValue COMMA
-    epsilon=constant (COMMA alpha=constant COMMA beta=constant)?
-    RR_BRACKET
-    fromClause
-    whereClause?
-    specialClause? #selectIndexStatement
     | SELECT selectElements
     fromClause
     whereClause?
     specialClause? #selectStatement
+    | CREATE INDEX ON prefixPath (COMMA prefixPath)* whereClause? indexWithClause #createIndex //not support yet
+    | DROP INDEX func=ID ON prefixPath (COMMA prefixPath)* #dropIndex //not support yet
+    | SELECT INDEX indexSelectElements (whereClause)? indexWithClause #selectIndexStatement //not support yet
+    //    whereClause?
+    //    specialClause?
     ;
 
 selectElements
@@ -99,6 +94,15 @@ selectElements
 functionCall
     : functionName LR_BRACKET suffixPath RR_BRACKET
     ;
+
+indexSelectElements
+    :  selfDefinedFunction (selfDefinedFunction)*
+    ;
+
+selfDefinedFunction
+    : ID LR_BRACKET fullPath RR_BRACKET
+    ;
+
 
 functionName
     : MIN_TIME
@@ -233,11 +237,7 @@ previousUntilLastClause
     ;
 
 indexWithClause
-    : WITH indexValue (COMMA indexValue)?
-    ;
-
-indexValue
-    : ID OPERATOR_EQ INT
+    : WITH INDEX OPERATOR_EQ indeName=ID (COMMA property)*
     ;
 
 

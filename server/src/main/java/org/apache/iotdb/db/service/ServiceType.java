@@ -45,7 +45,10 @@ public enum ServiceType {
 
   FLUSH_SERVICE("Flush ServerService",
       generateJmxName("org.apache.iotdb.db.engine.pool", "Flush Manager")),
-  CLUSTER_MONITOR_SERVICE("Cluster Monitor ServerService", "Cluster Monitor");
+  CLUSTER_MONITOR_SERVICE("Cluster Monitor ServerService", "Cluster Monitor"),
+
+  INDEX_SERVICE("Index ServerService", "");
+
 
   private String name;
   private String jmxName;

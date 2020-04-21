@@ -210,6 +210,11 @@ public class IoTDBConfig {
    */
   private int concurrentQueryThread = Runtime.getRuntime().availableProcessors();
 
+  /**
+   * How many threads can concurrently build index. When <= 0, use CPU core number.
+   */
+  private int concurrentIndexBuildThread = Runtime.getRuntime().availableProcessors();
+
   private ZoneId zoneID = ZoneId.systemDefault();
 
   /**
@@ -813,6 +818,14 @@ public class IoTDBConfig {
 
   public int getConcurrentQueryThread() {
     return concurrentQueryThread;
+  }
+
+  void setConcurrentIndexBuildThread(int concurrentIndexBuildThread) {
+    this.concurrentIndexBuildThread = concurrentIndexBuildThread;
+  }
+
+  public int getConcurrentIndexBuildThread() {
+    return concurrentIndexBuildThread;
   }
 
   void setConcurrentQueryThread(int concurrentQueryThread) {

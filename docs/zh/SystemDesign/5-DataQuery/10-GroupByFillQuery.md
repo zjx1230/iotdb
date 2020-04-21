@@ -7,9 +7,9 @@
     to you under the Apache License, Version 2.0 (the
     "License"); you may not use this file except in compliance
     with the License.  You may obtain a copy of the License at
-
+    
         http://www.apache.org/licenses/LICENSE-2.0
-
+    
     Unless required by applicable law or agreed to in writing,
     software distributed under the License is distributed on an
     "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -99,24 +99,24 @@ private long[] lastTimeArray;
 
 `previousValue`这个变量维护了当前时间窗口的前一个降采样值，在`GroupByFillDataSet`构造函数中调用了`initPreviousParis`方法对其进行初始化。
 
-```
-  private void initPreviousParis(QueryContext context, GroupByFillPlan groupByFillPlan)
+```java
+private void initPreviousParis(QueryContext context, GroupByFillPlan groupByFillPlan)
           throws StorageEngineException, IOException, QueryProcessException {
-    previousValue = new Object[paths.size()];
-    for (int i = 0; i < paths.size(); i++) {
-      Path path = paths.get(i);
-      TSDataType dataType = dataTypes.get(i);
-      IFill fill = new PreviousFill(dataType, groupByEngineDataSet.getStartTime(), -1L);
-      fill.constructReaders(path, groupByFillPlan.getAllMeasurementsInDevice(path.getDevice()), context);
+  previousValue = new Object[paths.size()];
+  for (int i = 0; i < paths.size(); i++) {
+    Path path = paths.get(i);
+    TSDataType dataType = dataTypes.get(i);
+    IFill fill = new PreviousFill(dataType, groupByEngineDataSet.getStartTime(), -1L);
+    fill.constructReaders(path, groupByFillPlan.getAllMeasurementsInDevice(path.getDevice()), context);
 
-      TimeValuePair timeValuePair = fill.getFillResult();
-      if (timeValuePair == null || timeValuePair.getValue() == null) {
-        previousValue[i] = null;
-      } else {
-        previousValue[i] = timeValuePair.getValue().getValue();
-      }
+    TimeValuePair timeValuePair = fill.getFillResult();
+    if (timeValuePair == null || timeValuePair.getValue() == null) {
+      previousValue[i] = null;
+    } else {
+      previousValue[i] = timeValuePair.getValue().getValue();
     }
   }
+}
 ```
 
 `initPreviousParis`方法主要为每个时间序列构造了一个单点补空值查询，`queryTime`设置为降采样时间窗口的起始值，`beforeRange`不作限制。
@@ -125,19 +125,19 @@ private long[] lastTimeArray;
 
 `lastTimeArray`这个变量维护了每个时间序列的最近时间戳值，主要用于`PREVIOUSUNTILLAST`这一填充方式，在`GroupByFillDataSet`构造函数中调用了`initLastTimeArray`方法对其进行初始化。
 
-```
-  private void initLastTimeArray(QueryContext context)
-      throws IOException, StorageEngineException, QueryProcessException {
-    lastTimeArray = new long[paths.size()];
-    Arrays.fill(lastTimeArray, Long.MAX_VALUE);
-    for (int i = 0; i < paths.size(); i++) {
-      TimeValuePair lastTimeValuePair =
-          LastQueryExecutor.calculateLastPairForOneSeries(paths.get(i), dataTypes.get(i), context);
-      if (lastTimeValuePair.getValue() != null) {
-        lastTimeArray[i] = lastTimeValuePair.getTimestamp();
-      }
+```java
+private void initLastTimeArray(QueryContext context)
+  throws IOException, StorageEngineException, QueryProcessException {
+  lastTimeArray = new long[paths.size()];
+  Arrays.fill(lastTimeArray, Long.MAX_VALUE);
+  for (int i = 0; i < paths.size(); i++) {
+    TimeValuePair lastTimeValuePair =
+      LastQueryExecutor.calculateLastPairForOneSeries(paths.get(i), dataTypes.get(i), context);
+    if (lastTimeValuePair.getValue() != null) {
+      lastTimeArray[i] = lastTimeValuePair.getTimestamp();
     }
   }
+}
 ```
 `initPreviousParis`方法主要为每个时间序列构造了一个最近时间戳 Last 查询
 
@@ -145,7 +145,7 @@ private long[] lastTimeArray;
 
 填充过程在`nextWithoutConstraint`方法中完成，主要逻辑如下：
 
-```
+```java
 protected RowRecord nextWithoutConstraint() throws IOException {
 
     // 首先通过groupByEngineDataSet，获得原始的降采样查询结果行
