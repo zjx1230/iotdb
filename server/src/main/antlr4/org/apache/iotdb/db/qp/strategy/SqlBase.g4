@@ -77,9 +77,9 @@ statement
     fromClause
     whereClause?
     specialClause? #selectStatement
-    | CREATE INDEX ON prefixPath (COMMA prefixPath)* whereClause? indexWithClause #createIndex //not support yet
-    | DROP INDEX func=ID ON prefixPath (COMMA prefixPath)* #dropIndex //not support yet
-    | SELECT INDEX indexSelectElements (whereClause)? indexWithClause #selectIndexStatement //not support yet
+    | CREATE INDEX ON fullPath whereClause? indexWithClause #createIndex //not support yet
+    | DROP INDEX indexName=ID ON fullPath #dropIndex //not support yet
+    | SELECT INDEX indexSelectElements fromClause (whereClause)? indexWithClause #selectIndexStatement //not support yet
     //    whereClause?
     //    specialClause?
     ;
@@ -96,11 +96,11 @@ functionCall
     ;
 
 indexSelectElements
-    :  selfDefinedFunction (selfDefinedFunction)*
+    :  selfDefinedFunction (COMMA selfDefinedFunction)* #selfDefinedFunctionElement
     ;
 
 selfDefinedFunction
-    : ID LR_BRACKET fullPath RR_BRACKET
+    : selfDefinedFunc=ID LR_BRACKET suffixPath RR_BRACKET
     ;
 
 
@@ -237,7 +237,7 @@ previousUntilLastClause
     ;
 
 indexWithClause
-    : WITH INDEX OPERATOR_EQ indeName=ID (COMMA property)*
+    : WITH INDEX OPERATOR_EQ indexName=ID (COMMA property)*
     ;
 
 

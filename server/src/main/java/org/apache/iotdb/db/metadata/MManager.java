@@ -48,6 +48,9 @@ import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.metadata.PathNotExistException;
 import org.apache.iotdb.db.exception.metadata.StorageGroupAlreadySetException;
 import org.apache.iotdb.db.exception.metadata.StorageGroupNotSetException;
+import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexManagerException;
+import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.metadata.mnode.InternalMNode;
 import org.apache.iotdb.db.metadata.mnode.LeafMNode;
 import org.apache.iotdb.db.metadata.mnode.MNode;
@@ -231,6 +234,16 @@ public class MManager {
           StorageEngine.getInstance().deleteAllDataFilesInOneStorageGroup(deleteStorageGroup);
         }
         break;
+      case MetadataOperationType.CREATE_INDEX:
+        String path = args[1];
+        IndexInfo indexInfo = IndexInfo.deserializeCreateIndex(args);
+        createIndexWithMemoryCheckAndLog(path, indexInfo);
+        break;
+      case MetadataOperationType.DROP_INDEX:
+        String dropPath = args[1];
+        IndexType indexType = IndexInfo.deserializeDropIndex(args);
+        dropIndexWithMemoryCheckAndLog(dropPath, indexType);
+        break;
       case MetadataOperationType.SET_STORAGE_GROUP:
         setStorageGroup(args[1]);
         break;
@@ -310,6 +323,77 @@ public class MManager {
           maxSeriesNumberAmongStorageGroup = size + 1;
         }
       }
+    } finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  private void createIndexWithMemoryCheckAndLog(String fullPath, IndexInfo indexInfo)
+      throws MetadataException, IOException {
+    mtree.createIndex(fullPath, indexInfo);
+    // create index with memory check
+    // TODO shall we check memory like Create Timeseries?
+    if (writeToLog) {
+      BufferedWriter writer = getLogWriter();
+      String log = indexInfo.serializeCreateIndex(fullPath);
+      writer.write(log);
+      writer.newLine();
+      writer.flush();
+    }
+    // update statistics
+    //TODO shall we update statistics for Create Index?
+    // if (config.isEnableParameterAdapter()) {}
+  }
+
+  /**
+   * Add index information to an exist leaf node, if the leaf node already exists, throw exception
+   *
+   * @param prefixPaths the timeseries paths
+   * @throws MetadataException when the given path does not exist.
+   */
+  public void createIndex(List<String> prefixPaths, IndexInfo indexInfo) throws MetadataException {
+    lock.writeLock().lock();
+    try {
+      for (String prefixPath : prefixPaths) {
+        for (String fullPath : getAllTimeseriesName(prefixPath)) {
+          createIndexWithMemoryCheckAndLog(fullPath, indexInfo);
+        }
+      }
+    } catch (IOException e) {
+      throw new MetadataException(e.getMessage());
+    } finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * Drop all indexes on the given paths/prefix paths, may cross different storage group
+   *
+   * @param fullPath paths to drop index   *
+   */
+  private void dropIndexWithMemoryCheckAndLog(String fullPath, IndexType indexType)
+      throws IOException, MetadataException {
+    // TODO shall we check memory like Drop Timeseries?
+    mtree.dropIndex(fullPath, indexType);
+    if (writeToLog) {
+      BufferedWriter writer = getLogWriter();
+      writer.write(IndexInfo.serializeDropIndex(fullPath, indexType));
+      writer.newLine();
+      writer.flush();
+    }
+  }
+
+  public void dropIndex(List<String> prefixPaths, IndexType indexType) throws MetadataException {
+    lock.writeLock().lock();
+    try {
+      List<String> fullPaths = new ArrayList<>();
+      for (String prefixPath : prefixPaths) {
+        for (String fullPath : getAllTimeseriesName(prefixPath)) {
+          dropIndexWithMemoryCheckAndLog(fullPath, indexType);
+        }
+      }
+    } catch (IOException e) {
+      throw new MetadataException(e.getMessage());
     } finally {
       lock.writeLock().unlock();
     }
@@ -442,6 +526,7 @@ public class MManager {
       lock.writeLock().unlock();
     }
   }
+
 
   /**
    * Set storage group of the given path to MTree. Check

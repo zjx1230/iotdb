@@ -16,38 +16,37 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.iotdb.db.qp.logical.sys;
+package org.apache.iotdb.db.qp.logical.crud;
 
+import java.util.List;
 import java.util.Map;
 import org.apache.iotdb.db.index.common.IndexType;
-import org.apache.iotdb.db.qp.logical.RootOperator;
-import org.apache.iotdb.db.qp.logical.crud.SFWOperator;
-import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.read.common.Path;
+import org.apache.iotdb.tsfile.utils.Pair;
 
 /**
  * this operator is to create a certain index on some time series.
  */
-public class CreateIndexOperator extends SFWOperator {
+public class QueryIndexOperator extends QueryOperator {
 
   private Map<String, String> props;
-  private long time;
+
+//  private List<Pair<Long, Long>> timeRanges;
   private IndexType indexType;
 
-  public CreateIndexOperator(int tokenIntType) {
+  public QueryIndexOperator(int tokenIntType) {
     super(tokenIntType);
-    operatorType = OperatorType.CREATE_INDEX;
+    operatorType = OperatorType.QUERY_INDEX;
   }
 
-  public long getTime() {
-    return time;
-  }
+//  public List<Pair<Long, Long>> getTimeRanges() {
+//    return timeRanges;
+//  }
+//
+//  public void setTimeRanges(
+//      List<Pair<Long, Long>> timeRanges) {
+//    this.timeRanges = timeRanges;
+//  }
 
-  public void setTime(long time) {
-    this.time = time;
-  }
 
   public Map<String, String> getProps() {
     return props;

@@ -81,6 +81,13 @@ public class PhysicalGenerator {
       case DELETE_TIMESERIES:
         DeleteTimeSeriesOperator deletePath = (DeleteTimeSeriesOperator) operator;
         return new DeleteTimeSeriesPlan(deletePath.getDeletePathList());
+      case CREATE_INDEX:
+        CreateIndexOperator createIndexOp = (CreateIndexOperator) operator;
+        return new CreateIndexPlan(createIndexOp.getSelectedPaths(), createIndexOp.getProps(),
+            createIndexOp.getTime(),createIndexOp.getIndexType());
+      case DROP_INDEX:
+        DropIndexOperator dropIndexOp = (DropIndexOperator) operator;
+        return new DropIndexPlan(dropIndexOp.getSelectedPaths(), dropIndexOp.getIndexType());
       case DELETE:
         DeleteDataOperator delete = (DeleteDataOperator) operator;
         paths = delete.getSelectedPaths();
@@ -98,6 +105,13 @@ public class PhysicalGenerator {
       case QUERY:
         QueryOperator query = (QueryOperator) operator;
         return transformQuery(query);
+      case QUERY_INDEX:
+        QueryIndexOperator queryIndexOp = (QueryIndexOperator) operator;
+        AggregationPlan aggregationPlan = (AggregationPlan) transformQuery(queryIndexOp);
+        QueryIndexPlan queryIndexPlan = QueryIndexPlan.initFromAggregationPlan(aggregationPlan);
+        queryIndexPlan.setIndexType(queryIndexOp.getIndexType());
+        queryIndexPlan.setProps(queryIndexOp.getProps());
+        return queryIndexPlan;
       case TTL:
         switch (operator.getTokenIntType()) {
           case SQLConstant.TOK_SET:

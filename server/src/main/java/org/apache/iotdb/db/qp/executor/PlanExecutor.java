@@ -66,6 +66,10 @@ import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.metadata.PathAlreadyExistException;
 import org.apache.iotdb.db.exception.metadata.PathNotExistException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
+import org.apache.iotdb.db.index.IndexManager;
+import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexManagerException;
+import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.mnode.InternalMNode;
 import org.apache.iotdb.db.metadata.mnode.LeafMNode;
@@ -77,10 +81,12 @@ import org.apache.iotdb.db.qp.physical.PhysicalPlan;
 import org.apache.iotdb.db.qp.physical.crud.*;
 import org.apache.iotdb.db.qp.physical.sys.AuthorPlan;
 import org.apache.iotdb.db.qp.physical.sys.CountPlan;
+import org.apache.iotdb.db.qp.physical.sys.CreateIndexPlan;
 import org.apache.iotdb.db.qp.physical.sys.CreateTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.DataAuthPlan;
 import org.apache.iotdb.db.qp.physical.sys.DeleteStorageGroupPlan;
 import org.apache.iotdb.db.qp.physical.sys.DeleteTimeSeriesPlan;
+import org.apache.iotdb.db.qp.physical.sys.DropIndexPlan;
 import org.apache.iotdb.db.qp.physical.sys.OperateFilePlan;
 import org.apache.iotdb.db.qp.physical.sys.SetStorageGroupPlan;
 import org.apache.iotdb.db.qp.physical.sys.SetTTLPlan;
@@ -130,10 +136,12 @@ public class PlanExecutor implements IPlanExecutor {
   private MManager mManager;
   // for administration
   private IAuthorizer authorizer;
+  private IndexManager indexManager;
 
   public PlanExecutor() throws QueryProcessException {
     queryRouter = new QueryRouter();
     mManager = MManager.getInstance();
+    indexManager = IndexManager.getInstance();
     try {
       authorizer = LocalFileAuthorizer.getInstance();
     } catch (AuthException e) {
@@ -211,6 +219,10 @@ public class PlanExecutor implements IPlanExecutor {
       case MOVE_FILE:
         operateMoveFile((OperateFilePlan) plan);
         return true;
+      case CREATE_INDEX:
+        return createIndex((CreateIndexPlan) plan);
+      case DROP_INDEX:
+        return dropIndex((DropIndexPlan) plan);
       default:
         throw new UnsupportedOperationException(
             String.format("operation %s is not supported", plan.getOperatorType()));
@@ -234,6 +246,11 @@ public class PlanExecutor implements IPlanExecutor {
       } else if (queryPlan instanceof GroupByPlan) {
         GroupByPlan groupByPlan = (GroupByPlan) queryPlan;
         return queryRouter.groupBy(groupByPlan, context);
+      } else if (queryPlan instanceof QueryIndexPlan) {
+        QueryIndexPlan queryIndexPlan = (QueryIndexPlan) queryPlan;
+//        queryDataSet = queryRouter.aggregate(aggregationPlan, context);
+//        queryDataSet = indexManager.query(queryIndexPlan, context);
+        throw new IndexManagerException("TODO 1ksi1ksd");
       } else if (queryPlan instanceof AggregationPlan) {
         AggregationPlan aggregationPlan = (AggregationPlan) queryPlan;
         queryDataSet = queryRouter.aggregate(aggregationPlan, context);
@@ -902,6 +919,36 @@ public class PlanExecutor implements IPlanExecutor {
       }
     } catch (MetadataException e) {
       throw new QueryProcessException(e);
+    }
+    return true;
+  }
+
+  private boolean createIndex(CreateIndexPlan createIndexPlan)
+      throws QueryProcessException {
+    List<Path> paths = createIndexPlan.getPaths();
+    List<String> prefixPathStrs = new ArrayList<>();
+    paths.forEach(pre -> prefixPathStrs.add(pre.getFullPath()));
+    long startTime = createIndexPlan.getTime();
+    IndexType indexType = createIndexPlan.getIndexType();
+    Map<String, String> props = createIndexPlan.getProps();
+    IndexInfo indexInfo = new IndexInfo(indexType, startTime, props);
+    try {
+      mManager.createIndex(prefixPathStrs, indexInfo);
+    } catch (MetadataException e) {
+      throw new IndexManagerException(e);
+    }
+    return true;
+  }
+
+  private boolean dropIndex(DropIndexPlan dropIndexPlan) throws QueryProcessException {
+    List<Path> paths = dropIndexPlan.getPaths();
+    List<String> prefixPathStrs = new ArrayList<>();
+    paths.forEach(pre -> prefixPathStrs.add(pre.getFullPath()));
+    IndexType indexType = dropIndexPlan.getIndexType();
+    try {
+      mManager.dropIndex(prefixPathStrs, indexType);
+    } catch (MetadataException e) {
+      throw new IndexManagerException(e);
     }
     return true;
   }

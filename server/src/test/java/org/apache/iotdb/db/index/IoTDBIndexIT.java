@@ -30,7 +30,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class IoTDBIndexTest {
+public class IoTDBIndexIT {
 
   @Before
   public void setUp() throws Exception {
@@ -43,17 +43,23 @@ public class IoTDBIndexTest {
   }
 
 
-    @Test
+  @Test
   public void testParseIndexStatement() throws SQLException, ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection = DriverManager
         .getConnection(Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/",
             "root", "root");
         Statement statement = connection.createStatement()) {
-      statement.execute("CREATE TIMESERIES root.ln.wf01.wt01.status WITH DATATYPE=BOOLEAN, ENCODING=PLAIN");
-//      statement.execute("CREATE INDEX ON root.s1.d1.* USING PAA WITH window_length=100, merge_threshold= 0.5");
+      statement.execute("SET STORAGE GROUP TO root.idx1");
+      statement.execute("CREATE TIMESERIES root.idx1.d0.s0 WITH DATATYPE=INT32,ENCODING=PLAIN");
+      statement.execute("INSERT INTO root.idx1.d0(timestamp, s0) VALUES (1, 1)");
+      statement.execute("CREATE INDEX ON root.idx1.d0.s0 WITH INDEX=PAA, window_length=100, merge_threshold= 0.5");
+      statement.execute("DROP INDEX PAA ON root.vehicle.d1.s1");
+//      statement.execute("select index whole_st_time(s1), dist(s2) from root.vehicle.d1 where \"\n"
+//          + "        + \"time <= 51 or !(time != 100 and time < 460) WITH INDEX=PAA, threshold=5, distance=DTW");
 
-//      Assert.assertEquals(1, count);
+      System.out.println("finished!");
+
     }
   }
 

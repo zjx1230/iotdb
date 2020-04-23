@@ -18,8 +18,14 @@
  */
 package org.apache.iotdb.db.metadata.mnode;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
@@ -36,6 +42,8 @@ public class LeafMNode extends MNode {
   private MeasurementSchema schema;
 
   private TimeValuePair cachedLastValuePair = null;
+
+  private Map<IndexType, IndexInfo> indexInfoMaps = new EnumMap<>(IndexType.class);
 
   public LeafMNode(MNode parent, String name, TSDataType dataType, TSEncoding encoding,
       CompressionType type, Map<String, String> props) {
@@ -101,5 +109,26 @@ public class LeafMNode extends MNode {
 
   public void resetCache() {
     cachedLastValuePair = null;
+  }
+
+
+  public void addIndexInfoMaps(IndexInfo indexInfo) {
+    this.indexInfoMaps.put(indexInfo.getIndexType(), indexInfo);
+  }
+
+  public IndexInfo getIndexInfo(IndexType indexType) {
+    return indexInfoMaps.get(indexType);
+  }
+
+  public List<IndexInfo> getAllIndexInfos() {
+    return new ArrayList<>(indexInfoMaps.values());
+  }
+
+  public boolean hasIndex(IndexType indexType) {
+    return indexInfoMaps.containsKey(indexType);
+  }
+
+  public void removeIndexInfo(IndexType indexType) {
+    indexInfoMaps.remove(indexType);
   }
 }

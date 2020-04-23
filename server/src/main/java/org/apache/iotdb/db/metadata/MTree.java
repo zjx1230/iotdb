@@ -44,6 +44,8 @@ import org.apache.iotdb.db.exception.metadata.PathAlreadyExistException;
 import org.apache.iotdb.db.exception.metadata.PathNotExistException;
 import org.apache.iotdb.db.exception.metadata.StorageGroupAlreadySetException;
 import org.apache.iotdb.db.exception.metadata.StorageGroupNotSetException;
+import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.metadata.mnode.InternalMNode;
 import org.apache.iotdb.db.metadata.mnode.LeafMNode;
 import org.apache.iotdb.db.metadata.mnode.MNode;
@@ -809,5 +811,18 @@ public class MTree implements Serializable {
         depthStack.push(depth);
       }
     }
+  }
+
+  /**
+   * Get measurement schema for a given path. Path must be a complete Path from root to leaf node.
+   */
+  void createIndex(String path, IndexInfo indexInfo) throws MetadataException {
+    LeafMNode node = (LeafMNode) getNodeByPath(path);
+    node.addIndexInfoMaps(indexInfo);
+  }
+
+  public void dropIndex(String fullPath, IndexType indexType) throws MetadataException {
+    LeafMNode node = (LeafMNode) getNodeByPath(fullPath);
+    node.removeIndexInfo(indexType);
   }
 }

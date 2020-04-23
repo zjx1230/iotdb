@@ -205,6 +205,10 @@ public class SQLConstant {
     tokenNames.put(TOK_LOAD_FILES, "TOK_LOAD_FILES");
     tokenNames.put(TOK_REMOVE_FILE, "TOK_REMOVE_FILE");
     tokenNames.put(TOK_MOVE_FILE, "TOK_MOVE_FILE");
+
+    tokenNames.put(TOK_CREATE_INDEX, "TOK_CREATE_INDEX");
+    tokenNames.put(TOK_DROP_INDEX, "TOK_DROP_INDEX");
+    tokenNames.put(TOK_QUERY_INDEX, "TOK_QUERY_INDEX");
   }
 
   static {

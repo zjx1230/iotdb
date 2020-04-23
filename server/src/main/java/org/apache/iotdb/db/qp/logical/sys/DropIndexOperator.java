@@ -18,43 +18,22 @@
  */
 package org.apache.iotdb.db.qp.logical.sys;
 
-import java.util.Map;
+import java.util.List;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.qp.logical.RootOperator;
 import org.apache.iotdb.db.qp.logical.crud.SFWOperator;
-import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.read.common.Path;
 
 /**
- * this operator is to create a certain index on some time series.
+ * this operator is to drop a certain index on some time series.
  */
-public class CreateIndexOperator extends SFWOperator {
+public class DropIndexOperator extends SFWOperator {
 
-  private Map<String, String> props;
-  private long time;
   private IndexType indexType;
 
-  public CreateIndexOperator(int tokenIntType) {
+  public DropIndexOperator(int tokenIntType) {
     super(tokenIntType);
-    operatorType = OperatorType.CREATE_INDEX;
-  }
-
-  public long getTime() {
-    return time;
-  }
-
-  public void setTime(long time) {
-    this.time = time;
-  }
-
-  public Map<String, String> getProps() {
-    return props;
-  }
-
-  public void setProps(Map<String, String> props) {
-    this.props = props;
+    operatorType = OperatorType.DROP_INDEX;
   }
 
   public IndexType getIndexType() {
@@ -64,4 +43,5 @@ public class CreateIndexOperator extends SFWOperator {
   public void setIndexType(IndexType indexType) {
     this.indexType = indexType;
   }
+
 }

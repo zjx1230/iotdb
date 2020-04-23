@@ -75,7 +75,7 @@ public enum IndexType {
       case "KV_INDEX":
         return KV_INDEX;
       default:
-        throw new IndexManagerException("unsupported index type:" + indexTypeString);
+        throw new NotImplementedException("unsupported index type:" + indexTypeString);
     }
   }
 }
