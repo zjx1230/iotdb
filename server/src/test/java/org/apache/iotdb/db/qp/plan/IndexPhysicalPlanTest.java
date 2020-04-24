@@ -108,6 +108,8 @@ public class IndexPhysicalPlanTest {
 
   @Test
   public void aaa() {
+    int a = 1;
+    System.out.println(++a);
     Map<IndexType, IndexInfo> indexInfoMaps = new EnumMap<>(IndexType.class);
     Map<String, String> aa = new HashMap<>();
     aa.put("asd", "asd");

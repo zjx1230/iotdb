@@ -18,14 +18,14 @@
  */
 package org.apache.iotdb.db.index;
 
-import java.util.ArrayList;
+import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.apache.iotdb.db.conf.IoTDBConfig;
+import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.StartupException;
-import org.apache.iotdb.db.exception.metadata.MetadataException;
-import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexManagerException;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.pool.IndexBuildTaskPoolManager;
@@ -33,7 +33,7 @@ import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.service.IService;
 import org.apache.iotdb.db.service.JMXService;
 import org.apache.iotdb.db.service.ServiceType;
-import org.apache.iotdb.tsfile.read.common.Path;
+import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,9 +42,71 @@ public class IndexManager implements IService {
   private static final Logger logger = LoggerFactory.getLogger(IndexManager.class);
   private IndexBuildTaskPoolManager indexBuildPool = IndexBuildTaskPoolManager.getInstance();
   private MManager mManager;
-  private static Map<IndexType, IIndex> indexMap = new HashMap<>();
+//  private static Map<IndexType, IIndex> indexMap = new HashMap<>();
 
   private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+
+
+  private Map<String, IndexProcessor> indexProcessorMap;
+
+  private Thread writeThread;
+  private IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
+
+  private final Runnable forceWriteTask = () -> {
+//    while (true) {
+//      if (Thread.interrupted()) {
+//        logger.info("Interrupted, the index write thread will exit.");
+//        return;
+//      }
+//      if (IoTDBDescriptor.getInstance().getConfig().isReadOnly()) {
+//        logger.warn("system mode is read-only, the index write thread will exit.");
+//        return;
+//      }
+//      for (IIndex indexProcessor : nodeMap.values()) {
+//        try {
+//          indexProcessor.forceSync();
+//        } catch (IOException e) {
+//          logger.error("Cannot force {}, because ", indexProcessor, e);
+//        }
+//      }
+//      try {
+//        Thread.sleep(config.getForceWalPeriodInMs());
+//      } catch (InterruptedException e) {
+//        logger.info("WAL force thread exits.");
+//        Thread.currentThread().interrupt();
+//        break;
+//      }
+//    }
+  };
+
+
+  public IndexProcessor getProcessor(String path) {
+    IndexProcessor indexProcessor = indexProcessorMap.get(path);
+    if (indexProcessor == null) {
+      indexProcessor = initializeIndexProcessor(path);
+      IndexProcessor oldProcessor = indexProcessorMap.putIfAbsent(path, indexProcessor);
+      if (oldProcessor != null) {
+        return oldProcessor;
+      }
+    }
+    return indexProcessor;
+  }
+
+  public IndexProcessor initializeIndexProcessor(String path) {
+    throw new NotImplementedException();
+  }
+
+  public void removeIndexProcessor(String identifier) throws IOException, IndexManagerException {
+    IndexProcessor processor = indexProcessorMap.remove(identifier);
+    if (processor != null) {
+      processor.close();
+    }
+  }
+
+  public void close() {
+    logger.info("IndexManager won't be closed alone, but with StorageEngine and MManger.");
+    throw new NotImplementedException("index processor close");
+  }
 
   @Override
   public void start() throws StartupException {
@@ -69,7 +131,7 @@ public class IndexManager implements IService {
 
 
   private IndexManager() {
-    mManager = MManager.getInstance();
+    indexProcessorMap = new ConcurrentHashMap<>();
   }
 
   public static IndexManager getInstance() {
@@ -90,9 +152,7 @@ public class IndexManager implements IService {
   }
 
 
-  public static IIndex getIndexInstance(IndexType indexType) {
-    return indexMap.get(indexType);
-  }
+
 
   /**
    * you can refer to MManger. We needn't add write lock since it's controlled by MManager.

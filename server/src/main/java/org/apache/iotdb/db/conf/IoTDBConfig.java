@@ -211,9 +211,31 @@ public class IoTDBConfig {
   private int concurrentQueryThread = Runtime.getRuntime().availableProcessors();
 
   /**
+   * Is the write ahead log enable.
+   */
+  private boolean enableIndex = true;
+
+  /**
    * How many threads can concurrently build index. When <= 0, use CPU core number.
    */
   private int concurrentIndexBuildThread = Runtime.getRuntime().availableProcessors();
+
+  /**
+   * byte-size of first layer buffer in each index processor. For each index processor, all its
+   * indexes share a common buffer size. All input data lists will be preprocessed and temporarily
+   * stored in the common buffer, and the size of preprocessed data will be counted. If the buffer
+   * size of one processor reaches this threshold, existing data will be built into an index and
+   * flushed into the index file.<br>
+   *
+   * As a result, a set of data may be divided into different parts and indexed separately. The
+   * results of each partial index should be mergeable.
+   */
+  private long indexBufferSize = 128 * 1024 * 1024;
+
+  /**
+   * index directory.
+   */
+  private String indexRootFolder = "data" + File.separator + "index";
 
   private ZoneId zoneID = ZoneId.systemDefault();
 
@@ -520,9 +542,9 @@ public class IoTDBConfig {
   private int defaultFillInterval = -1;
 
   /**
-   * default TTL for storage groups that are not set TTL by statements, in ms
-   * Notice: if this property is changed, previous created storage group which are not set TTL will
-   * also be affected.
+   * default TTL for storage groups that are not set TTL by statements, in ms Notice: if this
+   * property is changed, previous created storage group which are not set TTL will also be
+   * affected.
    */
   private long defaultTTL = Long.MAX_VALUE;
   /**
@@ -534,7 +556,7 @@ public class IoTDBConfig {
   //wait for 60 second by default.
   private int thriftServerAwaitTimeForStopService = 60;
 
-  private int queryCacheSizeInMetric =50;
+  private int queryCacheSizeInMetric = 50;
 
   public IoTDBConfig() {
     // empty constructor
@@ -586,6 +608,7 @@ public class IoTDBConfig {
     schemaDir = addHomeDir(schemaDir);
     syncDir = addHomeDir(syncDir);
     walFolder = addHomeDir(walFolder);
+    indexRootFolder = addHomeDir(indexRootFolder);
 
     if (TSFileDescriptor.getInstance().getConfig().getTSFileStorageFs().equals(FSType.HDFS)) {
       String hdfsDir = getHdfsDir();
@@ -1141,7 +1164,8 @@ public class IoTDBConfig {
     return allocateMemoryForTimeSeriesMetaDataCache;
   }
 
-  public void setAllocateMemoryForTimeSeriesMetaDataCache(long allocateMemoryForTimeSeriesMetaDataCache) {
+  public void setAllocateMemoryForTimeSeriesMetaDataCache(
+      long allocateMemoryForTimeSeriesMetaDataCache) {
     this.allocateMemoryForTimeSeriesMetaDataCache = allocateMemoryForTimeSeriesMetaDataCache;
   }
 
@@ -1493,5 +1517,29 @@ public class IoTDBConfig {
 
   public void setMqttPayloadFormatter(String mqttPayloadFormatter) {
     this.mqttPayloadFormatter = mqttPayloadFormatter;
+  }
+
+  public boolean isEnableIndex() {
+    return enableIndex;
+  }
+
+  public void setEnableIndex(boolean enableIndex) {
+    this.enableIndex = enableIndex;
+  }
+
+  public long getIndexBufferSize() {
+    return indexBufferSize;
+  }
+
+  public void setIndexBufferSize(long indexBufferSize) {
+    this.indexBufferSize = indexBufferSize;
+  }
+
+  public String getIndexRootFolder() {
+    return indexRootFolder;
+  }
+
+  public void setIndexRootFolder(String indexRootFolder) {
+    this.indexRootFolder = indexRootFolder;
   }
 }

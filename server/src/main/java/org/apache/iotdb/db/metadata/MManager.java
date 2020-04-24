@@ -386,7 +386,6 @@ public class MManager {
   public void dropIndex(List<String> prefixPaths, IndexType indexType) throws MetadataException {
     lock.writeLock().lock();
     try {
-      List<String> fullPaths = new ArrayList<>();
       for (String prefixPath : prefixPaths) {
         for (String fullPath : getAllTimeseriesName(prefixPath)) {
           dropIndexWithMemoryCheckAndLog(fullPath, indexType);

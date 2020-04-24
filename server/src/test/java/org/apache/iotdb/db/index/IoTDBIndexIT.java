@@ -53,8 +53,26 @@ public class IoTDBIndexIT {
       statement.execute("SET STORAGE GROUP TO root.idx1");
       statement.execute("CREATE TIMESERIES root.idx1.d0.s0 WITH DATATYPE=INT32,ENCODING=PLAIN");
       statement.execute("INSERT INTO root.idx1.d0(timestamp, s0) VALUES (1, 1)");
-      statement.execute("CREATE INDEX ON root.idx1.d0.s0 WITH INDEX=PAA, window_length=100, merge_threshold= 0.5");
-      statement.execute("DROP INDEX PAA ON root.vehicle.d1.s1");
+      statement.execute("INSERT INTO root.idx1.d0(timestamp, s0) VALUES (2, 2)");
+      statement.execute("INSERT INTO root.idx1.d0(timestamp, s0) VALUES (3, 3)");
+      statement.execute("flush");
+
+
+      statement.execute("INSERT INTO root.idx1.d0(timestamp, s0) VALUES (21, 21)");
+      statement.execute("INSERT INTO root.idx1.d0(timestamp, s0) VALUES (22, 22)");
+      statement.execute("INSERT INTO root.idx1.d0(timestamp, s0) VALUES (23, 23)");
+      statement.execute ("flush");
+
+      statement.execute("INSERT INTO root.idx1.d0(timestamp, s0) VALUES (31, 31)");
+      statement.execute("INSERT INTO root.idx1.d0(timestamp, s0) VALUES (32, 32)");
+      statement.execute("INSERT INTO root.idx1.d0(timestamp, s0) VALUES (33, 33)");
+
+      statement.execute("INSERT INTO root.idx1.d0(timestamp, s0) VALUES (11, 11)");
+      statement.execute("INSERT INTO root.idx1.d0(timestamp, s0) VALUES (12, 12)");
+      statement.execute("INSERT INTO root.idx1.d0(timestamp, s0) VALUES (13, 13)");
+      statement.execute("flush");
+
+      statement.execute("DROP INDEX PAA ON root.idx1.d0.s0");
 //      statement.execute("select index whole_st_time(s1), dist(s2) from root.vehicle.d1 where \"\n"
 //          + "        + \"time <= 51 or !(time != 100 and time < 460) WITH INDEX=PAA, threshold=5, distance=DTW");
 

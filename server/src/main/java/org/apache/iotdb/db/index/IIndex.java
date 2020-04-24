@@ -9,7 +9,9 @@ import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.Pair;
 
 /**
- * IIndex is Singleton.
+ * Each StorageGroupProcessor contains a IndexProcessor, and each IndexProcessor can contain more than one IIndex.
+ * Each type of Index corresponds one IIndex.
+ *
  */
 public interface IIndex {
 
