@@ -18,36 +18,49 @@
  */
 package org.apache.iotdb.db.index;
 
+import static org.apache.iotdb.db.conf.IoTDBConstant.SEQUENCE_FLODER_NAME;
+import static org.apache.iotdb.db.conf.IoTDBConstant.UNSEQUENCE_FLODER_NAME;
+
+import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.conf.directories.DirectoryManager;
+import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.exception.StartupException;
 import org.apache.iotdb.db.index.common.IndexManagerException;
-import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.pool.IndexBuildTaskPoolManager;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.service.IService;
 import org.apache.iotdb.db.service.JMXService;
 import org.apache.iotdb.db.service.ServiceType;
+import org.apache.iotdb.tsfile.common.constant.TsFileConstant;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class IndexManager implements IService {
 
   private static final Logger logger = LoggerFactory.getLogger(IndexManager.class);
+  private FSFactory fsFactory = FSFactoryProducer.getFSFactory();
+
+  public static final String INDEXING_SUFFIX = ".indexing";
+  public static final String INDEXED_SUFFIX = ".index";
+
   private IndexBuildTaskPoolManager indexBuildPool = IndexBuildTaskPoolManager.getInstance();
+
   private MManager mManager;
 //  private static Map<IndexType, IIndex> indexMap = new HashMap<>();
 
   private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
 
-  private Map<String, IndexProcessor> indexProcessorMap;
+  private Map<String, IndexFileProcessor> indexProcessorMap;
 
   private Thread writeThread;
   private IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
@@ -79,28 +92,58 @@ public class IndexManager implements IService {
 //    }
   };
 
+  /**
+   * In current version, the index fuile has the same path format as the corresponding tsfile except
+   * that tsfile_base_dir and the ".tsfile" suffix are replaced by index_base_dir and ".index".
+   * <br>
+   * i.e., index_base_dir / [un]sequence / storage_group_name / partition_id / tsfile_name.index
+   * <br>
+   * e.g.<br>
+   *
+   * tsfile: data/sequence/root.idx1/0/1587719150666-1-0.tsfile index file:
+   * index/sequence/root.idx1/0/1587719150666-1-0.index
+   *
+   * Since the total size of index files may be large, the base_dir may be selected from a list of
+   * param, just like {@linkplain DirectoryManager#getNextFolderForSequenceFile()
+   * getNextFolderForSequenceFile} in future.
+   */
+  private String getIndexFileName(String tsfileNameWithSuffix) {
 
-  public IndexProcessor getProcessor(String path) {
-    IndexProcessor indexProcessor = indexProcessorMap.get(path);
-    if (indexProcessor == null) {
-      indexProcessor = initializeIndexProcessor(path);
-      IndexProcessor oldProcessor = indexProcessorMap.putIfAbsent(path, indexProcessor);
+    int tsfileLen = tsfileNameWithSuffix.length() - TsFileConstant.TSFILE_SUFFIX.length();
+    return tsfileNameWithSuffix.substring(0, tsfileLen) + INDEXING_SUFFIX;
+  }
+
+  public IndexFileProcessor getProcessor(String storageGroup, boolean sequence,
+      long partitionId, String tsFileName) {
+    String relativeDir = sequence ? SEQUENCE_FLODER_NAME : UNSEQUENCE_FLODER_NAME
+        + File.separator + storageGroup + File.separator + partitionId;
+    String indexParentDir = DirectoryManager.getInstance().getIndexRootFolder() +
+        File.separator + relativeDir;
+    if (SystemFileFactory.INSTANCE.getFile(indexParentDir).mkdirs()) {
+      logger.info("create the index folder {}", indexParentDir);
+    }
+    String fullPath = indexParentDir + File.separator + getIndexFileName(tsFileName);
+    IndexFileProcessor indexFileProcessor = indexProcessorMap.get(fullPath);
+    if (indexFileProcessor == null) {
+      indexFileProcessor = createIndexProcessor(storageGroup, indexParentDir, fullPath, sequence);
+      IndexFileProcessor oldProcessor = indexProcessorMap.putIfAbsent(fullPath, indexFileProcessor);
       if (oldProcessor != null) {
         return oldProcessor;
       }
     }
-    return indexProcessor;
+    return indexFileProcessor;
   }
 
-  public IndexProcessor initializeIndexProcessor(String path) {
-    throw new NotImplementedException();
+  public IndexFileProcessor createIndexProcessor(String storageGroupName, String indexParentDir,
+      String indexFullPath, boolean sequence) {
+    return new IndexFileProcessor(storageGroupName, indexParentDir, indexFullPath, sequence);
   }
 
-  public void removeIndexProcessor(String identifier) throws IOException, IndexManagerException {
-    IndexProcessor processor = indexProcessorMap.remove(identifier);
-    if (processor != null) {
-      processor.close();
-    }
+  public void removeIndexProcessor(String identifier) {
+    indexProcessorMap.remove(identifier);
+//    if (processor != null) {
+//      processor.close();
+//    }
   }
 
   public void close() {
@@ -151,13 +194,9 @@ public class IndexManager implements IService {
         .format("the size of Index Build Task Pool: %d", indexBuildPool.getWorkingTasksNumber());
   }
 
-
-
-
   /**
    * you can refer to MManger. We needn't add write lock since it's controlled by MManager.
    */
-
 
 
 }

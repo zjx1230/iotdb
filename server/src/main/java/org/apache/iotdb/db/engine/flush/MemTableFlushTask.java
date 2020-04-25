@@ -28,8 +28,10 @@ import org.apache.iotdb.db.engine.flush.pool.FlushSubTaskPoolManager;
 import org.apache.iotdb.db.engine.memtable.IMemTable;
 import org.apache.iotdb.db.engine.memtable.IWritableMemChunk;
 import org.apache.iotdb.db.exception.runtime.FlushRunTimeException;
+import org.apache.iotdb.db.index.IndexFileProcessor;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.write.chunk.ChunkWriterImpl;
 import org.apache.iotdb.tsfile.write.chunk.IChunkWriter;
@@ -46,6 +48,8 @@ public class MemTableFlushTask {
   private Future encodingTaskFuture;
   private Future ioTaskFuture;
   private RestorableTsFileIOWriter writer;
+  private final boolean enabledIndex;
+  private final IndexFileProcessor indexFileProcessor;
 
   private ConcurrentLinkedQueue ioTaskQueue = new ConcurrentLinkedQueue();
   private ConcurrentLinkedQueue encodingTaskQueue = new ConcurrentLinkedQueue();
@@ -56,12 +60,15 @@ public class MemTableFlushTask {
   private volatile boolean noMoreEncodingTask = false;
   private volatile boolean noMoreIOTask = false;
 
-  public MemTableFlushTask(IMemTable memTable, RestorableTsFileIOWriter writer, String storageGroup) {
+  public MemTableFlushTask(IMemTable memTable, RestorableTsFileIOWriter writer, String storageGroup,
+      IndexFileProcessor indexFileProcessor) {
     this.memTable = memTable;
     this.writer = writer;
     this.storageGroup = storageGroup;
     this.encodingTaskFuture = subTaskPoolManager.submit(encodingTask);
     this.ioTaskFuture = subTaskPoolManager.submit(ioTask);
+    this.enabledIndex = IoTDBDescriptor.getInstance().getConfig().isEnableIndex();
+    this.indexFileProcessor = indexFileProcessor;
     logger.debug("flush task of Storage group {} memtable {} is created ",
         storageGroup, memTable.getVersion());
   }
@@ -73,6 +80,8 @@ public class MemTableFlushTask {
   public void syncFlushMemTable() throws ExecutionException, InterruptedException {
     long start = System.currentTimeMillis();
     long sortTime = 0;
+    if(enabledIndex)
+      indexFileProcessor.startFlushMemTable();
     for (String deviceId : memTable.getMemTableMap().keySet()) {
       encodingTaskQueue.add(new StartFlushGroupIOTask(deviceId));
       for (String measurementId : memTable.getMemTableMap().get(deviceId).keySet()) {
@@ -82,6 +91,7 @@ public class MemTableFlushTask {
         TVList tvList = series.getSortedTVList();
         sortTime += System.currentTimeMillis() - startTime;
         encodingTaskQueue.add(new Pair<>(tvList, desc));
+        indexFileProcessor.buildIndexForOneSeries(new Path(deviceId, measurementId), tvList);
         // register active time series to the ActiveTimeSeriesCounter
         if (IoTDBDescriptor.getInstance().getConfig().isEnableParameterAdapter()) {
           ActiveTimeSeriesCounter.getInstance().offer(storageGroup, deviceId, measurementId);
@@ -107,7 +117,7 @@ public class MemTableFlushTask {
     }
 
     ioTaskFuture.get();
-
+    indexFileProcessor.endFlushMemTable();
     try {
       writer.writeVersion(memTable.getVersion());
     } catch (IOException e) {

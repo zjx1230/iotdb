@@ -46,6 +46,8 @@ import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor.UpdateEndTi
 import org.apache.iotdb.db.engine.version.VersionController;
 import org.apache.iotdb.db.exception.TsFileProcessorException;
 import org.apache.iotdb.db.exception.WriteProcessException;
+import org.apache.iotdb.db.index.IndexManager;
+import org.apache.iotdb.db.index.IndexFileProcessor;
 import org.apache.iotdb.db.qp.physical.crud.BatchInsertPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
@@ -99,7 +101,7 @@ public class TsFileProcessor {
   private WriteLogNode logNode;
   private boolean sequence;
   private long totalMemTableSize;
-
+  private IndexFileProcessor indexFileProcessor;
   private static final String FLUSH_QUERY_WRITE_LOCKED = "{}: {} get flushQueryLock write lock";
   private static final String FLUSH_QUERY_WRITE_RELEASE = "{}: {} get flushQueryLock write lock released";
 
@@ -260,7 +262,7 @@ public class TsFileProcessor {
    */
   private long getMemtableSizeThresholdBasedOnSeriesNum() {
     IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
-    if(!config.isEnableParameterAdapter()){
+    if (!config.isEnableParameterAdapter()) {
       return config.getMemtableSizeThreshold();
     }
     long memTableSize = (long) (config.getMemtableSizeThreshold() * config.getMaxMemtableNumber()
@@ -294,13 +296,14 @@ public class TsFileProcessor {
         while (!flushingMemTables.isEmpty()) {
           flushingMemTables.wait(60_000);
           if (System.currentTimeMillis() - startTime > 60_000) {
-            logger.warn("{} has spent {}s for waiting flushing one memtable; {} left (first: {}). FlushingManager info: {}",
+            logger.warn(
+                "{} has spent {}s for waiting flushing one memtable; {} left (first: {}). FlushingManager info: {}",
                 this.tsFileResource.getFile().getAbsolutePath(),
-                (System.currentTimeMillis() - startTime)/1000,
+                (System.currentTimeMillis() - startTime) / 1000,
                 flushingMemTables.size(),
                 flushingMemTables.getFirst(),
                 FlushManager.getInstance()
-                );
+            );
           }
 
         }
@@ -367,8 +370,8 @@ public class TsFileProcessor {
   }
 
   /**
-   * TODO if the flushing thread is too fast, the tmpMemTable.wait() may never wakeup
-   * Tips: I am trying to solve this issue by checking whether the table exist before wait()
+   * TODO if the flushing thread is too fast, the tmpMemTable.wait() may never wakeup Tips: I am
+   * trying to solve this issue by checking whether the table exist before wait()
    */
   public void syncFlush() throws IOException {
     IMemTable tmpMemTable;
@@ -442,8 +445,8 @@ public class TsFileProcessor {
    * flushManager again.
    */
   private void addAMemtableIntoFlushingList(IMemTable tobeFlushed) throws IOException {
-    if(!tobeFlushed.isSignalMemTable() &&
-        (!updateLatestFlushTimeCallback.call(this) || tobeFlushed.memSize() == 0)){
+    if (!tobeFlushed.isSignalMemTable() &&
+        (!updateLatestFlushTimeCallback.call(this) || tobeFlushed.memSize() == 0)) {
       logger.warn("This normal memtable is empty, skip it in flush. {}: {} Memetable info: {}",
           storageGroupName, tsFileResource.getFile().getName(), tobeFlushed.getMemTableMap());
       return;
@@ -483,7 +486,7 @@ public class TsFileProcessor {
         logger.warn(
             "{}: {} put the memtable (signal={}) out of flushingMemtables but it is not in the queue.",
             storageGroupName, tsFileResource.getFile().getName(), memTable.isSignalMemTable());
-      } else if (logger.isDebugEnabled()){
+      } else if (logger.isDebugEnabled()) {
         logger.debug(
             "{}: {} memtable (signal={}) is removed from the queue. {} left.", storageGroupName,
             tsFileResource.getFile().getName(),
@@ -493,7 +496,7 @@ public class TsFileProcessor {
       MemTablePool.getInstance().putBack(memTable, storageGroupName);
       if (logger.isDebugEnabled()) {
         logger.debug("{}: {} flush finished, remove a memtable from flushing list, "
-            + "flushing memtable list size: {}", storageGroupName,
+                + "flushing memtable list size: {}", storageGroupName,
             tsFileResource.getFile().getName(), flushingMemTables.size());
       }
     } catch (Exception e) {
@@ -516,12 +519,12 @@ public class TsFileProcessor {
     memTableToFlush = flushingMemTables.getFirst();
     if (logger.isInfoEnabled()) {
       logger.info("{}: {} starts to flush a memtable in a flush thread", storageGroupName,
-              tsFileResource.getFile().getName());
+          tsFileResource.getFile().getName());
     }
     // signal memtable only may appear when calling asyncClose()
     if (!memTableToFlush.isSignalMemTable()) {
       MemTableFlushTask flushTask = new MemTableFlushTask(memTableToFlush, writer,
-          storageGroupName);
+          storageGroupName, getIndexFileProcessor());
       try {
         writer.mark();
         flushTask.syncFlushMemTable();
@@ -573,7 +576,8 @@ public class TsFileProcessor {
           if (compressionRatio == 0) {
             logger.error(
                 "{} The compression ratio of tsfile {} is 0, totalMemTableSize: {}, the file size: {}",
-                storageGroupName, writer.getFile().getAbsolutePath(), totalMemTableSize, writer.getPos());
+                storageGroupName, writer.getFile().getAbsolutePath(), totalMemTableSize,
+                writer.getPos());
           }
           CompressionRatio.getInstance().updateRatio(compressionRatio);
         } catch (IOException e) {
@@ -581,10 +585,16 @@ public class TsFileProcessor {
               tsFileResource.getFile().getName(), e);
         }
         if (logger.isDebugEnabled()) {
-          logger.debug("{}: {} flushingMemtables is empty and will close the file", storageGroupName,
-              tsFileResource.getFile().getName());
+          logger
+              .debug("{}: {} flushingMemtables is empty and will close the file", storageGroupName,
+                  tsFileResource.getFile().getName());
         }
         endFile();
+        if (IoTDBDescriptor.getInstance().getConfig().isEnableIndex()) {
+          getIndexFileProcessor().close();
+        }
+
+
       } catch (Exception e) {
         logger.error("{} meet error when flush FileMetadata to {}, change system mode to read-only",
             storageGroupName, tsFileResource.getFile().getAbsolutePath(), e);
@@ -648,12 +658,27 @@ public class TsFileProcessor {
     return logNode;
   }
 
+
+  private IndexFileProcessor getIndexFileProcessor() {
+    if (indexFileProcessor == null && IoTDBDescriptor.getInstance().getConfig().isEnableIndex()) {
+      indexFileProcessor = IndexManager.getInstance()
+          .getProcessor(storageGroupName, sequence, timeRangeId,
+              tsFileResource.getFile().getName());
+      logger.info("init a new index file processor {}", indexFileProcessor.getIndexFullPath());
+    }
+    return indexFileProcessor;
+
+  }
+
   public void close() throws TsFileProcessorException {
     try {
       //when closing resource file, its corresponding mod file is also closed.
       tsFileResource.close();
       MultiFileLogNodeManager.getInstance()
           .deleteNode(storageGroupName + "-" + tsFileResource.getFile().getName());
+      if (IoTDBDescriptor.getInstance().getConfig().isEnableIndex()) {
+        IndexManager.getInstance().removeIndexProcessor(getIndexFileProcessor().getIndexFullPath());
+      }
     } catch (IOException e) {
       throw new TsFileProcessorException(e);
     }
@@ -746,4 +771,6 @@ public class TsFileProcessor {
   public void setTimeRangeId(long timeRangeId) {
     this.timeRangeId = timeRangeId;
   }
+
+
 }
