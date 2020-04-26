@@ -18,11 +18,8 @@
  */
 package org.apache.iotdb.db.metadata.mnode;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
@@ -120,8 +117,8 @@ public class LeafMNode extends MNode {
     return indexInfoMaps.get(indexType);
   }
 
-  public List<IndexInfo> getAllIndexInfos() {
-    return new ArrayList<>(indexInfoMaps.values());
+  public Map<IndexType, IndexInfo> getIndexInfoMaps() {
+    return indexInfoMaps;
   }
 
   public boolean hasIndex(IndexType indexType) {

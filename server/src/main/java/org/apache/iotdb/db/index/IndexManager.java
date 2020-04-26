@@ -22,7 +22,6 @@ import static org.apache.iotdb.db.conf.IoTDBConstant.SEQUENCE_FLODER_NAME;
 import static org.apache.iotdb.db.conf.IoTDBConstant.UNSEQUENCE_FLODER_NAME;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -31,8 +30,7 @@ import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.exception.StartupException;
-import org.apache.iotdb.db.index.common.IndexManagerException;
-import org.apache.iotdb.db.index.pool.IndexBuildTaskPoolManager;
+import org.apache.iotdb.db.index.flush.IndexBuildTaskPoolManager;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.service.IService;
 import org.apache.iotdb.db.service.JMXService;
@@ -65,32 +63,6 @@ public class IndexManager implements IService {
   private Thread writeThread;
   private IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
 
-  private final Runnable forceWriteTask = () -> {
-//    while (true) {
-//      if (Thread.interrupted()) {
-//        logger.info("Interrupted, the index write thread will exit.");
-//        return;
-//      }
-//      if (IoTDBDescriptor.getInstance().getConfig().isReadOnly()) {
-//        logger.warn("system mode is read-only, the index write thread will exit.");
-//        return;
-//      }
-//      for (IIndex indexProcessor : nodeMap.values()) {
-//        try {
-//          indexProcessor.forceSync();
-//        } catch (IOException e) {
-//          logger.error("Cannot force {}, because ", indexProcessor, e);
-//        }
-//      }
-//      try {
-//        Thread.sleep(config.getForceWalPeriodInMs());
-//      } catch (InterruptedException e) {
-//        logger.info("WAL force thread exits.");
-//        Thread.currentThread().interrupt();
-//        break;
-//      }
-//    }
-  };
 
   /**
    * In current version, the index fuile has the same path format as the corresponding tsfile except
@@ -113,31 +85,34 @@ public class IndexManager implements IService {
     return tsfileNameWithSuffix.substring(0, tsfileLen) + INDEXING_SUFFIX;
   }
 
-  public IndexFileProcessor getProcessor(String storageGroup, boolean sequence,
-      long partitionId, String tsFileName) {
+  public IndexFileProcessor getProcessor(String storageGroup, boolean sequence, long partitionId,
+      String tsFileName) {
     String relativeDir = sequence ? SEQUENCE_FLODER_NAME : UNSEQUENCE_FLODER_NAME
         + File.separator + storageGroup + File.separator + partitionId;
     String indexParentDir = DirectoryManager.getInstance().getIndexRootFolder() +
         File.separator + relativeDir;
+
     if (SystemFileFactory.INSTANCE.getFile(indexParentDir).mkdirs()) {
       logger.info("create the index folder {}", indexParentDir);
     }
-    String fullPath = indexParentDir + File.separator + getIndexFileName(tsFileName);
-    IndexFileProcessor indexFileProcessor = indexProcessorMap.get(fullPath);
-    if (indexFileProcessor == null) {
-      indexFileProcessor = createIndexProcessor(storageGroup, indexParentDir, fullPath, sequence);
-      IndexFileProcessor oldProcessor = indexProcessorMap.putIfAbsent(fullPath, indexFileProcessor);
+    String fullFilePath = indexParentDir + File.separator + getIndexFileName(tsFileName);
+
+    IndexFileProcessor fileProcessor = indexProcessorMap.get(fullFilePath);
+    if (fileProcessor == null) {
+      fileProcessor = initIndexProcessor(storageGroup, indexParentDir, fullFilePath, sequence);
+      IndexFileProcessor oldProcessor = indexProcessorMap.putIfAbsent(fullFilePath, fileProcessor);
       if (oldProcessor != null) {
         return oldProcessor;
       }
     }
-    return indexFileProcessor;
+    return fileProcessor;
   }
 
-  public IndexFileProcessor createIndexProcessor(String storageGroupName, String indexParentDir,
-      String indexFullPath, boolean sequence) {
-    return new IndexFileProcessor(storageGroupName, indexParentDir, indexFullPath, sequence);
+  private IndexFileProcessor initIndexProcessor(String storageGroup, String indexParentDir,
+      String fullFilePath, boolean sequence) {
+    return new IndexFileProcessor(storageGroup, indexParentDir, fullFilePath, sequence);
   }
+
 
   public void removeIndexProcessor(String identifier) {
     indexProcessorMap.remove(identifier);

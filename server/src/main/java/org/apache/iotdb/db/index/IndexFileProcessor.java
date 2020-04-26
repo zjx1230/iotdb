@@ -18,34 +18,31 @@
  */
 package org.apache.iotdb.db.index;
 
-import static org.apache.iotdb.db.index.IndexManager.INDEXING_SUFFIX;
-import static org.apache.iotdb.db.index.IndexManager.INDEXED_SUFFIX;
+import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_MAP_INIT_RESERVE_SIZE;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.engine.flush.MemTableFlushTask;
-import org.apache.iotdb.db.engine.flush.MemTableFlushTask.StartFlushGroupIOTask;
-import org.apache.iotdb.db.engine.flush.pool.FlushSubTaskPoolManager;
-import org.apache.iotdb.db.engine.querycontext.ReadOnlyMemChunk;
 import org.apache.iotdb.db.exception.runtime.FlushRunTimeException;
+import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
-import org.apache.iotdb.db.qp.physical.PhysicalPlan;
+import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
+import org.apache.iotdb.db.index.flush.IndexBuildTaskPoolManager;
+import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.writelog.io.ILogWriter;
-import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.common.Path;
-import org.apache.iotdb.tsfile.write.chunk.ChunkWriterImpl;
-import org.apache.iotdb.tsfile.write.chunk.IChunkWriter;
 import org.apache.iotdb.tsfile.write.writer.RestorableTsFileIOWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,17 +53,17 @@ import org.slf4j.LoggerFactory;
 public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
 
   private static final Logger logger = LoggerFactory.getLogger(IndexFileProcessor.class);
-  private String indexFullPath;
   private final String storageGroupName;
+  private String indexFilePath;
 
   //  private String path;
   private String indexParentDir;
   private IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
 
   private ReadWriteLock lock = new ReentrantReadWriteLock();
-  private static long firstLayerBufferSize = IoTDBDescriptor.getInstance().getConfig()
-      .getIndexBufferSize();
-  private Map<IndexType, IIndex> indexMap;
+//  private static long firstLayerBufferSize = ;
+
+  private Map<String, Map<IndexType, IoTDBIndex>> allPathsIndexMap;
   private ByteBuffer processorBuffer = ByteBuffer.allocate((int) firstLayerBufferSize);
 
   private ILogWriter currentFileWriter;
@@ -75,128 +72,100 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
   private final boolean sequence;
 
 
-  private static final FlushSubTaskPoolManager subTaskPoolManager = FlushSubTaskPoolManager
-      .getInstance();
+  private final IndexBuildTaskPoolManager indexBuildPoolManager;
   private ConcurrentLinkedQueue flushTaskQueue;
   private Future flushTaskFuture;
   private boolean noMoreIndexFlushTask = false;
+  public final Object waitingSymbol = new Object();
+  private static long maxIndexBufferSize = IoTDBDescriptor.getInstance().getConfig()
+      .getIndexBufferSize();
+  private final AtomicLong memoryUsed;
 
-  public IndexFileProcessor(String storageGroupName, String indexParentDir, String indexFullPath,
+  public IndexFileProcessor(String storageGroupName, String indexParentDir, String indexFilePath,
       boolean sequence) {
     this.storageGroupName = storageGroupName;
     this.indexParentDir = indexParentDir;
-    this.indexFullPath = indexFullPath;
+    this.indexFilePath = indexFilePath;
     this.sequence = sequence;
+    this.indexBuildPoolManager = IndexBuildTaskPoolManager.getInstance();
+    memoryUsed = new AtomicLong(0);
+//    memoryThreshold =
+    refreshSeriesIndexMapFromMManager();
 
-    indexMap = new EnumMap<>(IndexType.class);
   }
 
-  public void flush(PhysicalPlan plan) throws IOException {
-    lock.writeLock().lock();
-    try {
-      putLog(plan);
-//      if (bufferedLogNum >= config.getFlushWalThreshold()) {
-//        sync();
-//      }
-    } catch (BufferOverflowException e) {
-      throw new IOException("Log cannot fit into buffer, please increase wal_buffer_size", e);
-    } finally {
-      lock.writeLock().unlock();
+  private void refreshSeriesIndexMapFromMManager() {
+    Map<String, Map<IndexType, IndexInfo>> indexInfoMap = MManager
+        .getInstance().getAllIndexInfosInStorageGroup(storageGroupName);
+    if (this.allPathsIndexMap == null) {
+      this.allPathsIndexMap = new HashMap<>(indexInfoMap.size() + INDEX_MAP_INIT_RESERVE_SIZE);
+    }
+    // Add indexes that are not in the previous map
+    indexInfoMap.forEach((path, pathIndexInfoMap) -> {
+      Map<IndexType, IoTDBIndex> pathIndexMap = allPathsIndexMap
+          .putIfAbsent(path, new EnumMap<>(IndexType.class));
+      assert pathIndexMap != null;
+      pathIndexInfoMap.forEach((indexType, indexInfo) -> pathIndexMap
+          .putIfAbsent(indexType, IndexType.constructIndex(indexType, indexInfo)));
+    });
+    // remove indexes that are removed from the previous map
+    for (String pathInMem : new ArrayList<>(allPathsIndexMap.keySet())) {
+      Map<IndexType, IoTDBIndex> pathIndexMap = allPathsIndexMap.get(pathInMem);
+      if (!indexInfoMap.containsKey(pathInMem)) {
+        pathIndexMap.forEach((indexType, index) -> index.delete());
+        allPathsIndexMap.remove(pathInMem);
+      } else {
+        Map<IndexType, IndexInfo> pathIndexInfoMap = indexInfoMap.get(pathInMem);
+        for (IndexType indexType : new ArrayList<>(pathIndexMap.keySet())) {
+          if (!pathIndexInfoMap.containsKey(indexType)) {
+            pathIndexMap.get(indexType).delete();
+            pathIndexMap.remove(indexType);
+          }
+        }
+      }
     }
   }
 
-  private void putLog(PhysicalPlan plan) {
-    processorBuffer.mark();
-    try {
-      plan.serializeTo(processorBuffer);
-    } catch (BufferOverflowException e) {
-      logger.info("WAL BufferOverflow !");
-      processorBuffer.reset();
-//      sync();
-      plan.serializeTo(processorBuffer);
-    }
-
-  }
 
   /**
    * seal the index file, move "indexing" to "index"
    */
   public void close() {
+    //TODO
 //    sync();
 //    forceWal();
-    try {
-      if (this.currentFileWriter != null) {
-        this.currentFileWriter.close();
-        this.currentFileWriter = null;
-      }
-      logger.debug("Log node {} closed successfully", indexFullPath);
-    } catch (IOException e) {
-      logger.error("Cannot close log node {} because:", indexFullPath, e);
-    } finally {
-      lock.writeLock().unlock();
-    }
-    String indexedFullPath = indexFullPath.substring(0, indexFullPath.length() -
-        INDEXING_SUFFIX.length()) + INDEXED_SUFFIX;
-    File oldFile = FSFactoryProducer.getFSFactory().getFile(indexFullPath);
-    File newFile = FSFactoryProducer.getFSFactory().getFile(indexedFullPath);
-    if (oldFile.renameTo(newFile)) {
-      logger.error("Renaming indexing file to indexed failed {}.", indexedFullPath);
-    }
-  }
-
-  public void forceSync() {
-//    sync();
-//    forceWal();
-  }
-
-//  public void notifyStartFlush() {
-//    lock.writeLock().lock();
 //    try {
-//      close();
-//      nextFileWriter();
+//      if (this.currentFileWriter != null) {
+//        this.currentFileWriter.close();
+//        this.currentFileWriter = null;
+//      }
+//      logger.debug("Log node {} closed successfully", indexFilePath);
+//    } catch (IOException e) {
+//      logger.error("Cannot close log node {} because:", indexFilePath, e);
 //    } finally {
 //      lock.writeLock().unlock();
 //    }
-//  }
-//
-//  public void notifyEndFlush() {
-//    lock.writeLock().lock();
-//    try {
-//      File logFile = SystemFileFactory.INSTANCE.getFile(indexGroupDirectory, INDEX_FILE_NAME + ++lastFlushedId);
-//      discard(logFile);
-//    } finally {
-//      lock.writeLock().unlock();
+//    String indexedFullPath = indexFilePath.substring(0, indexFilePath.length() -
+//        INDEXING_SUFFIX.length()) + INDEXED_SUFFIX;
+//    File oldFile = FSFactoryProducer.getFSFactory().getFile(indexFilePath);
+//    File newFile = FSFactoryProducer.getFSFactory().getFile(indexedFullPath);
+//    if (oldFile.renameTo(newFile)) {
+//      logger.error("Renaming indexing file to indexed failed {}.", indexedFullPath);
 //    }
-//  }
+  }
 
-  public String getIndexFullPath() {
-    return indexFullPath;
+
+  public String getIndexFilePath() {
+    return indexFilePath;
   }
 
   public String getIndexParentDir() {
     return indexParentDir;
   }
 
-//  private ILogWriter getCurrentFileWriter() {
-//    if (currentFileWriter == null) {
-//      nextFileWriter();
-//    }
-//    return currentFileWriter;
-//  }
-
-//  private void nextFileWriter() {
-//    fileId++;
-//    File newFile = SystemFileFactory.INSTANCE.getFile(indexGroupDirectory, INDEX_FILE_NAME + fileId);
-//    if (newFile.getParentFile().mkdirs()) {
-//      logger.info("create WAL parent folder {}.", newFile.getParent());
-//    }
-//    currentFileWriter = new LogWriter(newFile);
-//  }
-
-
   @Override
   public int hashCode() {
-    return indexFullPath.hashCode();
+    return indexFilePath.hashCode();
   }
 
   @Override
@@ -216,18 +185,12 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
 
   @Override
   public String toString() {
-    return "Index File: " + indexFullPath;
+    return "Index File: " + indexFilePath;
   }
 
   @Override
   public int compareTo(IndexFileProcessor o) {
-    return indexFullPath.compareTo(o.indexFullPath);
-  }
-
-  public void startFlushMemTable() {
-    this.flushTaskQueue = new ConcurrentLinkedQueue();
-    this.flushTaskFuture = subTaskPoolManager.submit(flushRunTask);
-    this.noMoreIndexFlushTask = false;
+    return indexFilePath.compareTo(o.indexFilePath);
   }
 
 
@@ -247,36 +210,58 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
         try {
           Thread.sleep(10);
         } catch (@SuppressWarnings("squid:S2142") InterruptedException e) {
-          logger.error("Index Flush Task is interrupted, index path {}", indexFullPath, e);
+          logger.error("Index Flush Task is interrupted, index path {}", indexFilePath, e);
           break;
         }
       } else {
         try {
           // TODO flush task
-          if (indexFlushMessage instanceof StartFlushGroupIOTask) {
-            writer.startChunkGroup(((StartFlushGroupIOTask) indexFlushMessage).deviceId);
-          } else if (indexFlushMessage instanceof IChunkWriter) {
-            ChunkWriterImpl chunkWriter = (ChunkWriterImpl) indexFlushMessage;
-            chunkWriter.writeToFileWriter(MemTableFlushTask.this.writer);
-          } else {
-            writer.endChunkGroup();
-          }
+          throw new IOException("asd");
+//          if (indexFlushMessage instanceof StartFlushGroupIOTask) {
+//            writer.startChunkGroup(((StartFlushGroupIOTask) indexFlushMessage).deviceId);
+//          } else if (indexFlushMessage instanceof IChunkWriter) {
+//            ChunkWriterImpl chunkWriter = (ChunkWriterImpl) indexFlushMessage;
+//            chunkWriter.writeToFileWriter(MemTableFlushTask.this.writer);
+//          } else {
+//            writer.endChunkGroup();
+//          }
         } catch (@SuppressWarnings("squid:S2139") IOException e) {
-          logger.error("Index Flush Task meet IO error, index path: {}", indexFullPath, e);
+          logger.error("Index Flush Task meet IO error, index path: {}", indexFilePath, e);
           throw new FlushRunTimeException(e);
         }
       }
     }
   };
 
+
+  public void startFlushMemTable() {
+    this.flushTaskQueue = new ConcurrentLinkedQueue();
+    this.flushTaskFuture = indexBuildPoolManager.submit(flushRunTask);
+    this.noMoreIndexFlushTask = false;
+    /*
+     * If the IndexProcessor of the corresponding storage group is not in indexMap, it means that the
+     * current storage group does not build any index in memory yet and we needn't update anything.
+     * The recent index information will be obtained when this IndexProcessor is loaded next time.<p>
+     * For the IndexProcessor loaded in memory, we need to refresh the newest index information in the
+     * start phase.
+     */
+    refreshSeriesIndexMapFromMManager();
+  }
+
+
   public void buildIndexForOneSeries(Path path, TVList tvList) {
-    tvList
-    CopyOnReadLinkedList<T>
+    // for every index of this path, submit a task to pool.
+    throw new RuntimeException();
+
+//    if
+//    CopyOnReadLinkedList<T>
 //    TODO
   }
 
 
-  public void endFlushMemTable() {
-    noMoreIOTask = true;
+  public void endFlushMemTable() throws ExecutionException, InterruptedException {
+    noMoreIndexFlushTask = true;
+    flushTaskFuture.get();
   }
+
 }

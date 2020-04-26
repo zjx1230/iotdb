@@ -175,6 +175,11 @@ public abstract class TVList {
     return minTime;
   }
 
+  public long getLastTime() {
+    long[] lastTimes = timestamps.get(timestamps.size() - 1);
+    return lastTimes[lastTimes.length - 1];
+  }
+
   public long getVersion() {
     return version;
   }

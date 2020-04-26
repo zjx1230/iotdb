@@ -49,7 +49,7 @@ public class MemTableFlushTask {
   private Future ioTaskFuture;
   private RestorableTsFileIOWriter writer;
   private final boolean enabledIndex;
-  private final IndexFileProcessor indexFileProcessor;
+  private IndexFileProcessor indexFileProcessor;
 
   private ConcurrentLinkedQueue ioTaskQueue = new ConcurrentLinkedQueue();
   private ConcurrentLinkedQueue encodingTaskQueue = new ConcurrentLinkedQueue();
@@ -67,8 +67,13 @@ public class MemTableFlushTask {
     this.storageGroup = storageGroup;
     this.encodingTaskFuture = subTaskPoolManager.submit(encodingTask);
     this.ioTaskFuture = subTaskPoolManager.submit(ioTask);
-    this.enabledIndex = IoTDBDescriptor.getInstance().getConfig().isEnableIndex();
-    this.indexFileProcessor = indexFileProcessor;
+    if (indexFileProcessor == null){
+      this.enabledIndex = false;
+    }else{
+      this.enabledIndex = IoTDBDescriptor.getInstance().getConfig().isEnableIndex();
+      this.indexFileProcessor = indexFileProcessor;
+    }
+
     logger.debug("flush task of Storage group {} memtable {} is created ",
         storageGroup, memTable.getVersion());
   }
@@ -80,8 +85,9 @@ public class MemTableFlushTask {
   public void syncFlushMemTable() throws ExecutionException, InterruptedException {
     long start = System.currentTimeMillis();
     long sortTime = 0;
-    if(enabledIndex)
+    if(enabledIndex) {
       indexFileProcessor.startFlushMemTable();
+    }
     for (String deviceId : memTable.getMemTableMap().keySet()) {
       encodingTaskQueue.add(new StartFlushGroupIOTask(deviceId));
       for (String measurementId : memTable.getMemTableMap().get(deviceId).keySet()) {
@@ -91,7 +97,9 @@ public class MemTableFlushTask {
         TVList tvList = series.getSortedTVList();
         sortTime += System.currentTimeMillis() - startTime;
         encodingTaskQueue.add(new Pair<>(tvList, desc));
-        indexFileProcessor.buildIndexForOneSeries(new Path(deviceId, measurementId), tvList);
+        if (enabledIndex) {
+          indexFileProcessor.buildIndexForOneSeries(new Path(deviceId, measurementId), tvList);
+        }
         // register active time series to the ActiveTimeSeriesCounter
         if (IoTDBDescriptor.getInstance().getConfig().isEnableParameterAdapter()) {
           ActiveTimeSeriesCounter.getInstance().offer(storageGroup, deviceId, measurementId);
@@ -117,7 +125,9 @@ public class MemTableFlushTask {
     }
 
     ioTaskFuture.get();
-    indexFileProcessor.endFlushMemTable();
+    if (enabledIndex){
+      indexFileProcessor.endFlushMemTable();
+    }
     try {
       writer.writeVersion(memTable.getVersion());
     } catch (IOException e) {

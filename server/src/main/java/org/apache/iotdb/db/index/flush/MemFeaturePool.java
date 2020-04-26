@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.iotdb.db.index;
+package org.apache.iotdb.db.index.flush;
 
 import java.util.ArrayDeque;
 import java.util.Deque;

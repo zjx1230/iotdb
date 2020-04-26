@@ -65,7 +65,7 @@ public class MemTableFlushTaskTest {
         MemTableTestUtils.measurementId0,
         MemTableTestUtils.dataType0);
     MemTableFlushTask memTableFlushTask = new MemTableFlushTask(memTable, writer, storageGroup,
-        getIndexFileProcessor());
+        null);
     assertTrue(writer
         .getVisibleMetadataList(MemTableTestUtils.deviceId0, MemTableTestUtils.measurementId0,
             MemTableTestUtils.dataType0).isEmpty());

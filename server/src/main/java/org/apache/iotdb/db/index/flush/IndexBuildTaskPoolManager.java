@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.iotdb.db.index.pool;
+package org.apache.iotdb.db.index.flush;
 
 import org.apache.iotdb.db.concurrent.IoTDBThreadPoolFactory;
 import org.apache.iotdb.db.concurrent.ThreadName;
@@ -32,7 +32,8 @@ public class IndexBuildTaskPoolManager extends AbstractPoolManager {
 
   private IndexBuildTaskPoolManager() {
     int threadCnt = IoTDBDescriptor.getInstance().getConfig().getConcurrentIndexBuildThread();
-    pool = IoTDBThreadPoolFactory.newFixedThreadPool(threadCnt, ThreadName.INDEX_SERVICE.getName());
+    // The additional one is for the IO flush task
+    pool = IoTDBThreadPoolFactory.newFixedThreadPool(threadCnt + 1, ThreadName.INDEX_SERVICE.getName());
   }
 
   public static IndexBuildTaskPoolManager getInstance() {

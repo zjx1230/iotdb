@@ -18,11 +18,12 @@
  */
 package org.apache.iotdb.db.index.common;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.iotdb.db.metadata.MetadataOperationType;
 
-public class IndexInfo {
+public class IndexInfo implements Cloneable{
 
   private Map<String, String> props;
   private long time;
@@ -104,5 +105,10 @@ public class IndexInfo {
   @Override
   public String toString() {
     return String.format("[type: %s, time: %d, props: %s]", indexType, time, props);
+  }
+
+  @Override
+  public Object clone() {
+    return new IndexInfo(indexType, time, new HashMap<>(props));
   }
 }

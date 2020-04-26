@@ -664,7 +664,7 @@ public class TsFileProcessor {
       indexFileProcessor = IndexManager.getInstance()
           .getProcessor(storageGroupName, sequence, timeRangeId,
               tsFileResource.getFile().getName());
-      logger.info("init a new index file processor {}", indexFileProcessor.getIndexFullPath());
+      logger.info("init a new index file processor {}", indexFileProcessor.getIndexFilePath());
     }
     return indexFileProcessor;
 
@@ -677,7 +677,7 @@ public class TsFileProcessor {
       MultiFileLogNodeManager.getInstance()
           .deleteNode(storageGroupName + "-" + tsFileResource.getFile().getName());
       if (IoTDBDescriptor.getInstance().getConfig().isEnableIndex()) {
-        IndexManager.getInstance().removeIndexProcessor(getIndexFileProcessor().getIndexFullPath());
+        IndexManager.getInstance().removeIndexProcessor(getIndexFileProcessor().getIndexFilePath());
       }
     } catch (IOException e) {
       throw new TsFileProcessorException(e);

@@ -19,6 +19,7 @@
 package org.apache.iotdb.db.conf;
 
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
+import org.apache.iotdb.db.engine.memtable.IWritableMemChunk;
 import org.apache.iotdb.db.engine.merge.selector.MergeFileStrategy;
 import org.apache.iotdb.db.exception.LoadConfigurationException;
 import org.apache.iotdb.db.metadata.MManager;
@@ -221,16 +222,16 @@ public class IoTDBConfig {
   private int concurrentIndexBuildThread = Runtime.getRuntime().availableProcessors();
 
   /**
-   * byte-size of first layer buffer in each index processor. For each index processor, all its
-   * indexes share a common buffer size. All input data lists will be preprocessed and temporarily
-   * stored in the common buffer, and the size of preprocessed data will be counted. If the buffer
-   * size of one processor reaches this threshold, existing data will be built into an index and
-   * flushed into the index file.<br>
+   * byte-size of memory buffer threshold in each index file processor. For each index processor,
+   * all indexes in one {@linkplain org.apache.iotdb.db.index.IndexFileProcessor IndexFileProcessor}
+   * share a total common buffer size. All input data lists will be preprocessed and the occupied
+   * memory will be counted. If the memory buffer size of one processor reaches this threshold,
+   * existing data will be built into indexes and flushed to the index file.<p>
    *
-   * As a result, a set of data may be divided into different parts and indexed separately. The
-   * results of each partial index should be mergeable.
+   * As a result, data in a {@linkplain IWritableMemChunk} may be divided into more than one part
+   * and indexed separately. The results of each partial index should be mergeable.
    */
-  private long indexBufferSize = 128 * 1024 * 1024;
+  private long indexBufferSize = 128 * 1024 * 1024L;
 
   /**
    * index directory.

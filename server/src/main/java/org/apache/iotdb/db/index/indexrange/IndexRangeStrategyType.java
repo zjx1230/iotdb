@@ -16,16 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.iotdb.db.index.common;
+package org.apache.iotdb.db.index.indexrange;
 
-import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
-import org.apache.iotdb.db.index.algorithm.NoIndex;
+import org.apache.iotdb.db.index.common.IndexManagerException;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
-import org.apache.iotdb.tsfile.read.common.Path;
 
-public enum IndexType {
+public enum IndexRangeStrategyType {
 
-  PAA, ELB, KV_INDEX;
+  NAIVE;
 
   /**
    * judge the index type.
@@ -33,16 +31,12 @@ public enum IndexType {
    * @param i an integer used to determine index type
    * @return index type
    */
-  public static IndexType deserialize(short i) {
+  public static IndexRangeStrategyType deserialize(short i) {
     switch (i) {
       case 0:
-        return PAA;
-      case 1:
-        return ELB;
-      case 2:
-        return KV_INDEX;
+        return NAIVE;
       default:
-        throw new NotImplementedException("Given index is not implemented");
+        throw new NotImplementedException("Given strategy is not implemented");
     }
   }
 
@@ -57,38 +51,30 @@ public enum IndexType {
    */
   public short serialize() {
     switch (this) {
-      case PAA:
+      case NAIVE:
         return 0;
-      case ELB:
-        return 1;
-      case KV_INDEX:
-        return 2;
       default:
-        throw new NotImplementedException("Given index is not implemented");
+        throw new NotImplementedException("Given strategy is not implemented");
     }
   }
 
-  public static IndexType getIndexType(String indexTypeString) throws IndexManagerException {
+  public static IndexRangeStrategyType getIndexStrategyType(String indexStrategyType) {
+    String normalized = indexStrategyType.toUpperCase();
+    switch (normalized) {
+      case "NAIVE":
+        return NAIVE;
+      default:
+        throw new NotImplementedException("unsupported index type:" + indexStrategyType);
+    }
+  }
+
+  public static IndexRangeStrategy getIndexStrategy(String indexTypeString) {
     String normalized = indexTypeString.toUpperCase();
     switch (normalized) {
-      case "PAA":
-        return PAA;
-      case "ELB":
-        return ELB;
-      case "KV_INDEX":
-        return KV_INDEX;
+      case "NAIVE":
+        return new NaiveIndexRangeStrategy();
       default:
-        throw new NotImplementedException("unsupported index type:" + indexTypeString);
-    }
-  }
-
-  public static IoTDBIndex constructIndex(IndexType indexType, IndexInfo indexInfo) {
-    switch (indexType) {
-      case PAA:
-      case ELB:
-      case KV_INDEX:
-      default:
-        return new NoIndex(indexInfo);
+        return new NaiveIndexRangeStrategy();
     }
   }
 }

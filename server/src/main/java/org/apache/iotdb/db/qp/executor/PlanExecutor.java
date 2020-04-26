@@ -933,7 +933,8 @@ public class PlanExecutor implements IPlanExecutor {
     Map<String, String> props = createIndexPlan.getProps();
     IndexInfo indexInfo = new IndexInfo(indexType, startTime, props);
     try {
-      mManager.createIndex(prefixPathStrs, indexInfo);
+      List<String> allFullPaths = mManager.createIndex(prefixPathStrs, indexInfo);
+//      indexManager.createIndex(allFullPaths, indexInfo);
     } catch (MetadataException e) {
       throw new IndexManagerException(e);
     }
@@ -946,7 +947,8 @@ public class PlanExecutor implements IPlanExecutor {
     paths.forEach(pre -> prefixPathStrs.add(pre.getFullPath()));
     IndexType indexType = dropIndexPlan.getIndexType();
     try {
-      mManager.dropIndex(prefixPathStrs, indexType);
+      List<String> allFullPaths = mManager.dropIndex(prefixPathStrs, indexType);
+//      indexManager.dropIndex(allFullPaths, indexType);
     } catch (MetadataException e) {
       throw new IndexManagerException(e);
     }

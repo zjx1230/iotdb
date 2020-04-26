@@ -825,4 +825,26 @@ public class MTree implements Serializable {
     LeafMNode node = (LeafMNode) getNodeByPath(fullPath);
     node.removeIndexInfo(indexType);
   }
+
+  /**
+   * Get all IndexInfos of leaf nodes in given storage group.
+   *
+   * @return Only path containing IndexInfo will be added and returned.
+   */
+  public Map<String, Map<IndexType, IndexInfo>> getAllIndexInfosInStorageGroup(
+      String storageGroup) throws MetadataException {
+    Map<String, Map<IndexType, IndexInfo>> res = new HashMap<>();
+    List<String> allTimeseriesInStorageGroup = null;
+
+    allTimeseriesInStorageGroup = getAllTimeseriesName(storageGroup);
+    for (String fullPath : allTimeseriesInStorageGroup) {
+      LeafMNode leafNode = (LeafMNode) getNodeByPath(fullPath);
+      Map<IndexType, IndexInfo> infos = leafNode.getIndexInfoMaps();
+      if (!infos.isEmpty()) {
+        res.put(fullPath, infos);
+      }
+    }
+
+    return res;
+  }
 }
