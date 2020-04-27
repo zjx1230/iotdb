@@ -1,64 +1,77 @@
 package org.apache.iotdb.db.index.preprocess;
 
+import org.apache.iotdb.db.utils.datastructure.TVList;
+
 /**
- * For all indexes, the raw input sequence has to be pre-processed before it's organized by indexes.
- * In general, index structure needn't maintain all of original data, but only pointers to the
- * original data (e.g. The start time and the end time can uniquely determine a time sequence).<p>
+ * COUNT_FIXED is very popular in the preprocessing phase. Most previous researches build indexes on
+ * sequences with the same length (a.k.a. COUNT_FIXED). The timestamp is very important for time
+ * series, although a rich line of researches ignore the time information directly.<p>
  *
- * {@linkplain TimeFixedPreprocessor} makes a time window slide over the time series by some rules and
- * obtain a list of subsequences. The time windows may be time-fixed (Euclidean distance),
- * count-fixed (Time Warping). It scans the sequence with a certain overlap step (a.k.a. the update
- * size).
+ * {@code WindowRange}: the number of subsequence.<p>
+ *
+ * {@code SlideStep}: the offset between two adjacent subsequences<p>
+ *
+ * {@code needFill}: inactive for COUNT_FIXED<p>
+ *
+ * Note that, in real scenarios, the time series could be variable-frequency, traditional distance
+ * metrics (e.g., Euclidean distance) may not make sense for COUNT_FIXED.
  */
-public class TimeFixedPreprocessor implements IPreprocess {
+public class TimeFixedPreprocessor extends BasicPreprocessor {
 
-
-  protected WindowWidthType widthType;
-  private int windowRange;
-  private int equispacedLength;
-  protected int slideStep;
-
-  protected final boolean storeBasicTriplet = true;
+  private final TVList srcData;
+  protected final boolean storeIdentifier;
+  protected final boolean storeAligned;
   /**
-   * the number of filled subsequences to be stored. If it is larger than the number of subsequence
-   * or equals to -1, all filled subsequences will be stored.
+   * -1 means not aligned.
    */
-  protected int filledSequencePastNum;
+  private final int equispacedLength;
+  private int currentIdx;
+  private int totalCount;
 
-
-  public TimeFixedPreprocessor(int windowRange, int equispacedLength, WindowWidthType widthType,
-      int slideStep, boolean ) {
-    this.windowRange = windowRange;
+  public TimeFixedPreprocessor(TVList srcData, int windowRange, int equispacedLength, int slideStep,
+      boolean storeAligned, boolean storeIdentifier) {
+    super(WindowType.COUNT_FIXED, windowRange, slideStep);
+    this.srcData = srcData;
+    this.storeIdentifier = storeIdentifier;
+    this.storeAligned = storeAligned;
     this.equispacedLength = equispacedLength;
-    this.widthType = widthType;
-    this.slideStep = slideStep;
-    this.filledSequencePastNum = filledSequencePastNum;
+    this.currentIdx = -1;
+    initTimeFixedParams();
   }
 
-  public TimeFixedPreprocessor(int subSeqLength) {
-    this(subSeqLength, -1, WindowWidthType.COUNT_FIXED, 1, 1);
+  private void initTimeFixedParams() {
+    long startTime = srcData.getMinTime();
+    long endTime = srcData.getLastTime();
+    this.totalCount = (int) ((endTime - startTime - this.windowRange) / slideStep);
+    if (storeIdentifier)
+  }
+
+  public TimeFixedPreprocessor(TVList srcData, int subSeqLength, int equispacedLength,
+      int slideStep) {
+    this(srcData, subSeqLength, slideStep, equispacedLength, true, true);
+  }
+
+  public TimeFixedPreprocessor(TVList srcData, int subSeqLength, int equispacedLength) {
+    this(srcData, subSeqLength, 1, equispacedLength, true, true);
   }
 
   @Override
   public boolean hasNext() {
-    return false;
+    return currentIdx + 1 < totalCount;
   }
 
   @Override
   public void processNext() {
-
+    currentIdx++;
   }
 
-  /**
-   * The time window type: time-fixed or count-fixed. It determines the meanings of following
-   * fields: {@code windowRange}, {@code windowRange}, {@code slideStep}.<p>
-   *
-   * COUNT_FIXED:
-   * TIME_FIXED:
-   *
-   * <p>See also: Kanat et. al. General Incremental Sliding-Window Aggregation. VLDB 2015.
-   */
-  private enum WindowWidthType {
-    TIME_FIXED, COUNT_FIXED;
+  @Override
+  public Object getPastN_L1_Identifiers(int pastN) {
+    return null;
+  }
+
+  @Override
+  public Object getPastN_L2_AlignedSequences(int pastN) {
+    return null;
   }
 }

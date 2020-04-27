@@ -1,44 +1,42 @@
 package org.apache.iotdb.db.index.preprocess;
 
 /**
- * COUNT_FIXED is very popular in the preprocessing phase. Most index-related researches build thier
- * indexes on sequences with the same length. Although many studies is concerned with time series as
- * they claimed, most of them ignore the time dimension directly, and the default sequence is fixed
- * frequency (i.e. equally spaced). In a real scene, the sequence may be of indefinite frequency,
- * but if the original COUNT_FIXED is still used, the distance measurement (e.g., Euclidean
- * distance) cannot be made sense.  In other words, the time of subsequences sliced in COUNT_FIXED
- * mode is likely to be misaligned. WindowRange: number of data points per subsequence SlideStep:
- * offset between two adjacent subsequences.
+ * COUNT_FIXED is very popular in the preprocessing phase. Most previous researches build indexes on
+ * sequences with the same length (a.k.a. COUNT_FIXED). The timestamp is very important for time
+ * series, although a rich line of researches ignore the time information directly.<p>
  *
- * NeedFill: the default is false because COUNT_FIXED does not need to perform a fill operation.
+ * {@code WindowRange}: the number of subsequence.<p>
+ *
+ * {@code SlideStep}: the offset between two adjacent subsequences<p>
+ *
+ * {@code needFill}: inactive for COUNT_FIXED<p>
+ *
+ * Note that, in real scenarios, the time series could be variable-frequency, traditional distance
+ * metrics (e.g., Euclidean distance) may not make sense for COUNT_FIXED.
  */
-public class CountFixedPreprocessor implements IPreprocess {
+public class CountFixedPreprocessor extends BasicPreprocessor {
 
-
-  protected WindowWidthType widthType;
-  private int windowRange;
-  private int equispacedLength;
-  protected int slideStep;
-
-  protected final boolean storeBasicTriplet = true;
   /**
-   * the number of filled subsequences to be stored. If it is larger than the number of subsequence
-   * or equals to -1, all filled subsequences will be stored.
+   * We don't put these two fields into {@linkplain BasicPreprocessor}, because we think that
+   * although the three-layer features are pre-designed, {@linkplain BasicPreprocessor} doesn't
+   * maintain any fields about them. It's weird to control some fields you haven't even seen.
    */
-  protected int filledSequencePastNum;
+  protected final boolean storeIdentifier;
+  protected final boolean storeAligned;
 
+  public CountFixedPreprocessor(int windowRange, int slideStep, boolean storeIdentifier,
+      boolean storeAligned) {
+    super(WindowType.COUNT_FIXED, windowRange, slideStep);
+    this.storeIdentifier = storeIdentifier;
+    this.storeAligned = storeAligned;
+  }
 
-  public CountFixedPreprocessor(int windowRange, int equispacedLength, WindowWidthType widthType,
-      int slideStep, boolean) {
-    this.windowRange = windowRange;
-    this.equispacedLength = equispacedLength;
-    this.widthType = widthType;
-    this.slideStep = slideStep;
-    this.filledSequencePastNum = filledSequencePastNum;
+  public CountFixedPreprocessor(int subSeqLength, int slideStep) {
+    this(subSeqLength, slideStep, true, true);
   }
 
   public CountFixedPreprocessor(int subSeqLength) {
-    this(subSeqLength, -1, WindowWidthType.COUNT_FIXED, 1, 1);
+    this(subSeqLength, 1, true, true);
   }
 
   @Override
@@ -51,15 +49,13 @@ public class CountFixedPreprocessor implements IPreprocess {
 
   }
 
-  /**
-   * The time window type: time-fixed or count-fixed. It determines the meanings of following
-   * fields: {@code windowRange}, {@code windowRange}, {@code slideStep}.<p>
-   *
-   * COUNT_FIXED: TIME_FIXED:
-   *
-   * <p>See also: Kanat et. al. General Incremental Sliding-Window Aggregation. VLDB 2015.
-   */
-  private enum WindowWidthType {
-    TIME_FIXED, COUNT_FIXED;
+  @Override
+  public Object getPastN_L1_Identifiers(int pastN) {
+    return null;
+  }
+
+  @Override
+  public Object getPastN_L2_AlignedSequences(int pastN) {
+    return null;
   }
 }
