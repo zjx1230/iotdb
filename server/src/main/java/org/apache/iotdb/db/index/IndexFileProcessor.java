@@ -64,7 +64,6 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
 //  private static long firstLayerBufferSize = ;
 
   private Map<String, Map<IndexType, IoTDBIndex>> allPathsIndexMap;
-  private ByteBuffer processorBuffer = ByteBuffer.allocate((int) firstLayerBufferSize);
 
   private ILogWriter currentFileWriter;
 
