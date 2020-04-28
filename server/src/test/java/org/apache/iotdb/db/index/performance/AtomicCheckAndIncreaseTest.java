@@ -5,7 +5,13 @@ import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.iotdb.db.index.IndexFileProcessor;
+import org.junit.Test;
 
+/**
+ * check the correctness of flushRunTask in {@linkplain IndexFileProcessor} in parallel
+ *
+ */
 public class AtomicCheckAndIncreaseTest {
 
   final Object waitingSymbol = new Object();
@@ -108,8 +114,8 @@ public class AtomicCheckAndIncreaseTest {
 
   }
 
-
-  public static void main(String[] args) {
+  @Test
+  public void testFlushRunTask() {
     AtomicCheckAndIncreaseTest test = new AtomicCheckAndIncreaseTest(100);
     ExecutorService executor = Executors.newCachedThreadPool();
     executor.submit(test.flushRunTask);

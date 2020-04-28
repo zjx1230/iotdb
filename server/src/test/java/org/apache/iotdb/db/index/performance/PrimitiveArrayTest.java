@@ -1,7 +1,9 @@
 package org.apache.iotdb.db.index.performance;//
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -133,7 +135,7 @@ public class PrimitiveArrayTest {
     }
   }
 
-  
+
   public static class NativeListInstance implements Runnable {
 
     public int totalWriteSize;
@@ -146,7 +148,6 @@ public class PrimitiveArrayTest {
     }
 
 
-
     @Override
     public void run() {
       while (true) {
@@ -155,8 +156,69 @@ public class PrimitiveArrayTest {
     }
   }
 
-  public static void main(String[] args) {
+  public interface CreateFunction {
 
+    CreateSelf apply(String params);
+  }
+
+  static abstract class CreateSelf {
+
+//    public abstract CreateFunction getCreateFunction();
+
+    public abstract String print();
+  }
+
+  static class Sub1 extends CreateSelf {
+    static {
+      Manager.getInstance().registerIndex("Sub1", Sub1::new);
+    }
+    private final String p;
+
+    public Sub1(String p) {
+      super();
+      this.p = p;
+    }
+
+    @Override
+    public String print() {
+      return p;
+    }
+  }
+
+  static class Manager {
+
+    private Map<String, CreateFunction> maps = new HashMap<>();
+
+    public void registerIndex(String s, CreateFunction c) {
+      if (maps == null || maps.containsKey(s)) {
+        throw new Error("???");
+      }
+      maps.put(s, c);
+    }
+
+    ;
+
+    public static Manager getInstance() {
+      return Manager.InstanceHolder.instance;
+    }
+
+    private static class InstanceHolder {
+
+      private InstanceHolder() {
+      }
+
+      private static Manager instance = new Manager();
+    }
+
+  }
+
+
+  public static void main(String[] args) {
+    System.out.println(Sub1.class);
+    Sub1 aa = new Sub1("");
+    System.out.println(Manager.getInstance().maps);
+    CreateSelf a = Manager.getInstance().maps.get("Sub1").apply("asd");
+    System.out.println(a.print());
 //    a.putFloat(1, 1);
   }
 

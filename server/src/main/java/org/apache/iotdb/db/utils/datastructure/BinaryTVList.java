@@ -38,7 +38,7 @@ public class BinaryTVList extends TVList {
   private Binary pivotValue;
 
   BinaryTVList() {
-    super();
+    super(TSDataType.TEXT);
     values = new ArrayList<>();
   }
 

@@ -1,5 +1,6 @@
 package org.apache.iotdb.db.index.preprocess;
 
+import java.util.List;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 
 /**
@@ -30,20 +31,21 @@ public abstract class BasicPreprocessor {
   /**
    * the type of sliding window, see {@linkplain WindowType}
    */
-  protected WindowType widthType;
+  protected WindowType windowType;
   /**
    * the window range, it depends on the window type.
    */
   protected int windowRange;
   /**
-   * the slide step (or called the update size), it depends on the window type.
+   * the the offset between two adjacent subsequences (a.k.a. the update size), depending on the the
+   * window type.
    */
   protected int slideStep;
 
 
   public BasicPreprocessor(WindowType widthType, int windowRange, int slideStep) {
     this.windowRange = windowRange;
-    this.widthType = widthType;
+    this.windowType = widthType;
     this.slideStep = slideStep;
   }
 
@@ -61,48 +63,63 @@ public abstract class BasicPreprocessor {
   public abstract void processNext();
 
   /**
-   * get the past N of L1 identifiers.
+   * get the latest N L1-identifiers, including the current one. The caller needs to release them
+   * after use.
    */
-  public abstract Object getPastN_L1_Identifiers(int pastN);
+  public abstract List<Object> getLatestN_L1_Identifiers(int latestN);
 
   /**
-   * get the last L1.
+   * get current L1 identifier. The caller needs to release them after use.
    */
-  public Object getLast_L1_Identifier() {
-    return getPastN_L1_Identifiers(1);
-  }
-
-
-  /**
-   * get the past N of L2 aligned sequences.
-   */
-  public abstract Object getPastN_L2_AlignedSequences(int pastN);
-
-  /**
-   * get the last L2 aligned sequences.
-   */
-  public Object getLast_L2_AlignedSequence() {
-    return getPastN_L2_AlignedSequences(1);
+  public Object getCurrent_L1_Identifier() {
+    List<Object> res = getLatestN_L1_Identifiers(1);
+    return res.isEmpty() ? null : res.get(0);
   }
 
   /**
-   * get the past N of L3 Features.
+   * get the latest N of L2 aligned sequences, including the current one. The caller needs to
+   * release them after use.
+   */
+  public abstract List<Object> getLatestN_L2_AlignedSequences(int latestN);
+
+  /**
+   * get current L2 aligned sequences. The caller needs to release them after use.
+   */
+  public Object getCurrent_L2_AlignedSequence() {
+    List<Object> res = getLatestN_L2_AlignedSequences(1);
+    return res.isEmpty() ? null : res.get(0);
+  }
+
+  /**
+   * get the latest N of L3 Features.
    *
    * @throws NotImplementedException Not all preprocessors support L3 features.
    */
-  public Object getPastN_L3_Features(int pastN) {
+  public List<Object> getLatestN_L3_Features(int latestN) {
     throw new NotImplementedException("This preprocessor doesn't support L3 feature");
   }
 
   /**
-   * get the last L3 Features.
+   * get the current L3 Features.
    *
    * @throws NotImplementedException Not all preprocessors support L3 features.
    */
-  public Object getLast_L3_Feature() {
-    return getPastN_L3_Features(1);
+  public Object getCurrent_L3_Feature() {
+    List<Object> res = getLatestN_L3_Features(1);
+    return res.isEmpty() ? null : res.get(0);
   }
 
+  public WindowType getWindowType() {
+    return windowType;
+  }
+
+  public int getWindowRange() {
+    return windowRange;
+  }
+
+  public int getSlideStep() {
+    return slideStep;
+  }
 
   /**
    * The time window type: time-fixed or count-fixed. It determines the meanings of following
@@ -127,4 +144,6 @@ public abstract class BasicPreprocessor {
       }
     }
   }
+
+  public abstract void clear();
 }

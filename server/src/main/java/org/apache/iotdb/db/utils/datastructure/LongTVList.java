@@ -37,7 +37,7 @@ public class LongTVList extends TVList {
   private long pivotValue;
 
   LongTVList() {
-    super();
+    super(TSDataType.INT64);
     values = new ArrayList<>();
   }
 

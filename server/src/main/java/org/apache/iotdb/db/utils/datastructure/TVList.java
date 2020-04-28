@@ -36,6 +36,7 @@ public abstract class TVList {
   private static final String ERR_DATATYPE_NOT_CONSISTENT = "DataType not consistent";
 
   protected static final int SMALL_ARRAY_LENGTH = 32;
+  private final TSDataType dataType;
 
   protected List<long[]> timestamps;
   protected int size;
@@ -54,7 +55,8 @@ public abstract class TVList {
   protected long minTime;
 
 
-  public TVList() {
+  public TVList(TSDataType dataType) {
+    this.dataType = dataType;
     timestamps = new ArrayList<>();
     size = 0;
     minTime = Long.MIN_VALUE;
@@ -176,8 +178,7 @@ public abstract class TVList {
   }
 
   public long getLastTime() {
-    long[] lastTimes = timestamps.get(timestamps.size() - 1);
-    return lastTimes[lastTimes.length - 1];
+    return getTime(size - 1);
   }
 
   public long getVersion() {
@@ -497,6 +498,8 @@ public abstract class TVList {
   public IPointReader getIterator(int floatPrecision, TSEncoding encoding) {
     return new Ite(floatPrecision, encoding);
   }
+
+  public TSDataType getDataType(){return this.dataType;};
 
   private class Ite implements IPointReader {
 

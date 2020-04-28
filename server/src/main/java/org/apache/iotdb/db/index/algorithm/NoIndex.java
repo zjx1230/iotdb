@@ -42,4 +42,9 @@ public class NoIndex extends IoTDBIndex {
       List<Pair<Long, Long>> nonUpdateIntervals, int limitSize) throws IndexManagerException {
     return null;
   }
+
+  @Override
+  public void delete() {
+
+  }
 }
