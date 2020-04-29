@@ -17,13 +17,13 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
  */
 public class TimeFixedPreprocessor extends BasicPreprocessor {
 
-  private final TVList srcData;
+  protected final TVList srcData;
   protected final boolean storeIdentifier;
   protected final boolean storeAligned;
   /**
    * The dimension of the aligned subsequence. -1 means not aligned.
    */
-  private final int alignedDim;
+  protected final int alignedDim;
   /**
    * how many subsequences we have pre-processed
    */
@@ -38,7 +38,7 @@ public class TimeFixedPreprocessor extends BasicPreprocessor {
   private long currentEndTime;
   private ArrayList<TVList> alignedList;
   private TVList currentAligned;
-  private int intervalWidth;
+  protected int intervalWidth;
 
 
   /**
@@ -113,7 +113,10 @@ public class TimeFixedPreprocessor extends BasicPreprocessor {
       identifierList.putLong(alignedDim);
     }
     if (alignedDim != -1) {
-      scanIdx = findClosestIdxToTimestamp(scanIdx, currentStartTime);
+      scanIdx = locatedIdxToTimestamp(scanIdx, currentStartTime);
+      if (!storeAligned && this.currentAligned != null) {
+        TVListAllocator.getInstance().release(currentAligned);
+      }
       this.currentAligned = createAlignedSequence(currentStartTime, scanIdx);
       if (storeAligned) {
         alignedList.add(currentAligned);
@@ -122,14 +125,17 @@ public class TimeFixedPreprocessor extends BasicPreprocessor {
   }
 
   /**
-   * Start scanning from {@code curIdx}, find the {@code id} of which timestamp closest to the
-   * target timestamp
+   * Move {@code curIdx} to a right position from which to start scanning. Current implementation is
+   * to find the timestamp closest to {@code targetTimestamp}.<p>
+   *
+   * For easy expansion, users could just override this function and {@linkplain
+   * #createAlignedSequence(long, int)}.
    *
    * @param curIdx start idx
    * @param targetTimestamp the target
    * @return the closest idx
    */
-  private int findClosestIdxToTimestamp(int curIdx, long targetTimestamp) {
+  protected int locatedIdxToTimestamp(int curIdx, long targetTimestamp) {
     long curDelta = Math.abs(srcData.getTime(curIdx) - targetTimestamp);
     long nextDelta;
     while (curIdx < srcData.size() - 1 && curDelta >
@@ -146,10 +152,10 @@ public class TimeFixedPreprocessor extends BasicPreprocessor {
    * @param startIdx the idx from which we start to search the closest timestamp.
    * @param leftBorderTimestamp the left border of sequence to be aligned.
    */
-  private TVList createAlignedSequence(long leftBorderTimestamp, int startIdx) {
+  protected TVList createAlignedSequence(long leftBorderTimestamp, int startIdx) {
     TVList seq = TVListAllocator.getInstance().allocate(srcData.getDataType());
     for (int i = 0; i < alignedDim; i++) {
-      startIdx = findClosestIdxToTimestamp(startIdx, leftBorderTimestamp);
+      startIdx = locatedIdxToTimestamp(startIdx, leftBorderTimestamp);
       switch (srcData.getDataType()) {
         case INT32:
           seq.putInt(leftBorderTimestamp, srcData.getInt(startIdx));
@@ -185,8 +191,9 @@ public class TimeFixedPreprocessor extends BasicPreprocessor {
       }
       return res;
     }
-    long startTimePastN = currentStartTime - (latestN - 1) * slideStep;
-    while (startTimePastN >= srcData.getTime(0) && startTimePastN <= currentStartTime) {
+    long startTimePastN = Math.max(currentStartTime - (latestN - 1) * slideStep,
+        srcData.getTime(0));
+    while (startTimePastN <= currentStartTime) {
       res.add(new Identifier(startTimePastN, startTimePastN + windowRange,
           alignedDim));
       startTimePastN += slideStep;
@@ -209,12 +216,13 @@ public class TimeFixedPreprocessor extends BasicPreprocessor {
       return res;
     }
     int startIdx = 0;
-    long startTimePastN = currentStartTime - (latestN - 1) * slideStep;
-    while (startTimePastN >= srcData.getTime(0) && startTimePastN <= currentStartTime) {
+    long startTimePastN = Math.max(currentStartTime - (latestN - 1) * slideStep,
+        srcData.getTime(0));
+    while (startTimePastN <= currentStartTime) {
       if (startTimePastN == currentStartTime) {
-        res.add(currentAligned);
+        res.add(currentAligned.clone());
       } else {
-        startIdx = findClosestIdxToTimestamp(startIdx, startTimePastN);
+        startIdx = locatedIdxToTimestamp(startIdx, startTimePastN);
         TVList seq = createAlignedSequence(startTimePastN, startIdx);
         res.add(seq);
       }
@@ -225,9 +233,14 @@ public class TimeFixedPreprocessor extends BasicPreprocessor {
 
   @Override
   public void clear() {
-    if (alignedDim != -1 && storeAligned) {
+    if (currentAligned != null) {
+      TVListAllocator.getInstance().release(currentAligned);
+    }
+    if (alignedList != null) {
       alignedList.forEach(tv -> TVListAllocator.getInstance().release(tv));
-      //TODO: maybe we need clean anything else
+    }
+    if (identifierList != null) {
+      identifierList.clearAndRelease();
     }
   }
 }

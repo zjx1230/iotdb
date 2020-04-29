@@ -25,17 +25,17 @@ import java.util.List;
 import org.apache.iotdb.db.rescon.PrimitiveArrayPool;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 
-public class LongPrimitiveList extends PrimitiveList {
+public class IntPrimitiveList extends PrimitiveList {
 
-  private List<long[]> values;
+  private List<int[]> values;
 
-  LongPrimitiveList() {
-    super(TSDataType.INT64);
+  IntPrimitiveList() {
+    super(TSDataType.INT32);
     values = new ArrayList<>();
   }
 
   @Override
-  public void putLong(long value) {
+  public void putInt(int value) {
     checkExpansion();
     int arrayIndex = size / ARRAY_SIZE;
     int elementIndex = size % ARRAY_SIZE;
@@ -44,7 +44,7 @@ public class LongPrimitiveList extends PrimitiveList {
   }
 
   @Override
-  public long getLong(int index) {
+  public int getInt(int index) {
     if (index >= size) {
       throw new ArrayIndexOutOfBoundsException(index);
     }
@@ -56,7 +56,7 @@ public class LongPrimitiveList extends PrimitiveList {
   @Override
   void clearAndReleaseValues() {
     if (values != null) {
-      for (long[] dataArray : values) {
+      for (int[] dataArray : values) {
         PrimitiveArrayPool.getInstance().release(dataArray);
       }
       values.clear();
@@ -65,23 +65,23 @@ public class LongPrimitiveList extends PrimitiveList {
 
   @Override
   protected void expandValues() {
-    values.add((long[]) PrimitiveArrayPool
-        .getInstance().getPrimitiveDataListByType(TSDataType.INT64));
+    values.add((int[]) PrimitiveArrayPool
+        .getInstance().getPrimitiveDataListByType(TSDataType.INT32));
     capacity += ARRAY_SIZE;
   }
 
   @Override
-  public LongPrimitiveList clone() {
-    LongPrimitiveList cloneList = new LongPrimitiveList();
+  public IntPrimitiveList clone() {
+    IntPrimitiveList cloneList = new IntPrimitiveList();
     cloneAs(cloneList);
-    for (long[] valueArray : values) {
+    for (int[] valueArray : values) {
       cloneList.values.add(cloneValue(valueArray));
     }
     return cloneList;
   }
 
-  private long[] cloneValue(long[] array) {
-    long[] cloneArray = new long[array.length];
+  private int[] cloneValue(int[] array) {
+    int[] cloneArray = new int[array.length];
     System.arraycopy(array, 0, cloneArray, 0, array.length);
     return cloneArray;
   }

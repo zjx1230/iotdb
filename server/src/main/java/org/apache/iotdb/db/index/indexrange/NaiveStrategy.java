@@ -2,14 +2,16 @@ package org.apache.iotdb.db.index.indexrange;
 
 import org.apache.iotdb.db.utils.datastructure.TVList;
 
-public class NaiveIndexRangeStrategy extends IndexRangeStrategy {
+/**
+ * As long as {@code configStartTime} overlaps over the {@code ratio} (default 0.8) with the time
+ * range of {@code sortedTVList}, NaiveIndexRangeStrategy will build the index.
+ */
+public class NaiveStrategy extends IndexRangeStrategy {
 
-  /**
-   * NaiveIndexRangeStrategy will build index regardless the timestamp and value distribution.
-   */
   @Override
-  public boolean needBuildIndex(TVList sortedTVList, long buildStartTime) {
-    return true;
+  public boolean needBuildIndex(TVList sortedTVList, long configStartTime) {
+    return (float) (sortedTVList.getLastTime() - configStartTime) / (sortedTVList.getLastTime()
+        - sortedTVList.getMinTime()) > 0.8;
   }
 
   @Override

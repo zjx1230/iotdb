@@ -21,6 +21,7 @@ package org.apache.iotdb.db.utils.datastructure.primitive;
 
 import static org.apache.iotdb.db.rescon.PrimitiveArrayPool.ARRAY_SIZE;
 
+import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 
 public abstract class PrimitiveList {
@@ -30,10 +31,14 @@ public abstract class PrimitiveList {
   protected static final int SMALL_ARRAY_LENGTH = 32;
 
   protected int size;
+  protected final TSDataType tsDataType;
+  protected int capacity;
 
 
-  public PrimitiveList() {
+  public PrimitiveList(TSDataType tsDataType) {
     size = 0;
+    capacity = 0;
+    this.tsDataType = tsDataType;
   }
 
   public int size() {
@@ -77,18 +82,20 @@ public abstract class PrimitiveList {
 
   public abstract PrimitiveList clone();
 
-  protected abstract void release();
-
   public void delete(long upperBound) {
     throw new UnsupportedOperationException("PrimitiveList not support delete");
   }
 
-  public void clear() {
+  public void clearButNotRelease() {
     size = 0;
-    clearValue();
   }
 
-  abstract void clearValue();
+  public void clearAndRelease() {
+    size = 0;
+    clearAndReleaseValues();
+  }
+
+  abstract void clearAndReleaseValues();
 
   protected void cloneAs(PrimitiveList cloneList) {
     cloneList.size = size;
@@ -96,7 +103,7 @@ public abstract class PrimitiveList {
 
 
   protected void checkExpansion() {
-    if ((size % ARRAY_SIZE) == 0) {
+    if (size == capacity) {
       expandValues();
     }
   }
@@ -105,13 +112,14 @@ public abstract class PrimitiveList {
     switch (dataType) {
       case INT64:
         return new LongPrimitiveList();
+      case INT32:
+        return new IntPrimitiveList();
       case TEXT:
       case FLOAT:
-      case INT32:
       case DOUBLE:
       case BOOLEAN:
       default:
-        return null;
+        throw new NotImplementedException("unsupported type: " + dataType);
     }
   }
 }

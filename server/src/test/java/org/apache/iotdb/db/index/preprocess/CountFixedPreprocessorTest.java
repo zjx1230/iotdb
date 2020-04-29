@@ -14,18 +14,14 @@ public class CountFixedPreprocessorTest {
   @Test
   public void testCreateAlignedSequence() throws IOException {
     String[] groundTruthL1 = new String[]{
-        "[0-20,4]",
-        "[5-25,4]",
-        "[10-30,4]",
-        "[15-35,4]",
-        "[20-40,4]"
+        "[0-4,5]",
+        "[2-6,5]",
+        "[4-8,5]",
     };
     String[] groundTruthL2 = new String[]{
-        "{[0,0],[5,6],[10,9],[15,15],}",
-        "{[5,6],[10,9],[15,15],[20,21],}",
-        "{[10,9],[15,15],[20,21],[25,24],}",
-        "{[15,15],[20,21],[25,24],[30,30],}",
-        "{[20,21],[25,24],[30,30],[35,36],}"
+        "{[0,0],[1,1],[2,2],[3,3],[4,4],}",
+        "{[2,2],[3,3],[4,4],[5,5],[6,6],}",
+        "{[4,4],[5,5],[6,6],[7,7],[8,8],}",
     };
     TVList srcData = TVListAllocator.getInstance().allocate(TSDataType.INT32);
     for (int i = 0; i < 9; i++) {
@@ -36,43 +32,45 @@ public class CountFixedPreprocessorTest {
     CountFixedPreprocessor countFixed = new CountFixedPreprocessor(srcData, windowRange,
         slideStep, true, true);
     assertL1AndL2(countFixed, groundTruthL1, groundTruthL2);
-    CountFixedPreprocessor countFixedWithoutStored = new CountFixedPreprocessor(srcData,
-        windowRange, slideStep, false, false);
-    assertL1AndL2(countFixedWithoutStored, groundTruthL1, groundTruthL2);
     countFixed.clear();
-    countFixedWithoutStored.clear();
+
+    System.out.println();
+//    CountFixedPreprocessor countFixedWithoutStored = new CountFixedPreprocessor(srcData,
+//        windowRange, slideStep, false, false);
+//    assertL1AndL2(countFixedWithoutStored, groundTruthL1, groundTruthL2);
+//    countFixedWithoutStored.clear();
   }
 
   private void assertL1AndL2(CountFixedPreprocessor countFixed, String[] groundTruthL1,
       String[] groundTruthL2) throws IOException {
     int idx = 0;
     while (countFixed.hasNext()) {
+//      System.out.println("idx:" + idx);
       countFixed.processNext();
       //L1 latest
       Identifier identifierL1 = (Identifier) countFixed.getCurrent_L1_Identifier();
-      System.out.println(identifierL1);
-//      Assert.assertEquals(groundTruthL1[idx], identifierL1.toString());
-      //L1 latest N
-      List<Object> L1s = countFixed.getLatestN_L1_Identifiers(idx + 1);
-      for (int i = 0; i < L1s.size(); i++) {
-        System.out.println(L1s.get(i).toString());
-//        Assert.assertEquals(groundTruthL1[i], L1s.get(i).toString());
+//      System.out.println(identifierL1);
+      Assert.assertEquals(groundTruthL1[idx], identifierL1.toString());
+      //L1 latest N, get data more than processed, it's expected to return only the processed data.
+      List<Object> L1s = countFixed.getLatestN_L1_Identifiers(idx + 5);
+      for (int i = 0; i <= idx; i++) {
+//        System.out.println(L1s.get(i).toString());
+        Assert.assertEquals(groundTruthL1[i], L1s.get(i).toString());
       }
 
       //L2 latest
-      int startIdxL2 = (int) countFixed.getCurrent_L2_AlignedSequence();
-      String l2Lastest = TestUtils.stringFromAlignedSequenceByCountFixed(countFixed.getSrcData(),
-          startIdxL2, countFixed.windowRange);
-      System.out.println(l2Lastest);
-//      Assert.assertEquals(groundTruthL2[idx], l2Lastest);
+      TVList seqL2 = (TVList) countFixed.getCurrent_L2_AlignedSequence();
+//      System.out.println(TestUtils.tvListToString(seqL2));
+      Assert.assertEquals(groundTruthL2[idx], TestUtils.tvListToString(seqL2));
       //L2 latest N
-      List<Object> L2s = countFixed.getLatestN_L2_AlignedSequences(idx + 1);
-      for (int i = 0; i < L2s.size(); i++) {
-        String l2pastI = TestUtils.stringFromAlignedSequenceByCountFixed(countFixed.getSrcData(),
-            (int) L2s.get(i), countFixed.windowRange);
-        System.out.println(l2pastI);
-//        Assert.assertEquals(groundTruthL2[i], l2pastI);
+      List<Object> L2s = countFixed.getLatestN_L2_AlignedSequences(idx + 5);
+      for (int i = 0; i <= idx; i++) {
+//        System.out.println(TestUtils.tvListToString((TVList) L2s.get(i)));
+        Assert.assertEquals(groundTruthL2[i], TestUtils.tvListToString((TVList) L2s.get(i)));
       }
+      //release
+      TVListAllocator.getInstance().release(seqL2);
+      L2s.forEach(p -> TVListAllocator.getInstance().release((TVList) p));
       idx++;
     }
   }

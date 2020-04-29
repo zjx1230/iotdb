@@ -10,9 +10,9 @@ public abstract class IndexRangeStrategy {
    * considering the time and value distribution.
    *
    * @param sortedTVList the sorted TVList to build the index
-   * @param buildStartTime the start time set by config.
+   * @param configStartTime the start time set in the configuration.
    */
-  public abstract boolean needBuildIndex(TVList sortedTVList, long buildStartTime);
+  public abstract boolean needBuildIndex(TVList sortedTVList, long configStartTime);
 
   public abstract long[] calculateIndexRange(TVList sortedTVList, long buildStartTime);
 

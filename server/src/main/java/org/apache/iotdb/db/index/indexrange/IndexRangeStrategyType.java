@@ -18,7 +18,6 @@
  */
 package org.apache.iotdb.db.index.indexrange;
 
-import org.apache.iotdb.db.index.common.IndexManagerException;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 
 public enum IndexRangeStrategyType {
@@ -72,9 +71,9 @@ public enum IndexRangeStrategyType {
     String normalized = indexTypeString.toUpperCase();
     switch (normalized) {
       case "NAIVE":
-        return new NaiveIndexRangeStrategy();
+        return new NaiveStrategy();
       default:
-        return new NaiveIndexRangeStrategy();
+        return new NaiveStrategy();
     }
   }
 }

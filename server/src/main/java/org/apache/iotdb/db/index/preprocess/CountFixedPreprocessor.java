@@ -2,6 +2,7 @@ package org.apache.iotdb.db.index.preprocess;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
@@ -23,18 +24,18 @@ public class CountFixedPreprocessor extends BasicPreprocessor {
   /**
    * how many sliding windows we have already pre-processed
    */
-  private int currentProcessedIdx;
+  protected int currentProcessedIdx;
   /**
    * the amount of sliding windows in srcData
    */
-  private int totalProcessedCount;
+  protected int totalProcessedCount;
 
   private PrimitiveList identifierList;
   private PrimitiveList alignedList;
   /**
    * the position in srcData of the first data point of the current sliding window
    */
-  private int currentStartTimeIdx;
+  protected int currentStartTimeIdx;
   private long currentStartTime;
   private long currentEndTime;
 
@@ -67,15 +68,13 @@ public class CountFixedPreprocessor extends BasicPreprocessor {
   private void initTimeFixedParams() {
     currentProcessedIdx = -1;
     this.totalProcessedCount = (srcData.size() - this.windowRange) / slideStep + 1;
-    // init the L1 identifier
-    long startTime = srcData.getTime(0);
-    long endTime = srcData.getLastTime();
-
     currentStartTimeIdx = -slideStep;
+
+    // init the L1 identifier
     if (storeIdentifier) {
       this.identifierList = PrimitiveList.newList(TSDataType.INT64);
     }
-    //COUNT_FIXED don't store L2 into TVList
+    //init L2
     if (storeAligned) {
       this.alignedList = PrimitiveList.newList(TSDataType.INT32);
     }
@@ -91,7 +90,7 @@ public class CountFixedPreprocessor extends BasicPreprocessor {
     currentProcessedIdx++;
     currentStartTimeIdx += slideStep;
     currentStartTime = srcData.getTime(currentStartTimeIdx);
-    currentEndTime = srcData.getTime(currentStartTimeIdx + windowRange);
+    currentEndTime = srcData.getTime(currentStartTimeIdx + windowRange - 1);
 
     // calculate the newest aligned sequence
     if (storeIdentifier) {
@@ -101,7 +100,7 @@ public class CountFixedPreprocessor extends BasicPreprocessor {
       identifierList.putLong(windowRange);
     }
     if (storeAligned) {
-      alignedList.putLong(currentStartTimeIdx);
+      alignedList.putInt(currentStartTimeIdx);
     }
   }
 
@@ -119,10 +118,10 @@ public class CountFixedPreprocessor extends BasicPreprocessor {
       }
       return res;
     }
-    int startIdxPastN = currentStartTimeIdx - (latestN - 1);
+    int startIdxPastN = currentStartTimeIdx - (latestN - 1) * slideStep;
     while (startIdxPastN >= 0 && startIdxPastN <= currentStartTimeIdx) {
       res.add(new Identifier(srcData.getTime(startIdxPastN),
-          srcData.getTime(startIdxPastN + windowRange), windowRange));
+          srcData.getTime(startIdxPastN + windowRange - 1), windowRange));
       startIdxPastN += slideStep;
     }
     return res;
@@ -132,12 +131,40 @@ public class CountFixedPreprocessor extends BasicPreprocessor {
   public List<Object> getLatestN_L2_AlignedSequences(int latestN) {
     List<Object> res = new ArrayList<>(latestN);
 
-    int startIdxPastN = Math.max(0, currentStartTimeIdx - (latestN - 1));
+    int startIdxPastN = Math.max(0, currentStartTimeIdx - (latestN - 1) * slideStep);
     while (startIdxPastN <= currentStartTimeIdx) {
-      res.add(startIdxPastN);
+      res.add(createAlignedSequence(startIdxPastN));
       startIdxPastN += slideStep;
     }
     return res;
+  }
+
+  /**
+   * For COUNT-FIXED preprocessor, given the original data and the window range, we can determine an
+   * aligned sequence only by the startIdx. Note that this method is only applicable to
+   * preprocessors which do not transform original data points.
+   */
+  protected TVList createAlignedSequence(int startIdx) {
+    TVList seq = TVListAllocator.getInstance().allocate(srcData.getDataType());
+    for (int i = startIdx; i < startIdx + windowRange; i++) {
+      switch (srcData.getDataType()) {
+        case INT32:
+          seq.putInt(srcData.getTime(i), srcData.getInt(i));
+          break;
+        case INT64:
+          seq.putLong(srcData.getTime(i), srcData.getLong(i));
+          break;
+        case FLOAT:
+          seq.putFloat(srcData.getTime(i), srcData.getFloat(i));
+          break;
+        case DOUBLE:
+          seq.putDouble(srcData.getTime(i), srcData.getDouble(i));
+          break;
+        default:
+          throw new NotImplementedException(srcData.getDataType().toString());
+      }
+    }
+    return seq;
   }
 
   public TVList getSrcData() {
@@ -146,8 +173,11 @@ public class CountFixedPreprocessor extends BasicPreprocessor {
 
   @Override
   public void clear() {
-    if (storeIdentifier) {
-      identifierList.clear();
+    if (identifierList != null) {
+      identifierList.clearAndRelease();
+    }
+    if (alignedList != null) {
+      alignedList.clearAndRelease();
     }
   }
 }
