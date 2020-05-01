@@ -73,7 +73,7 @@ public enum IndexRangeStrategyType {
       case "NAIVE":
         return new NaiveStrategy();
       default:
-        return new NaiveStrategy();
+        return new DefaultStrategy();
     }
   }
 }

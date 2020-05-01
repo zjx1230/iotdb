@@ -1,5 +1,7 @@
 package org.apache.iotdb.db.index.algorithm.elb;
 
+import static org.apache.iotdb.db.index.common.IndexUtils.getDataTypeSize;
+
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
@@ -17,7 +19,7 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
  * Refer to: Kang R, et al. Matching Consecutive Subpatterns over Streaming Time Series[C]
  * APWeb-WAIM Joint International Conference. Springer, Cham, 2018: 90-105.
  */
-public class ELBCountFixed extends CountFixedPreprocessor {
+public class ELBCountFixedPreprocessor extends CountFixedPreprocessor {
 
   private final int blockNum;
   /**
@@ -35,9 +37,9 @@ public class ELBCountFixed extends CountFixedPreprocessor {
    * A block contains {@code windowRange/b} points. A list of blocks ({@code b} blocks) cover
    * adjacent {@code windowRange/b} sequence.
    */
-  public ELBCountFixed(TVList srcData, int windowRange, int slideStep, int blockNum,
-      Distance distance,
-      CalcParam calcParam, ELBType elbType, boolean storeIdentifier, boolean storeAligned) {
+  public ELBCountFixedPreprocessor(TVList srcData, int windowRange, int slideStep, int blockNum,
+      Distance distance, CalcParam calcParam, ELBType elbType, boolean storeIdentifier,
+      boolean storeAligned) {
     super(srcData, windowRange, slideStep, storeIdentifier, storeAligned);
     if (blockNum > windowRange) {
       throw new IllegalIndexParamException(String
@@ -50,21 +52,22 @@ public class ELBCountFixed extends CountFixedPreprocessor {
         blockNum, elbType);
   }
 
+  public ELBCountFixedPreprocessor(TVList srcData, int windowRange, int slideStep, int blockNum,
+      Distance distance, CalcParam calcParam, ELBType elbType) {
+    this(srcData, windowRange, slideStep, blockNum, distance, calcParam, elbType, false, false);
+  }
 
   @Override
   public void processNext() {
     super.processNext();
-    currentProcessedIdx++;
-    currentStartTimeIdx += slideStep;
-
     elbFeatureExtractor.calcELBFeature(currentStartTimeIdx, mbrs);
   }
 
   private double[][] formatELBFeature(int processedIdx) {
-    double[][] res = new double[2][blockNum];
+    double[][] res = new double[blockNum][2];
     for (int i = 0; i < blockNum; i++) {
-      res[0][i] = mbrs.getDouble(2 * blockNum * processedIdx + 2 * i);
-      res[1][i] = mbrs.getDouble(2 * blockNum * processedIdx + 2 * i + 1);
+      res[i][0] = mbrs.getDouble(2 * blockNum * processedIdx + 2 * i);
+      res[i][1] = mbrs.getDouble(2 * blockNum * processedIdx + 2 * i + 1);
     }
     return res;
   }
@@ -72,11 +75,20 @@ public class ELBCountFixed extends CountFixedPreprocessor {
   @Override
   public List<Object> getLatestN_L3_Features(int latestN) {
     List<Object> res = new ArrayList<>(latestN);
-    int startIdx = Math.max(0, currentProcessedIdx + 1 - latestN);
+    int startIdx = Math.max(flushedOffset, currentProcessedIdx + 1 - latestN);
     for (int i = startIdx; i <= currentProcessedIdx; i++) {
-      res.add(formatELBFeature(i));
+      res.add(formatELBFeature(i - flushedOffset));
     }
     return res;
   }
 
-}
+  @Override
+  public long clear() {
+    long toBeReleased = super.clear();
+    toBeReleased += mbrs.getCapacity() * getDataTypeSize(mbrs);
+    mbrs.clearAndRelease();
+    return toBeReleased;
+  }
+
+
+  }

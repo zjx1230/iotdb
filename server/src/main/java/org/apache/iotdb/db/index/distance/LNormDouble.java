@@ -101,15 +101,14 @@ public class LNormDouble implements Distance {
 
   @Override
   public int distEarlyAbandonDetailNoRoot(double[] a, int aOffset, TVList b, int bOffset,
-      int length, double
-      thresPow) {
+      int length, double thresholdPow) {
     if (a.length < aOffset + length || b.size() < bOffset + length) {
       throw new DistanceMetricException("The length is out of bound");
     }
     double dis = 0;
     for (int i = 0; i < length; i++) {
       dis += pow(Math.abs(a[i + aOffset] - getDoubleFromAnyType(b, i + bOffset)));
-      if (dis > thresPow) {
+      if (dis > thresholdPow) {
         return (i + 1);
       }
     }

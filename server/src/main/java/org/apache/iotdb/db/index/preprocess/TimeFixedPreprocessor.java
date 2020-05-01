@@ -1,5 +1,7 @@
 package org.apache.iotdb.db.index.preprocess;
 
+import static org.apache.iotdb.db.index.common.IndexUtils.getDataTypeSize;
+
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.iotdb.db.rescon.TVListAllocator;
@@ -15,9 +17,7 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
  * L2_aligned_sequence, whose dimension is specified by the input parameter {@code alignedDim}. Up
  * to now, we adopt the nearest-point alignment rule.
  */
-public class TimeFixedPreprocessor extends BasicPreprocessor {
-
-  protected final TVList srcData;
+public class TimeFixedPreprocessor extends IndexPreprocessor {
   protected final boolean storeIdentifier;
   protected final boolean storeAligned;
   /**
@@ -37,9 +37,15 @@ public class TimeFixedPreprocessor extends BasicPreprocessor {
   private long currentStartTime;
   private long currentEndTime;
   private ArrayList<TVList> alignedList;
-  private TVList currentAligned;
+  //  private TVList currentAligned;
   protected int intervalWidth;
 
+  /**
+   * The idx of the last flush. ForcedFlush does not change current information (e.g. {@code
+   * currentProcessedIdx}, {@code currentStartTime}), but when reading or calculating L1~L3
+   * features, we should carefully subtract {@code lastFlushIdx} from {@code currentProcessedIdx}.
+   */
+  private int flushedOffset = 0;
 
   /**
    * Create TimeFixedPreprocessor
@@ -53,8 +59,7 @@ public class TimeFixedPreprocessor extends BasicPreprocessor {
    */
   public TimeFixedPreprocessor(TVList srcData, int windowRange, int alignedDim,
       int slideStep, boolean storeIdentifier, boolean storeAligned) {
-    super(WindowType.COUNT_FIXED, windowRange, slideStep);
-    this.srcData = srcData;
+    super(srcData, WindowType.COUNT_FIXED, windowRange, slideStep);
     this.storeIdentifier = storeIdentifier;
     this.storeAligned = storeAligned;
     this.alignedDim = alignedDim;
@@ -91,6 +96,8 @@ public class TimeFixedPreprocessor extends BasicPreprocessor {
        to be expanded once.
        */
       this.alignedList = new ArrayList<>(totalProcessedCount / 2 + 1);
+    } else {
+      this.alignedList = new ArrayList<>(1);
     }
   }
 
@@ -114,14 +121,17 @@ public class TimeFixedPreprocessor extends BasicPreprocessor {
     }
     if (alignedDim != -1) {
       scanIdx = locatedIdxToTimestamp(scanIdx, currentStartTime);
-      if (!storeAligned && this.currentAligned != null) {
-        TVListAllocator.getInstance().release(currentAligned);
+      if (!storeAligned && !alignedList.isEmpty()) {
+        TVListAllocator.getInstance().release(alignedList.get(0));
+        alignedList.clear();
       }
-      this.currentAligned = createAlignedSequence(currentStartTime, scanIdx);
-      if (storeAligned) {
-        alignedList.add(currentAligned);
-      }
+      alignedList.add(createAlignedSequence(currentStartTime, scanIdx));
     }
+  }
+
+  @Override
+  public int getCurrentOffset() {
+    return flushedOffset;
   }
 
   /**
@@ -181,12 +191,13 @@ public class TimeFixedPreprocessor extends BasicPreprocessor {
   public List<Object> getLatestN_L1_Identifiers(int latestN) {
     List<Object> res = new ArrayList<>(latestN);
     if (storeIdentifier) {
-      int startIdx = Math.max(0, currentProcessedIdx + 1 - latestN);
+      int startIdx = Math.max(flushedOffset, currentProcessedIdx + 1 - latestN);
       for (int i = startIdx; i <= currentProcessedIdx; i++) {
+        int actualIdx = i - flushedOffset;
         Identifier identifier = new Identifier(
-            identifierList.getLong(i * 3),
-            identifierList.getLong(i * 3 + 1),
-            (int) identifierList.getLong(i * 3 + 2));
+            identifierList.getLong(actualIdx * 3),
+            identifierList.getLong(actualIdx * 3 + 1),
+            (int) identifierList.getLong(actualIdx * 3 + 2));
         res.add(identifier);
       }
       return res;
@@ -209,9 +220,9 @@ public class TimeFixedPreprocessor extends BasicPreprocessor {
     }
     List<Object> res = new ArrayList<>(latestN);
     if (storeAligned) {
-      int startIdx = Math.max(0, currentProcessedIdx + 1 - latestN);
+      int startIdx = Math.max(flushedOffset, currentProcessedIdx + 1 - latestN);
       for (int i = startIdx; i <= currentProcessedIdx; i++) {
-        res.add(alignedList.get(i).clone());
+        res.add(alignedList.get(i - flushedOffset).clone());
       }
       return res;
     }
@@ -219,28 +230,34 @@ public class TimeFixedPreprocessor extends BasicPreprocessor {
     long startTimePastN = Math.max(currentStartTime - (latestN - 1) * slideStep,
         srcData.getTime(0));
     while (startTimePastN <= currentStartTime) {
-      if (startTimePastN == currentStartTime) {
-        res.add(currentAligned.clone());
-      } else {
-        startIdx = locatedIdxToTimestamp(startIdx, startTimePastN);
-        TVList seq = createAlignedSequence(startTimePastN, startIdx);
-        res.add(seq);
-      }
+      startIdx = locatedIdxToTimestamp(startIdx, startTimePastN);
+      TVList seq = createAlignedSequence(startTimePastN, startIdx);
+      res.add(seq);
       startTimePastN += slideStep;
     }
     return res;
   }
 
   @Override
-  public void clear() {
-    if (currentAligned != null) {
-      TVListAllocator.getInstance().release(currentAligned);
-    }
+  public long clear() {
+    flushedOffset = currentProcessedIdx + 1;
+    long toBeReleased = 0;
     if (alignedList != null) {
-      alignedList.forEach(tv -> TVListAllocator.getInstance().release(tv));
+      for (TVList tv : alignedList) {
+        toBeReleased += tv.size() * getDataTypeSize(tv);
+        TVListAllocator.getInstance().release(tv);
+      }
+      alignedList.clear();
     }
     if (identifierList != null) {
+      toBeReleased += identifierList.getCapacity() * getDataTypeSize(identifierList);
       identifierList.clearAndRelease();
     }
+    return toBeReleased;
+  }
+
+  @Override
+  public int getAmortizedSize() {
+    return 0;
   }
 }

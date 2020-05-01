@@ -107,4 +107,46 @@ public class TimeFixedPreprocessorTest {
       idx++;
     }
   }
+
+  @Test
+  public void testClearAndProcess() throws IOException {
+    String[] groundTruthL1 = new String[]{
+        "[0-20,4]",
+        "[5-25,4]",
+        "[10-30,4]",
+        "[15-35,4]",
+        "[20-40,4]"
+    };
+    String[] groundTruthL2 = new String[]{
+        "{[0,0],[5,6],[10,9],[15,15],}",
+        "{[5,6],[10,9],[15,15],[20,21],}",
+        "{[10,9],[15,15],[20,21],[25,24],}",
+        "{[15,15],[20,21],[25,24],[30,30],}",
+        "{[20,21],[25,24],[30,30],[35,36],}"
+    };
+    TVList srcData = TVListAllocator.getInstance().allocate(TSDataType.INT32);
+    for (int i = 0; i < 15; i++) {
+      srcData.putInt(i * 3, i * 3);
+    }
+    int windowRange = 20;
+    int alignedSequenceLength = 4;
+    int slideStep = 5;
+    TimeFixedPreprocessor timeFixed = new TimeFixedPreprocessor(srcData, windowRange,
+        alignedSequenceLength, slideStep, true, true);
+
+    timeFixed.processNext();
+    timeFixed.processNext();
+    timeFixed.processNext();
+    timeFixed.clear();
+    timeFixed.processNext();
+    timeFixed.processNext();
+    //L1 latest
+    Object L1s = timeFixed.getCurrent_L1_Identifier();
+    Assert.assertEquals(groundTruthL1[4], L1s.toString());
+
+    List<Object> L2s = timeFixed.getLatestN_L2_AlignedSequences(4);
+    Assert.assertEquals(2, L2s.size());
+    Assert.assertEquals(groundTruthL2[3], TestUtils.tvListToString((TVList) L2s.get(0)));
+    Assert.assertEquals(groundTruthL2[4], TestUtils.tvListToString((TVList) L2s.get(1)));
+  }
 }

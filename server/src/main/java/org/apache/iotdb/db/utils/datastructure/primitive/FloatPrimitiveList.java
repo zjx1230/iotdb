@@ -66,7 +66,7 @@ public class FloatPrimitiveList extends PrimitiveList {
   @Override
   protected void expandValues() {
     values.add((float[]) PrimitiveArrayPool
-        .getInstance().getPrimitiveDataListByType(TSDataType.INT32));
+        .getInstance().getPrimitiveDataListByType(TSDataType.FLOAT));
     capacity += ARRAY_SIZE;
   }
 

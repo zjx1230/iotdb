@@ -3,18 +3,28 @@ package org.apache.iotdb.db.index.indexrange;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 
 /**
- * The star discrepancy is the most well-known measure for the uniformity of point distributions. If
- * the sample points are reasonably equi-distributed, it is expected that the proportion of sample
- * points that fall within that smaller square is proportionately smaller.
+ * <p>The star discrepancy is the most well-known measure for the uniformity of point
+ * distributions. If the sample points are reasonably equi-distributed, it is expected that the
+ * proportion of sample points that fall within that smaller square is proportionately smaller.</p>
  *
- * For efficiency, we calculate the discrepancy only on one-resolution grids. The discrepancy is
- * normalized. A large discrepancy indicates poorly distributed sets.
+ * <p>For efficiency, we calculate the discrepancy only on one-resolution grids. The discrepancy is
+ * normalized. A large discrepancy indicates poorly distributed sets.</p>
+ *
+ * <p>Refer to: Ong, Meng Sang, et.al. "Statistical measures of two dimensional point set
+ * uniformity." Computational Statistics & Data Analysis 56.6 (2012): 2159-2181.</p>
  */
 public class UniformStrategy extends IndexRangeStrategy {
 
   @Override
-  public boolean needBuildIndex(TVList sortedTVList, long configStartTime) {
-    long st = sortedTVList.getMinTime();
+  public boolean needBuildIndex(TVList sortedTVList, int offset, long configStartTime) {
+    // find the allowed offset
+    while (sortedTVList.getTime(offset) < configStartTime) {
+      offset++;
+      if (offset == sortedTVList.size()) {
+        return false;
+      }
+    }
+    long st = sortedTVList.getTime(offset);
     long end = sortedTVList.getLastTime();
     long interval = (end - st) / sortedTVList.size();
     int interIdx = 1;
@@ -22,7 +32,7 @@ public class UniformStrategy extends IndexRangeStrategy {
     float discrepancy = 0;
     int currentNum = 1;
     // the first point must be inside the first interval.
-    for (int i = 1; i < sortedTVList.size(); i++) {
+    for (int i = offset + 1; i < sortedTVList.size(); i++) {
       long time = sortedTVList.getTime(i);
       if (time > interIdx * interval) {
         interIdx++;

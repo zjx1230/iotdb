@@ -16,9 +16,9 @@ public class PatternEnvelope {
 
   public void refresh(MilesPattern pattern) {
     if (upperLine == null || upperLine.length < pattern.subpatternCount) {
-      upperLine = new double[pattern.subpatternCount];
-      valueLine = new double[pattern.subpatternCount];
-      lowerLine = new double[pattern.subpatternCount];
+      upperLine = new double[pattern.sequenceLen];
+      valueLine = new double[pattern.sequenceLen];
+      lowerLine = new double[pattern.sequenceLen];
     }
     Arrays.fill(upperLine, -Double.MAX_VALUE);
     Arrays.fill(lowerLine, Double.MAX_VALUE);

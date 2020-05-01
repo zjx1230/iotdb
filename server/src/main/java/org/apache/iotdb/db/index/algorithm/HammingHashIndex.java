@@ -1,12 +1,6 @@
 package org.apache.iotdb.db.index.algorithm;
 
-import java.util.List;
-import java.util.Map;
-import org.apache.iotdb.db.index.common.DataFileInfo;
 import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexManagerException;
-import org.apache.iotdb.tsfile.read.common.Path;
-import org.apache.iotdb.tsfile.utils.Pair;
 
 /**
  * Hash lookup table is a data structure a structure that can map keys to values. A hash table uses
@@ -20,40 +14,15 @@ import org.apache.iotdb.tsfile.utils.Pair;
  *
  * Based on the mature hash lookup algorithm and the Hamming space retrieval, a rich line of hash
  * methods focuses on better feature representations for preserving the similarity relationship in
- * the Hamming space.
+ * the Hamming space.<p>
+ *
+ * TODO To be implemented.<p>
  */
-public class HammingHashIndex extends IoTDBIndex {
+public abstract class HammingHashIndex extends IoTDBIndex {
 
-  public HammingHashIndex(IndexInfo indexInfo) {
-    super(indexInfo);
+  public HammingHashIndex(String path, IndexInfo indexInfo) {
+    super(path, indexInfo);
   }
 
-  @Override
-  public boolean build(Path path, DataFileInfo newFile, Map<String, Object> parameters)
-      throws IndexManagerException {
-    return false;
-  }
 
-  @Override
-  public boolean flush(Path path, DataFileInfo newFile, Map<String, Object> parameters)
-      throws IndexManagerException {
-    return false;
-  }
-
-  @Override
-  public Object queryByIndex(Path path, List<Object> parameters,
-      List<Pair<Long, Long>> nonUpdateIntervals, int limitSize) throws IndexManagerException {
-    return null;
-  }
-
-  @Override
-  public Object queryByScan(Path path, List<Object> parameters,
-      List<Pair<Long, Long>> nonUpdateIntervals, int limitSize) throws IndexManagerException {
-    return null;
-  }
-
-  @Override
-  public void delete() {
-
-  }
 }

@@ -1,6 +1,9 @@
 package org.apache.iotdb.db.index.preprocess;
 
 import java.util.List;
+import org.apache.iotdb.db.index.indexrange.DefaultStrategy;
+import org.apache.iotdb.db.index.indexrange.IndexRangeStrategy;
+import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 
 /**
@@ -8,7 +11,7 @@ import org.apache.iotdb.tsfile.exception.NotImplementedException;
  * In general, index structure needn't maintain all of original data, but only pointers to the
  * original data (e.g. The start time and the end time can uniquely determine a time sequence).<p>
  *
- * {@linkplain BasicPreprocessor} makes a time window slide over the time series by some rules and
+ * {@linkplain IndexPreprocessor} makes a time window slide over the time series by some rules and
  * obtain a list of subsequences. The time windows may be time-fixed (Euclidean distance),
  * count-fixed (Time Warping). It scans the sequence with a certain overlap step (a.k.a. the update
  * size).
@@ -26,7 +29,7 @@ import org.apache.iotdb.tsfile.exception.NotImplementedException;
  *   <li>L3: customized feature: {@code {C1, C2, ..., Cm}}</li>
  * </ul>
  */
-public abstract class BasicPreprocessor {
+public abstract class IndexPreprocessor {
 
   /**
    * the type of sliding window, see {@linkplain WindowType}
@@ -41,9 +44,11 @@ public abstract class BasicPreprocessor {
    * window type.
    */
   protected int slideStep;
+  protected final TVList srcData;
 
 
-  public BasicPreprocessor(WindowType widthType, int windowRange, int slideStep) {
+  public IndexPreprocessor(TVList srcData, WindowType widthType, int windowRange, int slideStep) {
+    this.srcData = srcData;
     this.windowRange = windowRange;
     this.windowType = widthType;
     this.slideStep = slideStep;
@@ -63,6 +68,12 @@ public abstract class BasicPreprocessor {
   public abstract void processNext();
 
   /**
+   * TVList may have been flushed many times, return the current offset.
+   * @return the current offset.
+   */
+  public abstract int getCurrentOffset();
+
+  /**
    * get the latest N L1-identifiers, including the current one. The caller needs to release them
    * after use.
    */
@@ -74,6 +85,10 @@ public abstract class BasicPreprocessor {
   public Object getCurrent_L1_Identifier() {
     List<Object> res = getLatestN_L1_Identifiers(1);
     return res.isEmpty() ? null : res.get(0);
+  }
+
+  public List<Object> getAll_L1_Identifiers() {
+    return getLatestN_L1_Identifiers(Integer.MAX_VALUE);
   }
 
   /**
@@ -145,5 +160,19 @@ public abstract class BasicPreprocessor {
     }
   }
 
-  public abstract void clear();
+  /**
+   * Called when the memory reaches the threshold. This function should release all allocated array
+   * list which increases with the number of processed data pairs.<p>
+   *
+   * Note that, after cleaning up all past store, the next {@linkplain #processNext()} will still
+   * start from the current point.
+   */
+  public abstract long clear();
+
+
+  /**
+   * return how much memory is increased for each point processed. It's an amortized estimation,
+   * depending on {@code storeIdentifier}, {@code storeAlignedSequence} and {@code storeFeature}
+   */
+  public abstract int getAmortizedSize();
 }

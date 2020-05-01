@@ -66,7 +66,7 @@ public class DoublePrimitiveList extends PrimitiveList {
   @Override
   protected void expandValues() {
     values.add((double[]) PrimitiveArrayPool
-        .getInstance().getPrimitiveDataListByType(TSDataType.INT32));
+        .getInstance().getPrimitiveDataListByType(TSDataType.DOUBLE));
     capacity += ARRAY_SIZE;
   }
 

@@ -29,7 +29,7 @@ public abstract class ELBFeature {
     if (upperLines == null || upperLines.length < blockNum) {
       upperLines = new double[blockNum];
       lowerLines = new double[blockNum];
-      actualLowers = new double[blockNum];
+      actualUppers = new double[blockNum];
       actualLowers = new double[blockNum];
     }
     Arrays.fill(upperLines, -Double.MAX_VALUE);

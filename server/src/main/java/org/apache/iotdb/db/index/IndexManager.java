@@ -47,8 +47,6 @@ public class IndexManager implements IService {
   private static final Logger logger = LoggerFactory.getLogger(IndexManager.class);
   private FSFactory fsFactory = FSFactoryProducer.getFSFactory();
 
-  public static final String INDEXING_SUFFIX = ".indexing";
-  public static final String INDEXED_SUFFIX = ".index";
 
   private IndexBuildTaskPoolManager indexBuildPool = IndexBuildTaskPoolManager.getInstance();
 
@@ -82,7 +80,7 @@ public class IndexManager implements IService {
   private String getIndexFileName(String tsfileNameWithSuffix) {
 
     int tsfileLen = tsfileNameWithSuffix.length() - TsFileConstant.TSFILE_SUFFIX.length();
-    return tsfileNameWithSuffix.substring(0, tsfileLen) + INDEXING_SUFFIX;
+    return tsfileNameWithSuffix.substring(0, tsfileLen);
   }
 
   public IndexFileProcessor getProcessor(String storageGroup, boolean sequence, long partitionId,

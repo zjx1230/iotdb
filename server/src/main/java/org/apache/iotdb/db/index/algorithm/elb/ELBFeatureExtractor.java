@@ -7,9 +7,14 @@ import org.apache.iotdb.db.index.algorithm.elb.pattern.CalcParam;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.ELBFeature;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.MilesPattern;
 import org.apache.iotdb.db.index.distance.Distance;
+import org.apache.iotdb.db.index.distance.LInfinityNormdouble;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
+import org.apache.iotdb.tsfile.exception.NotImplementedException;
 
+/**
+ * Memory consumption can be considered constant.
+ */
 public class ELBFeatureExtractor {
 
   // final fields
@@ -34,8 +39,11 @@ public class ELBFeatureExtractor {
     this.calcParam = calcParam;
 
     pattern = new MilesPattern(distance);
-
     this.elbType = elbType;
+    if (elbType == ELBType.SEQ && distance instanceof LInfinityNormdouble) {
+      throw new NotImplementedException("For ELB-SEQ on L∞-Norm, there is a direct and simple "
+          + "algorithm for Adaptive Post-Processing, But we haven't realized yet.");
+    }
     if (elbType == ELBType.ELE) {
       envelope = new PatternEnvelope();
       elbFeature = new ElementELBFeature();

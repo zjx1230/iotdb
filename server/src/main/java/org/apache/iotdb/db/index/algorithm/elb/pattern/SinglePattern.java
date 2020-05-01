@@ -14,10 +14,10 @@ public class SinglePattern implements CalcParam {
   /**
    * -1 means Absolute mode
    */
-  private float thresholdRatio;
+  private double thresholdRatio;
   private final Object[] res;
 
-  private SinglePattern(float thresholdBase, float thresholdRatio, int windowRange) {
+  public SinglePattern(float thresholdBase, double thresholdRatio, int windowRange) {
     this.thresholdBase = thresholdBase;
     this.thresholdRatio = thresholdRatio;
     this.res = new Object[4];

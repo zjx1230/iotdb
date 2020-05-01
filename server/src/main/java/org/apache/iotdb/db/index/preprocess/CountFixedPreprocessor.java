@@ -1,5 +1,7 @@
 package org.apache.iotdb.db.index.preprocess;
 
+import static org.apache.iotdb.db.index.common.IndexUtils.getDataTypeSize;
+
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.iotdb.db.rescon.TVListAllocator;
@@ -16,9 +18,8 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
  * Note that, in real scenarios, the time series could be variable-frequency, traditional distance
  * metrics (e.g., Euclidean distance) may not make sense for COUNT_FIXED.
  */
-public class CountFixedPreprocessor extends BasicPreprocessor {
+public class CountFixedPreprocessor extends IndexPreprocessor {
 
-  private final TVList srcData;
   protected final boolean storeIdentifier;
   protected final boolean storeAligned;
   /**
@@ -30,6 +31,7 @@ public class CountFixedPreprocessor extends BasicPreprocessor {
    */
   protected int totalProcessedCount;
 
+
   private PrimitiveList identifierList;
   private PrimitiveList alignedList;
   /**
@@ -38,6 +40,13 @@ public class CountFixedPreprocessor extends BasicPreprocessor {
   protected int currentStartTimeIdx;
   private long currentStartTime;
   private long currentEndTime;
+  /**
+   * The number of processed points up to the last ForcedFlush. ForcedFlush does not change current
+   * information (e.g. {@code currentProcessedIdx}, {@code currentStartTime}), but when reading or
+   * calculating L1~L3 features, we should carefully subtract {@code lastFlushIdx} from {@code
+   * currentProcessedIdx}.
+   */
+  protected int flushedOffset = 0;
 
   /**
    * Create CountFixedPreprocessor
@@ -49,8 +58,7 @@ public class CountFixedPreprocessor extends BasicPreprocessor {
    */
   public CountFixedPreprocessor(TVList srcData, int windowRange, int slideStep,
       boolean storeIdentifier, boolean storeAligned) {
-    super(WindowType.COUNT_FIXED, windowRange, slideStep);
-    this.srcData = srcData;
+    super(srcData, WindowType.COUNT_FIXED, windowRange, slideStep);
     this.storeIdentifier = storeIdentifier;
     this.storeAligned = storeAligned;
     initTimeFixedParams();
@@ -105,15 +113,21 @@ public class CountFixedPreprocessor extends BasicPreprocessor {
   }
 
   @Override
+  public int getCurrentOffset() {
+    return flushedOffset;
+  }
+
+  @Override
   public List<Object> getLatestN_L1_Identifiers(int latestN) {
     List<Object> res = new ArrayList<>(latestN);
     if (storeIdentifier) {
-      int startIdx = Math.max(0, currentProcessedIdx + 1 - latestN);
+      int startIdx = Math.max(flushedOffset, currentProcessedIdx + 1 - latestN);
       for (int i = startIdx; i <= currentProcessedIdx; i++) {
+        int actualIdx = i - flushedOffset;
         Identifier identifier = new Identifier(
-            identifierList.getLong(i * 3),
-            identifierList.getLong(i * 3 + 1),
-            (int) identifierList.getLong(i * 3 + 2));
+            identifierList.getLong(actualIdx * 3),
+            identifierList.getLong(actualIdx * 3 + 1),
+            (int) identifierList.getLong(actualIdx * 3 + 2));
         res.add(identifier);
       }
       return res;
@@ -172,12 +186,34 @@ public class CountFixedPreprocessor extends BasicPreprocessor {
   }
 
   @Override
-  public void clear() {
+  public long clear() {
+    flushedOffset = currentStartTimeIdx + 1;
+    long toBeReleased = 0;
     if (identifierList != null) {
+      toBeReleased += identifierList.getCapacity() * getDataTypeSize(identifierList);
       identifierList.clearAndRelease();
     }
     if (alignedList != null) {
+      toBeReleased += alignedList.getCapacity() * getDataTypeSize(identifierList);
       alignedList.clearAndRelease();
     }
+    return toBeReleased;
+  }
+
+  @Override
+  public int getAmortizedSize() {
+    return Integer.MAX_VALUE;
+  }
+
+  public PrimitiveList getIdentifierList() {
+    return identifierList;
+  }
+
+  public long getEarliestTimeAfterLastFlush(){
+    return srcData.getTime(flushedOffset);
+  }
+
+  public long getLatestTimeAfterLastFlush(){
+    return currentEndTime;
   }
 }

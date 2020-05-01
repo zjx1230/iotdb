@@ -35,6 +35,10 @@ public abstract class PrimitiveList {
   protected int capacity;
 
 
+  public TSDataType getTsDataType() {
+    return tsDataType;
+  }
+
   public PrimitiveList(TSDataType tsDataType) {
     size = 0;
     capacity = 0;
@@ -45,6 +49,9 @@ public abstract class PrimitiveList {
     return size;
   }
 
+  public int getCapacity() {
+    return capacity;
+  }
 
   public void putLong(long value) {
     throw new UnsupportedOperationException(ERR_PRIMITIVE_DATATYPE_NOT_MATCH);
@@ -92,6 +99,7 @@ public abstract class PrimitiveList {
 
   public void clearAndRelease() {
     size = 0;
+    capacity = 0;
     clearAndReleaseValues();
   }
 
@@ -114,9 +122,11 @@ public abstract class PrimitiveList {
         return new LongPrimitiveList();
       case INT32:
         return new IntPrimitiveList();
-      case TEXT:
       case FLOAT:
+        return new FloatPrimitiveList();
       case DOUBLE:
+        return new DoublePrimitiveList();
+      case TEXT:
       case BOOLEAN:
       default:
         throw new NotImplementedException("unsupported type: " + dataType);

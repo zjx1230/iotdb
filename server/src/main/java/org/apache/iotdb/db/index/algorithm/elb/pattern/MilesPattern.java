@@ -31,7 +31,13 @@ import org.apache.iotdb.db.utils.datastructure.TVList;
 public class MilesPattern {
   public int[] minLeftBorders;
   public int[] maxLeftBorders;
+  /**
+   * the number of points in the sliding window
+   */
   public int sequenceLen;
+  /**
+   * the number of subpatterns specified by user
+   */
   public int subpatternCount;
   public double[] thresholdsArray;
 
@@ -57,10 +63,6 @@ public class MilesPattern {
     this.maxLeftBorders = maxLeftBorders;
 
     checkBorder();
-    if (thresholdPowers == null || thresholdPowers.length < subpatternCount) {
-      thresholdPowers = new double[subpatternCount];
-    }
-    Arrays.fill(thresholdPowers, 0);
 
     //the maximal potential variable range, to avoid frequently allocating memory
     int maxRadius = -1;
@@ -78,11 +80,13 @@ public class MilesPattern {
     Arrays.fill(diff, 0);
     Arrays.fill(idxSet, 0);
 
+    if (thresholdPowers == null || thresholdPowers.length < subpatternCount) {
+      thresholdPowers = new double[subpatternCount];
+    }
+    Arrays.fill(thresholdPowers, 0);
     for (int i = 0; i < subpatternCount; i++) {
       if (distance instanceof LNormDouble) {
         thresholdPowers[i] = ((LNormDouble) distance).pow(thresholdsArray[i]);
-      } else {
-        throw new IllegalIndexParamException("LNormdouble is still not supported by ELB ");
       }
     }
   }
@@ -107,7 +111,7 @@ public class MilesPattern {
   }
 
   /**
-   * Exact-Calculating Algorithm
+   * Adaptive Post-processing Algorithm.
    *
    * @return positive for matched item, negative for for unmatched one
    */

@@ -265,6 +265,10 @@ public class IoTDBDescriptor {
           .parseLong(properties.getProperty("index_buffer_size",
               Long.toString(conf.getIndexBufferSize()))));
 
+      conf.setDefaultIndexWindowRange(Integer
+          .parseInt(properties.getProperty("default_index_window_range",
+              Integer.toString(conf.getDefaultIndexWindowRange()))));
+
       if (conf.getConcurrentIndexBuildThread() <= 0) {
         conf.setConcurrentIndexBuildThread(Runtime.getRuntime().availableProcessors());
       }

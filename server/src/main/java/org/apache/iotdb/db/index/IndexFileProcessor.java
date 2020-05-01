@@ -21,29 +21,30 @@ package org.apache.iotdb.db.index;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_MAP_INIT_RESERVE_SIZE;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.runtime.FlushRunTimeException;
-import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
+import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexManagerException;
+import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.flush.IndexBuildTaskPoolManager;
+import org.apache.iotdb.db.index.io.IndexIOWriter;
+import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
+import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.db.writelog.io.ILogWriter;
 import org.apache.iotdb.tsfile.read.common.Path;
-import org.apache.iotdb.tsfile.write.writer.RestorableTsFileIOWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,29 +57,29 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
   private final String storageGroupName;
   private String indexFilePath;
 
-  //  private String path;
   private String indexParentDir;
-  private IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
 
   private ReadWriteLock lock = new ReentrantReadWriteLock();
-//  private static long firstLayerBufferSize = ;
 
+  /**
+   * path -> {Map<IndexType, IoTDBIndex>}
+   */
   private Map<String, Map<IndexType, IoTDBIndex>> allPathsIndexMap;
 
-  private ILogWriter currentFileWriter;
 
-  private RestorableTsFileIOWriter writer;
+  private IndexIOWriter writer;
   private final boolean sequence;
 
 
   private final IndexBuildTaskPoolManager indexBuildPoolManager;
-  private ConcurrentLinkedQueue flushTaskQueue;
+  private ConcurrentLinkedQueue<IndexFlushChunk> flushTaskQueue;
   private Future flushTaskFuture;
   private boolean noMoreIndexFlushTask = false;
-  public final Object waitingSymbol = new Object();
-  private static long maxIndexBufferSize = IoTDBDescriptor.getInstance().getConfig()
+  private final Object waitingSymbol = new Object();
+  private static long memoryThreshold = IoTDBDescriptor.getInstance().getConfig()
       .getIndexBufferSize();
   private final AtomicLong memoryUsed;
+  private boolean isFlushing;
 
   public IndexFileProcessor(String storageGroupName, String indexParentDir, String indexFilePath,
       boolean sequence) {
@@ -87,10 +88,10 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
     this.indexFilePath = indexFilePath;
     this.sequence = sequence;
     this.indexBuildPoolManager = IndexBuildTaskPoolManager.getInstance();
+    this.writer = new IndexIOWriter(indexFilePath);
     memoryUsed = new AtomicLong(0);
-//    memoryThreshold =
+    isFlushing = false;
     refreshSeriesIndexMapFromMManager();
-
   }
 
   private void refreshSeriesIndexMapFromMManager() {
@@ -103,9 +104,14 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
     indexInfoMap.forEach((path, pathIndexInfoMap) -> {
       Map<IndexType, IoTDBIndex> pathIndexMap = allPathsIndexMap
           .putIfAbsent(path, new EnumMap<>(IndexType.class));
-      assert pathIndexMap != null;
-      pathIndexInfoMap.forEach((indexType, indexInfo) -> pathIndexMap
-          .putIfAbsent(indexType, IndexType.constructIndex(indexType, indexInfo)));
+      if (pathIndexMap == null) {
+        pathIndexMap = allPathsIndexMap.get(path);
+      }
+      for (Entry<IndexType, IndexInfo> entry : pathIndexInfoMap.entrySet()) {
+        IndexType indexType = entry.getKey();
+        IndexInfo indexInfo = entry.getValue();
+        pathIndexMap.putIfAbsent(indexType, IndexType.constructIndex(path, indexType, indexInfo));
+      }
     });
     // remove indexes that are removed from the previous map
     for (String pathInMem : new ArrayList<>(allPathsIndexMap.keySet())) {
@@ -125,41 +131,47 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
     }
   }
 
-
   /**
    * seal the index file, move "indexing" to "index"
    */
-  public void close() {
-    //TODO
-//    sync();
-//    forceWal();
-//    try {
-//      if (this.currentFileWriter != null) {
-//        this.currentFileWriter.close();
-//        this.currentFileWriter = null;
-//      }
-//      logger.debug("Log node {} closed successfully", indexFilePath);
-//    } catch (IOException e) {
-//      logger.error("Cannot close log node {} because:", indexFilePath, e);
-//    } finally {
-//      lock.writeLock().unlock();
-//    }
-//    String indexedFullPath = indexFilePath.substring(0, indexFilePath.length() -
-//        INDEXING_SUFFIX.length()) + INDEXED_SUFFIX;
-//    File oldFile = FSFactoryProducer.getFSFactory().getFile(indexFilePath);
-//    File newFile = FSFactoryProducer.getFSFactory().getFile(indexedFullPath);
-//    if (oldFile.renameTo(newFile)) {
-//      logger.error("Renaming indexing file to indexed failed {}.", indexedFullPath);
-//    }
+  @SuppressWarnings("squid:S2589")
+  public void close() throws IOException {
+    //wait the flushing end.
+    long waitingTime;
+    long waitingInterval = 100;
+    long st = System.currentTimeMillis();
+    while (true) {
+      if (isFlushing) {
+        try {
+          Thread.sleep(waitingInterval);
+        } catch (InterruptedException e) {
+          logger.error("interrupted, index file may not complete.", e);
+          return;
+        }
+        waitingTime = System.currentTimeMillis() - st;
+        // wait for too long time.
+        if (waitingTime > 3000) {
+          waitingInterval = 1000;
+          if (logger.isWarnEnabled()) {
+            logger.warn(String.format("IndexFileProcessor %s: wait-close time %d ms is too long.",
+                storageGroupName, waitingTime));
+          }
+        }
+      } else {
+        lock.writeLock().lock();
+        // Another flush task starts between isFlushing = true and write lock.
+        if (!isFlushing) {
+          writer.endFile();
+          return;
+        }
+        lock.writeLock().unlock();
+      }
+    }
   }
 
 
   public String getIndexFilePath() {
     return indexFilePath;
-  }
-
-  public String getIndexParentDir() {
-    return indexParentDir;
   }
 
   @Override
@@ -192,17 +204,24 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
     return indexFilePath.compareTo(o.indexFilePath);
   }
 
+  private void updateMemAndNotify(long memoryDelta) {
+    long after = memoryUsed.addAndGet(memoryDelta);
+    if (after < memoryThreshold) {
+      synchronized (waitingSymbol) {
+        waitingSymbol.notifyAll();
+      }
+    }
+  }
 
   @SuppressWarnings("squid:S135")
   private Runnable flushRunTask = () -> {
-    long ioTime = 0;
     boolean returnWhenNoTask = false;
     while (true) {
       if (noMoreIndexFlushTask) {
         returnWhenNoTask = true;
       }
-      Object indexFlushMessage = flushTaskQueue.poll();
-      if (indexFlushMessage == null) {
+      IndexFlushChunk indexFlushChunk = flushTaskQueue.poll();
+      if (indexFlushChunk == null) {
         if (returnWhenNoTask) {
           break;
         }
@@ -214,16 +233,9 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
         }
       } else {
         try {
-          // TODO flush task
-          throw new IOException("asd");
-//          if (indexFlushMessage instanceof StartFlushGroupIOTask) {
-//            writer.startChunkGroup(((StartFlushGroupIOTask) indexFlushMessage).deviceId);
-//          } else if (indexFlushMessage instanceof IChunkWriter) {
-//            ChunkWriterImpl chunkWriter = (ChunkWriterImpl) indexFlushMessage;
-//            chunkWriter.writeToFileWriter(MemTableFlushTask.this.writer);
-//          } else {
-//            writer.endChunkGroup();
-//          }
+          writer.writeIndexData(indexFlushChunk);
+          // we can release the memory of indexFlushChunk
+          updateMemAndNotify(-indexFlushChunk.getDataSize());
         } catch (@SuppressWarnings("squid:S2139") IOException e) {
           logger.error("Index Flush Task meet IO error, index path: {}", indexFilePath, e);
           throw new FlushRunTimeException(e);
@@ -232,9 +244,70 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
     }
   };
 
+  /**
+   * <p>{@linkplain IoTDBIndex} requests memory allocation for processing one point. AtomicLong is
+   * used to update the current remaining memory.  If the memory threshold is reached, trigger
+   * {@linkplain IoTDBIndex#flush}, construct byte arrays to {@linkplain #flushRunTask}, release the
+   * memory occupied during {@linkplain IoTDBIndex#buildNext}, and request the memory allocation
+   * again.</p>
+   *
+   * <p>If it's still unavailable, {@code wait} until {@linkplain #flushRunTask} finishes someone
+   * task, releases memory and calls {@code notifyAll}. If it is available, return and call {@code
+   * notifyAll} to wake up other waiting index-building threads.</p>
+   *
+   * @return true if allocate successfully.
+   */
+  private boolean syncAllocateSize(int mem, IndexPreprocessor preprocessor, IoTDBIndex iotDBIndex,
+      Path path) {
+    long allowedMemBar = memoryThreshold - mem;
+    boolean hasFlushed = false;
+
+    while (true) {
+      long expectValue;
+      long targetValue;
+      do {
+        expectValue = memoryUsed.get();
+        targetValue = expectValue + mem;
+        if (memoryUsed.compareAndSet(expectValue, targetValue)) {
+          // allocated successfully
+          return true;
+        }
+      } while (expectValue <= allowedMemBar);
+
+      // flush and release some memory.
+      if (!hasFlushed) {
+        flushAndAddToQueue(iotDBIndex, path);
+        hasFlushed = true;
+      } else {
+        // still failed, we have to wait
+        synchronized (waitingSymbol) {
+          try {
+            waitingSymbol.wait();
+          } catch (InterruptedException e) {
+            logger.error("interrupted, canceled");
+            return false;
+          }
+        }
+      }
+    }
+  }
+
+  private void flushAndAddToQueue(IoTDBIndex index, Path path) {
+    try {
+      IndexFlushChunk indexFlushChunk = index.flush();
+      flushTaskQueue.add(indexFlushChunk);
+      long memoryDelta = indexFlushChunk.getDataSize();
+      memoryDelta -= index.clear();
+      updateMemAndNotify(memoryDelta);
+    } catch (IndexManagerException e) {
+      logger.error("flush path {} errors!", path, e);
+    }
+  }
 
   public void startFlushMemTable() {
-    this.flushTaskQueue = new ConcurrentLinkedQueue();
+    lock.writeLock().lock();
+    this.isFlushing = true;
+    this.flushTaskQueue = new ConcurrentLinkedQueue<>();
     this.flushTaskFuture = indexBuildPoolManager.submit(flushRunTask);
     this.noMoreIndexFlushTask = false;
     /*
@@ -245,22 +318,47 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
      * start phase.
      */
     refreshSeriesIndexMapFromMManager();
+    lock.writeLock().unlock();
   }
-
 
   public void buildIndexForOneSeries(Path path, TVList tvList) {
     // for every index of this path, submit a task to pool.
-    throw new RuntimeException();
-
-//    if
-//    CopyOnReadLinkedList<T>
-//    TODO
+    if (!allPathsIndexMap.containsKey(path.getFullPath())) {
+      return;
+    }
+    allPathsIndexMap.get(path.getFullPath()).forEach((indexType, index) -> {
+      Runnable buildTask = () -> {
+        IndexPreprocessor preprocessor = index.initIndexPreprocessor(tvList);
+        int previousOffset = Integer.MIN_VALUE;
+        while (preprocessor.hasNext()) {
+          int currentOffset = preprocessor.getCurrentOffset();
+          if (currentOffset != previousOffset && !index.checkNeedIndex(tvList, currentOffset)) {
+            return;
+          }
+          if (!syncAllocateSize(index.getAmortizedSize(), preprocessor, index, path)) {
+            return;
+          }
+          preprocessor.processNext();
+          try {
+            index.buildNext();
+          } catch (IndexManagerException e) {
+            //Give up the following data, but the previously serialized chunk will not be affected.
+            logger.error("build index failed", e);
+            return;
+          }
+        }
+        flushAndAddToQueue(index, path);
+      };
+      indexBuildPoolManager.submit(buildTask);
+    });
   }
 
 
   public void endFlushMemTable() throws ExecutionException, InterruptedException {
+    lock.writeLock().lock();
+    this.isFlushing = false;
     noMoreIndexFlushTask = true;
     flushTaskFuture.get();
+    lock.writeLock().unlock();
   }
-
 }

@@ -234,6 +234,11 @@ public class IoTDBConfig {
   private long indexBufferSize = 128 * 1024 * 1024L;
 
   /**
+   * the index framework adopts sliding window model to preprocess the original tv list.
+   */
+  private int defaultIndexWindowRange = 10;
+
+  /**
    * index directory.
    */
   private String indexRootFolder = "data" + File.separator + "index";
@@ -1543,4 +1548,13 @@ public class IoTDBConfig {
   public void setIndexRootFolder(String indexRootFolder) {
     this.indexRootFolder = indexRootFolder;
   }
+
+  public int getDefaultIndexWindowRange() {
+    return defaultIndexWindowRange;
+  }
+
+  public void setDefaultIndexWindowRange(int defaultIndexWindowRange) {
+    this.defaultIndexWindowRange = defaultIndexWindowRange;
+  }
+
 }

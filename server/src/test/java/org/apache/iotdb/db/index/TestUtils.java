@@ -34,5 +34,27 @@ public class TestUtils {
     return sb.toString();
   }
 
+  private static String doubleToFormatStringCoverInf(double d) {
+    if (d == Double.MAX_VALUE) {
+      return "Inf";
+    } else if (d == -Double.MAX_VALUE) {
+      return "-Inf";
+    } else {
+      return String.format("%.2f", d);
+    }
+  }
+
+  public static String TwoDimDoubleArrayToString(double[][] mbrs) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("{");
+    for (double[] mbr : mbrs) {
+      sb.append(String.format("[%s,%s],",
+          doubleToFormatStringCoverInf(mbr[0]),
+          doubleToFormatStringCoverInf(mbr[1])));
+    }
+    sb.append("}");
+    return sb.toString();
+  }
+
 
 }

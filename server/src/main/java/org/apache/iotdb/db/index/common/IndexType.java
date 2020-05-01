@@ -18,14 +18,17 @@
  */
 package org.apache.iotdb.db.index.common;
 
+import java.nio.ByteBuffer;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.algorithm.NoIndex;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
-import org.apache.iotdb.tsfile.read.common.Path;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 public enum IndexType {
 
-  PAA, ELB, KV_INDEX;
+  NO_INDEX, PAA, ELB, KV_INDEX;
 
   /**
    * judge the index type.
@@ -36,10 +39,12 @@ public enum IndexType {
   public static IndexType deserialize(short i) {
     switch (i) {
       case 0:
-        return PAA;
+        return NO_INDEX;
       case 1:
-        return ELB;
+        return PAA;
       case 2:
+        return ELB;
+      case 3:
         return KV_INDEX;
       default:
         throw new NotImplementedException("Given index is not implemented");
@@ -57,12 +62,14 @@ public enum IndexType {
    */
   public short serialize() {
     switch (this) {
-      case PAA:
+      case NO_INDEX:
         return 0;
-      case ELB:
+      case PAA:
         return 1;
-      case KV_INDEX:
+      case ELB:
         return 2;
+      case KV_INDEX:
+        return 3;
       default:
         throw new NotImplementedException("Given index is not implemented");
     }
@@ -78,17 +85,19 @@ public enum IndexType {
       case "KV_INDEX":
         return KV_INDEX;
       default:
-        throw new NotImplementedException("unsupported index type:" + indexTypeString);
+        throw new IndexManagerException("unsupported index type:" + indexTypeString);
     }
   }
 
-  public static IoTDBIndex constructIndex(IndexType indexType, IndexInfo indexInfo) {
+  public static IoTDBIndex constructIndex(String path, IndexType indexType, IndexInfo indexInfo) {
     switch (indexType) {
       case PAA:
       case ELB:
       case KV_INDEX:
+        throw new NotImplementedException("unsupported index type:" + indexType);
+      case NO_INDEX:
       default:
-        return new NoIndex(indexInfo);
+        return new NoIndex(path, indexInfo);
     }
   }
 }
