@@ -78,6 +78,8 @@ public enum IndexType {
   public static IndexType getIndexType(String indexTypeString) throws IndexManagerException {
     String normalized = indexTypeString.toUpperCase();
     switch (normalized) {
+      case "NO_INDEX":
+        return NO_INDEX;
       case "PAA":
         return PAA;
       case "ELB":
@@ -91,10 +93,10 @@ public enum IndexType {
 
   public static IoTDBIndex constructIndex(String path, IndexType indexType, IndexInfo indexInfo) {
     switch (indexType) {
-      case PAA:
       case ELB:
       case KV_INDEX:
-//        throw new NotImplementedException("unsupported index type:" + indexType);
+        throw new NotImplementedException("unsupported index type:" + indexType);
+      case PAA:
       case NO_INDEX:
       default:
         return new NoIndex(path, indexInfo);

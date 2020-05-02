@@ -18,20 +18,31 @@
  */
 package org.apache.iotdb.db.index;
 
+import static org.apache.iotdb.db.index.TestUtils.TEST_INDEX_FILE_NAME;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_SLIDE_STEP;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
 import static org.apache.iotdb.db.index.common.IndexType.NO_INDEX;
 import static org.apache.iotdb.db.index.common.IndexType.PAA;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.index.io.IndexIOReader;
+import org.apache.iotdb.db.index.io.IndexIOWriter.IndexChunkMeta;
+import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
+import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
@@ -41,7 +52,10 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.common.Path;
+import org.apache.iotdb.tsfile.utils.Pair;
+import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -91,8 +105,6 @@ public class IndexFileProcessorTest {
     prepareMManager();
     IoTDBDescriptor.getInstance().getConfig().setIndexBufferSize(100);
     FSFactoryProducer.getFSFactory().getFile(tempIndexFileDir).mkdirs();
-    IndexFileProcessor indexFileProcessor = new IndexFileProcessor(storageGroup, tempIndexFileDir,
-        tempIndexFileName, true);
     // Prepare data
     TVList p1List = TVListAllocator.getInstance().allocate(TSDataType.INT32);
     TVList p2List = TVListAllocator.getInstance().allocate(TSDataType.FLOAT);
@@ -100,13 +112,83 @@ public class IndexFileProcessorTest {
       p1List.putInt(i * 2, i * 2);
       p2List.putFloat(i * 3, i * 3);
     }
-    indexFileProcessor.startFlushMemTable();
-    indexFileProcessor.buildIndexForOneSeries(new Path(p1), p1List);
-    indexFileProcessor.buildIndexForOneSeries(new Path(p2), p2List);
-    indexFileProcessor.endFlushMemTable();
 
-    indexFileProcessor.close();
+    String gtStrP1 = "[0-8,5][10-18,5][20-28,5][30-38,5][40-48,5][50-58,5][60-68,5][70-78,5][80-88,5][90-98,5]";
+    String gtStrP2 = "[0-12,5][15-27,5][30-42,5][45-57,5][60-72,5][75-87,5][90-102,5][105-117,5][120-132,5][135-147,5]";
+    List<Pair<IndexType, String>> gtP1 = new ArrayList<>();
+    gtP1.add(new Pair<>(NO_INDEX, gtStrP1));
+    gtP1.add(new Pair<>(PAA, gtStrP1));
+    List<Pair<IndexType, String>> gtP2 = new ArrayList<>();
+    gtP2.add(new Pair<>(NO_INDEX, gtStrP2));
+
+    List<Validation> tasks = new ArrayList<>();
+    tasks.add(new Validation(p1, p1List, gtP1));
+    tasks.add(new Validation(p2, p2List, gtP2));
     // check result
+    checkFlush(tasks);
+  }
+
+  private class Validation {
+
+    String path;
+    TVList tvList;
+    List<Pair<IndexType, String>> gt;
+
+    public Validation(String path, TVList tvList, List<Pair<IndexType, String>> gt) {
+      this.path = path;
+      this.tvList = tvList;
+      this.gt = gt;
+    }
+  }
+
+  public void checkFlush(List<Validation> tasks)
+      throws ExecutionException, InterruptedException, IOException {
+    IndexFileProcessor indexFileProcessor = new IndexFileProcessor(storageGroup, tempIndexFileDir,
+        tempIndexFileName, true);
+
+    indexFileProcessor.startFlushMemTable();
+    for (Validation task : tasks) {
+      indexFileProcessor.buildIndexForOneSeries(new Path(task.path), task.tvList);
+    }
+    indexFileProcessor.endFlushMemTable();
+    indexFileProcessor.close();
+    //read and check
+    IndexIOReader reader = new IndexIOReader(tempIndexFileName, false);
+    for (Validation task : tasks) {
+      for (Pair<IndexType, String> pair : task.gt) {
+        IndexType indexType = pair.left;
+        System.out.println(String.format("path: %s, index: %s", task.path, indexType));
+        String gtDataStr = pair.right;
+        List<IndexChunkMeta> metaChunkList = reader.getChunkMetas(task.path, pair.left);
+
+        StringBuilder readStr = new StringBuilder();
+        for (IndexChunkMeta chunkMeta : metaChunkList) {
+          // data
+          ByteBuffer readData = reader.getDataByChunkMeta(chunkMeta);
+          readStr.append(deserialize(indexType, readData));
+        }
+        System.out.println(readStr.toString());
+        Assert.assertEquals(gtDataStr, readStr.toString());
+
+      }
+    }
+  }
+
+  public static String deserialize(IndexType indexType, ByteBuffer byteBuffer) {
+    switch (indexType) {
+      case NO_INDEX:
+      case PAA:
+        int size = ReadWriteIOUtils.readInt(byteBuffer);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < size; i++) {
+          sb.append(Identifier.deserialize(byteBuffer));
+        }
+        return sb.toString();
+      case ELB:
+      case KV_INDEX:
+      default:
+        throw new UnsupportedOperationException();
+    }
   }
 
 }

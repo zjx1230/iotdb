@@ -1,7 +1,5 @@
 package org.apache.iotdb.db.index.algorithm;
 
-import static org.apache.iotdb.db.index.common.IndexType.NO_INDEX;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
@@ -11,7 +9,6 @@ import org.apache.iotdb.db.index.preprocess.CountFixedPreprocessor;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
 import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
@@ -51,24 +48,26 @@ public class NoIndex extends IoTDBIndex {
    */
   @Override
   public IndexFlushChunk flush() {
-    if(indexPreprocessor.getCurrentChunkSize() == 0){
+    if (indexPreprocessor.getCurrentChunkSize() == 0) {
       System.out.println(String.format("%s-%s not input why flush? return", path, indexType));
       return null;
     }
     List<Object> list = indexPreprocessor.getAll_L1_Identifiers();
     ByteArrayOutputStream baos = new ByteArrayOutputStream(list.size());
-    for (Object o : list) {
-      try {
+    try {
+      ReadWriteIOUtils.write(list.size(), baos);
+      for (Object o : list) {
         Identifier id = (Identifier) o;
         id.serialize(baos);
-      } catch (IOException e) {
-        logger.error("flush failed", e);
-        return null;
       }
+    } catch (IOException e) {
+      logger.error("flush failed", e);
+      return null;
     }
     long st = ((Identifier) list.get(0)).getStartTime();
     long end = ((Identifier) list.get(list.size() - 1)).getEndTime();
-    return new IndexFlushChunk(path, NO_INDEX, baos, st, end);
+    return new IndexFlushChunk(path, indexType, baos, st, end);
+
   }
 
   /**
