@@ -94,7 +94,7 @@ public enum IndexType {
       case PAA:
       case ELB:
       case KV_INDEX:
-        throw new NotImplementedException("unsupported index type:" + indexType);
+//        throw new NotImplementedException("unsupported index type:" + indexType);
       case NO_INDEX:
       default:
         return new NoIndex(path, indexInfo);

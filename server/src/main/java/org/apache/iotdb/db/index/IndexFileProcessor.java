@@ -29,6 +29,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -80,6 +81,7 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
       .getIndexBufferSize();
   private final AtomicLong memoryUsed;
   private boolean isFlushing;
+  private AtomicInteger numIndexBuildTasks;
 
   public IndexFileProcessor(String storageGroupName, String indexParentDir, String indexFilePath,
       boolean sequence) {
@@ -90,6 +92,7 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
     this.indexBuildPoolManager = IndexBuildTaskPoolManager.getInstance();
     this.writer = new IndexIOWriter(indexFilePath);
     memoryUsed = new AtomicLong(0);
+    numIndexBuildTasks = new AtomicInteger(0);
     isFlushing = false;
     refreshSeriesIndexMapFromMManager();
   }
@@ -206,6 +209,7 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
 
   private void updateMemAndNotify(long memoryDelta) {
     long after = memoryUsed.addAndGet(memoryDelta);
+    System.out.println(String.format("update %d, after: %d", memoryDelta, after));
     if (after < memoryThreshold) {
       synchronized (waitingSymbol) {
         waitingSymbol.notifyAll();
@@ -222,17 +226,19 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
       }
       IndexFlushChunk indexFlushChunk = flushTaskQueue.poll();
       if (indexFlushChunk == null) {
-        if (returnWhenNoTask) {
+        if (returnWhenNoTask && numIndexBuildTasks.get() == 0) {
+          System.out.println("IO thread: no more, break");
           break;
         }
         try {
-          Thread.sleep(10);
+          Thread.sleep(100);
         } catch (@SuppressWarnings("squid:S2142") InterruptedException e) {
           logger.error("Index Flush Task is interrupted, index path {}", indexFilePath, e);
           break;
         }
       } else {
         try {
+          System.out.println(String.format("IO thread: get task: %s", indexFlushChunk));
           writer.writeIndexData(indexFlushChunk);
           // we can release the memory of indexFlushChunk
           updateMemAndNotify(-indexFlushChunk.getDataSize());
@@ -260,25 +266,40 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
   private boolean syncAllocateSize(int mem, IndexPreprocessor preprocessor, IoTDBIndex iotDBIndex,
       Path path) {
     long allowedMemBar = memoryThreshold - mem;
+    if (allowedMemBar < 0) {
+      logger.error(String.format("%s-%s required memory > total threshold, terminate",
+          path, iotDBIndex.getIndexType()));
+      System.out.println(String.format("%s-%s required memory > total threshold, terminate",
+          path, iotDBIndex.getIndexType()));
+      return false;
+    }
+
     boolean hasFlushed = false;
 
     while (true) {
-      long expectValue;
-      long targetValue;
-      do {
-        expectValue = memoryUsed.get();
-        targetValue = expectValue + mem;
+      long expectValue = memoryUsed.get();
+      long targetValue = expectValue + mem;
+      while (expectValue <= allowedMemBar) {
         if (memoryUsed.compareAndSet(expectValue, targetValue)) {
           // allocated successfully
+          System.out.println(String.format("%s-%s require %d success now mem %d",
+              path, iotDBIndex.getIndexType(), mem, targetValue));
           return true;
         }
-      } while (expectValue <= allowedMemBar);
-
+        System.out.println(String.format("%s-%s require %d failed, now mem %d",
+            path, iotDBIndex.getIndexType(), mem, targetValue));
+        expectValue = memoryUsed.get();
+        targetValue = expectValue + mem;
+      }
+      System.out.println(String.format("%s-%s memory full", path, iotDBIndex.getIndexType()));
       // flush and release some memory.
       if (!hasFlushed) {
-        flushAndAddToQueue(iotDBIndex, path);
+        if (preprocessor.getCurrentChunkSize() > 0) {
+          flushAndAddToQueue(iotDBIndex, path);
+        }
         hasFlushed = true;
       } else {
+        System.out.println(String.format("%s-%s have to wait", path, iotDBIndex.getIndexType()));
         // still failed, we have to wait
         synchronized (waitingSymbol) {
           try {
@@ -288,6 +309,7 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
             return false;
           }
         }
+        System.out.println(String.format("%s wake up", path));
       }
     }
   }
@@ -296,9 +318,11 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
     try {
       IndexFlushChunk indexFlushChunk = index.flush();
       flushTaskQueue.add(indexFlushChunk);
-      long memoryDelta = indexFlushChunk.getDataSize();
-      memoryDelta -= index.clear();
-      updateMemAndNotify(memoryDelta);
+      long chunkDataSize = indexFlushChunk.getDataSize();
+      long clearSize = index.clear();
+      System.out.println(String.format("%s-%s flush, add chunk %s, clear %d",
+          path, index.getIndexType(), chunkDataSize, clearSize));
+      updateMemAndNotify(chunkDataSize - clearSize);
     } catch (IndexManagerException e) {
       logger.error("flush path {} errors!", path, e);
     }
@@ -323,21 +347,31 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
 
   public void buildIndexForOneSeries(Path path, TVList tvList) {
     // for every index of this path, submit a task to pool.
+    lock.writeLock().lock();
     if (!allPathsIndexMap.containsKey(path.getFullPath())) {
+      lock.writeLock().unlock();
       return;
     }
     allPathsIndexMap.get(path.getFullPath()).forEach((indexType, index) -> {
       Runnable buildTask = () -> {
+        int nowNum = numIndexBuildTasks.incrementAndGet();
+        System.out.println(String.format("%s-%s start, current task %d",
+            path, index.getIndexType(), nowNum));
         IndexPreprocessor preprocessor = index.initIndexPreprocessor(tvList);
         int previousOffset = Integer.MIN_VALUE;
         while (preprocessor.hasNext()) {
-          int currentOffset = preprocessor.getCurrentOffset();
-          if (currentOffset != previousOffset && !index.checkNeedIndex(tvList, currentOffset)) {
-            return;
+          int currentOffset = preprocessor.getCurrentChunkOffset();
+          if (currentOffset != previousOffset) {
+            if (!index.checkNeedIndex(tvList, currentOffset)) {
+              return;
+            }
+            previousOffset = currentOffset;
           }
           if (!syncAllocateSize(index.getAmortizedSize(), preprocessor, index, path)) {
+            numIndexBuildTasks.decrementAndGet();
             return;
           }
+          System.out.println(String.format("%s-%s process a point", path, index.getIndexType()));
           preprocessor.processNext();
           try {
             index.buildNext();
@@ -347,18 +381,22 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
             return;
           }
         }
+        System.out.println(String.format("%s-%s process all, final flush", path, indexType));
         flushAndAddToQueue(index, path);
+        System.out.println(String.format("%s-%s finish", path, indexType));
+        numIndexBuildTasks.decrementAndGet();
       };
       indexBuildPoolManager.submit(buildTask);
     });
+    lock.writeLock().unlock();
   }
 
 
   public void endFlushMemTable() throws ExecutionException, InterruptedException {
-    lock.writeLock().lock();
-    this.isFlushing = false;
     noMoreIndexFlushTask = true;
     flushTaskFuture.get();
+    lock.writeLock().lock();
+    this.isFlushing = false;
     lock.writeLock().unlock();
   }
 }

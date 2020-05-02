@@ -74,7 +74,11 @@ public class ELBCountFixedPreprocessor extends CountFixedPreprocessor {
 
   @Override
   public List<Object> getLatestN_L3_Features(int latestN) {
+    latestN = Math.min(getCurrentChunkSize(), latestN);
     List<Object> res = new ArrayList<>(latestN);
+    if (latestN == 0) {
+      return res;
+    }
     int startIdx = Math.max(flushedOffset, currentProcessedIdx + 1 - latestN);
     for (int i = startIdx; i <= currentProcessedIdx; i++) {
       res.add(formatELBFeature(i - flushedOffset));
@@ -85,10 +89,16 @@ public class ELBCountFixedPreprocessor extends CountFixedPreprocessor {
   @Override
   public long clear() {
     long toBeReleased = super.clear();
-    toBeReleased += mbrs.getCapacity() * getDataTypeSize(mbrs);
+    toBeReleased += mbrs.size() * getDataTypeSize(mbrs);
     mbrs.clearAndRelease();
     return toBeReleased;
   }
 
-
+  @Override
+  public int getAmortizedSize() {
+    int res = super.getAmortizedSize();
+    res += elbFeatureExtractor.getAmortizedSize();
+    return res;
   }
+
+}

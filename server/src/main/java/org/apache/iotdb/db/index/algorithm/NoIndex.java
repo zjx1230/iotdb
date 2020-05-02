@@ -8,6 +8,7 @@ import java.util.List;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
 import org.apache.iotdb.db.index.preprocess.CountFixedPreprocessor;
+import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
@@ -50,19 +51,23 @@ public class NoIndex extends IoTDBIndex {
    */
   @Override
   public IndexFlushChunk flush() {
-    CountFixedPreprocessor preprocessor = (CountFixedPreprocessor) indexPreprocessor;
-    PrimitiveList list = preprocessor.getIdentifierList();
+    if(indexPreprocessor.getCurrentChunkSize() == 0){
+      System.out.println(String.format("%s-%s not input why flush? return", path, indexType));
+      return null;
+    }
+    List<Object> list = indexPreprocessor.getAll_L1_Identifiers();
     ByteArrayOutputStream baos = new ByteArrayOutputStream(list.size());
-    for (int i = 0; i < list.size(); i++) {
+    for (Object o : list) {
       try {
-        ReadWriteIOUtils.write(list.getLong(i), baos);
+        Identifier id = (Identifier) o;
+        id.serialize(baos);
       } catch (IOException e) {
         logger.error("flush failed", e);
         return null;
       }
     }
-    long st = preprocessor.getEarliestTimeAfterLastFlush();
-    long end = preprocessor.getLatestTimeAfterLastFlush();
+    long st = ((Identifier) list.get(0)).getStartTime();
+    long end = ((Identifier) list.get(list.size() - 1)).getEndTime();
     return new IndexFlushChunk(path, NO_INDEX, baos, st, end);
   }
 

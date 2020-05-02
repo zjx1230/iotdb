@@ -1,5 +1,10 @@
 package org.apache.iotdb.db.index.preprocess;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
+
 /**
  * Calling functions {@linkplain IndexPreprocessor#getCurrent_L1_Identifier()
  * getLatestN_L1_Identifiers} and {@linkplain IndexPreprocessor#getLatestN_L1_Identifiers(int)
@@ -8,6 +13,18 @@ package org.apache.iotdb.db.index.preprocess;
  * frequently in the future, we will optimize it with cache or other methods.
  */
 public class Identifier {
+
+  public long getStartTime() {
+    return startTime;
+  }
+
+  public long getEndTime() {
+    return endTime;
+  }
+
+  public int getSubsequenceLength() {
+    return subsequenceLength;
+  }
 
   private long startTime;
   private long endTime;
@@ -22,5 +39,11 @@ public class Identifier {
   @Override
   public String toString() {
     return String.format("[%d-%d,%d]", startTime, endTime, subsequenceLength);
+  }
+
+  public void serialize(OutputStream output) throws IOException {
+    ReadWriteIOUtils.write(startTime, output);
+    ReadWriteIOUtils.write(endTime, output);
+    ReadWriteIOUtils.write(subsequenceLength, output);
   }
 }

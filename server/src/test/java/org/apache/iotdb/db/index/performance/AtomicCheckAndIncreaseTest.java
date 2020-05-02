@@ -114,8 +114,7 @@ public class AtomicCheckAndIncreaseTest {
 
   }
 
-  @Test
-  public void testFlushRunTask() {
+  public static void main(String[] args) {
     AtomicCheckAndIncreaseTest test = new AtomicCheckAndIncreaseTest(100);
     ExecutorService executor = Executors.newCachedThreadPool();
     executor.submit(test.flushRunTask);

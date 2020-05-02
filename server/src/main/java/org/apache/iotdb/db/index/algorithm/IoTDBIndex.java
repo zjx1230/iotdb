@@ -137,4 +137,8 @@ public abstract class IoTDBIndex {
   public int getAmortizedSize() {
     return indexPreprocessor == null ? 0 : indexPreprocessor.getAmortizedSize();
   }
+
+  public IndexType getIndexType() {
+    return indexType;
+  }
 }

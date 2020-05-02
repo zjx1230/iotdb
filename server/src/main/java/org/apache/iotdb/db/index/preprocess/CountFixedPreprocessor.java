@@ -4,6 +4,8 @@ import static org.apache.iotdb.db.index.common.IndexUtils.getDataTypeSize;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
@@ -113,15 +115,24 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
   }
 
   @Override
-  public int getCurrentOffset() {
+  public int getCurrentChunkOffset() {
     return flushedOffset;
   }
 
   @Override
+  public int getCurrentChunkSize() {
+    return currentProcessedIdx - flushedOffset + 1;
+  }
+
+  @Override
   public List<Object> getLatestN_L1_Identifiers(int latestN) {
+    latestN = Math.min(getCurrentChunkSize(), latestN);
     List<Object> res = new ArrayList<>(latestN);
+    if (latestN == 0) {
+      return res;
+    }
     if (storeIdentifier) {
-      int startIdx = Math.max(flushedOffset, currentProcessedIdx + 1 - latestN);
+      int startIdx = currentProcessedIdx + 1 - latestN;
       for (int i = startIdx; i <= currentProcessedIdx; i++) {
         int actualIdx = i - flushedOffset;
         Identifier identifier = new Identifier(
@@ -143,8 +154,11 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
 
   @Override
   public List<Object> getLatestN_L2_AlignedSequences(int latestN) {
+    latestN = Math.min(getCurrentChunkSize(), latestN);
     List<Object> res = new ArrayList<>(latestN);
-
+    if (latestN == 0) {
+      return res;
+    }
     int startIdxPastN = Math.max(0, currentStartTimeIdx - (latestN - 1) * slideStep);
     while (startIdxPastN <= currentStartTimeIdx) {
       res.add(createAlignedSequence(startIdxPastN));
@@ -187,14 +201,14 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
 
   @Override
   public long clear() {
-    flushedOffset = currentStartTimeIdx + 1;
+    flushedOffset = currentProcessedIdx + 1;
     long toBeReleased = 0;
-    if (identifierList != null) {
-      toBeReleased += identifierList.getCapacity() * getDataTypeSize(identifierList);
+    if (storeIdentifier) {
+      toBeReleased += identifierList.size() * Long.BYTES;
       identifierList.clearAndRelease();
     }
-    if (alignedList != null) {
-      toBeReleased += alignedList.getCapacity() * getDataTypeSize(identifierList);
+    if (storeAligned) {
+      toBeReleased += alignedList.size() * Integer.BYTES;
       alignedList.clearAndRelease();
     }
     return toBeReleased;
@@ -202,18 +216,13 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
 
   @Override
   public int getAmortizedSize() {
-    return Integer.MAX_VALUE;
-  }
-
-  public PrimitiveList getIdentifierList() {
-    return identifierList;
-  }
-
-  public long getEarliestTimeAfterLastFlush(){
-    return srcData.getTime(flushedOffset);
-  }
-
-  public long getLatestTimeAfterLastFlush(){
-    return currentEndTime;
+    int res = 0;
+    if (storeIdentifier) {
+      res += 3 * Long.BYTES;
+    }
+    if (storeAligned) {
+      res += Integer.BYTES;
+    }
+    return res;
   }
 }

@@ -75,4 +75,8 @@ public class ELBFeatureExtractor {
   public enum ELBType {
     ELE, SEQ
   }
+
+  public int getAmortizedSize() {
+    return blockNum * Double.BYTES;
+  }
 }

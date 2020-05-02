@@ -1,8 +1,6 @@
 package org.apache.iotdb.db.index.preprocess;
 
 import java.util.List;
-import org.apache.iotdb.db.index.indexrange.DefaultStrategy;
-import org.apache.iotdb.db.index.indexrange.IndexRangeStrategy;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 
@@ -71,7 +69,13 @@ public abstract class IndexPreprocessor {
    * TVList may have been flushed many times, return the current offset.
    * @return the current offset.
    */
-  public abstract int getCurrentOffset();
+  public abstract int getCurrentChunkOffset();
+
+  /**
+   * In this chunk, how many points have been processed.
+   * @return
+   */
+  public abstract int getCurrentChunkSize();
 
   /**
    * get the latest N L1-identifiers, including the current one. The caller needs to release them
@@ -88,7 +92,8 @@ public abstract class IndexPreprocessor {
   }
 
   public List<Object> getAll_L1_Identifiers() {
-    return getLatestN_L1_Identifiers(Integer.MAX_VALUE);
+    int chunkNum = getCurrentChunkSize();
+    return getLatestN_L1_Identifiers(chunkNum);
   }
 
   /**

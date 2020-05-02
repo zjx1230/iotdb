@@ -1,5 +1,6 @@
 package org.apache.iotdb.db.index.io;
 
+import static org.apache.iotdb.db.index.common.IndexConstant.INDEXED_SUFFIX;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_MAGIC;
 
 import java.io.IOException;
@@ -31,6 +32,7 @@ public class IndexIOReader {
   private final InputStream indexInputStream;
 
   public IndexIOReader(String indexFileName, boolean lazyLoad) throws IOException {
+    indexFileName += INDEXED_SUFFIX;
     this.indexInput = FSFactoryProducer.getFileInputFactory().getTsFileInput(indexFileName);
     this.indexInputStream = indexInput.wrapAsInputStream();
     loadFirstMetadata();

@@ -166,5 +166,11 @@ public class IndexIOWriter {
     public int getDataSize() {
       return data.size();
     }
+
+    @Override
+    public String toString() {
+      return String.format("IndexFlushChunk{path=%s, indexType=%s, data=[len=%d], "
+          + "startTime=%d, endTime=%d}", path, indexType, data.size(), startTime, endTime);
+    }
   }
 }

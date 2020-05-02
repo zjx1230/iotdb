@@ -1,5 +1,8 @@
 package org.apache.iotdb.db.index.io;
 
+import static org.apache.iotdb.db.index.TestUtils.TEST_INDEX_FILE_NAME;
+import static org.apache.iotdb.db.index.common.IndexConstant.INDEXED_SUFFIX;
+import static org.apache.iotdb.db.index.common.IndexConstant.INDEXING_SUFFIX;
 import static org.apache.iotdb.db.index.common.IndexType.ELB;
 import static org.apache.iotdb.db.index.common.IndexType.PAA;
 
@@ -14,6 +17,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.iotdb.db.index.TestUtils;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexIOReader.IndexPair;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexChunkMeta;
@@ -32,16 +36,16 @@ import org.junit.Test;
  */
 public class IndexIOWriterTest {
 
-  public static String TEST_INDEX_FILE_NAME = "test.index";
 
   @Before
   public void setUp() throws Exception {
-    FSFactoryProducer.getFSFactory().getFile(TEST_INDEX_FILE_NAME).delete();
+    TestUtils.clearIndexFile(TEST_INDEX_FILE_NAME);
   }
 
   @After
   public void tearDown() throws Exception {
-    FSFactoryProducer.getFSFactory().getFile(TEST_INDEX_FILE_NAME).delete();
+    TestUtils.clearIndexFile(TEST_INDEX_FILE_NAME);
+
   }
 
 
@@ -91,7 +95,7 @@ public class IndexIOWriterTest {
     }
     indexList.add(new IndexFlushChunk(path, indexType, toByteArray(chunkData), st, end));
     // insert into writer
-    writer.writeIndexData(new IndexFlushChunk(path, indexType, toByteArray(chunkData),st, end));
+    writer.writeIndexData(new IndexFlushChunk(path, indexType, toByteArray(chunkData), st, end));
   }
 
   private ByteArrayOutputStream toByteArray(byte[] bytes) {

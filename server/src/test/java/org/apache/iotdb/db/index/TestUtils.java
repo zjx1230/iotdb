@@ -1,12 +1,24 @@
 package org.apache.iotdb.db.index;
 
+import static org.apache.iotdb.db.index.common.IndexConstant.INDEXED_SUFFIX;
+import static org.apache.iotdb.db.index.common.IndexConstant.INDEXING_SUFFIX;
+
 import java.io.IOException;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.TimeValuePair;
 import org.apache.iotdb.tsfile.read.reader.IPointReader;
 
 public class TestUtils {
+
+  public static String TEST_INDEX_FILE_NAME = "test_index";
+
+  public static void clearIndexFile(String index_name) {
+    FSFactoryProducer.getFSFactory().getFile(index_name).delete();
+    FSFactoryProducer.getFSFactory().getFile(index_name + INDEXED_SUFFIX).delete();
+    FSFactoryProducer.getFSFactory().getFile(index_name + INDEXING_SUFFIX).delete();
+  }
 
   public static String tvListToString(TVList tvList) throws IOException {
     StringBuilder sb = new StringBuilder();

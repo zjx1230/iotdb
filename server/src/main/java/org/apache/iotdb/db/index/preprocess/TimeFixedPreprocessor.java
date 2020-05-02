@@ -4,6 +4,7 @@ import static org.apache.iotdb.db.index.common.IndexUtils.getDataTypeSize;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
@@ -18,6 +19,7 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
  * to now, we adopt the nearest-point alignment rule.
  */
 public class TimeFixedPreprocessor extends IndexPreprocessor {
+
   protected final boolean storeIdentifier;
   protected final boolean storeAligned;
   /**
@@ -37,7 +39,7 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
   private long currentStartTime;
   private long currentEndTime;
   private ArrayList<TVList> alignedList;
-  //  private TVList currentAligned;
+  private TVList currentAligned;
   protected int intervalWidth;
 
   /**
@@ -120,18 +122,25 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
       identifierList.putLong(alignedDim);
     }
     if (alignedDim != -1) {
-      scanIdx = locatedIdxToTimestamp(scanIdx, currentStartTime);
-      if (!storeAligned && !alignedList.isEmpty()) {
-        TVListAllocator.getInstance().release(alignedList.get(0));
-        alignedList.clear();
+      if (currentAligned != null) {
+        TVListAllocator.getInstance().release(currentAligned);
       }
-      alignedList.add(createAlignedSequence(currentStartTime, scanIdx));
+      scanIdx = locatedIdxToTimestamp(scanIdx, currentStartTime);
+      currentAligned = createAlignedSequence(currentStartTime, scanIdx);
+      if (storeAligned) {
+        alignedList.add(currentAligned.clone());
+      }
     }
   }
 
   @Override
-  public int getCurrentOffset() {
+  public int getCurrentChunkOffset() {
     return flushedOffset;
+  }
+
+  @Override
+  public int getCurrentChunkSize() {
+    return currentProcessedIdx - flushedOffset + 1;
   }
 
   /**
@@ -189,9 +198,13 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
 
   @Override
   public List<Object> getLatestN_L1_Identifiers(int latestN) {
+    latestN = Math.min(getCurrentChunkSize(), latestN);
     List<Object> res = new ArrayList<>(latestN);
+    if (latestN == 0) {
+      return res;
+    }
     if (storeIdentifier) {
-      int startIdx = Math.max(flushedOffset, currentProcessedIdx + 1 - latestN);
+      int startIdx = currentProcessedIdx + 1 - latestN;
       for (int i = startIdx; i <= currentProcessedIdx; i++) {
         int actualIdx = i - flushedOffset;
         Identifier identifier = new Identifier(
@@ -215,12 +228,13 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
 
   @Override
   public List<Object> getLatestN_L2_AlignedSequences(int latestN) {
-    if (alignedDim == -1) {
-      return new ArrayList<>(0);
-    }
+    latestN = Math.min(getCurrentChunkSize(), latestN);
     List<Object> res = new ArrayList<>(latestN);
+    if (latestN == 0 || alignedDim == -1) {
+      return res;
+    }
     if (storeAligned) {
-      int startIdx = Math.max(flushedOffset, currentProcessedIdx + 1 - latestN);
+      int startIdx = currentProcessedIdx + 1 - latestN;
       for (int i = startIdx; i <= currentProcessedIdx; i++) {
         res.add(alignedList.get(i - flushedOffset).clone());
       }
@@ -242,22 +256,29 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
   public long clear() {
     flushedOffset = currentProcessedIdx + 1;
     long toBeReleased = 0;
-    if (alignedList != null) {
+    if (identifierList != null) {
+      toBeReleased += identifierList.size() * Long.BYTES;
+      identifierList.clearAndRelease();
+    }
+    if (alignedDim != -1 && storeAligned) {
       for (TVList tv : alignedList) {
-        toBeReleased += tv.size() * getDataTypeSize(tv);
+        toBeReleased += getDataTypeSize(srcData.getDataType()) * alignedDim;
         TVListAllocator.getInstance().release(tv);
       }
       alignedList.clear();
-    }
-    if (identifierList != null) {
-      toBeReleased += identifierList.getCapacity() * getDataTypeSize(identifierList);
-      identifierList.clearAndRelease();
     }
     return toBeReleased;
   }
 
   @Override
   public int getAmortizedSize() {
-    return 0;
+    int res = 0;
+    if (storeAligned) {
+      res += 3 * Long.BYTES;
+    }
+    if (alignedDim != -1 && storeAligned) {
+      res += getDataTypeSize(srcData.getDataType()) * alignedDim;
+    }
+    return res;
   }
 }
