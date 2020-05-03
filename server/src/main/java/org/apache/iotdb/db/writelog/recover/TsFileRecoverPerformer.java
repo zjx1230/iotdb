@@ -36,8 +36,6 @@ import org.apache.iotdb.db.engine.memtable.PrimitiveMemTable;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.engine.version.VersionController;
 import org.apache.iotdb.db.exception.StorageGroupProcessorException;
-import org.apache.iotdb.db.index.IndexFileProcessor;
-import org.apache.iotdb.db.index.IndexManager;
 import org.apache.iotdb.db.utils.FileLoaderUtils;
 import org.apache.iotdb.db.writelog.manager.MultiFileLogNodeManager;
 import org.apache.iotdb.tsfile.exception.NotCompatibleTsFileException;
@@ -199,14 +197,8 @@ public class TsFileRecoverPerformer {
     try {
       if (!recoverMemTable.isEmpty()) {
         // flush logs
-        String storageGroupName = resource.getFile().getParentFile().getParentFile().getName();
-        boolean sequence = "seq".equals(resource.getFile().getParentFile().getParentFile().
-            getParentFile().getName());
-        long partitionId = Long.parseLong(resource.getFile().getParentFile().getName());
-        IndexFileProcessor indexFileProcessor = IndexManager.getInstance()
-            .getProcessor(storageGroupName, sequence, partitionId, resource.getFile().getName());
         MemTableFlushTask tableFlushTask = new MemTableFlushTask(recoverMemTable,
-            restorableTsFileIOWriter, storageGroupName, indexFileProcessor);
+            restorableTsFileIOWriter, resource.getFile().getParentFile().getParentFile().getName(), null);
         tableFlushTask.syncFlushMemTable();
       }
 

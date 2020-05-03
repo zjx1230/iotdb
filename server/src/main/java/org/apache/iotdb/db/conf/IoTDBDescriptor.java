@@ -278,7 +278,7 @@ public class IoTDBDescriptor {
         conf.setConcurrentIndexBuildThread(Runtime.getRuntime().availableProcessors());
       }
 
-      conf.setIndexRootFolder(properties.getProperty("index_root_dir", conf.getWalFolder()));
+      conf.setIndexRootFolder(properties.getProperty("index_root_dir", conf.getIndexRootFolder()));
       // end: index parameter setting
 
       conf.setConcurrentQueryThread(Integer

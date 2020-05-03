@@ -29,12 +29,14 @@ public class IndexIOWriter {
   private final TsFileOutput output;
   private final Map<String, Map<IndexType, List<IndexChunkMeta>>> metaDataMap;
   private final String indexFileName;
+  private boolean closed;
 
   public IndexIOWriter(String indexFileName) {
     this.output = FSFactoryProducer.getFileOutputFactory()
         .getTsFileOutput(indexFileName + INDEXING_SUFFIX, false);
     this.indexFileName = indexFileName;
     this.metaDataMap = new HashMap<>();
+    this.closed = false;
   }
 
   /**
@@ -61,6 +63,9 @@ public class IndexIOWriter {
   }
 
   public void endFile() throws IOException {
+    if (closed) {
+      return;
+    }
     OutputStream outputStream = output.wrapAsStream();
 
     PublicBAOS firstLayerMeta = new PublicBAOS();
@@ -97,6 +102,7 @@ public class IndexIOWriter {
     File dest = fsFactory.getFile(indexFileName + INDEXED_SUFFIX);
     dest.delete();
     fsFactory.moveFile(src, dest);
+    closed = true;
   }
 
   /**

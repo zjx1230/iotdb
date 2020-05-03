@@ -131,7 +131,6 @@ public class IndexWriteIT {
         Statement statement = connection.createStatement()) {
       IoTDBDescriptor.getInstance().getConfig().setEnableIndex(true);
       IoTDBDescriptor.getInstance().getConfig().setIndexBufferSize(1000);
-      IoTDBDescriptor.getInstance().getConfig().setIndexRootFolder("target/index");
       prepareMManager(statement);
       for (int i = 0; i < 100; i++) {
         statement.execute(String.format("INSERT INTO %s(timestamp, %s) VALUES (%d, %d)",

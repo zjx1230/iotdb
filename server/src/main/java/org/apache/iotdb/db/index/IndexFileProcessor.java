@@ -84,6 +84,7 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
   private final AtomicLong memoryUsed;
   private boolean isFlushing;
   private AtomicInteger numIndexBuildTasks;
+  private boolean closed;
 
   public IndexFileProcessor(String storageGroupName, String indexParentDir, String indexFilePath,
       boolean sequence) {
@@ -96,6 +97,7 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
     memoryUsed = new AtomicLong(0);
     numIndexBuildTasks = new AtomicInteger(0);
     isFlushing = false;
+    closed = false;
     refreshSeriesIndexMapFromMManager();
   }
 
@@ -140,7 +142,10 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
    * seal the index file, move "indexing" to "index"
    */
   @SuppressWarnings("squid:S2589")
-  public void close() throws IOException {
+  public synchronized void close() throws IOException {
+    if (closed) {
+      return;
+    }
     //wait the flushing end.
     long waitingTime;
     long waitingInterval = 100;
@@ -164,12 +169,18 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
         }
       } else {
         lock.writeLock().lock();
-        // Another flush task starts between isFlushing = true and write lock.
-        if (!isFlushing) {
-          writer.endFile();
+        try {
+          // Another flush task starts between isFlushing = true and write lock.
+          if (!isFlushing) {
+            writer.endFile();
+            closed = true;
+          }
+        } finally {
+          lock.writeLock().unlock();
+        }
+        if (closed) {
           return;
         }
-        lock.writeLock().unlock();
       }
     }
   }
@@ -229,7 +240,9 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
       IndexFlushChunk indexFlushChunk = flushTaskQueue.poll();
       if (indexFlushChunk == null) {
         if (returnWhenNoTask && numIndexBuildTasks.get() == 0) {
-          System.out.println("IO thread: no more, break");
+          if (logger.isDebugEnabled()) {
+            logger.debug("IO thread: no more, break");
+          }
           break;
         }
         try {
@@ -334,75 +347,82 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
 
   public void startFlushMemTable() {
     lock.writeLock().lock();
-    this.isFlushing = true;
-    this.flushTaskQueue = new ConcurrentLinkedQueue<>();
-    this.flushTaskFuture = indexBuildPoolManager.submit(flushRunTask);
-    this.noMoreIndexFlushTask = false;
-    /*
-     * If the IndexProcessor of the corresponding storage group is not in indexMap, it means that the
-     * current storage group does not build any index in memory yet and we needn't update anything.
-     * The recent index information will be obtained when this IndexProcessor is loaded next time.<p>
-     * For the IndexProcessor loaded in memory, we need to refresh the newest index information in the
-     * start phase.
-     */
-    refreshSeriesIndexMapFromMManager();
-    lock.writeLock().unlock();
+    try {
+      this.isFlushing = true;
+      this.flushTaskQueue = new ConcurrentLinkedQueue<>();
+      this.flushTaskFuture = indexBuildPoolManager.submit(flushRunTask);
+      this.noMoreIndexFlushTask = false;
+      /*
+       * If the IndexProcessor of the corresponding storage group is not in indexMap, it means that the
+       * current storage group does not build any index in memory yet and we needn't update anything.
+       * The recent index information will be obtained when this IndexProcessor is loaded next time.<p>
+       * For the IndexProcessor loaded in memory, we need to refresh the newest index information in the
+       * start phase.
+       */
+      refreshSeriesIndexMapFromMManager();
+    } finally {
+      lock.writeLock().unlock();
+    }
   }
 
   public void buildIndexForOneSeries(Path path, TVList tvList) {
     // for every index of this path, submit a task to pool.
     lock.writeLock().lock();
-    if (!allPathsIndexMap.containsKey(path.getFullPath())) {
-      lock.writeLock().unlock();
-      return;
-    }
-    allPathsIndexMap.get(path.getFullPath()).forEach((indexType, index) -> {
-      Runnable buildTask = () -> {
-        int nowNum = numIndexBuildTasks.incrementAndGet();
-        System.out.println(String.format("%s-%s start, current task %d",
-            path, index.getIndexType(), nowNum));
-        IndexPreprocessor preprocessor = index.initIndexPreprocessor(tvList);
-        int previousOffset = Integer.MIN_VALUE;
-        while (preprocessor.hasNext()) {
-          int currentOffset = preprocessor.getCurrentChunkOffset();
-          if (currentOffset != previousOffset) {
-            if (!index.checkNeedIndex(tvList, currentOffset)) {
+    try {
+      if (!allPathsIndexMap.containsKey(path.getFullPath())) {
+        return;
+      }
+      allPathsIndexMap.get(path.getFullPath()).forEach((indexType, index) -> {
+        Runnable buildTask = () -> {
+          int nowNum = numIndexBuildTasks.incrementAndGet();
+          System.out.println(String.format("%s-%s start, current task %d",
+              path, index.getIndexType(), nowNum));
+          IndexPreprocessor preprocessor = index.initIndexPreprocessor(tvList);
+          int previousOffset = Integer.MIN_VALUE;
+          while (preprocessor.hasNext()) {
+            int currentOffset = preprocessor.getCurrentChunkOffset();
+            if (currentOffset != previousOffset) {
+              if (!index.checkNeedIndex(tvList, currentOffset)) {
+                return;
+              }
+              previousOffset = currentOffset;
+            }
+            if (!syncAllocateSize(index.getAmortizedSize(), preprocessor, index, path)) {
+              numIndexBuildTasks.decrementAndGet();
               return;
             }
-            previousOffset = currentOffset;
-          }
-          if (!syncAllocateSize(index.getAmortizedSize(), preprocessor, index, path)) {
-            numIndexBuildTasks.decrementAndGet();
-            return;
-          }
 //          System.out.println(String.format("%s-%s process a point", path, index.getIndexType()));
-          preprocessor.processNext();
-          try {
-            index.buildNext();
-          } catch (IndexManagerException e) {
-            //Give up the following data, but the previously serialized chunk will not be affected.
-            logger.error("build index failed", e);
-            return;
+            preprocessor.processNext();
+            try {
+              index.buildNext();
+            } catch (IndexManagerException e) {
+              //Give up the following data, but the previously serialized chunk will not be affected.
+              logger.error("build index failed", e);
+              return;
+            }
           }
-        }
-        System.out.println(String.format("%s-%s process all, final flush", path, indexType));
-        if (preprocessor.getCurrentChunkSize() > 0) {
-          flushAndAddToQueue(index, path);
-        }
-        System.out.println(String.format("%s-%s finish", path, indexType));
-        numIndexBuildTasks.decrementAndGet();
-      };
-      indexBuildPoolManager.submit(buildTask);
-    });
-    lock.writeLock().unlock();
+          System.out.println(String.format("%s-%s process all, final flush", path, indexType));
+          if (preprocessor.getCurrentChunkSize() > 0) {
+            flushAndAddToQueue(index, path);
+          }
+          System.out.println(String.format("%s-%s finish", path, indexType));
+          numIndexBuildTasks.decrementAndGet();
+        };
+        indexBuildPoolManager.submit(buildTask);
+      });
+    } finally {
+      lock.writeLock().unlock();
+    }
   }
 
 
   public void endFlushMemTable() throws ExecutionException, InterruptedException {
+//    System.out.println("start end flush ========================================");
     noMoreIndexFlushTask = true;
     flushTaskFuture.get();
     lock.writeLock().lock();
     this.isFlushing = false;
+//    System.out.println("end flushing is called ========================================");
     lock.writeLock().unlock();
   }
 

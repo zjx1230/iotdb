@@ -40,6 +40,7 @@ import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.cache.ChunkMetadataCache;
 import org.apache.iotdb.db.engine.cache.TsFileMetaDataCache;
 import org.apache.iotdb.db.exception.StorageEngineException;
+import org.apache.iotdb.db.index.IndexManager;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.FileReaderManager;
@@ -129,6 +130,11 @@ public class EnvironmentUtils {
       fail();
     }
 
+    // clean index
+    if(config.isEnableIndex()){
+      IndexManager.getInstance().deleteAll();
+    }
+
     IoTDBDescriptor.getInstance().getConfig().setReadOnly(false);
 
 
@@ -164,6 +170,7 @@ public class EnvironmentUtils {
     cleanDir(config.getWalFolder());
     // delete query
     cleanDir(config.getQueryDir());
+    cleanDir(config.getIndexRootFolder());
     cleanDir(config.getBaseDir());
     // delete data files
     for (String dataDir : config.getDataDirs()) {

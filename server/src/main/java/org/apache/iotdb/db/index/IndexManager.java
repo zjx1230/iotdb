@@ -22,7 +22,9 @@ import static org.apache.iotdb.db.conf.IoTDBConstant.SEQUENCE_FLODER_NAME;
 import static org.apache.iotdb.db.conf.IoTDBConstant.UNSEQUENCE_FLODER_NAME;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.iotdb.db.conf.IoTDBConfig;
@@ -35,6 +37,7 @@ import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.service.IService;
 import org.apache.iotdb.db.service.JMXService;
 import org.apache.iotdb.db.service.ServiceType;
+import org.apache.iotdb.db.utils.FileUtils;
 import org.apache.iotdb.tsfile.common.constant.TsFileConstant;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
@@ -152,6 +155,26 @@ public class IndexManager implements IService {
 
   public static IndexManager getInstance() {
     return IndexManager.InstanceHolder.instance;
+  }
+
+  public void deleteAll() throws IOException {
+    logger.info("Start deleting all storage groups' timeseries");
+    for (Entry<String, IndexFileProcessor> entry : indexProcessorMap.entrySet()) {
+      IndexFileProcessor processor = entry.getValue();
+      processor.close();
+    }
+    // delete all index files
+    for (Entry<String, IndexFileProcessor> entry : indexProcessorMap.entrySet()) {
+      IndexFileProcessor processor = entry.getValue();
+      File file = new File(processor.getIndexFilePath());
+      if (file.exists()) {
+        file.delete();
+      }
+    }
+    File indexRootDir = new File(DirectoryManager.getInstance().getIndexRootFolder());
+    if (indexRootDir.exists())
+      FileUtils.deleteDirectory(indexRootDir);
+    this.indexProcessorMap.clear();
   }
 
   private static class InstanceHolder {
