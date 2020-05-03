@@ -19,6 +19,8 @@
 package org.apache.iotdb.db.metadata;
 
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
+import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.qp.physical.sys.CreateTimeSeriesPlan;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.slf4j.Logger;
@@ -91,8 +93,23 @@ public class MLogWriter {
     writer.flush();
   }
 
+
   public void deleteTimeseries(String path) throws IOException {
     writer.write(MetadataOperationType.DELETE_TIMESERIES + "," + path);
+    writer.newLine();
+    writer.flush();
+  }
+
+  public void createIndex(String path, IndexInfo indexInfo) throws IOException {
+    String log = indexInfo.serializeCreateIndex(path);
+    writer.write(log);
+    writer.newLine();
+    writer.flush();
+  }
+
+  public void dropIndex(String path, IndexType indexType) throws IOException {
+    String log = IndexInfo.serializeDropIndex(path, indexType);
+    writer.write(log);
     writer.newLine();
     writer.flush();
   }
@@ -154,7 +171,7 @@ public class MLogWriter {
         writer.write(buf.toString());
         writer.newLine();
         writer.flush();
-        
+
       }
     }
 
@@ -162,9 +179,9 @@ public class MLogWriter {
     if (!logFile.delete()) {
       throw new IOException("Deleting " + logFile + "failed.");
     }
-    
+
     // rename tmpLogFile to mlog
     FSFactoryProducer.getFSFactory().moveFile(tmpLogFile, logFile);
   }
-  
+
 }

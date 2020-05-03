@@ -362,11 +362,7 @@ public class MManager {
     // create index with memory check
     // TODO shall we check memory like Create Timeseries?
     if (writeToLog) {
-//      BufferedWriter writer = getLogWriter();
-//      String log = indexInfo.serializeCreateIndex(fullPath);
-//      writer.write(log);
-//      writer.newLine();
-//      writer.flush();
+        logWriter.createIndex(fullPath, indexInfo);
     }
     // update statistics
     //TODO shall we update statistics for Create Index?
@@ -409,10 +405,7 @@ public class MManager {
     // TODO shall we check memory like Drop Timeseries?
     mtree.dropIndex(fullPath, indexType);
     if (writeToLog) {
-//      BufferedWriter writer = getLogWriter();
-//      writer.write(IndexInfo.serializeDropIndex(fullPath, indexType));
-//      writer.newLine();
-//      writer.flush();
+      logWriter.dropIndex(fullPath, indexType);
     }
   }
 
