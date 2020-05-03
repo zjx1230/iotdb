@@ -21,6 +21,8 @@ package org.apache.iotdb.db.index.common;
 import java.nio.ByteBuffer;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.algorithm.NoIndex;
+import org.apache.iotdb.db.index.algorithm.elb.ELBIndex;
+import org.apache.iotdb.db.index.algorithm.paa.PAAIndex;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
@@ -94,12 +96,14 @@ public enum IndexType {
   public static IoTDBIndex constructIndex(String path, IndexType indexType, IndexInfo indexInfo) {
     switch (indexType) {
       case ELB:
-      case KV_INDEX:
-        throw new NotImplementedException("unsupported index type:" + indexType);
+        return new ELBIndex(path, indexInfo);
       case PAA:
+        return new PAAIndex(path, indexInfo);
       case NO_INDEX:
-      default:
         return new NoIndex(path, indexInfo);
+      case KV_INDEX:
+      default:
+        throw new NotImplementedException("unsupported index type:" + indexType);
     }
   }
 }

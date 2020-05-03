@@ -1,10 +1,15 @@
 package org.apache.iotdb.db.index.algorithm.paa;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import org.apache.iotdb.db.index.common.IndexRuntimeException;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.preprocess.TimeFixedPreprocessor;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 /**
  * PAA (Piecewise Aggregate Approximation), a classical feature in time series. <p>
@@ -12,11 +17,11 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
  * Refer to: Keogh Eamonn, et al. "Dimensionality reduction for fast similarity search in large time
  * series databases." Knowledge and information Systems 3.3 (2001): 263-286.
  */
-public class PAATimeFixed extends TimeFixedPreprocessor {
+public class PAATimeFixedPreprocessor extends TimeFixedPreprocessor {
 
-  public PAATimeFixed(TVList srcData, int windowRange, int paaDim, int slideStep,
+  public PAATimeFixedPreprocessor(TVList srcData, int windowRange, int slideStep, int paaDim,
       boolean storeIdentifier, boolean storeAligned) {
-    super(srcData, windowRange, paaDim, slideStep, storeIdentifier, storeAligned);
+    super(srcData, windowRange, slideStep, paaDim, storeIdentifier, storeAligned);
   }
 
 
@@ -77,4 +82,38 @@ public class PAATimeFixed extends TimeFixedPreprocessor {
     return seq;
   }
 
+  /**
+   * custom for {@linkplain PAAIndex}
+   *
+   * @param currentCorners current corners
+   */
+  void copyFeature(float[] currentCorners) {
+    if (currentAligned.size() != currentCorners.length) {
+      throw new IndexRuntimeException(String.format("paa aligned.size %d != corners.length %d",
+          currentAligned.size(), currentCorners.length));
+    }
+    for (int i = 0; i < currentCorners.length; i++) {
+      currentCorners[i] = IndexUtils.getFloatFromAnyType(currentAligned, i);
+    }
+  }
+
+  /**
+   * custom for {@linkplain PAAIndex}
+   *
+   * @param idx the idx-th identifiers
+   * @param outputStream to output
+   */
+  void serializeIdentifier(Integer idx, OutputStream outputStream) throws IOException {
+    int actualIdx = idx - flushedOffset;
+    if (actualIdx * 3 + 2 >= identifierList.size()) {
+      throw new IOException(String.format("PAA serialize: idx %d*3+2 > identifiers size %d", idx,
+          identifierList.size()));
+    }
+    if (!storeIdentifier) {
+      throw new IOException("In PAA index, must store the identifier list");
+    }
+    ReadWriteIOUtils.write(identifierList.getLong(actualIdx * 3), outputStream);
+    ReadWriteIOUtils.write(identifierList.getLong(actualIdx * 3 + 1), outputStream);
+    ReadWriteIOUtils.write((int) identifierList.getLong(actualIdx * 3 + 2), outputStream);
+  }
 }

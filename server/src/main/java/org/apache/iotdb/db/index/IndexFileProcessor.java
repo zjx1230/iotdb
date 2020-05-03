@@ -79,6 +79,7 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
   private final Object waitingSymbol = new Object();
   private static long memoryThreshold = IoTDBDescriptor.getInstance().getConfig()
       .getIndexBufferSize();
+
   private final AtomicLong memoryUsed;
   private boolean isFlushing;
   private AtomicInteger numIndexBuildTasks;
@@ -267,9 +268,11 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
       Path path) {
     long allowedMemBar = memoryThreshold - mem;
     if (allowedMemBar < 0) {
-      logger.error(String.format("%s-%s required memory > total threshold, terminate",
-          path, iotDBIndex.getIndexType()));
-      System.out.println(String.format("%s-%s required memory > total threshold, terminate",
+      if (logger.isErrorEnabled()) {
+        logger.error(String.format("%s-%s required memory > total threshold, terminate",
+            path, iotDBIndex.getIndexType()));
+      }
+      System.out.println(String.format("========%s-%s required memory > total threshold, terminate",
           path, iotDBIndex.getIndexType()));
       return false;
     }
@@ -382,7 +385,9 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
           }
         }
         System.out.println(String.format("%s-%s process all, final flush", path, indexType));
-        flushAndAddToQueue(index, path);
+        if (preprocessor.getCurrentChunkSize() > 0) {
+          flushAndAddToQueue(index, path);
+        }
         System.out.println(String.format("%s-%s finish", path, indexType));
         numIndexBuildTasks.decrementAndGet();
       };
@@ -398,5 +403,19 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
     lock.writeLock().lock();
     this.isFlushing = false;
     lock.writeLock().unlock();
+  }
+
+  /**
+   * Only for test.
+   */
+  public AtomicLong getMemoryUsed() {
+    return memoryUsed;
+  }
+
+  /**
+   * Only for test.
+   */
+  public AtomicInteger getNumIndexBuildTasks() {
+    return numIndexBuildTasks;
   }
 }

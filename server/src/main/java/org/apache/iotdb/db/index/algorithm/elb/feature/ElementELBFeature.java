@@ -5,7 +5,7 @@ import org.apache.iotdb.db.index.algorithm.elb.pattern.MilesPattern;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 
 /**
- * PatternNode：Pattern被分割成的小block，lowerbound 1 Created by kangrong on 16/12/27.
+ * PatternNode：Pattern is divided into a list of blocks
  */
 public class ElementELBFeature extends ELBFeature {
 

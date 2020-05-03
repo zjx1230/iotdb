@@ -4,20 +4,20 @@ import static org.apache.iotdb.db.index.common.IndexUtils.getValueRange;
 
 import org.apache.iotdb.db.utils.datastructure.TVList;
 
-public class SinglePattern implements CalcParam {
+public class SingleParamSchema implements CalcParam {
 
   private final double[] thresholdsArray;
   /**
    * -1 means Ratio mode
    */
-  private float thresholdBase;
+  private double thresholdBase;
   /**
    * -1 means Absolute mode
    */
   private double thresholdRatio;
   private final Object[] res;
 
-  public SinglePattern(float thresholdBase, double thresholdRatio, int windowRange) {
+  public SingleParamSchema(double thresholdBase, double thresholdRatio, int windowRange) {
     this.thresholdBase = thresholdBase;
     this.thresholdRatio = thresholdRatio;
     this.res = new Object[4];
@@ -31,12 +31,12 @@ public class SinglePattern implements CalcParam {
     res[3] = maxLeftBorders;
   }
 
-  public SinglePattern createInstanceByAbsoluteThreshold(float threshold, int windowRange) {
-    return new SinglePattern(threshold, -1, windowRange);
+  public SingleParamSchema createInstanceByAbsoluteThreshold(float threshold, int windowRange) {
+    return new SingleParamSchema(threshold, -1, windowRange);
   }
 
-  public SinglePattern createInstanceByValueRatio(float thresholdRatio, int windowRange) {
-    return new SinglePattern(-1, thresholdRatio, windowRange);
+  public SingleParamSchema createInstanceByValueRatio(float thresholdRatio, int windowRange) {
+    return new SingleParamSchema(-1, thresholdRatio, windowRange);
   }
 
   /**

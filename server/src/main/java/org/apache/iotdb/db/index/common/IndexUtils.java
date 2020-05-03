@@ -43,6 +43,21 @@ public class IndexUtils {
     }
   }
 
+  public static float getFloatFromAnyType(TVList srcData, int idx) {
+    switch (srcData.getDataType()) {
+      case INT32:
+        return srcData.getInt(idx);
+      case INT64:
+        return srcData.getLong(idx);
+      case FLOAT:
+        return srcData.getFloat(idx);
+      case DOUBLE:
+        return (float) srcData.getDouble(idx);
+      default:
+        throw new NotImplementedException(srcData.getDataType().toString());
+    }
+  }
+
   public static double getValueRange(TVList srcData, int offset, int length) {
     double minValue = Double.MAX_VALUE;
     double maxValue = Double.MIN_VALUE;

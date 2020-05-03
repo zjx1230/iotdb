@@ -89,7 +89,9 @@ public class IndexIOReader {
     if (metaDataMap == null) {
       loadFirstMetadata();
     }
-    assert metaDataMap != null;
+    if(metaDataMap == null){
+      throw new IOException("load first layer metadata failed");
+    }
     if (!metaDataMap.containsKey(path) || !metaDataMap.get(path).containsKey(indexType)) {
       return new ArrayList<>();
     }

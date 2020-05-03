@@ -60,7 +60,7 @@ public class IndexLogicalPlanTest {
 
   @Test
   public void testParseCreateIndex() {
-    String sqlStr = "CREATE INDEX ON root.vehicle.d1.s1 WHERE time > 50 WITH INDEX=PAA, window_length=100, merge_threshold= 0.5";
+    String sqlStr = "CREATE INDEX ON root.vehicle.d1.s1 WHERE time > 50 WITH INDEX=PAA, WINDOW_LENGTH=100, merge_threshold= 0.5";
     Operator op = parseDriver.parse(sqlStr, IoTDBDescriptor.getInstance().getConfig().getZoneID());
     Assert.assertEquals(CreateIndexOperator.class, op.getClass());
     CreateIndexOperator createOperator = (CreateIndexOperator) op;

@@ -1,5 +1,8 @@
 package org.apache.iotdb.db.index.distance;
 
+import static org.apache.iotdb.db.index.common.IndexConstant.L_INFINITY;
+
+import org.apache.iotdb.db.index.common.IndexConstant;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 
 /**
@@ -26,4 +29,12 @@ public interface Distance {
 
   int distEarlyAbandonDetailNoRoot(double[] a, int aOffset, TVList b, int bOffset, int length,
       double thresholdPow);
+
+  static Distance getDistance(String distance) {
+    if (L_INFINITY.equals(distance)) {
+      return new LInfinityNormdouble();
+    } else {
+      return new LNormDouble(Integer.parseInt(distance));
+    }
+  }
 }

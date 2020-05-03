@@ -87,7 +87,8 @@ public abstract class IoTDBIndex {
   public abstract IndexFlushChunk flush() throws IndexManagerException;
 
   /**
-   * clear and release the occupied memory. The preprocessor clearing should be considered.
+   * clear and release the occupied memory. The preprocessor has been cleared in IoTDBIndex, so
+   * remember invoke {@code super.clear()} and then add yourself.
    *
    * @return how much memory was freed.
    */
@@ -95,6 +96,14 @@ public abstract class IoTDBIndex {
     return indexPreprocessor == null ? 0 : indexPreprocessor.clear();
   }
 
+  /**
+   * return how much memory is increased for each point processed. It's an amortized estimation,
+   * which should consider both {@linkplain IndexPreprocessor#getAmortizedSize()} and the <b>index
+   * expansion rate</b>.
+   */
+  public int getAmortizedSize() {
+    return indexPreprocessor == null ? 0 : indexPreprocessor.getAmortizedSize();
+  }
   /**
    * query on path with parameters, return result by limitSize
    *
@@ -129,14 +138,6 @@ public abstract class IoTDBIndex {
    */
   public abstract void delete();
 
-  /**
-   * return how much memory is increased for each point processed. It's an amortized estimation,
-   * which should consider both {@linkplain IndexPreprocessor#getAmortizedSize()} and the <b>index
-   * expansion rate</b>.
-   */
-  public int getAmortizedSize() {
-    return indexPreprocessor == null ? 0 : indexPreprocessor.getAmortizedSize();
-  }
 
   public IndexType getIndexType() {
     return indexType;

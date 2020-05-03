@@ -141,6 +141,10 @@ public abstract class IndexPreprocessor {
     return slideStep;
   }
 
+  public abstract long getChunkStartTime();
+
+  public abstract long getChunkEndTime();
+
   /**
    * The time window type: time-fixed or count-fixed. It determines the meanings of following
    * fields: {@code windowRange}, {@code windowRange}, {@code slideStep}.<p>

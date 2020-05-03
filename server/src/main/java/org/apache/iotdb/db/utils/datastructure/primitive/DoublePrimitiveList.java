@@ -53,6 +53,15 @@ public class DoublePrimitiveList extends PrimitiveList {
     return values.get(arrayIndex)[elementIndex];
   }
 
+
+  @Override
+  public void putAllDouble(PrimitiveList src) {
+    // The putAll can be optimized
+    for (int i = 0; i < src.size; i++) {
+      this.putDouble(src.getDouble(i));
+    }
+  }
+
   @Override
   void clearAndReleaseValues() {
     if (values != null) {

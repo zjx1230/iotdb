@@ -35,11 +35,11 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
    */
   private int totalProcessedCount;
   private int scanIdx;
-  private PrimitiveList identifierList;
+  protected PrimitiveList identifierList;
   private long currentStartTime;
   private long currentEndTime;
   private ArrayList<TVList> alignedList;
-  private TVList currentAligned;
+  protected TVList currentAligned;
   protected int intervalWidth;
 
   /**
@@ -47,7 +47,8 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
    * currentProcessedIdx}, {@code currentStartTime}), but when reading or calculating L1~L3
    * features, we should carefully subtract {@code lastFlushIdx} from {@code currentProcessedIdx}.
    */
-  private int flushedOffset = 0;
+  protected int flushedOffset = 0;
+  private long chunkStartTime = -1;
 
   /**
    * Create TimeFixedPreprocessor
@@ -59,8 +60,8 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
    * @param storeIdentifier true if we need to store all identifiers. The cost will be counted.
    * @param storeAligned true if we need to store all aligned sequences. The cost will be counted.
    */
-  public TimeFixedPreprocessor(TVList srcData, int windowRange, int alignedDim,
-      int slideStep, boolean storeIdentifier, boolean storeAligned) {
+  public TimeFixedPreprocessor(TVList srcData, int windowRange, int slideStep,
+      int alignedDim, boolean storeIdentifier, boolean storeAligned) {
     super(srcData, WindowType.COUNT_FIXED, windowRange, slideStep);
     this.storeIdentifier = storeIdentifier;
     this.storeAligned = storeAligned;
@@ -113,12 +114,18 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
     currentProcessedIdx++;
     currentStartTime += slideStep;
     currentEndTime += slideStep;
+    if (chunkStartTime == -1) {
+      chunkStartTime = currentStartTime;
+    }
     // calculate the newest aligned sequence
 
     if (storeIdentifier) {
       // it's a naive identifier, we can refine it in the future.
       identifierList.putLong(currentStartTime);
       identifierList.putLong(currentEndTime);
+      // TimeFixed feature has fixed dimension of aligned sequence.
+      // If necessary, the fixed dimension can be changed to the number of actual data points
+      // within the time range of the aligned sequence.
       identifierList.putLong(alignedDim);
     }
     if (alignedDim != -1) {
@@ -136,6 +143,10 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
   @Override
   public int getCurrentChunkOffset() {
     return flushedOffset;
+  }
+
+  public int getCurrentIdx() {
+    return currentProcessedIdx;
   }
 
   @Override
@@ -225,7 +236,6 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
     return res;
   }
 
-
   @Override
   public List<Object> getLatestN_L2_AlignedSequences(int latestN) {
     latestN = Math.min(getCurrentChunkSize(), latestN);
@@ -253,8 +263,19 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
   }
 
   @Override
+  public long getChunkStartTime() {
+    return chunkStartTime;
+  }
+
+  @Override
+  public long getChunkEndTime() {
+    return currentEndTime;
+  }
+
+  @Override
   public long clear() {
     flushedOffset = currentProcessedIdx + 1;
+    chunkStartTime = -1;
     long toBeReleased = 0;
     if (identifierList != null) {
       toBeReleased += identifierList.size() * Long.BYTES;
@@ -273,7 +294,7 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
   @Override
   public int getAmortizedSize() {
     int res = 0;
-    if (storeAligned) {
+    if (storeIdentifier) {
       res += 3 * Long.BYTES;
     }
     if (alignedDim != -1 && storeAligned) {

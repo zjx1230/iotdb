@@ -3,14 +3,14 @@ package org.apache.iotdb.db.index.preprocess;
 import java.io.IOException;
 import java.util.List;
 import org.apache.iotdb.db.index.TestUtils;
-import org.apache.iotdb.db.index.algorithm.paa.PAATimeFixed;
+import org.apache.iotdb.db.index.algorithm.paa.PAATimeFixedPreprocessor;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class PAATimeFixedPreprocessorTest {
+public class PAATimeFixedPreprocessorPreprocessorTest {
 
   @Test
   public void testCreateAlignedSequence() throws IOException {
@@ -35,12 +35,8 @@ public class PAATimeFixedPreprocessorTest {
     int windowRange = 20;
     int alignedSequenceLength = 4;
     int slideStep = 5;
-//    PAATimeFixed timeFixed = new PAATimeFixed(srcData, windowRange,
-//        alignedSequenceLength, slideStep, true, true);
-//    assertL1AndL2(timeFixed, groundTruthL1, groundTruthL2);
-//    timeFixed.clear();
 
-    PAATimeFixed timeFixedWithoutStored = new PAATimeFixed(srcData, windowRange,
+    PAATimeFixedPreprocessor timeFixedWithoutStored = new PAATimeFixedPreprocessor(srcData, windowRange,
         alignedSequenceLength, slideStep, false, false);
     assertL1AndL2(timeFixedWithoutStored, groundTruthL1, groundTruthL2);
     timeFixedWithoutStored.clear();
@@ -67,18 +63,18 @@ public class PAATimeFixedPreprocessorTest {
     int windowRange = 20;
     int alignedSequenceLength = 4;
     int slideStep = 5;
-    PAATimeFixed timeFixed = new PAATimeFixed(srcData, windowRange,
+    PAATimeFixedPreprocessor timeFixed = new PAATimeFixedPreprocessor(srcData, windowRange,
         alignedSequenceLength, slideStep, true, true);
     assertL1AndL2(timeFixed, groundTruthL1, groundTruthL2);
     timeFixed.clear();
     System.out.println();
-    PAATimeFixed timeFixedWithoutStored = new PAATimeFixed(srcData, windowRange,
+    PAATimeFixedPreprocessor timeFixedWithoutStored = new PAATimeFixedPreprocessor(srcData, windowRange,
         alignedSequenceLength, slideStep, false, false);
     assertL1AndL2(timeFixedWithoutStored, groundTruthL1, groundTruthL2);
     timeFixedWithoutStored.clear();
   }
 
-  private void assertL1AndL2(PAATimeFixed timeFixed, String[] groundTruthL1,
+  private void assertL1AndL2(PAATimeFixedPreprocessor timeFixed, String[] groundTruthL1,
       String[] groundTruthL2) throws IOException {
     int idx = 0;
     while (timeFixed.hasNext()) {
@@ -135,7 +131,7 @@ public class PAATimeFixedPreprocessorTest {
     int windowRange = 20;
     int alignedSequenceLength = 4;
     int slideStep = 5;
-    PAATimeFixed timeFixed = new PAATimeFixed(srcData, windowRange,
+    PAATimeFixedPreprocessor timeFixed = new PAATimeFixedPreprocessor(srcData, windowRange,
         alignedSequenceLength, slideStep, true, true);
 
     timeFixed.processNext();

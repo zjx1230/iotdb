@@ -1,42 +1,82 @@
 package org.apache.iotdb.db.index.algorithm;
 
-/*
-http://www.spf4j.org/jacoco/org.spf4j.base/RTree.java.html
- * Copyright 2010 Russ Weeks rweeks@newbrightidea.com Licensed under the GNU
- * LGPL License details here: http://www.gnu.org/licenses/lgpl-3.0.txt
- *
- */
-
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Set;
+import java.util.function.BiConsumer;
+import org.apache.iotdb.db.index.common.IllegalIndexParamException;
+import org.apache.iotdb.db.index.common.IndexRuntimeException;
+import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 /**
- * Implementation of an arbitrary-dimension RTree. Based on R-Trees: A Dynamic Index Structure for
- * Spatial Searching (Antonn Guttmann, 1984)
+ * <p>This code is an implementation of an arbitrary-dimension RTree. Refer to: R-Trees: A Dynamic
+ * Index Structure for * Spatial Searching (Antonn Guttmann, 1984) This class is not
+ * thread-safe.</p>
  *
- * This class is not thread-safe. TODO: I have cleaned up a bit this class, but there is a lot more
- * to do here this class implementation is not clean in several places.
- *
- * @param <T> the type of entry to store in this RTree.
+ * <p>The code refer to: <a href="http://www.spf4j.org/jacoco/org.spf4j.base/RTree.java.html"></a>.
+ * The license of original code is as follows:</p>
+ * <p>Copyright 2010 Russ Weeks rweeks@newbrightidea.com</p>
+ * <p>Under the GNU * LGPL License details here: http://www.gnu.org/licenses/lgpl-3.0.txt</p>
  */
-public final class RTree<T> {
+public class RTree<T> {
 
   public enum SeedPicker {
 
-    LINEAR, QUADRATIC
+    LINEAR, QUADRATIC;
+
+    /**
+     * judge the index type.
+     *
+     * @param i an integer used to determine index type
+     * @return index type
+     */
+    public static SeedPicker deserialize(short i) {
+      switch (i) {
+        case 0:
+          return LINEAR;
+        case 1:
+          return QUADRATIC;
+        default:
+          throw new IllegalIndexParamException("Given index is not implemented");
+      }
+    }
+
+    public static int getSerializedSize() {
+      return Short.BYTES;
+    }
+
+    /**
+     * @return the integer used to determine index type
+     */
+    public short serialize() {
+      switch (this) {
+        case LINEAR:
+          return 0;
+        case QUADRATIC:
+          return 1;
+        default:
+          throw new IllegalIndexParamException("Given index is not implemented");
+      }
+    }
   }
 
   private final int maxEntries;
-  private final int minEntries;
+  final int minEntries;
   private final int numDims;
   private final float[] pointDims;
   private final SeedPicker seedPicker;
-  private Node root;
-  private int size;
+  protected Node root;
+  protected int size;
+
+  private static final float DIM_FACTOR = -2.0f;
+  private static final float FUDGE_FACTOR = 1.001f;
 
   /**
    * Creates a new RTree.
@@ -60,8 +100,14 @@ public final class RTree<T> {
     this(maxEntries, minEntries, numDims, SeedPicker.LINEAR);
   }
 
-  private static final float DIM_FACTOR = -2.0f;
-  private static final float FUDGE_FACTOR = 1.001f;
+
+  /**
+   * Builds a new RTree using default parameters: maximum 50 entries per node minimum 2 entries per
+   * node 2 dimensions
+   */
+  public RTree() {
+    this(50, 2, 2, SeedPicker.LINEAR);
+  }
 
   private Node buildRoot(final boolean asLeaf) {
     float[] initCoords = new float[numDims];
@@ -71,14 +117,6 @@ public final class RTree<T> {
       initDimensions[i] = DIM_FACTOR * (float) Math.sqrt(Float.MAX_VALUE);
     }
     return new Node(initCoords, initDimensions, asLeaf);
-  }
-
-  /**
-   * Builds a new RTree using default parameters: maximum 50 entries per node minimum 2 entries per
-   * node 2 dimensions
-   */
-  public RTree() {
-    this(50, 2, 2, SeedPicker.LINEAR);
   }
 
   /**
@@ -120,17 +158,18 @@ public final class RTree<T> {
   public List<T> search(final float[] coords, final float[] dimensions) {
     assert (coords.length == numDims);
     assert (dimensions.length == numDims);
-    LinkedList<T> results = new LinkedList<T>();
+    LinkedList<T> results = new LinkedList<>();
     search(coords, dimensions, root, results);
     return results;
   }
 
+  @SuppressWarnings("unchecked")
   private void search(final float[] coords, final float[] dimensions, final Node n,
       final LinkedList<T> results) {
     if (n.leaf) {
       for (Node e : n.children) {
         if (isOverlap(coords, dimensions, e.coords, e.dimensions)) {
-          results.add(((Entry<T>) e).entry);
+          results.add(((EntryNode<T>) e).value);
         }
       }
     } else {
@@ -155,15 +194,15 @@ public final class RTree<T> {
     assert (dimensions.length == numDims);
     Node l = findLeaf(root, coords, dimensions, entry);
     if (l == null) {
-      throw new RuntimeException("leaf not found for entry " + entry);
+      throw new IndexRuntimeException("leaf not found for entry " + entry);
     }
     ListIterator<Node> li = l.children.listIterator();
     T removed = null;
     while (li.hasNext()) {
       @SuppressWarnings("unchecked")
-      Entry<T> e = (Entry<T>) li.next();
-      if (e.entry.equals(entry)) {
-        removed = e.entry;
+      EntryNode<T> e = (EntryNode<T>) li.next();
+      if (e.value.equals(entry)) {
+        removed = e.value;
         li.remove();
         break;
       }
@@ -186,7 +225,7 @@ public final class RTree<T> {
       final float[] dimensions, final T entry) {
     if (n.leaf) {
       for (Node c : n.children) {
-        if (((Entry) c).entry.equals(entry)) {
+        if (((EntryNode) c).value.equals(entry)) {
           return n;
         }
       }
@@ -206,14 +245,14 @@ public final class RTree<T> {
 
   private void condenseTree(final Node pn) {
     Node n = pn;
-    Set<Node> q = new HashSet<Node>();
+    Set<Node> q = new HashSet<>();
     while (n != root) {
       if (n.leaf && (n.children.size() < minEntries)) {
         q.addAll(n.children);
         n.parent.children.remove(n);
       } else if (!n.leaf && (n.children.size() < minEntries)) {
         // probably a more efficient way to do this...
-        LinkedList<Node> toVisit = new LinkedList<Node>(n.children);
+        LinkedList<Node> toVisit = new LinkedList<>(n.children);
         while (!toVisit.isEmpty()) {
           Node c = toVisit.pop();
           if (c.leaf) {
@@ -228,7 +267,7 @@ public final class RTree<T> {
       }
       n = n.parent;
     }
-    if (root.children.size() == 0) {
+    if (root.children.isEmpty()) {
       root = buildRoot(true);
     } else if ((root.children.size() == 1) && (!root.leaf)) {
       root = root.children.get(0);
@@ -238,8 +277,8 @@ public final class RTree<T> {
     }
     for (Node ne : q) {
       @SuppressWarnings("unchecked")
-      Entry<T> e = (Entry<T>) ne;
-      insert(e.coords, e.dimensions, e.entry);
+      EntryNode<T> e = (EntryNode<T>) ne;
+      insert(e.coords, e.dimensions, e.value);
     }
     size -= q.size();
   }
@@ -253,16 +292,18 @@ public final class RTree<T> {
   }
 
   /**
-   * Inserts the given entry into the RTree, associated with the given rectangle.
+   * Inserts the given entry into the RTree, associated with the given rectangle. When the entry is
+   * finally inserted, coords and dimensions will be deep-copied.
    *
    * @param coords the corner of the rectangle that is the lower bound in every dimension
    * @param dimensions the dimensions of the rectangle
    * @param entry the entry to insert
    */
+  @SuppressWarnings("unchecked")
   public void insert(final float[] coords, final float[] dimensions, final T entry) {
     assert (coords.length == numDims);
     assert (dimensions.length == numDims);
-    Entry e = new Entry(coords, dimensions, entry);
+    EntryNode e = new EntryNode(coords, dimensions, entry);
     Node l = chooseLeaf(root, e);
     l.children.add(e);
     size++;
@@ -276,7 +317,8 @@ public final class RTree<T> {
   }
 
   /**
-   * Convenience method for inserting a point
+   * Convenience method for inserting a point. When the entry is finally inserted, coords and
+   * dimensions will be deep-copied.
    */
   public void insert(final float[] coords, final T entry) {
     insert(coords, pointDims, entry);
@@ -308,18 +350,18 @@ public final class RTree<T> {
     }
   }
 
+  @SuppressWarnings("squid:S2140")
   private Node[] splitNode(final Node n) {
-    // TODO: this class probably calls "tighten" a little too often.
-    // For instance the call at the end of the "while (!cc.isEmpty())" loop
-    // could be modified and inlined because it's only adjusting for the addition
-    // of a single node.  Left as-is for now for readability.
-    @SuppressWarnings("unchecked")
-    Node[] nn = new RTree.Node[]{n, new Node(n.coords, n.dimensions, n.leaf)};
+    // this class probably calls "tighten" a little too often.
+    //For instance, the call at the end of the "while cc.isEmpty()" loop
+    // could be modified and inlined because it's only adjusting for the addition of a single node.
+    // Left as-is for now for readability.
+    Node[] nn = new Node[]{n, new Node(n.coords, n.dimensions, n.leaf)};
     nn[1].parent = n.parent;
     if (nn[1].parent != null) {
       nn[1].parent.children.add(nn[1]);
     }
-    LinkedList<Node> cc = new LinkedList<Node>(n.children);
+    LinkedList<Node> cc = new LinkedList<>(n.children);
     n.children.clear();
     Node[] ss = seedPicker == SeedPicker.LINEAR ? lPickSeeds(cc) : qPickSeeds(cc);
     nn[0].children.add(ss[0]);
@@ -372,7 +414,6 @@ public final class RTree<T> {
 
   // Implementation of Quadratic PickSeeds
   private Node[] qPickSeeds(final LinkedList<Node> nn) {
-    @SuppressWarnings("unchecked")
     Node[] bestPair = new Node[2];
     float maxWaste = -1.0f * Float.MAX_VALUE;
     for (Node n1 : nn) {
@@ -427,14 +468,16 @@ public final class RTree<T> {
 
   // Implementation of LinearPickSeeds
   private Node[] lPickSeeds(final LinkedList<Node> nn) {
-    @SuppressWarnings("unchecked")
-    Node[] bestPair = new RTree.Node[2];
+    Node[] bestPair = new Node[2];
     boolean foundBestPair = false;
     float bestSep = 0.0f;
     for (int i = 0; i < numDims; i++) {
-      float dimLb = Float.MAX_VALUE, dimMinUb = Float.MAX_VALUE;
-      float dimUb = -1.0f * Float.MAX_VALUE, dimMaxLb = -1.0f * Float.MAX_VALUE;
-      Node nMaxLb = null, nMinUb = null;
+      float dimLb = Float.MAX_VALUE;
+      float dimMinUb = Float.MAX_VALUE;
+      float dimUb = -1.0f * Float.MAX_VALUE;
+      float dimMaxLb = -1.0f * Float.MAX_VALUE;
+      Node nMaxLb = null;
+      Node nMinUb = null;
       for (Node n : nn) {
         if (n.coords[i] < dimLb) {
           dimLb = n.coords[i];
@@ -464,7 +507,7 @@ public final class RTree<T> {
     // algorithm does not find a best pair.  Just pick the first 2
     // children.
     if (!foundBestPair) {
-      bestPair = new RTree.Node[]{nn.get(0), nn.get(1)};
+      bestPair = new Node[]{nn.get(0), nn.get(1)};
     }
     nn.remove(bestPair[0]);
     nn.remove(bestPair[1]);
@@ -484,16 +527,15 @@ public final class RTree<T> {
   private void tighten(final Node... nodes) {
     assert (nodes.length >= 1) : "Pass some nodes to tighten!";
     for (Node n : nodes) {
-      assert (n.children.size() > 0) : "tighten() called on empty node!";
+      assert (!n.children.isEmpty()) : "tighten() called on empty node!";
       float[] minCoords = new float[numDims];
       float[] maxCoords = new float[numDims];
       for (int i = 0; i < numDims; i++) {
         minCoords[i] = Float.MAX_VALUE;
-        maxCoords[i] = Float.MIN_VALUE;
+        maxCoords[i] = -Float.MAX_VALUE;
 
         for (Node c : n.children) {
-          // we may have bulk-added a bunch of children to a node (eg. in
-          // splitNode)
+          // we may have bulk-added a bunch of children to a node (eg. in splitNode),
           // so here we just enforce the child->parent relationship.
           c.parent = n;
           if (c.coords[i] < minCoords[i]) {
@@ -513,7 +555,7 @@ public final class RTree<T> {
     }
   }
 
-  private Node chooseLeaf(final Node n, final Entry<T> e) {
+  private Node chooseLeaf(final Node n, final EntryNode<T> e) {
     if (n.leaf) {
       return n;
     }
@@ -528,6 +570,7 @@ public final class RTree<T> {
         float curArea = 1.0f;
         float thisArea = 1.0f;
         for (int i = 0; i < c.dimensions.length; i++) {
+          assert next != null;
           curArea *= next.dimensions[i];
           thisArea *= c.dimensions[i];
         }
@@ -536,6 +579,7 @@ public final class RTree<T> {
         }
       }
     }
+    assert next != null;
     return chooseLeaf(next, e);
   }
 
@@ -561,8 +605,8 @@ public final class RTree<T> {
 
   private float getArea(final float[] dimensions) {
     float area = 1.0f;
-    for (int i = 0; i < dimensions.length; i++) {
-      area *= dimensions[i];
+    for (float dimension : dimensions) {
+      area *= dimension;
     }
     return area;
   }
@@ -578,10 +622,8 @@ public final class RTree<T> {
         if (scoords[i] + FUDGE_FACTOR * sdimensions[i] >= coords[i]) {
           overlapInThisDimension = true;
         }
-      } else if (scoords[i] > coords[i]) {
-        if (coords[i] + FUDGE_FACTOR * dimensions[i] >= scoords[i]) {
-          overlapInThisDimension = true;
-        }
+      } else if (scoords[i] > coords[i] && coords[i] + FUDGE_FACTOR * dimensions[i] >= scoords[i]) {
+        overlapInThisDimension = true;
       }
       if (!overlapInThisDimension) {
         return false;
@@ -590,9 +632,133 @@ public final class RTree<T> {
     return true;
   }
 
+  /**
+   * write metadata
+   *
+   * @param outputStream serialize to
+   */
+  public void serialize(ByteArrayOutputStream outputStream,
+      BiConsumer<Integer, OutputStream> biConsumer) throws IOException {
+    ReadWriteIOUtils.write(maxEntries, outputStream);
+    ReadWriteIOUtils.write(minEntries, outputStream);
+    ReadWriteIOUtils.write(numDims, outputStream);
+    ReadWriteIOUtils.write(seedPicker.serialize(), outputStream);
+    serialize(root, outputStream, biConsumer);
+  }
+
+  /**
+   * Pre-order traversal
+   *
+   * @param outputStream serialize to
+   */
+  @SuppressWarnings("unchecked")
+  private void serialize(Node node, ByteArrayOutputStream outputStream,
+      BiConsumer<Integer, OutputStream> biConsumer) throws IOException {
+    if (node instanceof EntryNode) {
+      ReadWriteIOUtils.write(0, outputStream);
+    } else if (node.leaf) {
+      ReadWriteIOUtils.write(1, outputStream);
+    } else {
+      ReadWriteIOUtils.write(2, outputStream);
+    }
+    for (float coord : node.coords) {
+      ReadWriteIOUtils.write(coord, outputStream);
+    }
+    for (float dimension : node.dimensions) {
+      ReadWriteIOUtils.write(dimension, outputStream);
+    }
+    if (node instanceof EntryNode) {
+      int idx = ((EntryNode<Integer>) node).value;
+      ReadWriteIOUtils.write(idx, outputStream);
+      biConsumer.accept(idx, outputStream);
+    } else {
+      // write child
+      ReadWriteIOUtils.write(node.children.size(), outputStream);
+      for (Node child : node.children) {
+        serialize(child, outputStream, biConsumer);
+      }
+    }
+  }
+
+
+  public static RTree<Integer> deserialize(ByteBuffer byteBuffer,
+      BiConsumer<Integer, ByteBuffer> biConsumer) {
+    int maxEntries = ReadWriteIOUtils.readInt(byteBuffer);
+    int minEntries = ReadWriteIOUtils.readInt(byteBuffer);
+    int numDims = ReadWriteIOUtils.readInt(byteBuffer);
+    SeedPicker seedPicker = SeedPicker.deserialize(ReadWriteIOUtils.readShort(byteBuffer));
+    RTree<Integer> rTree = new RTree<>(maxEntries, minEntries, numDims, seedPicker);
+
+    deserialize(rTree, null, byteBuffer, biConsumer);
+    return rTree;
+  }
+
+  /**
+   * Pre-order traversal
+   *
+   * @param byteBuffer deserialize from
+   */
+  private static void deserialize(RTree rTree, Node parent, ByteBuffer byteBuffer,
+      BiConsumer<Integer, ByteBuffer> biConsumer) {
+    int leafInt = ReadWriteIOUtils.readInt(byteBuffer);
+    float[] coords = new float[rTree.numDims];
+    float[] dimensions = new float[rTree.numDims];
+    for (int i = 0; i < rTree.numDims; i++) {
+      coords[i] = ReadWriteIOUtils.readFloat(byteBuffer);
+    }
+    for (int i = 0; i < rTree.numDims; i++) {
+      dimensions[i] = ReadWriteIOUtils.readFloat(byteBuffer);
+    }
+    Node node;
+    if (leafInt == 0) {
+      int idx = ReadWriteIOUtils.readInt(byteBuffer);
+      biConsumer.accept(idx, byteBuffer);
+      node = new EntryNode<>(coords, dimensions, idx);
+    } else {
+      node = new Node(coords, dimensions, leafInt == 1);
+      int childSize = ReadWriteIOUtils.readInt(byteBuffer);
+      for (int i = 0; i < childSize; i++) {
+        deserialize(rTree, node, byteBuffer, biConsumer);
+      }
+    }
+    if (parent == null) {
+      rTree.root = node;
+    } else {
+      parent.children.add(node);
+      node.parent = parent;
+    }
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append(String.format("maxEntities:%d,", maxEntries));
+    sb.append(String.format("minEntries:%d,", minEntries));
+    sb.append(String.format("numDims:%d,", numDims));
+    sb.append(String.format("seedPicker:%s%n", seedPicker));
+    if (root == null) {
+      return sb.toString();
+    }
+    toString(root, 0, sb);
+    return sb.toString();
+  }
+
+  @SuppressWarnings("unchecked")
+  private void toString(Node node, int depth, StringBuilder sb) {
+    for (int i = 0; i < depth; i++) {
+      sb.append("--");
+    }
+    sb.append(node.toString());
+    sb.append("\n");
+    if (!(node instanceof EntryNode)) {
+      for (Node child : node.children) {
+        toString(child, depth + 1, sb);
+      }
+    }
+  }
 
   // CHECKSTYLE:OFF
-  private static class Node {
+  static class Node {
 
     final float[] coords;
     final float[] dimensions;
@@ -606,71 +772,35 @@ public final class RTree<T> {
       System.arraycopy(coords, 0, this.coords, 0, coords.length);
       System.arraycopy(dimensions, 0, this.dimensions, 0, dimensions.length);
       this.leaf = leaf;
-      children = new LinkedList<Node>();
-    }
-  }
-
-  private static class Entry<T> extends Node {
-
-    public final T entry;
-
-    public Entry(final float[] coords, final float[] dimensions, final T entry) {
-      // an entry isn't actually a leaf (its parent is a leaf)
-      // but all the algorithms should stop at the first leaf they encounter,
-      // so this little hack shouldn't be a problem.
-      super(coords, dimensions, true);
-      this.entry = entry;
+      children = new LinkedList<>();
     }
 
     @Override
     public String toString() {
-      return "Entry: " + entry;
+      return "Node{" +
+          "coords=" + Arrays.toString(coords) +
+          ", dimensions=" + Arrays.toString(dimensions) +
+          ", leaf=" + leaf +
+          '}';
     }
   }
-  //CHECKSTYLE:ON
 
-  // The methods below this point can be used to create an HTML rendering
-  // of the RTree.  Maybe useful for debugging?
-  private static final int ELEM_WIDTH = 150;
-  private static final int ELEM_HEIGHT = 120;
+  private static class EntryNode<T> extends Node {
 
-  public String visualize() {
-    int ubDepth = (int) Math.ceil(Math.log(size) / Math.log(minEntries)) * ELEM_HEIGHT;
-    int ubWidth = size * ELEM_WIDTH;
-    java.io.StringWriter sw = new java.io.StringWriter();
-    java.io.PrintWriter pw = new java.io.PrintWriter(sw);
-    pw.println("<html><head></head><body>");
-    visualize(root, pw, 0, 0, ubWidth, ubDepth);
-    pw.println("</body>");
-    pw.flush();
-    return sw.toString();
-  }
+    public final T value;
 
-  private void visualize(final Node n, final java.io.PrintWriter pw, final int x0,
-      final int y0, final int w, final int h) {
-    pw.printf(
-        "<div style=\"position:absolute; left: %d; top: %d; width: %d; height: %d; border: 1px dashed\">%n",
-        x0, y0, w, h);
-    pw.println("<pre>");
-    pw.println("Node: " + n.toString() + " (root==" + (n == root) + ") \n");
-    pw.println("Coords: " + Arrays.toString(n.coords) + "\n");
-    pw.println("Dimensions: " + Arrays.toString(n.dimensions) + "\n");
-    pw.println("# Children: " + ((n.children == null) ? 0 : n.children.size()) + "\n");
-    pw.println("isLeaf: " + n.leaf + "\n");
-    pw.println("</pre>");
-    int numChildren = (n.children == null) ? 0 : n.children.size();
-    for (int i = 0; i < numChildren; i++) {
-      visualize(n.children.get(i), pw, (int) (x0 + (i * w / (float) numChildren)),
-          y0 + ELEM_HEIGHT, (int) (w / (float) numChildren), h - ELEM_HEIGHT);
+    EntryNode(final float[] coords, final float[] dimensions, final T value) {
+      // an entry isn't actually a leaf (its parent is a leaf)
+      // but all the algorithms should stop at the first leaf they encounter,
+      // so this little hack shouldn't be a problem.
+      super(coords, dimensions, true);
+      this.value = value;
     }
-    pw.println("</div>");
+
+    @Override
+    public String toString() {
+      return "Entry: " + value + "," + super.toString();
+    }
   }
 
-  public static void main(String[] args) {
-    RTree<Double> rTree = new RTree<>();
-    rTree.insert(new float[]{1, 2}, (double) 1);
-    rTree.insert(new float[]{2, 3}, (double) 2);
-    rTree.insert(new float[]{3, 4}, (double) 3);
-    System.out.println(rTree.visualize());
-  }
 }

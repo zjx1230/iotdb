@@ -34,7 +34,7 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
   protected int totalProcessedCount;
 
 
-  private PrimitiveList identifierList;
+  protected PrimitiveList identifierList;
   private PrimitiveList alignedList;
   /**
    * the position in srcData of the first data point of the current sliding window
@@ -49,6 +49,7 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
    * currentProcessedIdx}.
    */
   protected int flushedOffset = 0;
+  private long chunkStartTime = -1;
 
   /**
    * Create CountFixedPreprocessor
@@ -101,6 +102,9 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
     currentStartTimeIdx += slideStep;
     currentStartTime = srcData.getTime(currentStartTimeIdx);
     currentEndTime = srcData.getTime(currentStartTimeIdx + windowRange - 1);
+    if (chunkStartTime == -1) {
+      chunkStartTime = currentStartTime;
+    }
 
     // calculate the newest aligned sequence
     if (storeIdentifier) {
@@ -117,6 +121,10 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
   @Override
   public int getCurrentChunkOffset() {
     return flushedOffset;
+  }
+
+  public int getCurrentProcessedIdx() {
+    return currentProcessedIdx;
   }
 
   @Override
@@ -167,6 +175,16 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
     return res;
   }
 
+  @Override
+  public long getChunkStartTime() {
+    return chunkStartTime;
+  }
+
+  @Override
+  public long getChunkEndTime() {
+    return currentEndTime;
+  }
+
   /**
    * For COUNT-FIXED preprocessor, given the original data and the window range, we can determine an
    * aligned sequence only by the startIdx. Note that this method is only applicable to
@@ -202,6 +220,7 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
   @Override
   public long clear() {
     flushedOffset = currentProcessedIdx + 1;
+    chunkStartTime = -1;
     long toBeReleased = 0;
     if (storeIdentifier) {
       toBeReleased += identifierList.size() * Long.BYTES;
@@ -224,5 +243,9 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
       res += Integer.BYTES;
     }
     return res;
+  }
+
+  public int getCurrentIdx() {
+    return currentProcessedIdx;
   }
 }

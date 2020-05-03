@@ -69,6 +69,10 @@ public abstract class PrimitiveList {
     throw new UnsupportedOperationException(ERR_PRIMITIVE_DATATYPE_NOT_MATCH);
   }
 
+  public void putAllDouble(PrimitiveList src) {
+    throw new UnsupportedOperationException(ERR_PRIMITIVE_DATATYPE_NOT_MATCH);
+  }
+
   public long getLong(int index) {
     throw new UnsupportedOperationException(ERR_PRIMITIVE_DATATYPE_NOT_MATCH);
   }

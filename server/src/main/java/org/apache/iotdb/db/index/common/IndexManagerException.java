@@ -1,7 +1,6 @@
 package org.apache.iotdb.db.index.common;
 
 
-import java.io.Serializable;
 import org.apache.iotdb.db.exception.IoTDBException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.rpc.TSStatusCode;

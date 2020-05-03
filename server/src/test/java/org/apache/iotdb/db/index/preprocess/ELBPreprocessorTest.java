@@ -6,7 +6,7 @@ import java.util.List;
 import org.apache.iotdb.db.index.algorithm.elb.ELBCountFixedPreprocessor;
 import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.CalcParam;
-import org.apache.iotdb.db.index.algorithm.elb.pattern.SinglePattern;
+import org.apache.iotdb.db.index.algorithm.elb.pattern.SingleParamSchema;
 import org.apache.iotdb.db.index.distance.Distance;
 import org.apache.iotdb.db.index.distance.LInfinityNormdouble;
 import org.apache.iotdb.db.index.distance.LNormDouble;
@@ -34,10 +34,10 @@ public class ELBPreprocessorTest {
     int slideStep = 3;
     int blockNum = 4;
     Distance distance = new LNormDouble(1);
-    CalcParam calcParam = new SinglePattern(-1, 0.2, windowRange);
+    CalcParam calcParam = new SingleParamSchema(-1, 0.2, windowRange);
     ELBCountFixedPreprocessor elbProcessor = new ELBCountFixedPreprocessor(srcData,
         windowRange, slideStep, blockNum, distance, calcParam, ELBType.SEQ);
-    assertL3(elbProcessor, groundTruthL3);
+    assertL3(elbProcessor, groundTruthL3, true);
     elbProcessor.clear();
   }
 
@@ -48,7 +48,6 @@ public class ELBPreprocessorTest {
         "{[32.40,-2.40],[47.40,12.60],[62.40,27.60],[77.40,42.60],}",
         "{[41.40,6.60],[56.40,21.60],[71.40,36.60],[86.40,51.60],}",
         "{[50.40,15.60],[65.40,30.60],[80.40,45.60],[95.40,60.60],}",
-
     };
     TVList srcData = TVListAllocator.getInstance().allocate(TSDataType.INT32);
     for (int i = 0; i < 30; i++) {
@@ -58,14 +57,19 @@ public class ELBPreprocessorTest {
     int slideStep = 3;
     int blockNum = 4;
     Distance distance = new LInfinityNormdouble();
-    CalcParam calcParam = new SinglePattern(-1, 0.2, windowRange);
+    CalcParam calcParam = new SingleParamSchema(-1, 0.2, windowRange);
     ELBCountFixedPreprocessor elbProcessor = new ELBCountFixedPreprocessor(srcData,
-        windowRange, slideStep, blockNum, distance, calcParam, ELBType.ELE);
-    assertL3(elbProcessor, groundTruthL3);
+        windowRange, slideStep, blockNum, distance, calcParam, ELBType.ELE, false, false, true);
+    assertL3(elbProcessor, groundTruthL3, true);
+    elbProcessor.clear();
+    //Not store
+    elbProcessor = new ELBCountFixedPreprocessor(srcData,
+        windowRange, slideStep, blockNum, distance, calcParam, ELBType.ELE, false, false, false);
+    assertL3(elbProcessor, groundTruthL3, false);
     elbProcessor.clear();
   }
 
-  private void assertL3(ELBCountFixedPreprocessor elbProcessor, String[] groundTruthL3) {
+  private void assertL3(ELBCountFixedPreprocessor elbProcessor, String[] groundTruthL3, boolean storeL3) {
     int idx = 0;
     while (elbProcessor.hasNext()) {
 //      System.out.println("idx:" + idx);
@@ -76,10 +80,18 @@ public class ELBPreprocessorTest {
       Assert.assertEquals(groundTruthL3[idx], TwoDimDoubleArrayToString(elbL3));
       //L2 latest N
       List<Object> L3s = elbProcessor.getLatestN_L3_Features(idx + 5);
-      for (int i = 0; i <= idx; i++) {
-        double[][] elb = (double[][]) L3s.get(i);
+      if(storeL3){
+        Assert.assertEquals(idx + 1, L3s.size());
+        for (int i = 0; i <= idx; i++) {
+          double[][] elb = (double[][]) L3s.get(i);
 //        System.out.println(TwoDimDoubleArrayToString(elb));
-        Assert.assertEquals(groundTruthL3[i], TwoDimDoubleArrayToString(elb));
+          Assert.assertEquals(groundTruthL3[i], TwoDimDoubleArrayToString(elb));
+        }
+      } else{
+        //if not storeL3, it will only return the latest one
+        Assert.assertEquals(1, L3s.size());
+        double[][] elb = (double[][]) L3s.get(0);
+        Assert.assertEquals(groundTruthL3[idx], TwoDimDoubleArrayToString(elb));
       }
       idx++;
     }
