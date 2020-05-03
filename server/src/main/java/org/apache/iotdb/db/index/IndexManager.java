@@ -85,7 +85,7 @@ public class IndexManager implements IService {
 
   public IndexFileProcessor getProcessor(String storageGroup, boolean sequence, long partitionId,
       String tsFileName) {
-    String relativeDir = sequence ? SEQUENCE_FLODER_NAME : UNSEQUENCE_FLODER_NAME
+    String relativeDir = (sequence ? SEQUENCE_FLODER_NAME : UNSEQUENCE_FLODER_NAME)
         + File.separator + storageGroup + File.separator + partitionId;
     String indexParentDir = DirectoryManager.getInstance().getIndexRootFolder() +
         File.separator + relativeDir;

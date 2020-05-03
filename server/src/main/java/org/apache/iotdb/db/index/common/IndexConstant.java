@@ -6,9 +6,9 @@ public class IndexConstant {
   public static final String INDEXING_SUFFIX = ".indexing";
   public static final String INDEXED_SUFFIX = ".index";
 
-  public static final String INDEX_WINDOW_RANGE = "index_window_range";
+  public static final String INDEX_WINDOW_RANGE = "INDEX_WINDOW_RANGE";
   public static final String INDEX_RANGE_STRATEGY = "INDEX_RANGE_STRATEGY";
-  public static final String INDEX_SLIDE_STEP = "index_slide_step";
+  public static final String INDEX_SLIDE_STEP = "INDEX_SLIDE_STEP";
 
   public static final String DEFAULT_PROP_NAME = "DEFAULT";
 

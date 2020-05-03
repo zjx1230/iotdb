@@ -22,6 +22,7 @@ import static org.apache.iotdb.db.index.TestUtils.deserializeIndexChunk;
 import static org.apache.iotdb.db.index.common.IndexConstant.DISTANCE;
 import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE;
 import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE_ELE;
+import static org.apache.iotdb.db.index.common.IndexConstant.INDEXED_SUFFIX;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_SLIDE_STEP;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
 import static org.apache.iotdb.db.index.common.IndexConstant.L_INFINITY;
@@ -54,12 +55,14 @@ import org.apache.iotdb.db.index.io.IndexIOWriter.IndexChunkMeta;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
+import org.apache.iotdb.db.utils.FileUtils;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.jdbc.Config;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.junit.After;
@@ -104,6 +107,21 @@ public class IndexWriteIT {
             ELB_TYPE, ELB_TYPE_ELE));
   }
 
+  private String loadIndexFile(){
+    String indexRootDir = DirectoryManager.getInstance().getIndexRootFolder();
+    //get index file path
+    String indexParentDir = String.format("%s/sequence/%s/0", indexRootDir, storageGroup);
+    String[] subFileList = new File(indexParentDir).list();
+    String indexFile = indexParentDir;
+    assert subFileList != null;
+    for (String s : subFileList) {
+      if (s.endsWith(INDEXED_SUFFIX)) {
+        indexFile += "/" + s;
+        break;
+      }
+    }
+    return indexFile;
+  }
   @Test
   public void testParseIndexStatement() throws SQLException, ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
@@ -111,7 +129,9 @@ public class IndexWriteIT {
         .getConnection(Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/",
             "root", "root");
         Statement statement = connection.createStatement()) {
+      IoTDBDescriptor.getInstance().getConfig().setEnableIndex(true);
       IoTDBDescriptor.getInstance().getConfig().setIndexBufferSize(500);
+      IoTDBDescriptor.getInstance().getConfig().setIndexRootFolder("target/index");
       prepareMManager(statement);
       for (int i = 0; i < 100; i++) {
         statement.execute(String.format("INSERT INTO %s(timestamp, %s) VALUES (%d, %d)",
@@ -120,81 +140,49 @@ public class IndexWriteIT {
             storageGroup, p2Sensor, i * 3, i * 3));
       }
       statement.execute("flush");
-      for (int i = 0; i < 100; i++) {
-        statement.execute(String.format("INSERT INTO %s(timestamp, %s) VALUES (%d, %d)",
-            storageGroup, p1Sensor, i * 2, i * 2));
-        statement.execute(String.format("INSERT INTO %s(timestamp, %s) VALUES (%d, %d)",
-            storageGroup, p2Sensor, i * 3, i * 3));
-      }
-      statement.execute("flush");
-      String indexParentDir = DirectoryManager.getInstance().getIndexRootFolder();
-      System.out.println("index path:");
-      System.out.println(indexParentDir);
-//      IndexFileProcessor indexFileProcessor = IndexManager.getInstance()
-//          .getProcessor(storageGroupName, sequence, timeRangeId,
-//              tsFileResource.getFile().getName());
-      System.out.println("finished!");
 
-    } catch (MetadataException e) {
+      // TODO
+      //  this is an interval test for verifying the writing correctness.
+      // Finally it will be replaced by SQL QUERY
+      Thread.sleep(500);
+      String indexFile = loadIndexFile();
+
+      String gtStrP1ELB = ""
+          + "(0,[0-18,10])(1,[20-38,10])(2,[40-58,10])(3,[60-78,10])"
+          + "(4,[80-98,10])(5,[100-118,10])(6,[120-138,10])(7,[140-158,10])"
+          + "(8,[160-178,10])(9,[180-198,10])";
+      String gtStrP1PAA = ""
+          + "(0,[0-10,4])(1,[10-20,4])(2,[20-30,4])(3,[30-40,4])(4,[40-50,4])(5,[50-60,4])"
+          + "(6,[60-70,4])(7,[70-80,4])(8,[80-90,4])(9,[90-100,4])(10,[100-110,4])(11,[110-120,4])"
+          + "(12,[120-130,4])(13,[130-140,4])(14,[140-150,4])(15,[150-160,4])(16,[160-170,4])"
+          + "(17,[170-180,4])(18,[180-190,4])";
+      String gtStrP2ELB = ""
+          + "(0,[0-27,10])(1,[30-57,10])(2,[60-87,10])(3,[90-117,10])"
+          + "(4,[120-147,10])(5,[150-177,10])(6,[180-207,10])(7,[210-237,10])"
+          + "(8,[240-267,10])(9,[270-297,10])";
+      List<Pair<IndexType, String>> gtP1 = new ArrayList<>();
+      gtP1.add(new Pair<>(ELB, gtStrP1ELB));
+      gtP1.add(new Pair<>(PAA, gtStrP1PAA));
+      List<Pair<IndexType, String>> gtP2 = new ArrayList<>();
+      gtP2.add(new Pair<>(ELB, gtStrP2ELB));
+
+      List<Validation> tasks = new ArrayList<>();
+      tasks.add(new Validation(p1, null, gtP1));
+      tasks.add(new Validation(p2, null, gtP2));
+      // check result
+      checkIndexFlushAndResult(tasks, indexFile);
+
+      FileUtils.deleteDirectory(new File(DirectoryManager.getInstance().getIndexRootFolder()));
+      System.out.println("finished!");
+    } catch (MetadataException | InterruptedException | IOException | ExecutionException e) {
       e.printStackTrace();
       Assert.fail();
     }
   }
 
-  @Test
-  public void testMultiThreadWrite()
-      throws MetadataException, ExecutionException, InterruptedException, IOException, SQLException {
-    prepareMManager(null);
-    IoTDBDescriptor.getInstance().getConfig().setIndexBufferSize(500);
-    FSFactoryProducer.getFSFactory().getFile(tempIndexFileDir).mkdirs();
-    // Prepare data
-    TVList p1List = TVListAllocator.getInstance().allocate(TSDataType.INT32);
-    TVList p2List = TVListAllocator.getInstance().allocate(TSDataType.FLOAT);
-    for (int i = 0; i < 100; i++) {
-      p1List.putInt(i * 2, i * 2);
-      p2List.putFloat(i * 3, i * 3);
-    }
 
-    String gtStrP1ELB = ""
-        + "(0,[0-18,10])(1,[20-38,10])(2,[40-58,10])(3,[60-78,10])"
-        + "(4,[80-98,10])(5,[100-118,10])(6,[120-138,10])(7,[140-158,10])"
-        + "(8,[160-178,10])(9,[180-198,10])";
-    String gtStrP1PAA = ""
-        + "(0,[0-10,4])(1,[10-20,4])(2,[20-30,4])(3,[30-40,4])(4,[40-50,4])(5,[50-60,4])"
-        + "(6,[60-70,4])(7,[70-80,4])(8,[80-90,4])(9,[90-100,4])(10,[100-110,4])(11,[110-120,4])"
-        + "(12,[120-130,4])(13,[130-140,4])(14,[140-150,4])(15,[150-160,4])(16,[160-170,4])"
-        + "(17,[170-180,4])(18,[180-190,4])";
-    String gtStrP2ELB = ""
-        + "(0,[0-27,10])(1,[30-57,10])(2,[60-87,10])(3,[90-117,10])"
-        + "(4,[120-147,10])(5,[150-177,10])(6,[180-207,10])(7,[210-237,10])"
-        + "(8,[240-267,10])(9,[270-297,10])";
-    List<Pair<IndexType, String>> gtP1 = new ArrayList<>();
-    gtP1.add(new Pair<>(ELB, gtStrP1ELB));
-    gtP1.add(new Pair<>(PAA, gtStrP1PAA));
-    List<Pair<IndexType, String>> gtP2 = new ArrayList<>();
-    gtP2.add(new Pair<>(ELB, gtStrP2ELB));
-
-    List<Validation> tasks = new ArrayList<>();
-    tasks.add(new Validation(p1, p1List, gtP1));
-    tasks.add(new Validation(p2, p2List, gtP2));
-    // check result
-    checkIndexFlushAndResult(tasks, storageGroup, tempIndexFileDir, tempIndexFileName);
-  }
-
-  private static void checkIndexFlushAndResult(List<Validation> tasks, String storageGroup,
-      String indexFileDir, String indexFileName)
+  private static void checkIndexFlushAndResult(List<Validation> tasks, String indexFileName)
       throws ExecutionException, InterruptedException, IOException {
-    IndexFileProcessor indexFileProcessor = new IndexFileProcessor(storageGroup, indexFileDir,
-        indexFileName, true);
-
-    indexFileProcessor.startFlushMemTable();
-    for (Validation task : tasks) {
-      indexFileProcessor.buildIndexForOneSeries(new Path(task.path), task.tvList);
-    }
-    indexFileProcessor.endFlushMemTable();
-    Assert.assertEquals(0, indexFileProcessor.getMemoryUsed().get());
-    Assert.assertEquals(0, indexFileProcessor.getNumIndexBuildTasks().get());
-    indexFileProcessor.close();
     //read and check
     IndexIOReader reader = new IndexIOReader(indexFileName, false);
     for (Validation task : tasks) {

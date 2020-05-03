@@ -20,6 +20,7 @@ package org.apache.iotdb.db.index;
 
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_MAP_INIT_RESERVE_SIZE;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -285,8 +286,8 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
       while (expectValue <= allowedMemBar) {
         if (memoryUsed.compareAndSet(expectValue, targetValue)) {
           // allocated successfully
-          System.out.println(String.format("%s-%s require %d success now mem %d",
-              path, iotDBIndex.getIndexType(), mem, targetValue));
+//          System.out.println(String.format("%s-%s require %d success now mem %d",
+//              path, iotDBIndex.getIndexType(), mem, targetValue));
           return true;
         }
         System.out.println(String.format("%s-%s require %d failed, now mem %d",
@@ -374,7 +375,7 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
             numIndexBuildTasks.decrementAndGet();
             return;
           }
-          System.out.println(String.format("%s-%s process a point", path, index.getIndexType()));
+//          System.out.println(String.format("%s-%s process a point", path, index.getIndexType()));
           preprocessor.processNext();
           try {
             index.buildNext();

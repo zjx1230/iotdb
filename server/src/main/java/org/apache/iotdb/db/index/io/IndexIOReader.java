@@ -32,7 +32,9 @@ public class IndexIOReader {
   private final InputStream indexInputStream;
 
   public IndexIOReader(String indexFileName, boolean lazyLoad) throws IOException {
-    indexFileName += INDEXED_SUFFIX;
+    if (!indexFileName.endsWith(INDEXED_SUFFIX)) {
+      indexFileName += INDEXED_SUFFIX;
+    }
     this.indexInput = FSFactoryProducer.getFileInputFactory().getTsFileInput(indexFileName);
     this.indexInputStream = indexInput.wrapAsInputStream();
     loadFirstMetadata();
@@ -65,8 +67,6 @@ public class IndexIOReader {
 
   /**
    * read the data bytes from file according to the position in indexMeta
-   * @param indexMeta
-   * @return
    */
   public ByteBuffer getDataByChunkMeta(IndexChunkMeta indexMeta) throws IOException {
     long startPos = indexMeta.startPosInFile;
@@ -89,7 +89,7 @@ public class IndexIOReader {
     if (metaDataMap == null) {
       loadFirstMetadata();
     }
-    if(metaDataMap == null){
+    if (metaDataMap == null) {
       throw new IOException("load first layer metadata failed");
     }
     if (!metaDataMap.containsKey(path) || !metaDataMap.get(path).containsKey(indexType)) {

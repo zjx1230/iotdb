@@ -18,15 +18,13 @@
  */
 package org.apache.iotdb.db.index.common;
 
-import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.algorithm.NoIndex;
 import org.apache.iotdb.db.index.algorithm.elb.ELBIndex;
 import org.apache.iotdb.db.index.algorithm.paa.PAAIndex;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 public enum IndexType {
 
@@ -94,6 +92,7 @@ public enum IndexType {
   }
 
   public static IoTDBIndex constructIndex(String path, IndexType indexType, IndexInfo indexInfo) {
+    uppercaseProps(indexInfo);
     switch (indexType) {
       case ELB:
         return new ELBIndex(path, indexInfo);
@@ -105,5 +104,12 @@ public enum IndexType {
       default:
         throw new NotImplementedException("unsupported index type:" + indexType);
     }
+  }
+
+  private static void uppercaseProps(IndexInfo indexInfo){
+    Map<String, String> props = indexInfo.getProps();
+    Map<String, String> uppercase = new HashMap<>(props.size());
+    props.forEach((k,v)-> uppercase.put(k.toUpperCase(), v.toUpperCase()));
+    indexInfo.setProps(uppercase);
   }
 }

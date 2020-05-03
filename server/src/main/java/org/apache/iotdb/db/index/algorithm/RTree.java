@@ -732,7 +732,7 @@ public class RTree<T> {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append(String.format("maxEntities:%d,", maxEntries));
+    sb.append(String.format("maxEntries:%d,", maxEntries));
     sb.append(String.format("minEntries:%d,", minEntries));
     sb.append(String.format("numDims:%d,", numDims));
     sb.append(String.format("seedPicker:%s%n", seedPicker));
