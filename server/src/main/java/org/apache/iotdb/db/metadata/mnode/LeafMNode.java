@@ -37,6 +37,9 @@ public class LeafMNode extends MNode {
    * measurement's Schema for one timeseries represented by current leaf node
    */
   private MeasurementSchema schema;
+  private String alias;
+  // tag/attribute's start offset in tag file
+  private long offset = -1;
 
   private TimeValuePair cachedLastValuePair = null;
 
@@ -48,18 +51,33 @@ public class LeafMNode extends MNode {
     this.schema = new MeasurementSchema(name, dataType, encoding, type, props);
   }
 
+  /**
+   * @param alias alias of measurementName
+   */
+  public LeafMNode(MNode parent, String measurementName, String alias, TSDataType dataType,
+      TSEncoding encoding, CompressionType type, Map<String, String> props) {
+    super(parent, measurementName);
+    this.schema = new MeasurementSchema(measurementName, dataType, encoding, type, props);
+    this.alias = alias;
+  }
+
   @Override
   public boolean hasChild(String name) {
     return false;
   }
 
   @Override
-  public void addChild(MNode child) {
+  public void addChild(String name, MNode child) {
     // Do nothing
   }
 
   @Override
   public void deleteChild(String name) {
+    // Do nothing
+  }
+
+  @Override
+  public void deleteAliasChild(String alias) {
     // Do nothing
   }
 
@@ -71,6 +89,11 @@ public class LeafMNode extends MNode {
   @Override
   public int getLeafCount() {
     return 1;
+  }
+
+  @Override
+  public void addAlias(String alias, MNode child) {
+    // Do nothing
   }
 
   @Override
@@ -108,7 +131,6 @@ public class LeafMNode extends MNode {
     cachedLastValuePair = null;
   }
 
-
   public void addIndexInfoMaps(IndexInfo indexInfo) {
     this.indexInfoMaps.put(indexInfo.getIndexType(), indexInfo);
   }
@@ -127,5 +149,20 @@ public class LeafMNode extends MNode {
 
   public void removeIndexInfo(IndexType indexType) {
     indexInfoMaps.remove(indexType);
+  }
+  public long getOffset() {
+    return offset;
+  }
+
+  public void setOffset(long offset) {
+    this.offset = offset;
+  }
+
+  public String getAlias() {
+    return alias;
+  }
+
+  public void setAlias(String alias) {
+    this.alias = alias;
   }
 }

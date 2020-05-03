@@ -36,8 +36,8 @@ public class PAATimeFixedPreprocessorPreprocessorTest {
     int alignedSequenceLength = 4;
     int slideStep = 5;
 
-    PAATimeFixedPreprocessor timeFixedWithoutStored = new PAATimeFixedPreprocessor(srcData, windowRange,
-        alignedSequenceLength, slideStep, false, false);
+    PAATimeFixedPreprocessor timeFixedWithoutStored = new PAATimeFixedPreprocessor(srcData,
+        windowRange, slideStep, alignedSequenceLength, false, false);
     assertL1AndL2(timeFixedWithoutStored, groundTruthL1, groundTruthL2);
     timeFixedWithoutStored.clear();
   }
@@ -64,12 +64,12 @@ public class PAATimeFixedPreprocessorPreprocessorTest {
     int alignedSequenceLength = 4;
     int slideStep = 5;
     PAATimeFixedPreprocessor timeFixed = new PAATimeFixedPreprocessor(srcData, windowRange,
-        alignedSequenceLength, slideStep, true, true);
+        slideStep, alignedSequenceLength, true, true);
     assertL1AndL2(timeFixed, groundTruthL1, groundTruthL2);
     timeFixed.clear();
     System.out.println();
-    PAATimeFixedPreprocessor timeFixedWithoutStored = new PAATimeFixedPreprocessor(srcData, windowRange,
-        alignedSequenceLength, slideStep, false, false);
+    PAATimeFixedPreprocessor timeFixedWithoutStored = new PAATimeFixedPreprocessor(srcData,
+        windowRange, slideStep, alignedSequenceLength, false, false);
     assertL1AndL2(timeFixedWithoutStored, groundTruthL1, groundTruthL2);
     timeFixedWithoutStored.clear();
   }
@@ -78,7 +78,7 @@ public class PAATimeFixedPreprocessorPreprocessorTest {
       String[] groundTruthL2) throws IOException {
     int idx = 0;
     while (timeFixed.hasNext()) {
-//      System.out.println("idx:" + idx);
+      System.out.println("idx:" + idx);
       timeFixed.processNext();
       //L1 latest
       Identifier identifierL1 = (Identifier) timeFixed.getCurrent_L1_Identifier();
@@ -93,7 +93,7 @@ public class PAATimeFixedPreprocessorPreprocessorTest {
 
       //L2 latest
       TVList seqL2 = (TVList) timeFixed.getCurrent_L2_AlignedSequence();
-//      System.out.println(TestUtils.tvListToString(seqL2));
+      System.out.println(TestUtils.tvListToString(seqL2));
       Assert.assertEquals(groundTruthL2[idx], TestUtils.tvListToString(seqL2));
       //L2 latest N
       List<Object> L2s = timeFixed.getLatestN_L2_AlignedSequences(idx + 5);
@@ -132,7 +132,7 @@ public class PAATimeFixedPreprocessorPreprocessorTest {
     int alignedSequenceLength = 4;
     int slideStep = 5;
     PAATimeFixedPreprocessor timeFixed = new PAATimeFixedPreprocessor(srcData, windowRange,
-        alignedSequenceLength, slideStep, true, true);
+        slideStep, alignedSequenceLength, true, true);
 
     timeFixed.processNext();
     timeFixed.processNext();

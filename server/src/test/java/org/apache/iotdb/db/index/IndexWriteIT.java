@@ -123,14 +123,14 @@ public class IndexWriteIT {
     return indexFile;
   }
   @Test
-  public void testParseIndexStatement() throws SQLException, ClassNotFoundException {
+  public void testIndexWriteSQLAndReadFile() throws SQLException, ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection = DriverManager
         .getConnection(Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/",
             "root", "root");
         Statement statement = connection.createStatement()) {
       IoTDBDescriptor.getInstance().getConfig().setEnableIndex(true);
-      IoTDBDescriptor.getInstance().getConfig().setIndexBufferSize(500);
+      IoTDBDescriptor.getInstance().getConfig().setIndexBufferSize(1000);
       IoTDBDescriptor.getInstance().getConfig().setIndexRootFolder("target/index");
       prepareMManager(statement);
       for (int i = 0; i < 100; i++) {

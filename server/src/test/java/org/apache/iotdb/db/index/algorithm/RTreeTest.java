@@ -20,7 +20,7 @@ public class RTreeTest {
 
   @Test
   public void testRTreeToString() {
-    String gt = "maxEntities:4,minEntries:2,numDims:2,seedPicker:LINEAR\n"
+    String gt = "maxEntries:4,minEntries:2,numDims:2,seedPicker:LINEAR\n"
         + "Node{coords=[0.0, 0.0], dimensions=[19.0, 17.0], leaf=false}\n"
         + "--Node{coords=[0.0, 0.0], dimensions=[19.0, 17.0], leaf=false}\n"
         + "----Node{coords=[15.0, 13.0], dimensions=[4.0, 1.0], leaf=true}\n"

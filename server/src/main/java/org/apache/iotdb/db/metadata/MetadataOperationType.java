@@ -31,4 +31,5 @@ public class MetadataOperationType {
   public static final String DELETE_STORAGE_GROUP = "11";
   public static final String CREATE_INDEX = "31";
   public static final String DROP_INDEX = "32";
+  public static final String CHANGE_OFFSET = "12";
 }

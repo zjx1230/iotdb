@@ -35,12 +35,12 @@ public class TimeFixedPreprocessorTest {
     int alignedSequenceLength = 4;
     int slideStep = 5;
     TimeFixedPreprocessor timeFixed = new TimeFixedPreprocessor(srcData, windowRange,
-        alignedSequenceLength, slideStep, true, true);
+        slideStep, alignedSequenceLength, true, true);
     assertL1AndL2(timeFixed, groundTruthL1, groundTruthL2);
     timeFixed.clear();
 
     TimeFixedPreprocessor timeFixedWithoutStored = new TimeFixedPreprocessor(srcData, windowRange,
-        alignedSequenceLength, slideStep, false, false);
+        slideStep, alignedSequenceLength, false, false);
     assertL1AndL2(timeFixedWithoutStored, groundTruthL1, groundTruthL2);
     timeFixedWithoutStored.clear();
   }
@@ -67,12 +67,12 @@ public class TimeFixedPreprocessorTest {
     int alignedSequenceLength = 4;
     int slideStep = 5;
     TimeFixedPreprocessor timeFixed = new TimeFixedPreprocessor(srcData, windowRange,
-        alignedSequenceLength, slideStep, true, true);
+        slideStep, alignedSequenceLength, true, true);
     assertL1AndL2(timeFixed, groundTruthL1, groundTruthL2);
     timeFixed.clear();
 
     TimeFixedPreprocessor timeFixedWithoutStored = new TimeFixedPreprocessor(srcData, windowRange,
-        alignedSequenceLength, slideStep, false, false);
+        slideStep, alignedSequenceLength, false, false);
     assertL1AndL2(timeFixedWithoutStored, groundTruthL1, groundTruthL2);
     timeFixedWithoutStored.clear();
   }
@@ -132,7 +132,7 @@ public class TimeFixedPreprocessorTest {
     int alignedSequenceLength = 4;
     int slideStep = 5;
     TimeFixedPreprocessor timeFixed = new TimeFixedPreprocessor(srcData, windowRange,
-        alignedSequenceLength, slideStep, true, true);
+        slideStep, alignedSequenceLength, true, true);
 
     timeFixed.processNext();
     timeFixed.processNext();
