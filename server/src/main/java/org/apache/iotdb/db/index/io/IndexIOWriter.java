@@ -47,15 +47,9 @@ public class IndexIOWriter {
    */
   public void writeIndexData(IndexFlushChunk flushChunk) throws IOException {
     Map<IndexType, List<IndexChunkMeta>> indexTypeListMap = metaDataMap
-        .putIfAbsent(flushChunk.path, new EnumMap<>(IndexType.class));
-    if (indexTypeListMap == null) {
-      indexTypeListMap = metaDataMap.get(flushChunk.path);
-    }
+        .computeIfAbsent(flushChunk.path, k -> new EnumMap<>(IndexType.class));
     List<IndexChunkMeta> chunkInfoList = indexTypeListMap
-        .putIfAbsent(flushChunk.indexType, new ArrayList<>());
-    if (chunkInfoList == null) {
-      chunkInfoList = indexTypeListMap.get(flushChunk.indexType);
-    }
+        .computeIfAbsent(flushChunk.indexType, k -> new ArrayList<>());
     IndexChunkMeta chunkInfo = new IndexChunkMeta(flushChunk.startTime, flushChunk.endTime,
         output.getPosition(), flushChunk.getDataSize());
     chunkInfoList.add(chunkInfo);
@@ -100,6 +94,7 @@ public class IndexIOWriter {
     FSFactory fsFactory = FSFactoryProducer.getFSFactory();
     File src = fsFactory.getFile(indexFileName + INDEXING_SUFFIX);
     File dest = fsFactory.getFile(indexFileName + INDEXED_SUFFIX);
+    System.out.println("close index file: " + indexFileName + INDEXED_SUFFIX);
     dest.delete();
     fsFactory.moveFile(src, dest);
     closed = true;

@@ -20,7 +20,6 @@ package org.apache.iotdb.db.index;
 
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_MAP_INIT_RESERVE_SIZE;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -45,6 +44,7 @@ import org.apache.iotdb.db.index.io.IndexIOWriter;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
 import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
 import org.apache.iotdb.db.metadata.MManager;
+import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.slf4j.Logger;
@@ -72,6 +72,7 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
   private IndexIOWriter writer;
   private final boolean sequence;
 
+  private static final long LONGEST_FLUSH_IO_WAIT_MS = 60000;
 
   private final IndexBuildTaskPoolManager indexBuildPoolManager;
   private ConcurrentLinkedQueue<IndexFlushChunk> flushTaskQueue;
@@ -110,10 +111,7 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
     // Add indexes that are not in the previous map
     indexInfoMap.forEach((path, pathIndexInfoMap) -> {
       Map<IndexType, IoTDBIndex> pathIndexMap = allPathsIndexMap
-          .putIfAbsent(path, new EnumMap<>(IndexType.class));
-      if (pathIndexMap == null) {
-        pathIndexMap = allPathsIndexMap.get(path);
-      }
+          .computeIfAbsent(path, k -> new EnumMap<>(IndexType.class));
       for (Entry<IndexType, IndexInfo> entry : pathIndexInfoMap.entrySet()) {
         IndexType indexType = entry.getKey();
         IndexInfo indexInfo = entry.getValue();
@@ -165,9 +163,13 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
           if (logger.isWarnEnabled()) {
             logger.warn(String.format("IndexFileProcessor %s: wait-close time %d ms is too long.",
                 storageGroupName, waitingTime));
+            System.out
+                .println(String.format("IndexFileProcessor %s: wait-close time %d ms is too long.",
+                    storageGroupName, waitingTime));
           }
         }
       } else {
+//        System.out.println("||||||||||||||||||||  close try to get lock");
         lock.writeLock().lock();
         try {
           // Another flush task starts between isFlushing = true and write lock.
@@ -177,6 +179,7 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
           }
         } finally {
           lock.writeLock().unlock();
+//          System.out.println("||||||||||||||||||||  close unlock");
         }
         if (closed) {
           return;
@@ -233,6 +236,7 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
   @SuppressWarnings("squid:S135")
   private Runnable flushRunTask = () -> {
     boolean returnWhenNoTask = false;
+    long startTiming = -1;
     while (true) {
       if (noMoreIndexFlushTask) {
         returnWhenNoTask = true;
@@ -243,16 +247,28 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
           if (logger.isDebugEnabled()) {
             logger.debug("IO thread: no more, break");
           }
+          System.out.println("IO thread: no more, break");
           break;
+        } else if (startTiming == -1) {
+          startTiming = System.currentTimeMillis();
+          System.out.println(
+              "IO thread: no new task, but still wait, taskNum: " + numIndexBuildTasks.get());
+        } else {
+          long waitingTime = System.currentTimeMillis() - startTiming;
+          if (waitingTime > LONGEST_FLUSH_IO_WAIT_MS) {
+            logger.error("Too long time no more task, discard the potential rest, return");
+            break;
+          }
         }
         try {
-          Thread.sleep(100);
+          Thread.sleep(200);
         } catch (@SuppressWarnings("squid:S2142") InterruptedException e) {
           logger.error("Index Flush Task is interrupted, index path {}", indexFilePath, e);
           break;
         }
       } else {
         try {
+          startTiming = -1;
           System.out.println(String.format("IO thread: get task: %s", indexFlushChunk));
           writer.writeIndexData(indexFlushChunk);
           // we can release the memory of indexFlushChunk
@@ -320,13 +336,14 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
         // still failed, we have to wait
         synchronized (waitingSymbol) {
           try {
+            System.out.println(String.format("||||||||    %s wake", path));
             waitingSymbol.wait();
           } catch (InterruptedException e) {
             logger.error("interrupted, canceled");
             return false;
           }
         }
-        System.out.println(String.format("%s wake up", path));
+        System.out.println(String.format("||||||||    %s wake up", path));
       }
     }
   }
@@ -346,7 +363,12 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
   }
 
   public void startFlushMemTable() {
+//    System.out.println("||||||||||||||||||||  startFlushMemTable try lock");
     lock.writeLock().lock();
+    if (closed) {
+      System.out.println("closed index file !!!!!");
+      throw new RuntimeException("closed index file !!!!!");
+    }
     try {
       this.isFlushing = true;
       this.flushTaskQueue = new ConcurrentLinkedQueue<>();
@@ -362,11 +384,13 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
       refreshSeriesIndexMapFromMManager();
     } finally {
       lock.writeLock().unlock();
+//      System.out.println("||||||||||||||||||||  startFlushMemTable unlock");
     }
   }
 
   public void buildIndexForOneSeries(Path path, TVList tvList) {
     // for every index of this path, submit a task to pool.
+//    System.out.println("||||||||||||||||||||  build try lock");
     lock.writeLock().lock();
     try {
       if (!allPathsIndexMap.containsKey(path.getFullPath())) {
@@ -375,43 +399,50 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
       allPathsIndexMap.get(path.getFullPath()).forEach((indexType, index) -> {
         Runnable buildTask = () -> {
           int nowNum = numIndexBuildTasks.incrementAndGet();
-          System.out.println(String.format("%s-%s start, current task %d",
-              path, index.getIndexType(), nowNum));
-          IndexPreprocessor preprocessor = index.initIndexPreprocessor(tvList);
-          int previousOffset = Integer.MIN_VALUE;
-          while (preprocessor.hasNext()) {
-            int currentOffset = preprocessor.getCurrentChunkOffset();
-            if (currentOffset != previousOffset) {
-              if (!index.checkNeedIndex(tvList, currentOffset)) {
+          System.out.println(
+              String.format("%s-%s start, current task %d", path, index.getIndexType(), nowNum));
+          try {
+            IndexPreprocessor preprocessor = index.initIndexPreprocessor(tvList);
+            int previousOffset = Integer.MIN_VALUE;
+            while (preprocessor.hasNext()) {
+              int currentOffset = preprocessor.getCurrentChunkOffset();
+              if (currentOffset != previousOffset) {
+                if (!index.checkNeedIndex(tvList, currentOffset)) {
+                  System.out.println("if (!index.checkNeedIndex(tvList, currentOffset))");
+                  return;
+                }
+                previousOffset = currentOffset;
+              }
+              if (!syncAllocateSize(index.getAmortizedSize(), preprocessor, index, path)) {
                 return;
               }
-              previousOffset = currentOffset;
-            }
-            if (!syncAllocateSize(index.getAmortizedSize(), preprocessor, index, path)) {
-              numIndexBuildTasks.decrementAndGet();
-              return;
-            }
-//          System.out.println(String.format("%s-%s process a point", path, index.getIndexType()));
-            preprocessor.processNext();
-            try {
+//              System.out.println(String.format("%s-%s process point", path, index.getIndexType()));
+              preprocessor.processNext();
               index.buildNext();
-            } catch (IndexManagerException e) {
-              //Give up the following data, but the previously serialized chunk will not be affected.
-              logger.error("build index failed", e);
-              return;
+
             }
+            System.out.println(String.format("%s-%s process all, final flush", path, indexType));
+            if (preprocessor.getCurrentChunkSize() > 0) {
+              flushAndAddToQueue(index, path);
+            }
+          } catch (IndexManagerException e) {
+            //Give up the following data, but the previously serialized chunk will not be affected.
+            logger.error("build index failed", e);
+            System.out.println("Error: build index failed" + e);
+          } catch (RuntimeException e) {
+            logger.error("RuntimeException", e);
+            System.out.println("RuntimeException: " + e);
+          } finally {
+            numIndexBuildTasks.decrementAndGet();
+            System.out.println(String.format("%s-%s finish, -- and return, current task %d",
+                path, index.getIndexType(), numIndexBuildTasks.get()));
           }
-          System.out.println(String.format("%s-%s process all, final flush", path, indexType));
-          if (preprocessor.getCurrentChunkSize() > 0) {
-            flushAndAddToQueue(index, path);
-          }
-          System.out.println(String.format("%s-%s finish", path, indexType));
-          numIndexBuildTasks.decrementAndGet();
         };
         indexBuildPoolManager.submit(buildTask);
       });
     } finally {
       lock.writeLock().unlock();
+//      System.out.println("||||||||||||||||||||  build unlock");
     }
   }
 
@@ -420,22 +451,20 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
 //    System.out.println("start end flush ========================================");
     noMoreIndexFlushTask = true;
     flushTaskFuture.get();
+//    System.out.println("||||||||||||||||||||  endFlushMemTable try lock");
     lock.writeLock().lock();
     this.isFlushing = false;
 //    System.out.println("end flushing is called ========================================");
     lock.writeLock().unlock();
+//    System.out.println("||||||||||||||||||||  endFlushMemTable unlock");
   }
 
-  /**
-   * Only for test.
-   */
+  @TestOnly
   public AtomicLong getMemoryUsed() {
     return memoryUsed;
   }
 
-  /**
-   * Only for test.
-   */
+  @TestOnly
   public AtomicInteger getNumIndexBuildTasks() {
     return numIndexBuildTasks;
   }
