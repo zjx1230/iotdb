@@ -14,33 +14,59 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import org.apache.iotdb.db.index.common.IndexType;
-import org.apache.iotdb.db.index.io.IndexIOWriter.IndexChunkMeta;
+import org.apache.iotdb.db.index.read.IndexFileResource;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.reader.TsFileInput;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 /**
- * refer to {@linkplain TsFileSequenceReader}
+ * refer to {@linkplain TsFileSequenceReader} It's thread-unsafe.
  */
 public class IndexIOReader {
 
-  private final TsFileInput indexInput;
 
+  private final Map<String, Map<IndexType, IndexPair>> metaDataMap;
+  private final String indexFileName;
+  private InputStream indexInputStream;
+  private TsFileInput indexInput;
 
-  private Map<String, Map<IndexType, IndexPair>> metaDataMap;
-  private final InputStream indexInputStream;
 
   public IndexIOReader(String indexFileName, boolean lazyLoad) throws IOException {
     if (!indexFileName.endsWith(INDEXED_SUFFIX)) {
       indexFileName += INDEXED_SUFFIX;
     }
-    this.indexInput = FSFactoryProducer.getFileInputFactory().getTsFileInput(indexFileName);
-    this.indexInputStream = indexInput.wrapAsInputStream();
-    loadFirstMetadata();
+    this.indexFileName = indexFileName;
+    metaDataMap = loadFirstMetadata();
     // If not lazyLoad, load all metadata immediately, otherwise, load metadata when required.
     if (!lazyLoad) {
       loadAllSecondMetadata();
+    }
+  }
+
+
+  /**
+   * Init reader with generated metadataMap from {@linkplain IndexIOWriter}.
+   *
+   * @param metaDataMap generated metadataMap
+   */
+  public IndexIOReader(Map<String, Map<IndexType, IndexPair>> metaDataMap, String indexFileName,
+      boolean lazyLoad) throws IOException {
+    if (!indexFileName.endsWith(INDEXED_SUFFIX)) {
+      indexFileName += INDEXED_SUFFIX;
+    }
+    this.indexFileName = indexFileName;
+    this.metaDataMap = metaDataMap;
+    if (!lazyLoad) {
+      loadAllSecondMetadata();
+    }
+  }
+
+
+  private void checkIOReader() throws IOException {
+    if (indexInput == null) {
+      this.indexInput = FSFactoryProducer.getFileInputFactory().getTsFileInput(indexFileName);
+      this.indexInputStream = indexInput.wrapAsInputStream();
     }
   }
 
@@ -56,19 +82,30 @@ public class IndexIOReader {
 
 
   private List<IndexChunkMeta> loadOnePathMetadata(long startPos) throws IOException {
+    checkIOReader();
     indexInput.position(startPos);
     int size = ReadWriteIOUtils.readInt(indexInputStream);
     ArrayList<IndexChunkMeta> res = new ArrayList<>(size);
     for (int i = 0; i < size; i++) {
-      res.add(IndexChunkMeta.deserializeFrom(indexInputStream));
+//      getDataByChunkMeta
+
+      IndexChunkMeta chunkMeta = IndexChunkMeta.deserializeFrom(indexInputStream);
+      chunkMeta.setReadDataCallback(this::getDataByChunkMeta);
+      res.add(chunkMeta);
     }
     return res;
+  }
+
+  @FunctionalInterface
+  public static interface ReadDataByChunkMetaCallback {
+    ByteBuffer call(IndexChunkMeta indexMeta) throws IOException;
   }
 
   /**
    * read the data bytes from file according to the position in indexMeta
    */
   public ByteBuffer getDataByChunkMeta(IndexChunkMeta indexMeta) throws IOException {
+    checkIOReader();
     long startPos = indexMeta.startPosInFile;
     int dataSize = indexMeta.dataSize;
     ByteBuffer indexBytes = ByteBuffer.allocate(dataSize);
@@ -106,7 +143,8 @@ public class IndexIOReader {
   /**
    * Load the first layer metadata.
    */
-  private void loadFirstMetadata() throws IOException {
+  private Map<String, Map<IndexType, IndexPair>> loadFirstMetadata() throws IOException {
+    checkIOReader();
     int firstMetaSize = loadFirstMetadataSize();
     indexInput.position(firstMetaSize);
     ByteBuffer firstMetaBytes = ByteBuffer.allocate(firstMetaSize);
@@ -115,7 +153,7 @@ public class IndexIOReader {
     firstMetaBytes.flip();
     // reconstruct
     int pathSize = ReadWriteIOUtils.readInt(firstMetaBytes);
-    metaDataMap = new HashMap<>(pathSize);
+    Map<String, Map<IndexType, IndexPair>> metaDataMap = new HashMap<>(pathSize);
     for (int i = 0; i < pathSize; i++) {
       String path = ReadWriteIOUtils.readString(firstMetaBytes);
       int indexSize = ReadWriteIOUtils.readInt(firstMetaBytes);
@@ -127,11 +165,11 @@ public class IndexIOReader {
       }
       metaDataMap.put(path, indexChunkPairMap);
     }
+    return metaDataMap;
   }
 
-
   private int loadFirstMetadataSize() throws IOException {
-    if (readTailIndexMagic().equals(INDEX_MAGIC)) {
+    if (checkTailComplete(this.indexInput)) {
       indexInput.position(indexInput.size() - INDEX_MAGIC.getBytes().length - Integer.BYTES);
       return ReadWriteIOUtils.readInt(indexInputStream);
     } else {
@@ -139,15 +177,26 @@ public class IndexIOReader {
     }
   }
 
-  private String readTailIndexMagic() throws IOException {
+  /**
+   * Used to load metadata and recover files.
+   */
+  public static boolean checkTailComplete(TsFileInput indexInput) throws IOException {
+    return INDEX_MAGIC.equals(readTailIndexMagic(indexInput));
+  }
+
+
+  private static String readTailIndexMagic(TsFileInput indexInput) throws IOException {
     long totalSize = indexInput.size();
+    if (totalSize < INDEX_MAGIC.getBytes().length) {
+      return "";
+    }
     ByteBuffer magicStringBytes = ByteBuffer.allocate(INDEX_MAGIC.getBytes().length);
     indexInput.read(magicStringBytes, totalSize - INDEX_MAGIC.getBytes().length);
     magicStringBytes.flip();
     return new String(magicStringBytes.array());
   }
 
-  static class IndexPair {
+  public static class IndexPair {
 
     long chunkListPos;
     List<IndexChunkMeta> list;
@@ -155,10 +204,16 @@ public class IndexIOReader {
     IndexPair(long chunkListPos) {
       this.chunkListPos = chunkListPos;
     }
+
+    IndexPair(List<IndexChunkMeta> list) {
+      this.list = list;
+      this.chunkListPos = -1;
+    }
   }
 
   /**
-   * Package-private, only for test.
+   * Package-private, only for {@linkplain org.apache.iotdb.db.index.read.IndexFileResource
+   * IndexFileResource} and test.
    */
   Map<String, Map<IndexType, IndexPair>> getMetaDataMap() {
     return metaDataMap;

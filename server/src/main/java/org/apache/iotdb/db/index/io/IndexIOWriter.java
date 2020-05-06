@@ -8,7 +8,6 @@ import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_MAGIC;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -17,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.index.io.IndexIOReader.IndexPair;
+import org.apache.iotdb.db.index.read.IndexFileResource;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.utils.PublicBAOS;
@@ -56,9 +57,9 @@ public class IndexIOWriter {
     flushChunk.data.writeTo(output.wrapAsStream());
   }
 
-  public void endFile() throws IOException {
+  public IndexFileResource endFile() throws IOException {
     if (closed) {
-      return;
+      return null;
     }
     OutputStream outputStream = output.wrapAsStream();
 
@@ -98,52 +99,19 @@ public class IndexIOWriter {
     dest.delete();
     fsFactory.moveFile(src, dest);
     closed = true;
+    return toResource();
   }
 
-  /**
-   * IoTDBIndex builds indexes for sequences within a time range of one path. This IndexChunkInfo
-   * stores the earliest and the latest timestamp of the sequence, and the position in the index
-   * file.
-   */
-  public static class IndexChunkMeta {
-
-    /**
-     *
-     */
-    long startTime;
-    long endTime;
-
-
-    /**
-     * the position of index data in the file
-     */
-    long startPosInFile;
-    int dataSize;
-
-
-    public IndexChunkMeta(long startTime, long endTime, long startPosInFile, int dataSize) {
-      this.startTime = startTime;
-      this.endTime = endTime;
-      this.startPosInFile = startPosInFile;
-      this.dataSize = dataSize;
-    }
-
-
-    public void serializeTo(OutputStream outputStream) throws IOException {
-      ReadWriteIOUtils.write(startTime, outputStream);
-      ReadWriteIOUtils.write(endTime, outputStream);
-      ReadWriteIOUtils.write(startPosInFile, outputStream);
-      ReadWriteIOUtils.write(dataSize, outputStream);
-    }
-
-    public static IndexChunkMeta deserializeFrom(InputStream inputStream) throws IOException {
-      long startTime = ReadWriteIOUtils.readLong(inputStream);
-      long endTime = ReadWriteIOUtils.readLong(inputStream);
-      long startPosInFile = ReadWriteIOUtils.readLong(inputStream);
-      int dataSize = ReadWriteIOUtils.readInt(inputStream);
-      return new IndexChunkMeta(startTime, endTime, startPosInFile, dataSize);
-    }
-
+  private IndexFileResource toResource() throws IOException {
+    Map<String, Map<IndexType, IndexPair>> pairMap = new HashMap<>();
+    metaDataMap.forEach((path, pathMap) -> {
+      Map<IndexType, IndexPair> pairPathMap = new HashMap<>();
+      pathMap.forEach((indexType, chunkMetaList) -> {
+        pairPathMap.put(indexType, new IndexPair(chunkMetaList));
+      });
+      pairMap.put(path, pairPathMap);
+    });
+    return new IndexFileResource(pairMap, indexFileName);
   }
 
 

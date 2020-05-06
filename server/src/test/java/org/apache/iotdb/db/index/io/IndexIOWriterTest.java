@@ -1,8 +1,6 @@
 package org.apache.iotdb.db.index.io;
 
 import static org.apache.iotdb.db.index.TestUtils.TEST_INDEX_FILE_NAME;
-import static org.apache.iotdb.db.index.common.IndexConstant.INDEXED_SUFFIX;
-import static org.apache.iotdb.db.index.common.IndexConstant.INDEXING_SUFFIX;
 import static org.apache.iotdb.db.index.common.IndexType.ELB;
 import static org.apache.iotdb.db.index.common.IndexType.PAA;
 
@@ -20,7 +18,6 @@ import java.util.Map;
 import org.apache.iotdb.db.index.TestUtils;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexIOReader.IndexPair;
-import org.apache.iotdb.db.index.io.IndexIOWriter.IndexChunkMeta;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.reader.TsFileInput;

@@ -18,8 +18,15 @@
  */
 package org.apache.iotdb.db.index.common;
 
+import static org.apache.iotdb.db.index.common.IndexFunc.SIM_ET;
+import static org.apache.iotdb.db.index.common.IndexFunc.LEN;
+import static org.apache.iotdb.db.index.common.IndexFunc.SIM_ST;
+
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.algorithm.NoIndex;
 import org.apache.iotdb.db.index.algorithm.elb.ELBIndex;
@@ -28,7 +35,20 @@ import org.apache.iotdb.tsfile.exception.NotImplementedException;
 
 public enum IndexType {
 
-  NO_INDEX, PAA, ELB, KV_INDEX;
+  NO_INDEX(SIM_ST, SIM_ET, LEN),
+  PAA(SIM_ST, SIM_ET, LEN),
+  ELB(SIM_ST, SIM_ET, LEN),
+  KV_INDEX();
+
+  private final Set<IndexFunc> func;
+
+  IndexType(IndexFunc... func) {
+    this.func = new HashSet<>(Arrays.asList(func));
+  }
+
+  public Set<IndexFunc> getSupportedFunc() {
+    return func;
+  }
 
   /**
    * judge the index type.
@@ -106,10 +126,10 @@ public enum IndexType {
     }
   }
 
-  private static void uppercaseProps(IndexInfo indexInfo){
+  private static void uppercaseProps(IndexInfo indexInfo) {
     Map<String, String> props = indexInfo.getProps();
     Map<String, String> uppercase = new HashMap<>(props.size());
-    props.forEach((k,v)-> uppercase.put(k.toUpperCase(), v.toUpperCase()));
+    props.forEach((k, v) -> uppercase.put(k.toUpperCase(), v.toUpperCase()));
     indexInfo.setProps(uppercase);
   }
 }

@@ -42,7 +42,7 @@ IAggregateReader seriesReader = new SeriesAggregateReader(
 
 接下来，按照5.2节所介绍的 `aggregateReader` 使用方法，更新 `AggregateResult`：
 
-```
+```java
 while (aggregateReader.hasNextChunk()) {
   if (aggregateReader.canUseCurrentChunkStatistics()) {
     Statistics chunkStatistics = aggregateReader.currentChunkStatistics();
@@ -73,7 +73,7 @@ while (aggregateReader.hasNextChunk()) {
 ```
 
 需要注意的是，在对于每一个result进行更新之前，需要首先判断其是否已经被计算完（利用 `isCalculatedList` 列表）；每一次更新后，调用 `isCalculatedAggregationResult()` 方法同时更新列表中的布尔值。如果列表中所有值均为true，即 `remainingToCalculate` 值为0，证明所有聚合函数结果均已计算完，可以返回。
-```
+```java
 if (Boolean.FALSE.equals(isCalculatedList.get(i))) {
   AggregateResult aggregateResult = aggregateResultList.get(i);
   ... // 更新

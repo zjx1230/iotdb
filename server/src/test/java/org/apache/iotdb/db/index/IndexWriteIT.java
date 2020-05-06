@@ -27,7 +27,6 @@ import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_SLIDE_STEP;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
 import static org.apache.iotdb.db.index.common.IndexConstant.L_INFINITY;
 import static org.apache.iotdb.db.index.common.IndexType.ELB;
-import static org.apache.iotdb.db.index.common.IndexType.NO_INDEX;
 import static org.apache.iotdb.db.index.common.IndexType.PAA;
 
 import java.io.File;
@@ -35,35 +34,21 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.TestUtils.Validation;
-import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.index.io.IndexChunkMeta;
 import org.apache.iotdb.db.index.io.IndexIOReader;
-import org.apache.iotdb.db.index.io.IndexIOWriter.IndexChunkMeta;
-import org.apache.iotdb.db.metadata.MManager;
-import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.db.utils.FileUtils;
-import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.jdbc.Config;
-import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
-import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
-import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.junit.After;
 import org.junit.Assert;
@@ -79,14 +64,18 @@ public class IndexWriteIT {
   private static final String p2Sensor = "p2";
   private static final String tempIndexFileDir = "index/root.v/";
   private static final String tempIndexFileName = "index/root.v/demo_elb_paa_index";
+  private long defaultIndexBufferSize;
 
   @Before
   public void setUp() throws Exception {
     EnvironmentUtils.envSetUp();
+    defaultIndexBufferSize = IoTDBDescriptor.getInstance().getConfig().getIndexBufferSize();
+    IoTDBDescriptor.getInstance().getConfig().setIndexBufferSize(1000);
   }
 
   @After
   public void tearDown() throws Exception {
+    IoTDBDescriptor.getInstance().getConfig().setIndexBufferSize(defaultIndexBufferSize);
     EnvironmentUtils.cleanEnv();
   }
 
@@ -129,8 +118,7 @@ public class IndexWriteIT {
         .getConnection(Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/",
             "root", "root");
         Statement statement = connection.createStatement()) {
-      IoTDBDescriptor.getInstance().getConfig().setEnableIndex(true);
-      IoTDBDescriptor.getInstance().getConfig().setIndexBufferSize(1000);
+
       prepareMManager(statement);
       for (int i = 0; i < 100; i++) {
         statement.execute(String.format("INSERT INTO %s(timestamp, %s) VALUES (%d, %d)",

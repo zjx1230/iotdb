@@ -267,7 +267,7 @@ public class PlanExecutor implements IPlanExecutor {
         return queryRouter.groupBy(groupByPlan, context);
       } else if (queryPlan instanceof QueryIndexPlan) {
         QueryIndexPlan queryIndexPlan = (QueryIndexPlan) queryPlan;
-//        queryDataSet = queryRouter.aggregate(aggregationPlan, context);
+        queryDataSet = queryRouter.aggregate(queryIndexPlan, context);
 //        queryDataSet = indexManager.query(queryIndexPlan, context);
         throw new IndexManagerException("TODO 1ksi1ksd");
       } else if (queryPlan instanceof AggregationPlan) {

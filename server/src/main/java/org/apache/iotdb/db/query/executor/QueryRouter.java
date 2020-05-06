@@ -21,6 +21,7 @@ package org.apache.iotdb.db.query.executor;
 
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
+import org.apache.iotdb.db.index.read.IndexAggregationExecutor;
 import org.apache.iotdb.db.qp.physical.crud.*;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.dataset.groupby.GroupByEngineDataSet;
@@ -108,7 +109,9 @@ public class QueryRouter implements IQueryRouter {
   }
 
   protected AggregationExecutor getAggregationExecutor(AggregationPlan aggregationPlan) {
-    return new AggregationExecutor(aggregationPlan);
+    return aggregationPlan instanceof QueryIndexPlan ?
+        new IndexAggregationExecutor((QueryIndexPlan) aggregationPlan) :
+        new AggregationExecutor(aggregationPlan);
   }
 
   @Override

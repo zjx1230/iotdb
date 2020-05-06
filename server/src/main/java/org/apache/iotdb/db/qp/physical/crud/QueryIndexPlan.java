@@ -21,23 +21,31 @@ package org.apache.iotdb.db.qp.physical.crud;
 import java.util.Map;
 import java.util.Objects;
 import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.qp.logical.Operator;
+import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
 
 public class QueryIndexPlan extends AggregationPlan {
   private Map<String, String> props;
   private IndexType indexType;
 
   public QueryIndexPlan() {
+    super();
+    setOperatorType(OperatorType.QUERY_INDEX);
   }
 
   public static QueryIndexPlan initFromAggregationPlan(AggregationPlan aggregationPlan){
     QueryIndexPlan indexQueryPlan = new QueryIndexPlan();
     indexQueryPlan.setPaths(aggregationPlan.getPaths());
+    indexQueryPlan.setDeduplicatedPaths(aggregationPlan.getDeduplicatedPaths());
     indexQueryPlan.setAggregations(aggregationPlan.getAggregations());
     indexQueryPlan.setExpression(aggregationPlan.getExpression());
     indexQueryPlan.setDataTypes(aggregationPlan.getDataTypes());
     indexQueryPlan.setAlignByTime(aggregationPlan.isAlignByTime());
     indexQueryPlan.setDeduplicatedAggregations(aggregationPlan.getDeduplicatedAggregations());
     indexQueryPlan.setDeduplicatedDataTypes(aggregationPlan.getDeduplicatedDataTypes());
+    indexQueryPlan.setPathToIndex(aggregationPlan.getPathToIndex());
+    indexQueryPlan.setRowLimit(aggregationPlan.getRowLimit());
+    indexQueryPlan.setRowOffset(aggregationPlan.getRowOffset());
     return indexQueryPlan;
   }
 

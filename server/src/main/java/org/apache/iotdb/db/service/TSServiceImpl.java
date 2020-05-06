@@ -35,6 +35,7 @@ import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.metadata.StorageGroupNotSetException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.exception.runtime.SQLParserException;
+import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metrics.server.SqlArgument;
 import org.apache.iotdb.db.qp.Planner;
@@ -562,7 +563,8 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
           throw new QueryProcessException("Group by doesn't support disable align clause.");
         }
       }
-      if (plan.getOperatorType() == OperatorType.AGGREGATION) {
+      if (plan.getOperatorType() == OperatorType.AGGREGATION
+          || plan.getOperatorType() == OperatorType.QUERY_INDEX) {
         resp.setIgnoreTimeStamp(true);
       } // else default ignoreTimeStamp is false
       resp.setOperationType(plan.getOperatorType().toString());
@@ -727,6 +729,7 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
         }
         seriesTypes = getSeriesTypesByString(respColumns, null);
         break;
+      case QUERY_INDEX:
       case AGGREGATION:
       case GROUPBY:
       case GROUP_BY_FILL:
@@ -739,7 +742,11 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
         for (int i = 0; i < paths.size(); i++) {
           respColumns.add(aggregations.get(i) + "(" + paths.get(i).getFullPath() + ")");
         }
-        seriesTypes = getSeriesTypesByPath(paths, aggregations);
+        if (plan.getOperatorType() == OperatorType.QUERY_INDEX) {
+          seriesTypes = IndexFunc.getSeriesByFunc(paths, aggregations);
+        } else {
+          seriesTypes = getSeriesTypesByPath(paths, aggregations);
+        }
         break;
       default:
         throw new TException("unsupported query type: " + plan.getOperatorType());

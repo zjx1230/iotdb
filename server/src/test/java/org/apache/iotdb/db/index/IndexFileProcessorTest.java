@@ -18,19 +18,15 @@
  */
 package org.apache.iotdb.db.index;
 
-import static org.apache.iotdb.db.index.TestUtils.TEST_INDEX_FILE_NAME;
 import static org.apache.iotdb.db.index.TestUtils.deserializeIndexChunk;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_SLIDE_STEP;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
 import static org.apache.iotdb.db.index.common.IndexType.NO_INDEX;
-import static org.apache.iotdb.db.index.common.IndexType.PAA;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -42,9 +38,7 @@ import org.apache.iotdb.db.index.TestUtils.Validation;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexIOReader;
-import org.apache.iotdb.db.index.io.IndexIOWriter.IndexChunkMeta;
-import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
-import org.apache.iotdb.db.index.preprocess.Identifier;
+import org.apache.iotdb.db.index.io.IndexChunkMeta;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
@@ -55,7 +49,6 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.Pair;
-import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -85,27 +78,31 @@ public class IndexFileProcessorTest {
     mManager.createIndex(Collections.singletonList(p2), new IndexInfo(NO_INDEX, 0, props));
   }
 
+  private long defaultIndexBufferSize;
   @Before
   public void setUp() throws Exception {
+    EnvironmentUtils.envSetUp();
     MManager.getInstance().init();
     MManager.getInstance().clear();
-    EnvironmentUtils.envSetUp();
     TestUtils.clearIndexFile(tempIndexFileName);
+    defaultIndexBufferSize = IoTDBDescriptor.getInstance().getConfig().getIndexBufferSize();
+    IoTDBDescriptor.getInstance().getConfig().setIndexBufferSize(100);
+    FSFactoryProducer.getFSFactory().getFile(tempIndexFileDir).mkdirs();
   }
 
   @After
   public void tearDown() throws Exception {
-    EnvironmentUtils.cleanEnv();
     TestUtils.clearIndexFile(tempIndexFileName);
+    IoTDBDescriptor.getInstance().getConfig().setIndexBufferSize(defaultIndexBufferSize);
+    EnvironmentUtils.cleanEnv();
+
   }
 
 
   @Test
   public void testMultiThreadWrite()
-      throws SQLException, ClassNotFoundException, MetadataException, ExecutionException, InterruptedException, IOException {
+      throws MetadataException, ExecutionException, InterruptedException, IOException {
     prepareMManager();
-    IoTDBDescriptor.getInstance().getConfig().setIndexBufferSize(100);
-    FSFactoryProducer.getFSFactory().getFile(tempIndexFileDir).mkdirs();
     // Prepare data
     TVList p1List = TVListAllocator.getInstance().allocate(TSDataType.INT32);
     TVList p2List = TVListAllocator.getInstance().allocate(TSDataType.FLOAT);
@@ -133,7 +130,8 @@ public class IndexFileProcessorTest {
       String indexFileDir, String indexFileName)
       throws ExecutionException, InterruptedException, IOException {
     IndexFileProcessor indexFileProcessor = new IndexFileProcessor(storageGroup, indexFileDir,
-        indexFileName, true);
+        indexFileName, true, (a, b) -> {
+    });
 
     indexFileProcessor.startFlushMemTable();
     for (Validation task : tasks) {

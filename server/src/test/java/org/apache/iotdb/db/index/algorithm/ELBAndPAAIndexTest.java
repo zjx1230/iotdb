@@ -43,8 +43,8 @@ import org.apache.iotdb.db.index.TestUtils;
 import org.apache.iotdb.db.index.TestUtils.Validation;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.index.io.IndexChunkMeta;
 import org.apache.iotdb.db.index.io.IndexIOReader;
-import org.apache.iotdb.db.index.io.IndexIOWriter.IndexChunkMeta;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
@@ -149,7 +149,7 @@ public class ELBAndPAAIndexTest {
       String indexFileDir, String indexFileName)
       throws ExecutionException, InterruptedException, IOException {
     IndexFileProcessor indexFileProcessor = new IndexFileProcessor(storageGroup, indexFileDir,
-        indexFileName, true);
+        indexFileName, true, (a, b) -> { });
 
     indexFileProcessor.startFlushMemTable();
     for (Validation task : tasks) {

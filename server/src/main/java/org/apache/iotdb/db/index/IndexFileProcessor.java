@@ -43,6 +43,8 @@ import org.apache.iotdb.db.index.flush.IndexBuildTaskPoolManager;
 import org.apache.iotdb.db.index.io.IndexIOWriter;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
 import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
+import org.apache.iotdb.db.index.read.IndexFileResource;
+import org.apache.iotdb.db.index.read.IndexStorageGroupProcessor.AddIndexFileResourcesCallBack;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.db.utils.datastructure.TVList;
@@ -71,6 +73,7 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
 
   private IndexIOWriter writer;
   private final boolean sequence;
+  private final AddIndexFileResourcesCallBack addResourcesCallBack;
 
   private static final long LONGEST_FLUSH_IO_WAIT_MS = 60000;
 
@@ -79,23 +82,24 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
   private Future flushTaskFuture;
   private boolean noMoreIndexFlushTask = false;
   private final Object waitingSymbol = new Object();
-  private static long memoryThreshold = IoTDBDescriptor.getInstance().getConfig()
-      .getIndexBufferSize();
+  private final long memoryThreshold;
 
   private final AtomicLong memoryUsed;
-  private boolean isFlushing;
+  private volatile boolean isFlushing;
   private AtomicInteger numIndexBuildTasks;
-  private boolean closed;
+  private volatile boolean closed;
 
   public IndexFileProcessor(String storageGroupName, String indexParentDir, String indexFilePath,
-      boolean sequence) {
+      boolean sequence, AddIndexFileResourcesCallBack addResourcesCallBack) {
     this.storageGroupName = storageGroupName;
     this.indexParentDir = indexParentDir;
     this.indexFilePath = indexFilePath;
     this.sequence = sequence;
+    this.addResourcesCallBack = addResourcesCallBack;
     this.indexBuildPoolManager = IndexBuildTaskPoolManager.getInstance();
     this.writer = new IndexIOWriter(indexFilePath);
     memoryUsed = new AtomicLong(0);
+    memoryThreshold = IoTDBDescriptor.getInstance().getConfig().getIndexBufferSize();
     numIndexBuildTasks = new AtomicInteger(0);
     isFlushing = false;
     closed = false;
@@ -169,17 +173,18 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
           }
         }
       } else {
-//        System.out.println("||||||||||||||||||||  close try to get lock");
         lock.writeLock().lock();
         try {
           // Another flush task starts between isFlushing = true and write lock.
           if (!isFlushing) {
-            writer.endFile();
+            IndexFileResource resource = writer.endFile();
+            if (resource != null) {
+              addResourcesCallBack.call(sequence, resource);
+            }
             closed = true;
           }
         } finally {
           lock.writeLock().unlock();
-//          System.out.println("||||||||||||||||||||  close unlock");
         }
         if (closed) {
           return;

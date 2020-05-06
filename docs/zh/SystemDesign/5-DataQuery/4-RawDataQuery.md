@@ -47,7 +47,7 @@
 
 `ReadTask`中有两个字段
 
-```
+```java
  private final ManagedSeriesReader reader;
  private BlockingQueue<BatchData> blockingQueue;
 ```
@@ -56,7 +56,7 @@
 
 `ManagedSeriesReader`接口继承了`IBatchReader`接口，主要用来读取单个时间序列的数据，并且新增了以下四个方法
 
-```
+```java
 boolean isManagedByQueryManager();
 
 void setManagedByQueryManager(boolean managedByQueryManager);
@@ -74,7 +74,7 @@ void setHasRemaining(boolean hasRemaining);
 
 #### run()
 
-```
+```java
 public void run() {
   try {
     // 这里加锁的原因是为了保证对于blockingQueue满不满的判断是正确同步的
@@ -153,7 +153,7 @@ public void run() {
 
 #### init()
 
-```
+```java
 private void init() throws InterruptedException {
 	timeHeap = new TreeSet<>();
 	// 为每个时间序列构建生产者任务
@@ -210,7 +210,7 @@ private void fillCache(int seriesIndex) throws InterruptedException {
 
 有了每个时间序列的数据，接下来就是将每个时间戳的数据做对齐，并将结果组装成`TSQueryDataSet`返回。这里的逻辑封装在`fillBuffer()`方法中，该方法里还包含了`limit`和`offset`，以及格式化结果集的逻辑，对此我们不作赘述，只分析其中数据读取和时间戳对齐的流程。
 
-```
+```java
 // 从最小堆中取出当前时间戳
 long minTime = timeHeap.pollFirst();
 for (int seriesIndex = 0; seriesIndex < seriesNum; seriesIndex++) {

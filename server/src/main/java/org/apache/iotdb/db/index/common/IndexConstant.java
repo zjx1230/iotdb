@@ -1,5 +1,14 @@
 package org.apache.iotdb.db.index.common;
 
+import static org.apache.iotdb.db.index.common.IndexType.ELB;
+import static org.apache.iotdb.db.index.common.IndexType.KV_INDEX;
+import static org.apache.iotdb.db.index.common.IndexType.NO_INDEX;
+import static org.apache.iotdb.db.index.common.IndexType.PAA;
+
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.Set;
+
 public class IndexConstant {
 
 
@@ -33,7 +42,7 @@ public class IndexConstant {
   public static final String ELB_TYPE_SEQ = "SEQ";
   public static final String DEFAULT_ELB_TYPE = "SEQ";
 
-  //calc param
+  //ELB: calc param
   public static final String ELB_CALC_PARAM = "ELB_CALC_PARAM";
   public static final String DEFAULT_ELB_CALC_PARAM = "SINGLE";
   public static final String ELB_CALC_PARAM_SINGLE = "SINGLE";
@@ -42,5 +51,21 @@ public class IndexConstant {
   public static final double ELB_DEFAULT_THRESHOLD_RATIO = 0.1;
 
 
+  // index function mapping
+  private static Map<IndexType, Set<IndexFunc>> indexSupportFunction = new EnumMap<>(
+      IndexType.class);
+
+  static {
+    indexSupportFunction.put(NO_INDEX, NO_INDEX.getSupportedFunc());
+    indexSupportFunction.put(ELB, ELB.getSupportedFunc());
+    indexSupportFunction.put(PAA, PAA.getSupportedFunc());
+    indexSupportFunction.put(KV_INDEX, KV_INDEX.getSupportedFunc());
+  }
+
+  public static boolean checkIndexQueryValidity(String func, IndexType indexType) {
+    IndexFunc indexFunc = IndexFunc.getIndexFunc(func);
+    return indexSupportFunction.containsKey(indexType) && indexSupportFunction.get(indexType)
+        .contains(indexFunc);
+  }
 
 }

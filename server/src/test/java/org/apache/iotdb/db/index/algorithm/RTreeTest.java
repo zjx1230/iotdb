@@ -1,14 +1,10 @@
 package org.apache.iotdb.db.index.algorithm;
 
-import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_MAGIC;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Random;
 import java.util.function.BiConsumer;
 import org.apache.iotdb.db.index.algorithm.RTree.SeedPicker;
