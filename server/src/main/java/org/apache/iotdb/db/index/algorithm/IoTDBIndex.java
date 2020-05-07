@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexManagerException;
 import org.apache.iotdb.db.index.common.IndexType;
@@ -142,4 +143,6 @@ public abstract class IoTDBIndex {
   public IndexType getIndexType() {
     return indexType;
   }
+
+  public abstract void initQuery(Map<String, String> queryProps, List<IndexFunc> indexFuncs);
 }

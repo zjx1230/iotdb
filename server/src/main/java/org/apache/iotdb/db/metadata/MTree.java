@@ -917,7 +917,17 @@ public class MTree implements Serializable {
         res.put(fullPath, infos);
       }
     }
-
     return res;
+  }
+
+  public IndexInfo getIndexInfoByPath(String path, IndexType indexType) throws MetadataException {
+    LeafMNode leafNode = (LeafMNode) getNodeByPath(path);
+    Map<IndexType, IndexInfo> infos = leafNode.getIndexInfoMaps();
+    if (!infos.isEmpty()) {
+      return infos.get(indexType);
+    }
+    else{
+      return null;
+    }
   }
 }

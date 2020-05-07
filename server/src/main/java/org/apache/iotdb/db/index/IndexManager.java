@@ -20,7 +20,6 @@ package org.apache.iotdb.db.index;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -29,15 +28,19 @@ import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.exception.StartupException;
+import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.flush.IndexBuildTaskPoolManager;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
+import org.apache.iotdb.db.index.read.IndexQueryReader;
 import org.apache.iotdb.db.index.read.IndexStorageGroupProcessor;
+import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.service.IService;
 import org.apache.iotdb.db.service.JMXService;
 import org.apache.iotdb.db.service.ServiceType;
 import org.apache.iotdb.db.utils.FileUtils;
 import org.apache.iotdb.db.utils.TestOnly;
+import org.apache.iotdb.tsfile.read.common.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,6 +55,17 @@ public class IndexManager implements IService {
 
   private IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
 
+
+  public IndexQueryReader getQuerySource(Path seriesPath, IndexType indexType)
+      throws IOException, MetadataException {
+    String series = seriesPath.getFullPath();
+    String storageGroupName = MManager.getInstance().getStorageGroupName(series);
+    IndexStorageGroupProcessor sgProcessor = processorMap.computeIfAbsent(storageGroupName,
+        sg -> new IndexStorageGroupProcessor(storageGroupName));
+    List<IndexChunkMeta> seq = sgProcessor.getIndexMetadata(true, series, indexType);
+    List<IndexChunkMeta> unseq = sgProcessor.getIndexMetadata(false, series, indexType);
+    return new IndexQueryReader(seriesPath, indexType, seq, unseq);
+  }
 
   public List<IndexChunkMeta> getIndexMetadata(String storageGroup, boolean sequence,
       String seriesPath, IndexType indexType) throws IOException {

@@ -442,6 +442,18 @@ public class MManager {
     }
   }
 
+  public IndexInfo getIndexInfoByPath(String path, IndexType indexType) {
+    lock.readLock().lock();
+    try {
+      return mtree.getIndexInfoByPath(path, indexType);
+    } catch (MetadataException e) {
+      logger.error("meet errors when get index info for {} {}.", path, indexType, e);
+      return null;
+    } finally {
+      lock.readLock().unlock();
+    }
+  }
+
 //  @TestOnly
 //  public void createTimeseries(String path, String dataType, String encoding)
 //      throws MetadataException {

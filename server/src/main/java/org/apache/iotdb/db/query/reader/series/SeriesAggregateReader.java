@@ -18,6 +18,8 @@
  */
 package org.apache.iotdb.db.query.reader.series;
 
+import java.io.IOException;
+import java.util.Set;
 import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.filter.TsFileFilter;
@@ -27,15 +29,12 @@ import org.apache.iotdb.tsfile.read.common.BatchData;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 
-import java.io.IOException;
-import java.util.Set;
-
 
 public class SeriesAggregateReader implements IAggregateReader {
 
-  private final SeriesReader seriesReader;
+  protected final SeriesReader seriesReader;
 
-  public SeriesAggregateReader(Path seriesPath, Set<String> allSensors,  TSDataType dataType,
+  public SeriesAggregateReader(Path seriesPath, Set<String> allSensors, TSDataType dataType,
       QueryContext context, QueryDataSource dataSource, Filter timeFilter, Filter valueFilter,
       TsFileFilter fileFilter) {
     this.seriesReader = new SeriesReader(seriesPath, allSensors, dataType, context, dataSource,
@@ -121,4 +120,9 @@ public class SeriesAggregateReader implements IAggregateReader {
     return timeFilter == null
         || timeFilter.containStartEndTime(statistics.getStartTime(), statistics.getEndTime());
   }
+
+  public long[] getUnOverlappedInCurrentChunk() throws IOException {
+    return seriesReader.getUncoveredInCurrentChunk();
+  }
+
 }

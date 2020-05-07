@@ -25,12 +25,14 @@ import static org.apache.iotdb.db.index.common.IndexFunc.SIM_ST;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.algorithm.NoIndex;
 import org.apache.iotdb.db.index.algorithm.elb.ELBIndex;
 import org.apache.iotdb.db.index.algorithm.paa.PAAIndex;
+import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 
 public enum IndexType {
@@ -112,7 +114,7 @@ public enum IndexType {
   }
 
   public static IoTDBIndex constructIndex(String path, IndexType indexType, IndexInfo indexInfo) {
-    uppercaseProps(indexInfo);
+    indexInfo.setProps(uppercaseProps(indexInfo.getProps()));
     switch (indexType) {
       case ELB:
         return new ELBIndex(path, indexInfo);
@@ -126,10 +128,39 @@ public enum IndexType {
     }
   }
 
-  private static void uppercaseProps(IndexInfo indexInfo) {
-    Map<String, String> props = indexInfo.getProps();
+  /**
+   * Construct an index for an index-query
+   */
+  public static IoTDBIndex constructQueryIndex(String path, IndexType indexType,
+      Map<String, String> queryProps, List<IndexFunc> indexFuncs) {
+    queryProps = uppercaseProps(queryProps);
+    IndexInfo indexInfo = MManager.getInstance().getIndexInfoByPath(path, indexType);
+    if (indexInfo == null) {
+      throw new IllegalIndexParamException(
+          String.format("%s.%s not found, why it escapes the check?", path, indexType));
+    }
+    IoTDBIndex iotIndex;
+    switch (indexType) {
+      case ELB:
+        iotIndex = new ELBIndex(path, indexInfo);
+        break;
+      case PAA:
+        iotIndex = new PAAIndex(path, indexInfo);
+        break;
+      case NO_INDEX:
+        iotIndex = new NoIndex(path, indexInfo);
+        break;
+      case KV_INDEX:
+      default:
+        throw new NotImplementedException("unsupported index type:" + indexType);
+    }
+    iotIndex.initQuery(queryProps, indexFuncs);
+    return iotIndex;
+  }
+
+  private static Map<String, String> uppercaseProps(Map<String, String> props) {
     Map<String, String> uppercase = new HashMap<>(props.size());
     props.forEach((k, v) -> uppercase.put(k.toUpperCase(), v.toUpperCase()));
-    indexInfo.setProps(uppercase);
+    return uppercase;
   }
 }

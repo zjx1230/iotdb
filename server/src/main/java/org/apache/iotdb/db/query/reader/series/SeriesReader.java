@@ -692,6 +692,18 @@ class SeriesReader {
     return timeFilter;
   }
 
+  long[] getUncoveredInCurrentChunk() throws IOException {
+    Statistics chunkStatistics = firstChunkMetadata.getStatistics();
+
+    if (!isChunkOverlapped()) {
+      return new long[]{chunkStatistics.getStartTime(), chunkStatistics.getEndTime()};
+    } else {
+      // TODO to be reviewed. Is the left border correct? Is it uncovered?
+      ChunkMetadata nextChunk = cachedChunkMetadata.peek();
+      return new long[]{chunkStatistics.getStartTime(), nextChunk.getStartTime() - 1};
+    }
+  }
+
   private class VersionPageReader {
 
     protected long version;
