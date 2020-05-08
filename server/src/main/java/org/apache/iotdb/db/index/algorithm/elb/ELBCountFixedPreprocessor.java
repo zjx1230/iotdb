@@ -7,11 +7,9 @@ import java.util.List;
 import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.CalcParam;
 import org.apache.iotdb.db.index.common.IllegalIndexParamException;
-import org.apache.iotdb.db.index.common.IndexManagerException;
 import org.apache.iotdb.db.index.common.IndexRuntimeException;
 import org.apache.iotdb.db.index.distance.Distance;
 import org.apache.iotdb.db.index.preprocess.CountFixedPreprocessor;
-import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
@@ -101,8 +99,8 @@ public class ELBCountFixedPreprocessor extends CountFixedPreprocessor {
     if (!storeFeature) {
       res.add(formatELBFeature(currentMBR, 0));
     } else {
-      int startIdx = Math.max(flushedOffset, currentProcessedIdx + 1 - latestN);
-      for (int i = startIdx; i <= currentProcessedIdx; i++) {
+      int startIdx = Math.max(flushedOffset, sliceNum - latestN);
+      for (int i = startIdx; i < sliceNum; i++) {
         res.add(formatELBFeature(mbrs, i - flushedOffset));
       }
     }

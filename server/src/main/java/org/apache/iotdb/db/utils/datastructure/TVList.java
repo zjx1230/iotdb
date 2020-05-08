@@ -27,6 +27,7 @@ import java.util.List;
 import org.apache.iotdb.db.rescon.PrimitiveArrayPool;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.tsfile.read.common.BatchData;
 import org.apache.iotdb.tsfile.read.reader.IPointReader;
 import org.apache.iotdb.tsfile.read.TimeValuePair;
 import org.apache.iotdb.tsfile.utils.Binary;
@@ -585,5 +586,32 @@ public abstract class TVList {
     }
   }
 
+  public static void appendAll(TVList dest, BatchData newData) {
+    while (newData.hasCurrent()) {
+      long time = newData.currentTime();
+      Object value = newData.currentValue();
+      switch (dest.dataType) {
+        case BOOLEAN:
+          dest.putBoolean(time, (boolean) value);
+          break;
+        case INT32:
+          dest.putInt(time, (int) value);
+          break;
+        case INT64:
+          dest.putLong(time, (Long) value);
+          break;
+        case FLOAT:
+          dest.putFloat(time, (Float) value);
+          break;
+        case DOUBLE:
+          dest.putDouble(time, (Double) value);
+          break;
+        case TEXT:
+          dest.putBinary(time, (Binary) value);
+          break;
+      }
+      newData.next();
+    }
+  }
 
 }

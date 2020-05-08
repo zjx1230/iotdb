@@ -11,6 +11,8 @@ import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.read.common.BatchData;
+import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 /**
@@ -80,6 +82,11 @@ public abstract class IndexPreprocessor {
     initParams();
   }
 
+  public void appendNewSrcData(BatchData newData) {
+    TVList.appendAll(this.srcData, newData);
+    initParams();
+  }
+
   protected abstract void initParams();
 
   /**
@@ -93,6 +100,8 @@ public abstract class IndexPreprocessor {
     }
     TVList swap = TVListAllocator.getInstance().allocate(srcData.getDataType());
     TVList.append(swap, this.srcData, idx, srcData.size() - idx);
+    TVListAllocator.getInstance().release(srcData);
+    this.srcData = swap;
   }
 
 //  public IndexPreprocessor(TVList tvList, WindowType widthType, int windowRange, int slideStep) {
@@ -107,13 +116,19 @@ public abstract class IndexPreprocessor {
 //    // An empty header for program simplicity
 //  }
 
+
+  public abstract boolean hasNext();
+
   /**
    * Returns true if the pre-processor has more elements. i.e., return true if {@link #processNext}
    * would process the next data item rather than throwing an exception.)
    *
+   * If there are more sequences, most {@code currentStartTime} and {@code currentEndTime} to the
+   * next one. Otherwise, don't change them.
+   *
    * @return {@code true} if there are more elements to be processed.
    */
-  public abstract boolean hasNext();
+  public abstract boolean hasNext(Filter timeFilter);
 
   /**
    * Processed the next element.
@@ -200,6 +215,7 @@ public abstract class IndexPreprocessor {
 
   public abstract long getChunkEndTime();
 
+
   /**
    * The time window type: time-fixed or count-fixed. It determines the meanings of following
    * fields: {@code windowRange}, {@code windowRange}, {@code slideStep}.<p>
@@ -261,7 +277,7 @@ public abstract class IndexPreprocessor {
    * deserialize from the buffer, set the previous overlapped data
    */
   public void deserializePrevious(ByteBuffer byteBuffer) {
-    if(byteBuffer == null){
+    if (byteBuffer == null) {
       return;
     }
     srcData.clear();

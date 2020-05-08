@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.Comparator;
 import org.apache.iotdb.db.index.io.IndexIOReader.ReadDataByChunkMetaCallback;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
@@ -15,10 +16,19 @@ public class IndexChunkMeta {
    * file.
    */
 
+  public long getStartTime() {
+    return startTime;
+  }
+
   /**
    *
    */
   long startTime;
+
+  public long getEndTime() {
+    return endTime;
+  }
+
   long endTime;
 
 
@@ -35,6 +45,10 @@ public class IndexChunkMeta {
     this.endTime = endTime;
     this.startPosInFile = startPosInFile;
     this.dataSize = dataSize;
+  }
+
+  public ByteBuffer unpack() throws IOException {
+    return getDataByChunkMeta.call(this);
   }
 
 
@@ -78,4 +92,5 @@ public class IndexChunkMeta {
         ", dataSize=" + dataSize +
         '}';
   }
+
 }

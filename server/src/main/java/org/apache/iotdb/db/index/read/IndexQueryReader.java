@@ -1,16 +1,26 @@
 package org.apache.iotdb.db.index.read;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.common.IndexFunc;
+import org.apache.iotdb.db.index.common.IndexManagerException;
 import org.apache.iotdb.db.index.common.IndexQueryException;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
-import org.apache.iotdb.db.query.aggregation.AggregateResult;
-import org.apache.iotdb.tsfile.file.metadata.statistics.Statistics;
+import org.apache.iotdb.db.index.preprocess.Identifier;
+import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
+import org.apache.iotdb.db.index.read.optimize.IndexQueryOptimize;
+import org.apache.iotdb.db.index.read.optimize.NaiveOptimizer;
 import org.apache.iotdb.tsfile.read.common.BatchData;
 import org.apache.iotdb.tsfile.read.common.Path;
+import org.apache.iotdb.tsfile.read.filter.basic.Filter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * For a query on a series, IndexQueryResource contains the required seq/unseq chunk metadata list
@@ -21,42 +31,50 @@ import org.apache.iotdb.tsfile.read.common.Path;
  */
 public class IndexQueryReader {
 
+  private static final Logger logger = LoggerFactory.getLogger(IndexQueryReader.class);
   private Path seriesPath;
   private final IndexType indexType;
-  private List<IndexChunkMeta> seqResources;
+  private PriorityQueue<IndexChunkMeta> seqResources;
 
   int seqIdx = 0;
 
-  int currentKnownTime = -1;
   /**
    * unused up to now
    */
-  private List<IndexChunkMeta> unseqResources;
+  private PriorityQueue<IndexChunkMeta> unseqResources;
 
   /**
    * both-side closed range. The i-th index-usable range is {@code [range[i*2], range[i*2+1]]}
    */
   private IndexTimeRange indexUsableRange = new IndexTimeRange();
-  //  private Map<String, String> queryProps;
+  private IndexTimeRange indexPrunedRange = new IndexTimeRange();
   private List<IndexFunc> indexFuncs;
   private IoTDBIndex index;
+  private IndexQueryOptimize optimizer;
 
   public IndexQueryReader(Path seriesPath, IndexType indexType,
       List<IndexChunkMeta> seqResources,
       List<IndexChunkMeta> unseqResources) {
     this.seriesPath = seriesPath;
     this.indexType = indexType;
-    this.seqResources = seqResources;
-    this.unseqResources = unseqResources;
+    this.seqResources = new PriorityQueue<>(Comparator.comparingLong(IndexChunkMeta::getStartTime));
+    this.seqResources.addAll(seqResources);
+    this.unseqResources = new PriorityQueue<>(
+        Comparator.comparingLong(IndexChunkMeta::getStartTime));
+    this.unseqResources.addAll(unseqResources);
+
+    this.optimizer = new NaiveOptimizer();
   }
 
   /**
    * 获得chunkmeta之后调用，告诉reader，这次查询的所有条件，以及查询的所有indexFunc
    */
-  public void initQuery(Map<String, String> queryProps, List<IndexFunc> indexFuncs) {
+  public void initQueryCondition(Map<String, String> queryProps, List<IndexFunc> indexFuncs) {
     this.indexFuncs = indexFuncs;
     this.index = IndexType
         .constructQueryIndex(seriesPath.getFullPath(), indexType, queryProps, indexFuncs);
+    index.initPreprocessor(null);
+
   }
 
   /**
@@ -75,50 +93,73 @@ public class IndexQueryReader {
       return;
     }
     this.indexUsableRange.addRange(start, end);
-    updateIndexChunk();
+    updateIndexChunk(start, end);
+  }
+
+  private boolean chunkOverlapData(IndexChunkMeta indexChunkMeta, long dataStartTime,
+      long dataEndTime) {
+    return indexChunkMeta.getStartTime() >= dataEndTime
+        && indexChunkMeta.getEndTime() <= dataStartTime;
   }
 
   /**
-   * 有了新的可用区间（也可能并没有更新的），判断并加载下一段index，合并得到新的 pruneRanges 和 pruneCandidatePoints
+   * 有了新的可用区间（也可能并没有更新的），判断并加载下一段index，合并得到新的 pruneRanges 和 pruneCandidatePoints 最重要的函数之一
    */
-  private void updateIndexChunk() {
-    // TODO
+  private void updateIndexChunk(long dataStartTime, long dataEndTime) {
+    while (!seqResources.isEmpty()) {
+      IndexChunkMeta chunkMeta = seqResources.peek();
+      if (chunkOverlapData(chunkMeta, dataStartTime, dataEndTime) &&
+          optimizer.needUnpackIndexChunk(indexUsableRange, chunkMeta.getStartTime(),
+              chunkMeta.getEndTime())) {
+        chunkMeta = seqResources.poll();
+        ByteBuffer chunkData;
+        try {
+          chunkData = chunkMeta.unpack();
+          List<Identifier> candidateList = index.queryByIndex(chunkData);
+          if(candidateList != null)
+            updatePrunedRange(chunkMeta, candidateList);
+        } catch (IOException e) {
+          logger.error("unpack chunk failed:{}, skip it", chunkMeta, e);
+        } catch (IndexManagerException e) {
+          logger.error("query chunk failed:{}, skip it", chunkMeta, e);
+        }
+      }
+    }
   }
 
-  public boolean canSkipCurrentChunk(Statistics currentChunkStatistics) {
-    //TODO
-    throw new UnsupportedOperationException();
+  private void updatePrunedRange(IndexChunkMeta chunkMeta, List<Identifier> candidateList) {
+    indexPrunedRange.addRange(chunkMeta.getStartTime(), chunkMeta.getEndTime());
+    candidateList.forEach(p -> indexPrunedRange.pruneRange(p.getStartTime(), p.getEndTime()));
   }
 
-  public boolean canSkipCurrentPage(Statistics pageStatistics) {
-    //TODO
-    throw new UnsupportedOperationException();
-  }
 
-  /**
-   * 判断某个page或者chunk可以被移除是非常严格的，当某段被skip时，Previous肯定是不需要再用了，所以preprocessor清理掉
-   */
-  public void clearPrevious() {
-    //TODO
-    throw new UnsupportedOperationException();
+  public boolean canSkipDataRange(long dataStartTime, long dataEndTime) {
+    updateIndexChunk(dataStartTime, dataEndTime);
+    return indexPrunedRange.fullyContains(dataStartTime, dataEndTime);
   }
 
   /**
    * 新来一批数据,处理完，写出去
    */
   public void appendDataAndPostProcess(BatchData nextOverlappedPageData,
-      List<AggregateResult> aggregateResultList, boolean[] isCalculatedArray) {
-    //TODO
+      List<IndexFuncResult> aggregateResultList, boolean[] isCalculatedArray, Filter timeFilter)
+      throws IndexManagerException {
+    IndexPreprocessor preprocessor = index.startFlushTask(nextOverlappedPageData);
+    while (preprocessor.hasNext(timeFilter)) {
+      preprocessor.processNext();
+      index.postProcessNext(aggregateResultList, isCalculatedArray);
+    }
+    index.endFlushTask();
     throw new UnsupportedOperationException();
   }
 
   /**
-   * 这个函数被调用的时候说明所有的数据都处理完了，把数据输出去+
+   * release all resources.
    */
-  public void outputIndexResult(List<AggregateResult> aggregateResultList) {
-    //TODO
-    throw new UnsupportedOperationException();
+  public void release() {
+    seqResources.clear();
+    unseqResources.clear();
+    indexFuncs.clear();
+    index.closeAndRelease();
   }
-
-
 }

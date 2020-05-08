@@ -8,12 +8,22 @@ import static org.apache.iotdb.db.index.common.IndexConstant.SEED_PICKER;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.function.BiConsumer;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.index.algorithm.RTree.SeedPicker;
+import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexManagerException;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
+import org.apache.iotdb.db.index.preprocess.Identifier;
+import org.apache.iotdb.db.query.aggregation.AggregateResult;
+import org.apache.iotdb.tsfile.read.filter.basic.Filter;
+import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +53,7 @@ public abstract class MBRIndex extends IoTDBIndex {
   /**
    * For generality, RTree only store ids of identifiers or others.
    */
-   protected RTree<Integer> rTree;
+  protected RTree<Integer> rTree;
   protected float[] currentCorners;
   protected float[] currentRanges;
   private int maxEntries;
@@ -106,7 +116,7 @@ public abstract class MBRIndex extends IoTDBIndex {
     double amortizedInnerNodeNum;
     if (n < b) {
       return leafNodeCost;
-    }else {
+    } else {
       float af = (float) a;
       float bf = (float) b;
       float nf = (float) n;
@@ -144,7 +154,19 @@ public abstract class MBRIndex extends IoTDBIndex {
     return true;
   }
 
+  /**
+   * For index building.
+   */
   protected abstract BiConsumer<Integer, OutputStream> getSerializeFunc();
+
+  /**
+   * Following three methods are for query.
+   */
+  protected abstract BiConsumer<Integer, ByteBuffer> getDeserializeFunc();
+
+  protected abstract List<Identifier> getQueryCandidates(List<Integer> candidateIds);
+
+  protected abstract void fillQueryFeature();
 
   @Override
   public IndexFlushChunk flush() {
@@ -168,7 +190,7 @@ public abstract class MBRIndex extends IoTDBIndex {
   }
 
   /**
-   * @return 0
+   *
    */
   @Override
   @SuppressWarnings("squid:S1185")
@@ -186,6 +208,18 @@ public abstract class MBRIndex extends IoTDBIndex {
   @SuppressWarnings("squid:S1185")
   public int getAmortizedSize() {
     return super.getAmortizedSize() + this.amortizedPerInputCost;
+  }
+
+
+  @Override
+  public List<Identifier> queryByIndex(ByteBuffer indexChunkData) throws IndexManagerException {
+    RTree<Integer> rtree = RTree.deserialize(indexChunkData, getDeserializeFunc());
+    fillQueryFeature();
+    if (usePointType) {
+      Arrays.fill(currentRanges, 0);
+    }
+    List<Integer> candidateIds = rTree.search(currentCorners, currentRanges);
+    return getQueryCandidates(candidateIds);
   }
 
 }

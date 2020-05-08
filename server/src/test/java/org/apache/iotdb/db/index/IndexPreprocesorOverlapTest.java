@@ -61,10 +61,10 @@ public class IndexPreprocesorOverlapTest {
       statement
           .execute(String.format("CREATE TIMESERIES %s WITH DATATYPE=INT32,ENCODING=PLAIN", p2));
 
-//      statement.execute(String
-//          .format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d, %s=%s, %s=%s",
-//              p1, IndexType.ELB, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 2, DISTANCE, L_INFINITY,
-//              ELB_TYPE, ELB_TYPE_ELE));
+      statement.execute(String
+          .format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d, %s=%s, %s=%s",
+              p1, IndexType.ELB, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 2, DISTANCE, L_INFINITY,
+              ELB_TYPE, ELB_TYPE_ELE));
       statement.execute(String
           .format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d",
               p1, IndexType.PAA, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 2));
@@ -77,18 +77,19 @@ public class IndexPreprocesorOverlapTest {
       long timeInterval = 0;
       int unseqDelta = 1000;
       // time partition 1, seq file 1
-//      for (i = 0; i < 100; i++) {
-//        statement.execute(String.format(insertPattern,
-//            device, p1s, timeInterval + i, timeInterval + i));
-//        statement.execute(String.format(insertPattern,
-//            device, p2s, timeInterval + i, timeInterval + i * 2));
-//      }
-//      statement.execute("flush");
-//      System.out.println("================ flush and close: " + i);
+      for (i = 0; i < 15; i++) {
+        statement.execute(String.format(insertPattern,
+            device, p1s, timeInterval + i, timeInterval + i));
+        statement.execute(String.format(insertPattern,
+            device, p2s, timeInterval + i, timeInterval + i * 2));
+      }
+      statement.execute("flush");
+      System.out.println("================ flush and close: " + i);
 
       // time partition 2, seq file 2
       timeInterval = 1_000_000_000;
-      for (i = 0; i < 100; i++) {
+      for (i = 0; i < 15; i++) {
+//      for (i = 0; i < 100; i++) {
         statement.execute(String.format(insertPattern,
             device, p1s, timeInterval + i, timeInterval + i));
         statement.execute(String.format(insertPattern,
@@ -97,7 +98,8 @@ public class IndexPreprocesorOverlapTest {
       statement.execute("flush");
       System.out.println("================ flush and close: " + (i + timeInterval));
       // time partition 2, seq file 3
-      for (i = 200; i < 300; i++) {
+      for (i = 200; i < 215; i++) {
+//      for (i = 200; i < 300; i++) {
         statement.execute(String.format(insertPattern,
             device, p1s, timeInterval + i, timeInterval + i));
         statement.execute(String.format(insertPattern,
@@ -116,7 +118,8 @@ public class IndexPreprocesorOverlapTest {
 //      statement.execute("flush");
 //      System.out.println("================ flush and close: " + (i + timeInterval));
       // time partition 2, seq file 4, unsealed
-      for (i = 400; i < 500; i++) {
+      for (i = 400; i < 415; i++) {
+//      for (i = 400; i < 500; i++) {
         statement.execute(String.format(insertPattern,
             device, p1s, timeInterval + i, timeInterval + i));
         statement.execute(String.format(insertPattern,

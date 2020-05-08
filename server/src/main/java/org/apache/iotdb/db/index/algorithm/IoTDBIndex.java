@@ -19,12 +19,13 @@ import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategy;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategyType;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
+import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
+import org.apache.iotdb.db.index.read.IndexFuncResult;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.read.common.Path;
-import org.apache.iotdb.tsfile.utils.Pair;
+import org.apache.iotdb.tsfile.read.common.BatchData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,6 +45,8 @@ public abstract class IoTDBIndex {
   protected int windowRange;
   protected int slideStep;
   protected IndexPreprocessor indexPreprocessor;
+  protected Map<String, String> queryProps;
+  protected List<IndexFunc> indexFuncs;
 
   public IoTDBIndex(String path, IndexInfo indexInfo) {
     try {
@@ -81,6 +84,15 @@ public abstract class IoTDBIndex {
    */
   public IndexPreprocessor startFlushTask(TVList tvList) {
     this.indexPreprocessor.appendNewSrcData(tvList);
+    return indexPreprocessor;
+  }
+
+
+  /**
+   * Sorry but this method is ugly.
+   */
+  public IndexPreprocessor startFlushTask(BatchData batchData) {
+    this.indexPreprocessor.appendNewSrcData(batchData);
     return indexPreprocessor;
   }
 
@@ -165,33 +177,48 @@ public abstract class IoTDBIndex {
     return indexPreprocessor == null ? 0 : indexPreprocessor.getAmortizedSize();
   }
 
+  public void initQuery(Map<String, String> queryProps, List<IndexFunc> indexFuncs) {
+    this.queryProps = queryProps;
+    this.indexFuncs = indexFuncs;
+  }
+
   /**
-   * query on path with parameters, return result by limitSize
+   * query on path with parameters, return the candidate list. return null is regarded as Nothing to
+   * be pruned.
    *
-   * @param path the path to be queried
-   * @param parameters the query request with all parameters
-   * @param nonUpdateIntervals the query request with all parameters
-   * @param limitSize the limitation of number of answers
-   * @return the query response
+   * TODO It's not gentle enough. null should have close definition as empty list.
+   *
+   * @return null means nothing to be pruned
    */
-  public abstract Object queryByIndex(Path path, List<Object> parameters,
-      List<Pair<Long, Long>> nonUpdateIntervals,
-      int limitSize)
+  public abstract List<Identifier> queryByIndex(ByteBuffer indexChunkData)
       throws IndexManagerException;
 
   /**
    * query on path with parameters, return result by limitSize
    *
-   * @param path the path to be queried
-   * @param parameters the query request with all parameters
-   * @param nonUpdateIntervals the query request with all parameters
-   * @param limitSize the limitation of number of answers
    * @return the query response
    */
-  public abstract Object queryByScan(Path path, List<Object> parameters,
-      List<Pair<Long, Long>> nonUpdateIntervals,
-      int limitSize)
-      throws IndexManagerException;
+  public void postProcessNext(List<IndexFuncResult> aggregateResultList,
+      boolean[] isCalculatedArray) throws IndexManagerException {
+    for (int i = 0; i < aggregateResultList.size(); i++) {
+      if (!isCalculatedArray[i]) {
+        if (postProcessNext(aggregateResultList.get(i))) {
+          isCalculatedArray[i] = true;
+        }
+      }
+    }
+  }
+
+  /**
+   * IndexPreprocessor has preprocess a new sequence, produce L1, L2 or L3 features as user's
+   * configuration. Calculates functions you support and fill into {@code funcResult}.
+   *
+   * Returns {@code true} if all calculations of this function have been completed. If so, this AggregateResult will not
+   * be called next time.
+   *
+   * @throws UnsupportedOperationException If you meet an unsupported AggregateResult
+   */
+  public abstract boolean postProcessNext(IndexFuncResult funcResult) throws IndexManagerException;
 
   /**
    * the file is no more needed. Stop ongoing construction and flush operations, clear memory
@@ -203,7 +230,5 @@ public abstract class IoTDBIndex {
   public IndexType getIndexType() {
     return indexType;
   }
-
-  public abstract void initQuery(Map<String, String> queryProps, List<IndexFunc> indexFuncs);
 
 }

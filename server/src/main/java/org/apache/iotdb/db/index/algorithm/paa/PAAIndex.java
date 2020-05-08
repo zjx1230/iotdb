@@ -11,6 +11,8 @@ import org.apache.iotdb.db.index.algorithm.MBRIndex;
 import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexManagerException;
+import org.apache.iotdb.db.index.preprocess.Identifier;
+import org.apache.iotdb.db.index.read.IndexFuncResult;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.slf4j.Logger;
@@ -50,7 +52,7 @@ public class PAAIndex extends MBRIndex {
   protected int fillCurrentFeature() {
     paaTimeFixedPreprocessor.copyFeature(currentCorners);
     Arrays.fill(currentRanges, 0);
-    return paaTimeFixedPreprocessor.getCurrentIdx();
+    return paaTimeFixedPreprocessor.getSliceNum() - 1;
   }
 
   @Override
@@ -64,17 +66,6 @@ public class PAAIndex extends MBRIndex {
     };
   }
 
-  @Override
-  public Object queryByIndex(Path path, List<Object> parameters,
-      List<Pair<Long, Long>> nonUpdateIntervals, int limitSize) throws IndexManagerException {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public Object queryByScan(Path path, List<Object> parameters,
-      List<Pair<Long, Long>> nonUpdateIntervals, int limitSize) throws IndexManagerException {
-    throw new UnsupportedOperationException();
-  }
 
   @Override
   public void delete() {
@@ -82,7 +73,23 @@ public class PAAIndex extends MBRIndex {
   }
 
   @Override
-  public void initQuery(Map<String, String> queryProps, List<IndexFunc> indexFuncs) {
+  protected BiConsumer<Integer, ByteBuffer> getDeserializeFunc() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  protected List<Identifier> getQueryCandidates(List<Integer> candidateIds) {
+
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  protected void fillQueryFeature() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean postProcessNext(IndexFuncResult funcResult) throws IndexManagerException {
     throw new UnsupportedOperationException();
   }
 }

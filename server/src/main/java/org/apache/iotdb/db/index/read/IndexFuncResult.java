@@ -15,12 +15,12 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.statistics.Statistics;
 import org.apache.iotdb.tsfile.read.common.BatchData;
 
-public class IndexAggregateResult extends AggregateResult {
+public class IndexFuncResult extends AggregateResult {
 
   private final IndexFunc indexFunc;
   private final IndexType indexType;
 
-  public IndexAggregateResult(IndexFunc indexFunc, TSDataType tsDataType, IndexType indexType) {
+  public IndexFuncResult(IndexFunc indexFunc, TSDataType tsDataType, IndexType indexType) {
     super(tsDataType, INDEX);
     this.indexFunc = indexFunc;
     this.indexType = indexType;

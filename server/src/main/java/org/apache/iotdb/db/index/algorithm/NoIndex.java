@@ -4,16 +4,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.Map;
-import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexManagerException;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
 import org.apache.iotdb.db.index.preprocess.CountFixedPreprocessor;
 import org.apache.iotdb.db.index.preprocess.Identifier;
-import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
-import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.tsfile.read.common.Path;
-import org.apache.iotdb.tsfile.utils.Pair;
+import org.apache.iotdb.db.index.read.IndexFuncResult;
+import org.apache.iotdb.db.query.aggregation.AggregateResult;
+import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,27 +83,25 @@ public class NoIndex extends IoTDBIndex {
     return super.clear();
   }
 
-  @Override
-  public Object queryByIndex(Path path, List<Object> parameters,
-      List<Pair<Long, Long>> nonUpdateIntervals, int limitSize) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public Object queryByScan(Path path, List<Object> parameters,
-      List<Pair<Long, Long>> nonUpdateIntervals, int limitSize) {
-    throw new UnsupportedOperationException();
-  }
 
   @Override
   public void delete() {
     throw new UnsupportedOperationException();
   }
 
+  /**
+   * NoIndex cannot prune anything. Return null.
+   */
   @Override
-  public void initQuery(Map<String, String> queryProps, List<IndexFunc> indexFuncs) {
+  public List<Identifier> queryByIndex(ByteBuffer indexChunkData) throws IndexManagerException {
+    return null;
+  }
+
+  @Override
+  public boolean postProcessNext(IndexFuncResult funcResult) throws IndexManagerException {
     throw new UnsupportedOperationException();
   }
+
 
   /**
    * All it needs depends on its preprocessor. Just for explain.

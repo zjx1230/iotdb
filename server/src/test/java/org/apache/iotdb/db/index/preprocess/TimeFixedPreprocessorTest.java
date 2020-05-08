@@ -45,7 +45,7 @@ public class TimeFixedPreprocessorTest {
 
     TimeFixedPreprocessor timeFixedWithoutStored = new TimeFixedPreprocessor(INT32,
         windowRange, slideStep, alignedSequenceLength, 0, false, false);
-    timeFixed.appendNewSrcData(srcData);
+    timeFixedWithoutStored.appendNewSrcData(srcData);
     assertL1AndL2(timeFixedWithoutStored, groundTruthL1, groundTruthL2);
     timeFixedWithoutStored.clear();
   }

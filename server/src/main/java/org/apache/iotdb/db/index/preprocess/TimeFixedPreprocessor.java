@@ -9,6 +9,7 @@ import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 
 /**
  * In TIME_FIXED, the sliding window always has a fixed time range.  However, since the time series
@@ -36,7 +37,7 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
   /**
    * how many subsequences we have pre-processed
    */
-  private int currentProcessedIdx;
+  private int sliceNum;
   private int scanIdx;
   protected PrimitiveList identifierList;
   private long currentStartTime;
@@ -53,6 +54,7 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
   protected int flushedOffset;
   private long chunkStartTime = -1;
   private long chunkEndTime = -1;
+  private long processedStartTime;
 
   /**
    * Create TimeFixedPreprocessor
@@ -81,7 +83,7 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
   @Override
   protected void initParams() {
     scanIdx = 0;
-    currentProcessedIdx = -1;
+    sliceNum = 0;
     flushedOffset = 0;
     this.intervalWidth = windowRange / alignedDim;
     long startTime = srcData.getTime(0);
@@ -113,15 +115,27 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
 
   @Override
   public boolean hasNext() {
-    while (scanIdx < srcData.size()) {
-      currentStartTime += slideStep;
-      currentEndTime += slideStep;
-      if (currentEndTime > srcData.getLastTime()) {
+    return hasNext(null);
+  }
+
+  public boolean hasNext(Filter timeFilter) {
+    long startTime = currentStartTime;
+    long endTime = currentEndTime;
+    int startIdx = scanIdx;
+    while (endTime <= srcData.getLastTime()) {
+      startTime += slideStep;
+      endTime += slideStep;
+      if (endTime > srcData.getLastTime()) {
         return false;
       }
-      scanIdx = locatedIdxToTimestamp(scanIdx, currentStartTime);
-      if (checkValid(scanIdx, currentStartTime, currentEndTime)) {
-        return true;
+      startIdx = locatedIdxToTimestamp(startIdx, startTime);
+      if (checkValid(startIdx, startTime, endTime)) {
+        if (timeFilter == null || timeFilter.containStartEndTime(startTime, endTime)) {
+          scanIdx = startIdx;
+          currentStartTime = startTime;
+          currentEndTime = endTime;
+          return true;
+        }
       }
     }
     return false;
@@ -139,14 +153,15 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
 
   @Override
   public void processNext() {
-    currentProcessedIdx++;
+    sliceNum++;
+    processedStartTime = currentStartTime;
     if (chunkStartTime == -1) {
-      System.out.println("[[[[[[[[[[[[[[[[[[[[[[[[   reset ChunkStartTime   ]]]]]]]]]]]]]]]]]]]]]]]]");
       chunkStartTime = currentStartTime;
     }
     chunkEndTime = currentEndTime;
     // calculate the newest aligned sequence
 
+//    System.out.println(String.format("write PAA: %d - %d, %d", currentStartTime, currentEndTime, alignedDim));
     if (storeIdentifier) {
       // it's a naive identifier, we can refine it in the future.
       identifierList.putLong(currentStartTime);
@@ -173,13 +188,13 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
     return flushedOffset;
   }
 
-  public int getCurrentIdx() {
-    return currentProcessedIdx;
+  public int getSliceNum() {
+    return sliceNum;
   }
 
   @Override
   public int getCurrentChunkSize() {
-    return currentProcessedIdx - flushedOffset + 1;
+    return sliceNum - flushedOffset;
   }
 
   /**
@@ -247,8 +262,8 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
       return res;
     }
     if (storeIdentifier) {
-      int startIdx = currentProcessedIdx + 1 - latestN;
-      for (int i = startIdx; i <= currentProcessedIdx; i++) {
+      int startIdx = sliceNum - latestN;
+      for (int i = startIdx; i < sliceNum; i++) {
         int actualIdx = i - flushedOffset;
         Identifier identifier = new Identifier(
             identifierList.getLong(actualIdx * 3),
@@ -275,8 +290,8 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
       return res;
     }
     if (storeAligned) {
-      int startIdx = currentProcessedIdx + 1 - latestN;
-      for (int i = startIdx; i <= currentProcessedIdx; i++) {
+      int startIdx = sliceNum - latestN;
+      for (int i = startIdx; i < sliceNum; i++) {
         res.add(alignedList.get(i - flushedOffset).clone());
       }
       return res;
@@ -306,7 +321,7 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
   @Override
   public long clear() {
     long toBeReleased = 0;
-    flushedOffset = currentProcessedIdx + 1;
+    flushedOffset = sliceNum;
     chunkStartTime = -1;
     chunkEndTime = -1;
     if (identifierList != null) {
@@ -337,7 +352,7 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
 
   @Override
   public int nextUnprocessedWindowStartIdx() {
-    int next = locatedIdxToTimestamp(0, currentStartTime);
+    int next = locatedIdxToTimestamp(0, processedStartTime + slideStep);
     if (next >= srcData.size()) {
       next = srcData.size();
     }

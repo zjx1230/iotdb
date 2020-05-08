@@ -4,13 +4,12 @@ import static org.apache.iotdb.db.index.common.IndexUtils.getDataTypeSize;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 
 /**
  * COUNT_FIXED is very popular in the preprocessing phase. Most previous researches build indexes on
@@ -25,9 +24,10 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
   protected final boolean storeIdentifier;
   protected final boolean storeAligned;
   /**
-   * how many sliding windows we have already pre-processed
+   * how many sliding windows we have already pre-processed. If we have process 2 windows, sliceNum
+   * = 1
    */
-  protected int currentProcessedIdx;
+  protected int sliceNum;
   /**
    * the amount of sliding windows in srcData
    */
@@ -50,6 +50,8 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
    */
   protected int flushedOffset = 0;
   private long chunkStartTime = -1;
+  private long chunkEndTime = -1;
+  private int processedStartTimeIdx = -1;
 
   /**
    * Create CountFixedPreprocessor
@@ -77,7 +79,7 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
 
   @Override
   protected void initParams() {
-    currentProcessedIdx = -1;
+    sliceNum = 0;
     this.totalProcessedCount = (srcData.size() - this.windowRange) / slideStep + 1;
     currentStartTimeIdx = -slideStep;
 
@@ -93,20 +95,41 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
 
   @Override
   public boolean hasNext() {
-    return currentProcessedIdx + 1 < totalProcessedCount;
+    return hasNext(null);
+  }
+
+  public boolean hasNext(Filter timeFilter) {
+    int startIdx = currentStartTimeIdx;
+    int endIdx = startIdx + windowRange - 1;
+
+    while (endIdx < srcData.size()) {
+      startIdx += slideStep;
+      endIdx += slideStep;
+      if (endIdx < srcData.size()) {
+        long startTime = srcData.getTime(startIdx);
+        long endTime = srcData.getTime(endIdx);
+        if (timeFilter == null || timeFilter.containStartEndTime(startTime, endTime)) {
+          currentStartTimeIdx = startIdx;
+          currentStartTime = srcData.getTime(startIdx);
+          currentEndTime = srcData.getTime(endIdx);
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   @Override
   public void processNext() {
-    currentProcessedIdx++;
-    currentStartTimeIdx += slideStep;
-    currentStartTime = srcData.getTime(currentStartTimeIdx);
-    currentEndTime = srcData.getTime(currentStartTimeIdx + windowRange - 1);
+    sliceNum++;
     if (chunkStartTime == -1) {
       chunkStartTime = currentStartTime;
     }
+    processedStartTimeIdx = currentStartTimeIdx;
+    chunkEndTime = currentEndTime;
 
     // calculate the newest aligned sequence
+//    System.out.println(String.format("write ELB: %d - %d, %d", currentStartTime, currentEndTime, windowRange));
     if (storeIdentifier) {
       // it's a naive identifier, we can refine it in the future.
       identifierList.putLong(currentStartTime);
@@ -123,13 +146,9 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
     return flushedOffset;
   }
 
-  public int getCurrentProcessedIdx() {
-    return currentProcessedIdx;
-  }
-
   @Override
   public int getCurrentChunkSize() {
-    return currentProcessedIdx - flushedOffset + 1;
+    return sliceNum - flushedOffset;
   }
 
   @Override
@@ -140,8 +159,8 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
       return res;
     }
     if (storeIdentifier) {
-      int startIdx = currentProcessedIdx + 1 - latestN;
-      for (int i = startIdx; i <= currentProcessedIdx; i++) {
+      int startIdx = sliceNum - latestN;
+      for (int i = startIdx; i < sliceNum; i++) {
         int actualIdx = i - flushedOffset;
         Identifier identifier = new Identifier(
             identifierList.getLong(actualIdx * 3),
@@ -182,7 +201,7 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
 
   @Override
   public long getChunkEndTime() {
-    return currentEndTime;
+    return chunkEndTime;
   }
 
   /**
@@ -220,8 +239,10 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
   @Override
   public long clear() {
     long toBeReleased = 0;
-    flushedOffset = currentProcessedIdx + 1;
+    flushedOffset = sliceNum;
     chunkStartTime = -1;
+    chunkEndTime = -1;
+
     if (storeIdentifier) {
       toBeReleased += identifierList.size() * Long.BYTES;
       identifierList.clearAndRelease();
@@ -247,15 +268,15 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
 
   @Override
   public int nextUnprocessedWindowStartIdx() {
-    int next = currentStartTimeIdx + slideStep;
+    int next = processedStartTimeIdx + slideStep;
     if (next >= srcData.size()) {
       next = srcData.size();
     }
     return next;
   }
 
-  public int getCurrentIdx() {
-    return currentProcessedIdx;
+  public int getSliceNum() {
+    return sliceNum;
   }
 
 }

@@ -25,7 +25,10 @@ import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexManagerException;
 import org.apache.iotdb.db.index.distance.Distance;
+import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
+import org.apache.iotdb.db.index.read.IndexFuncResult;
+import org.apache.iotdb.db.query.aggregation.AggregateResult;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.Pair;
@@ -70,11 +73,12 @@ public class ELBIndex extends MBRIndex {
     if (this.indexPreprocessor != null) {
       this.indexPreprocessor.clear();
     }
-    this.elbTimeFixedPreprocessor = new ELBCountFixedPreprocessor(tsDataType, windowRange, slideStep,
-        featureDim, distance, calcParam, elbType, true, false, false);
+    this.elbTimeFixedPreprocessor = new ELBCountFixedPreprocessor(tsDataType, windowRange,
+        slideStep, featureDim, distance, calcParam, elbType, true, false, false);
     this.indexPreprocessor = elbTimeFixedPreprocessor;
     indexPreprocessor.deserializePrevious(previous);
   }
+
 
   /**
    * Fill {@code currentCorners} and the optional {@code currentRanges}, and return the current idx
@@ -84,7 +88,7 @@ public class ELBIndex extends MBRIndex {
   @Override
   protected int fillCurrentFeature() {
     elbTimeFixedPreprocessor.copyFeature(currentCorners, currentRanges);
-    return elbTimeFixedPreprocessor.getCurrentIdx();
+    return elbTimeFixedPreprocessor.getSliceNum() - 1;
   }
 
   @Override
@@ -98,17 +102,6 @@ public class ELBIndex extends MBRIndex {
     };
   }
 
-  @Override
-  public Object queryByIndex(Path path, List<Object> parameters,
-      List<Pair<Long, Long>> nonUpdateIntervals, int limitSize) throws IndexManagerException {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public Object queryByScan(Path path, List<Object> parameters,
-      List<Pair<Long, Long>> nonUpdateIntervals, int limitSize) throws IndexManagerException {
-    throw new UnsupportedOperationException();
-  }
 
   @Override
   public void delete() {
@@ -116,7 +109,23 @@ public class ELBIndex extends MBRIndex {
   }
 
   @Override
-  public void initQuery(Map<String, String> queryProps, List<IndexFunc> indexFuncs) {
+  protected BiConsumer<Integer, ByteBuffer> getDeserializeFunc() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  protected List<Identifier> getQueryCandidates(List<Integer> candidateIds) {
+
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  protected void fillQueryFeature() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean postProcessNext(IndexFuncResult funcResult) throws IndexManagerException {
     throw new UnsupportedOperationException();
   }
 }

@@ -495,7 +495,6 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
 //              System.out.println(String.format("%s-%s process point", path, index.getIndexType()));
               preprocessor.processNext();
               index.buildNext();
-
             }
             System.out.println(String.format("%s-%s process all, final flush", path, indexType));
             if (preprocessor.getCurrentChunkSize() > 0) {
@@ -511,8 +510,7 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
             System.out.println("RuntimeException: " + e);
           } finally {
             numIndexBuildTasks.decrementAndGet();
-            System.out.println(String.format("%s-%s finish, -- and return, current task %d",
-                path, index.getIndexType(), numIndexBuildTasks.get()));
+//            System.out.println(String.format("%s-%s finish, -- and return, current task %d", path, index.getIndexType(), numIndexBuildTasks.get()));
           }
         };
         indexBuildPoolManager.submit(buildTask);
