@@ -39,6 +39,8 @@ import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexIOReader;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
+import org.apache.iotdb.db.index.read.IndexFileResource;
+import org.apache.iotdb.db.index.read.IndexStorageGroupProcessor.UpdateIndexFileResourcesCallBack;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
@@ -79,6 +81,7 @@ public class IndexFileProcessorTest {
   }
 
   private long defaultIndexBufferSize;
+
   @Before
   public void setUp() throws Exception {
     EnvironmentUtils.envSetUp();
@@ -130,7 +133,7 @@ public class IndexFileProcessorTest {
       String indexFileDir, String indexFileName)
       throws ExecutionException, InterruptedException, IOException {
     IndexFileProcessor indexFileProcessor = new IndexFileProcessor(storageGroup, indexFileDir,
-        indexFileName, true, (a, b) -> {
+        indexFileName, true, 0, new HashMap<>(), (a, b, c, d) -> {
     });
 
     indexFileProcessor.startFlushMemTable();

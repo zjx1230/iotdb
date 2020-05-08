@@ -43,7 +43,7 @@ public abstract class MBRIndex extends IoTDBIndex {
   /**
    * For generality, RTree only store ids of identifiers or others.
    */
-  protected RTree<Integer> rTree;
+   protected RTree<Integer> rTree;
   protected float[] currentCorners;
   protected float[] currentRanges;
   private int maxEntries;

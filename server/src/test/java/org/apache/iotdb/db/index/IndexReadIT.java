@@ -138,7 +138,7 @@ public class IndexReadIT {
     EnvironmentUtils.cleanEnv();
   }
 
-  @Test
+//  @Test
   public void sumAggreWithSingleFilterTest()
       throws ClassNotFoundException, SQLException, InterruptedException {
 //    Thread.sleep(60000);

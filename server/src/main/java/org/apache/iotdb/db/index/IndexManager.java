@@ -18,6 +18,8 @@
  */
 package org.apache.iotdb.db.index;
 
+import static org.apache.iotdb.db.index.common.IndexConstant.META_DIR_NAME;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -27,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
+import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.exception.StartupException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.common.IndexType;
@@ -40,6 +43,8 @@ import org.apache.iotdb.db.service.JMXService;
 import org.apache.iotdb.db.service.ServiceType;
 import org.apache.iotdb.db.utils.FileUtils;
 import org.apache.iotdb.db.utils.TestOnly;
+import org.apache.iotdb.db.writelog.node.ExclusiveWriteLogNode;
+import org.apache.iotdb.db.writelog.node.WriteLogNode;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +52,7 @@ import org.slf4j.LoggerFactory;
 public class IndexManager implements IService {
 
   private static final Logger logger = LoggerFactory.getLogger(IndexManager.class);
-
+  private final String metaDirPath;
   /**
    * storage group name -> index storage group processor
    */
@@ -60,8 +65,7 @@ public class IndexManager implements IService {
       throws IOException, MetadataException {
     String series = seriesPath.getFullPath();
     String storageGroupName = MManager.getInstance().getStorageGroupName(series);
-    IndexStorageGroupProcessor sgProcessor = processorMap.computeIfAbsent(storageGroupName,
-        sg -> new IndexStorageGroupProcessor(storageGroupName));
+    IndexStorageGroupProcessor sgProcessor = createStorageGroupProcessor(storageGroupName);
     List<IndexChunkMeta> seq = sgProcessor.getIndexMetadata(true, series, indexType);
     List<IndexChunkMeta> unseq = sgProcessor.getIndexMetadata(false, series, indexType);
     return new IndexQueryReader(seriesPath, indexType, seq, unseq);
@@ -69,16 +73,38 @@ public class IndexManager implements IService {
 
   public List<IndexChunkMeta> getIndexMetadata(String storageGroup, boolean sequence,
       String seriesPath, IndexType indexType) throws IOException {
-    IndexStorageGroupProcessor sgProcessor = processorMap.computeIfAbsent(storageGroup,
-        sg -> new IndexStorageGroupProcessor(storageGroup));
+    IndexStorageGroupProcessor sgProcessor = createStorageGroupProcessor(storageGroup);
     return sgProcessor.getIndexMetadata(sequence, seriesPath, indexType);
   }
 
   public IndexFileProcessor getNewIndexFileProcessor(String storageGroup, boolean sequence,
       long partitionId, String tsFileName) {
-    IndexStorageGroupProcessor sgProcessor = processorMap.computeIfAbsent(storageGroup,
-        sg -> new IndexStorageGroupProcessor(storageGroup));
+    IndexStorageGroupProcessor sgProcessor = createStorageGroupProcessor(storageGroup);
     return sgProcessor.createIndexFileProcessor(sequence, partitionId, tsFileName);
+  }
+
+  private IndexStorageGroupProcessor createStorageGroupProcessor(String storageGroup) {
+    checkMetaDataDir();
+    IndexStorageGroupProcessor processor = processorMap.get(storageGroup);
+    if (processor == null) {
+      processor = new IndexStorageGroupProcessor(storageGroup, metaDirPath);
+      IndexStorageGroupProcessor oldProcessor = processorMap.putIfAbsent(storageGroup, processor);
+      if (oldProcessor != null) {
+        return oldProcessor;
+      }
+    }
+    return processor;
+  }
+
+  private void checkMetaDataDir() {
+    File metaDir = SystemFileFactory.INSTANCE.getFile(this.metaDirPath);
+    if (!metaDir.exists()) {
+      boolean mk = SystemFileFactory.INSTANCE.getFile(this.metaDirPath).mkdirs();
+      if (mk) {
+        logger.info("create index metadata folder {}", this.metaDirPath);
+        System.out.println("create index metadata folder " + this.metaDirPath);
+      }
+    }
   }
 
   public void removeIndexProcessor(String storageGroupName, boolean sequence, String identifier)
@@ -147,6 +173,8 @@ public class IndexManager implements IService {
 
   private IndexManager() {
     processorMap = new ConcurrentHashMap<>();
+    metaDirPath =
+        DirectoryManager.getInstance().getIndexRootFolder() + File.separator + META_DIR_NAME;
   }
 
   public static IndexManager getInstance() {
@@ -160,6 +188,10 @@ public class IndexManager implements IService {
     for (Entry<String, IndexStorageGroupProcessor> entry : processorMap.entrySet()) {
       IndexStorageGroupProcessor processor = entry.getValue();
       processor.deleteAll();
+    }
+    File indexMetaDir = new File(metaDirPath);
+    if (indexMetaDir.exists()) {
+      FileUtils.deleteDirectory(indexMetaDir);
     }
     File indexRootDir = new File(DirectoryManager.getInstance().getIndexRootFolder());
     if (indexRootDir.exists()) {

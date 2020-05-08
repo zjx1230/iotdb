@@ -4,7 +4,6 @@ import static org.apache.iotdb.db.index.common.IndexUtils.getDataTypeSize;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
@@ -17,9 +16,17 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
  * each sliding window. For indexes processing data with the same dimension, they need to calculate
  * L2_aligned_sequence, whose dimension is specified by the input parameter {@code alignedDim}. Up
  * to now, we adopt the nearest-point alignment rule.
+ *
+ * TIME_FIXED preprocessor need set {@code baseTime}. For arbitrary window, the startTime is
+ * divisible by {@code timeAnchor}
  */
 public class TimeFixedPreprocessor extends IndexPreprocessor {
 
+  /**
+   * To anchor the start time of sliding window. Any window start time should be congruence with
+   * timeAnchor on {@code slideStep}
+   */
+  private final long timeAnchor;
   protected final boolean storeIdentifier;
   protected final boolean storeAligned;
   /**
@@ -30,10 +37,6 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
    * how many subsequences we have pre-processed
    */
   private int currentProcessedIdx;
-  /**
-   * the amount of subsequences in srcData
-   */
-  private int totalProcessedCount;
   private int scanIdx;
   protected PrimitiveList identifierList;
   private long currentStartTime;
@@ -47,47 +50,49 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
    * currentProcessedIdx}, {@code currentStartTime}), but when reading or calculating L1~L3
    * features, we should carefully subtract {@code lastFlushIdx} from {@code currentProcessedIdx}.
    */
-  protected int flushedOffset = 0;
+  protected int flushedOffset;
   private long chunkStartTime = -1;
+  private long chunkEndTime = -1;
 
   /**
    * Create TimeFixedPreprocessor
    *
-   * @param srcData cannot be empty or null
+   * @param tsDataType data type
    * @param windowRange the sliding window range
    * @param alignedDim the length of sequence after alignment
    * @param slideStep the update size
    * @param storeIdentifier true if we need to store all identifiers. The cost will be counted.
    * @param storeAligned true if we need to store all aligned sequences. The cost will be counted.
    */
-  public TimeFixedPreprocessor(TVList srcData, int windowRange, int slideStep,
-      int alignedDim, boolean storeIdentifier, boolean storeAligned) {
-    super(srcData, WindowType.COUNT_FIXED, windowRange, slideStep);
+  public TimeFixedPreprocessor(TSDataType tsDataType, int windowRange, int slideStep,
+      int alignedDim, long timeAnchor, boolean storeIdentifier, boolean storeAligned) {
+    super(tsDataType, WindowType.COUNT_FIXED, windowRange, slideStep);
     this.storeIdentifier = storeIdentifier;
     this.storeAligned = storeAligned;
     this.alignedDim = alignedDim;
-    initTimeFixedParams();
+    this.timeAnchor = timeAnchor;
   }
 
-  public TimeFixedPreprocessor(TVList srcData, int windowRange, int alignedDim,
-      int slideStep) {
-    this(srcData, windowRange, slideStep, alignedDim, true, true);
+  public TimeFixedPreprocessor(TSDataType tsDataType, int windowRange, int alignedDim,
+      int slideStep, long timeAnchor) {
+    this(tsDataType, windowRange, slideStep, alignedDim, timeAnchor, true, true);
   }
 
-  public TimeFixedPreprocessor(TVList srcData, int windowRange, int alignedDim) {
-    this(srcData, windowRange, alignedDim, 1, true, true);
-  }
-
-  private void initTimeFixedParams() {
+  @Override
+  protected void initParams() {
     scanIdx = 0;
     currentProcessedIdx = -1;
+    flushedOffset = 0;
     this.intervalWidth = windowRange / alignedDim;
     long startTime = srcData.getTime(0);
-    long endTime = srcData.getLastTime();
-    this.totalProcessedCount = (int) ((endTime - startTime + 1 - this.windowRange) / slideStep + 1);
+    startTime = startTime - startTime % slideStep + timeAnchor % slideStep;
+    while (startTime > srcData.getTime(0)) {
+      startTime -= slideStep;
+    }
+
     // init the L1 identifier
     currentStartTime = startTime - slideStep;
-    currentEndTime = startTime + windowRange - slideStep;
+    currentEndTime = startTime + windowRange - slideStep - 1;
     if (storeIdentifier) {
       this.identifierList = PrimitiveList.newList(TSDataType.INT64);
     }
@@ -98,7 +103,9 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
        each index will be divided into several parts. If the memory is enough, ArrayList only needs
        to be expanded once.
        */
-      this.alignedList = new ArrayList<>(totalProcessedCount / 2 + 1);
+      int estimateTotal = (int) (
+          (srcData.getLastTime() - startTime + 1 - this.windowRange) / slideStep + 1);
+      this.alignedList = new ArrayList<>(estimateTotal / 2 + 1);
     } else {
       this.alignedList = new ArrayList<>(1);
     }
@@ -106,17 +113,38 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
 
   @Override
   public boolean hasNext() {
-    return currentProcessedIdx + 1 < totalProcessedCount;
+    while (scanIdx < srcData.size()) {
+      currentStartTime += slideStep;
+      currentEndTime += slideStep;
+      if (currentEndTime > srcData.getLastTime()) {
+        return false;
+      }
+      scanIdx = locatedIdxToTimestamp(scanIdx, currentStartTime);
+      if (checkValid(scanIdx, currentStartTime, currentEndTime)) {
+        return true;
+      }
+    }
+    return false;
   }
+
+  protected boolean checkValid(int startIdx, long startTime, long endTime) {
+    return isDataInRange(startIdx, startTime, endTime);
+  }
+
+  protected boolean isDataInRange(int idx, long startTime, long endTime) {
+    return idx < srcData.size() && srcData.getTime(idx) >= startTime
+        && srcData.getTime(idx) <= endTime;
+  }
+
 
   @Override
   public void processNext() {
     currentProcessedIdx++;
-    currentStartTime += slideStep;
-    currentEndTime += slideStep;
     if (chunkStartTime == -1) {
+      System.out.println("[[[[[[[[[[[[[[[[[[[[[[[[   reset ChunkStartTime   ]]]]]]]]]]]]]]]]]]]]]]]]");
       chunkStartTime = currentStartTime;
     }
+    chunkEndTime = currentEndTime;
     // calculate the newest aligned sequence
 
     if (storeIdentifier) {
@@ -155,22 +183,15 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
   }
 
   /**
-   * Move {@code curIdx} to a right position from which to start scanning. Current implementation is
-   * to find the timestamp closest to {@code targetTimestamp}.<p>
+   * Find the idx of the minimum timestamp greater than or equal to {@code targetTimestamp}.  If
+   * not, return the idx of the timestamp closest to {@code targetTimestamp}.
    *
-   * For easy expansion, users could just override this function and {@linkplain
-   * #createAlignedSequence(long, int)}.
-   *
-   * @param curIdx start idx
+   * @param curIdx the idx to start scanning
    * @param targetTimestamp the target
-   * @return the closest idx
+   * @return the idx of the minimum timestamp >= {@code targetTimestamp}
    */
   protected int locatedIdxToTimestamp(int curIdx, long targetTimestamp) {
-    long curDelta = Math.abs(srcData.getTime(curIdx) - targetTimestamp);
-    long nextDelta;
-    while (curIdx < srcData.size() - 1 && curDelta >
-        (nextDelta = Math.abs(srcData.getTime(curIdx + 1) - targetTimestamp))) {
-      curDelta = nextDelta;
+    while (curIdx < srcData.size() && srcData.getTime(curIdx) < targetTimestamp) {
       curIdx++;
     }
     return curIdx;
@@ -180,29 +201,40 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
    * Use CLOSEST ALIGN, a naive method not involving average calculation.
    *
    * @param startIdx the idx from which we start to search the closest timestamp.
-   * @param leftBorderTimestamp the left border of sequence to be aligned.
+   * @param windowStartTime the left border of sequence to be aligned.
    */
-  protected TVList createAlignedSequence(long leftBorderTimestamp, int startIdx) {
+  protected TVList createAlignedSequence(long windowStartTime, int startIdx) {
     TVList seq = TVListAllocator.getInstance().allocate(srcData.getDataType());
+    int windowStartIdx = locatedIdxToTimestamp(startIdx, windowStartTime);
+    long windowEndTime = windowStartTime + windowRange - 1;
+    if (!checkValid(windowStartIdx, windowStartTime, windowEndTime)) {
+      return seq;
+    }
+    int windowEndIdx = locatedIdxToTimestamp(windowStartIdx, windowEndTime + 1) - 1;
+    int segIdx = windowStartIdx;
+    long segmentStartTime = windowStartTime;
     for (int i = 0; i < alignedDim; i++) {
-      startIdx = locatedIdxToTimestamp(startIdx, leftBorderTimestamp);
+      segIdx = locatedIdxToTimestamp(segIdx, segmentStartTime);
+      // The original TimeFixedProcessor allows empty segments. An empty segment will select points
+      // from its adjacent segment.
+      segIdx = Math.min(segIdx, windowEndIdx);
       switch (srcData.getDataType()) {
         case INT32:
-          seq.putInt(leftBorderTimestamp, srcData.getInt(startIdx));
+          seq.putInt(segmentStartTime, srcData.getInt(segIdx));
           break;
         case INT64:
-          seq.putLong(leftBorderTimestamp, srcData.getLong(startIdx));
+          seq.putLong(segmentStartTime, srcData.getLong(segIdx));
           break;
         case FLOAT:
-          seq.putFloat(leftBorderTimestamp, srcData.getFloat(startIdx));
+          seq.putFloat(segmentStartTime, srcData.getFloat(segIdx));
           break;
         case DOUBLE:
-          seq.putDouble(leftBorderTimestamp, srcData.getDouble(startIdx));
+          seq.putDouble(segmentStartTime, srcData.getDouble(segIdx));
           break;
         default:
           throw new NotImplementedException(srcData.getDataType().toString());
       }
-      leftBorderTimestamp += intervalWidth;
+      segmentStartTime += intervalWidth;
     }
     return seq;
   }
@@ -226,10 +258,9 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
       }
       return res;
     }
-    long startTimePastN = Math.max(currentStartTime - (latestN - 1) * slideStep,
-        srcData.getTime(0));
+    long startTimePastN = currentStartTime - (latestN - 1) * slideStep;
     while (startTimePastN <= currentStartTime) {
-      res.add(new Identifier(startTimePastN, startTimePastN + windowRange,
+      res.add(new Identifier(startTimePastN, startTimePastN + windowRange - 1,
           alignedDim));
       startTimePastN += slideStep;
     }
@@ -251,8 +282,7 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
       return res;
     }
     int startIdx = 0;
-    long startTimePastN = Math.max(currentStartTime - (latestN - 1) * slideStep,
-        srcData.getTime(0));
+    long startTimePastN = currentStartTime - (latestN - 1) * slideStep;
     while (startTimePastN <= currentStartTime) {
       startIdx = locatedIdxToTimestamp(startIdx, startTimePastN);
       TVList seq = createAlignedSequence(startTimePastN, startIdx);
@@ -269,14 +299,16 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
 
   @Override
   public long getChunkEndTime() {
-    return currentEndTime;
+    return chunkEndTime;
   }
+
 
   @Override
   public long clear() {
+    long toBeReleased = 0;
     flushedOffset = currentProcessedIdx + 1;
     chunkStartTime = -1;
-    long toBeReleased = 0;
+    chunkEndTime = -1;
     if (identifierList != null) {
       toBeReleased += identifierList.size() * Long.BYTES;
       identifierList.clearAndRelease();
@@ -302,4 +334,14 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
     }
     return res;
   }
+
+  @Override
+  public int nextUnprocessedWindowStartIdx() {
+    int next = locatedIdxToTimestamp(0, currentStartTime);
+    if (next >= srcData.size()) {
+      next = srcData.size();
+    }
+    return next;
+  }
+
 }

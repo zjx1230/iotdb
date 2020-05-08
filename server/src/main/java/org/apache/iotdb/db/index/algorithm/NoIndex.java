@@ -2,7 +2,10 @@ package org.apache.iotdb.db.index.algorithm;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
+import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
 import org.apache.iotdb.db.index.preprocess.CountFixedPreprocessor;
@@ -29,13 +32,13 @@ public class NoIndex extends IoTDBIndex {
   }
 
   @Override
-  public IndexPreprocessor initIndexPreprocessor(TVList tvList) {
+  public void initPreprocessor(ByteBuffer previous) {
     if (this.indexPreprocessor != null) {
       this.indexPreprocessor.clear();
     }
-    this.indexPreprocessor = new CountFixedPreprocessor(tvList, windowRange,
+    this.indexPreprocessor = new CountFixedPreprocessor(tsDataType, windowRange,
         slideStep, true, true);
-    return indexPreprocessor;
+    indexPreprocessor.deserializePrevious(previous);
   }
 
   @Override
@@ -96,6 +99,11 @@ public class NoIndex extends IoTDBIndex {
 
   @Override
   public void delete() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void initQuery(Map<String, String> queryProps, List<IndexFunc> indexFuncs) {
     throw new UnsupportedOperationException();
   }
 

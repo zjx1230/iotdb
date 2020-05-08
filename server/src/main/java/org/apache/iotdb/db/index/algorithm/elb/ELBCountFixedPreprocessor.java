@@ -42,10 +42,11 @@ public class ELBCountFixedPreprocessor extends CountFixedPreprocessor {
    * A block contains {@code windowRange/b} points. A list of blocks ({@code b} blocks) cover
    * adjacent {@code windowRange/b} sequence.
    */
-  public ELBCountFixedPreprocessor(TVList srcData, int windowRange, int slideStep, int blockNum,
+  public ELBCountFixedPreprocessor(TSDataType tsDataType, int windowRange, int slideStep,
+      int blockNum,
       Distance distance, CalcParam calcParam, ELBType elbType, boolean storeIdentifier,
       boolean storeAligned, boolean storeFeature) {
-    super(srcData, windowRange, slideStep, storeIdentifier, storeAligned);
+    super(tsDataType, windowRange, slideStep, storeIdentifier, storeAligned);
     this.storeFeature = storeFeature;
     if (blockNum > windowRange) {
       throw new IllegalIndexParamException(String
@@ -59,9 +60,9 @@ public class ELBCountFixedPreprocessor extends CountFixedPreprocessor {
         blockNum, elbType);
   }
 
-  public ELBCountFixedPreprocessor(TVList srcData, int windowRange, int slideStep, int blockNum,
-      Distance distance, CalcParam calcParam, ELBType elbType) {
-    this(srcData, windowRange, slideStep, blockNum, distance, calcParam, elbType, false, false,
+  public ELBCountFixedPreprocessor(TSDataType tsDataType, int windowRange, int slideStep,
+      int blockNum, Distance distance, CalcParam calcParam, ELBType elbType) {
+    this(tsDataType, windowRange, slideStep, blockNum, distance, calcParam, elbType, false, false,
         true);
   }
 
@@ -134,7 +135,7 @@ public class ELBCountFixedPreprocessor extends CountFixedPreprocessor {
    * @param currentCorners current corners
    */
   void copyFeature(float[] currentCorners, float[] currentRanges) {
-    if(blockNum != currentCorners.length || blockNum != currentRanges.length){
+    if (blockNum != currentCorners.length || blockNum != currentRanges.length) {
       throw new IndexRuntimeException("blockDim != currentCorners or currentRanges length");
     }
     for (int i = 0; i < blockNum; i++) {

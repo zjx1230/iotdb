@@ -1,12 +1,9 @@
 package org.apache.iotdb.db.index.read;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.common.IndexFunc;
-import org.apache.iotdb.db.index.common.IndexManagerException;
 import org.apache.iotdb.db.index.common.IndexQueryException;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
@@ -27,12 +24,19 @@ public class IndexQueryReader {
   private Path seriesPath;
   private final IndexType indexType;
   private List<IndexChunkMeta> seqResources;
+
+  int seqIdx = 0;
+
+  int currentKnownTime = -1;
+  /**
+   * unused up to now
+   */
   private List<IndexChunkMeta> unseqResources;
 
   /**
    * both-side closed range. The i-th index-usable range is {@code [range[i*2], range[i*2+1]]}
    */
-  private TimeRange usableRange = new TimeRange();
+  private IndexTimeRange indexUsableRange = new IndexTimeRange();
   //  private Map<String, String> queryProps;
   private List<IndexFunc> indexFuncs;
   private IoTDBIndex index;
@@ -62,7 +66,15 @@ public class IndexQueryReader {
    * tend to add more if-condition and throwing exception to uncover the potential bugs.
    */
   void updateUsableRange(long[] usableRange) throws IndexQueryException {
-    this.usableRange.appendRange(usableRange);
+    if (usableRange.length != 2) {
+      throw new UnsupportedOperationException("series reader gives me a range length > 2");
+    }
+    long start = usableRange[0];
+    long end = usableRange[1];
+    if (start > end) {
+      return;
+    }
+    this.indexUsableRange.addRange(start, end);
     updateIndexChunk();
   }
 

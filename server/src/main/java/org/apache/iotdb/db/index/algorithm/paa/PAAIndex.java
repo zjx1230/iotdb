@@ -2,14 +2,15 @@ package org.apache.iotdb.db.index.algorithm.paa;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import org.apache.iotdb.db.index.algorithm.MBRIndex;
+import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexManagerException;
-import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
-import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.slf4j.Logger;
@@ -30,14 +31,14 @@ public class PAAIndex extends MBRIndex {
   }
 
   @Override
-  public IndexPreprocessor initIndexPreprocessor(TVList tvList) {
+  public void initPreprocessor(ByteBuffer previous) {
     if (this.indexPreprocessor != null) {
       this.indexPreprocessor.clear();
     }
-    this.paaTimeFixedPreprocessor = new PAATimeFixedPreprocessor(tvList, windowRange, slideStep,
-        featureDim, true, false);
+    this.paaTimeFixedPreprocessor = new PAATimeFixedPreprocessor(tsDataType, windowRange, slideStep,
+        featureDim, confIndexStartTime, true, false);
+    paaTimeFixedPreprocessor.deserializePrevious(previous);
     this.indexPreprocessor = paaTimeFixedPreprocessor;
-    return indexPreprocessor;
   }
 
   /**
@@ -77,6 +78,11 @@ public class PAAIndex extends MBRIndex {
 
   @Override
   public void delete() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void initQuery(Map<String, String> queryProps, List<IndexFunc> indexFuncs) {
     throw new UnsupportedOperationException();
   }
 }

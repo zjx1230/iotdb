@@ -558,5 +558,32 @@ public abstract class TVList {
     }
   }
 
+  public static void append(TVList dest, TVList src, int srcPos, int length) {
+    assert srcPos + length <= src.size;
+    for (int i = srcPos; i < srcPos + length; i++) {
+      long time = src.getTime(i);
+      switch (src.dataType) {
+        case BOOLEAN:
+          dest.putBoolean(time, src.getBoolean(i));
+          break;
+        case INT32:
+          dest.putInt(time, src.getInt(i));
+          break;
+        case INT64:
+          dest.putLong(time, src.getLong(i));
+          break;
+        case FLOAT:
+          dest.putFloat(time, src.getFloat(i));
+          break;
+        case DOUBLE:
+          dest.putDouble(time, src.getDouble(i));
+          break;
+        case TEXT:
+          dest.putBinary(time, src.getBinary(i));
+          break;
+      }
+    }
+  }
+
 
 }

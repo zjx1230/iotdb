@@ -96,7 +96,7 @@ public class IndexWriteIT {
             ELB_TYPE, ELB_TYPE_ELE));
   }
 
-  private String loadIndexFile(){
+  private String loadIndexFile() {
     String indexRootDir = DirectoryManager.getInstance().getIndexRootFolder();
     //get index file path
     String indexParentDir = String.format("%s/sequence/%s/0", indexRootDir, storageGroup);
@@ -111,6 +111,7 @@ public class IndexWriteIT {
     }
     return indexFile;
   }
+
   @Test
   public void testIndexWriteSQLAndReadFile() throws SQLException, ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
@@ -135,14 +136,9 @@ public class IndexWriteIT {
       String indexFile = loadIndexFile();
 
       String gtStrP1ELB = ""
-          + "(0,[0-18,10])(1,[20-38,10])(2,[40-58,10])(3,[60-78,10])"
-          + "(4,[80-98,10])(5,[100-118,10])(6,[120-138,10])(7,[140-158,10])"
-          + "(8,[160-178,10])(9,[180-198,10])";
+          + "(0,[0-18,10])(1,[20-38,10])(2,[40-58,10])(3,[60-78,10])(4,[80-98,10])(5,[100-118,10])(6,[120-138,10])(7,[140-158,10])(8,[160-178,10])(9,[180-198,10])";
       String gtStrP1PAA = ""
-          + "(0,[0-10,4])(1,[10-20,4])(2,[20-30,4])(3,[30-40,4])(4,[40-50,4])(5,[50-60,4])"
-          + "(6,[60-70,4])(7,[70-80,4])(8,[80-90,4])(9,[90-100,4])(10,[100-110,4])(11,[110-120,4])"
-          + "(12,[120-130,4])(13,[130-140,4])(14,[140-150,4])(15,[150-160,4])(16,[160-170,4])"
-          + "(17,[170-180,4])(18,[180-190,4])";
+          + "(0,[0-9,4])(1,[10-19,4])(2,[20-29,4])(3,[30-39,4])(4,[40-49,4])(5,[50-59,4])(6,[60-69,4])(7,[70-79,4])(8,[80-89,4])(9,[90-99,4])(10,[100-109,4])(11,[110-119,4])(12,[120-129,4])(13,[130-139,4])(14,[140-149,4])(15,[150-159,4])(16,[160-169,4])(17,[170-179,4])(18,[180-189,4])";
       String gtStrP2ELB = ""
           + "(0,[0-27,10])(1,[30-57,10])(2,[60-87,10])(3,[90-117,10])"
           + "(4,[120-147,10])(5,[150-177,10])(6,[180-207,10])(7,[210-237,10])"
@@ -158,8 +154,6 @@ public class IndexWriteIT {
       tasks.add(new Validation(p2, null, gtP2));
       // check result
       checkIndexFlushAndResult(tasks, indexFile);
-
-      FileUtils.deleteDirectory(new File(DirectoryManager.getInstance().getIndexRootFolder()));
       System.out.println("finished!");
     } catch (MetadataException | InterruptedException | IOException | ExecutionException e) {
       e.printStackTrace();

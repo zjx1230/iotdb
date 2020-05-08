@@ -3,25 +3,32 @@ package org.apache.iotdb.db.index;
 import static org.apache.iotdb.db.index.common.IndexConstant.DISTANCE;
 import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE;
 import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE_ELE;
+import static org.apache.iotdb.db.index.common.IndexConstant.INDEXED_SUFFIX;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_SLIDE_STEP;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
 import static org.apache.iotdb.db.index.common.IndexConstant.L_INFINITY;
 import static org.junit.Assert.fail;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 import java.util.List;
+import org.apache.iotdb.db.conf.directories.DirectoryManager;
+import org.apache.iotdb.db.index.algorithm.paa.PAATimeFixedPreprocessor;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
+import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
+import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.jdbc.Config;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class IndexManagerTest {
+public class IndexPreprocesorOverlapTest {
 
   private static final String insertPattern = "INSERT INTO %s(timestamp, %s) VALUES (%d, %d)";
   private static final String storageGroup = "root.v";
@@ -54,37 +61,38 @@ public class IndexManagerTest {
       statement
           .execute(String.format("CREATE TIMESERIES %s WITH DATATYPE=INT32,ENCODING=PLAIN", p2));
 
-      statement.execute(String
-          .format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d, %s=%s, %s=%s",
-              p1, IndexType.ELB, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 10, DISTANCE, L_INFINITY,
-              ELB_TYPE, ELB_TYPE_ELE));
+//      statement.execute(String
+//          .format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d, %s=%s, %s=%s",
+//              p1, IndexType.ELB, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 2, DISTANCE, L_INFINITY,
+//              ELB_TYPE, ELB_TYPE_ELE));
       statement.execute(String
           .format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d",
-              p1, IndexType.PAA, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 10));
-      statement.execute(String
-          .format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d, %s=%s, %s=%s",
-              p2, IndexType.ELB, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 10, DISTANCE, L_INFINITY,
-              ELB_TYPE, ELB_TYPE_ELE));
+              p1, IndexType.PAA, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 2));
+//      statement.execute(String
+//          .format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d, %s=%s, %s=%s",
+//              p2, IndexType.ELB, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 10, DISTANCE, L_INFINITY,
+//              ELB_TYPE, ELB_TYPE_ELE));
 
       long i;
       long timeInterval = 0;
       int unseqDelta = 1000;
       // time partition 1, seq file 1
-      for (i = 0; i < 100; i++) {
-        statement.execute(String.format(insertPattern,
-            device, p1s, timeInterval + i, timeInterval + i));
-        statement.execute(String.format(insertPattern,
-            device, p2s, timeInterval + i, timeInterval + i * 2));
-      }
-      statement.execute("flush");
-      System.out.println("================ flush and close: " + i);
+//      for (i = 0; i < 100; i++) {
+//        statement.execute(String.format(insertPattern,
+//            device, p1s, timeInterval + i, timeInterval + i));
+//        statement.execute(String.format(insertPattern,
+//            device, p2s, timeInterval + i, timeInterval + i * 2));
+//      }
+//      statement.execute("flush");
+//      System.out.println("================ flush and close: " + i);
+
       // time partition 2, seq file 2
       timeInterval = 1_000_000_000;
       for (i = 0; i < 100; i++) {
         statement.execute(String.format(insertPattern,
             device, p1s, timeInterval + i, timeInterval + i));
         statement.execute(String.format(insertPattern,
-            device, p2s, timeInterval + i, timeInterval + i * 2));
+            device, p2s, timeInterval + i, timeInterval + i * 5));
       }
       statement.execute("flush");
       System.out.println("================ flush and close: " + (i + timeInterval));
@@ -99,14 +107,14 @@ public class IndexManagerTest {
       System.out.println("================ flush and close: " + (i + timeInterval));
 
       // time partition 2, unseq file 1, overlap with seq file 2
-      for (i = 50; i < 150; i++) {
-        statement.execute(String.format(insertPattern,
-            device, p1s, timeInterval + i, timeInterval + i + unseqDelta));
-        statement.execute(String.format(insertPattern,
-            device, p2s, timeInterval + i, timeInterval + i * 2 + unseqDelta));
-      }
-      statement.execute("flush");
-      System.out.println("================ flush and close: " + (i + timeInterval));
+//      for (i = 50; i < 150; i++) {
+//        statement.execute(String.format(insertPattern,
+//            device, p1s, timeInterval + i, timeInterval + i + unseqDelta));
+//        statement.execute(String.format(insertPattern,
+//            device, p2s, timeInterval + i, timeInterval + i * 2 + unseqDelta));
+//      }
+//      statement.execute("flush");
+//      System.out.println("================ flush and close: " + (i + timeInterval));
       // time partition 2, seq file 4, unsealed
       for (i = 400; i < 500; i++) {
         statement.execute(String.format(insertPattern,
@@ -114,16 +122,17 @@ public class IndexManagerTest {
         statement.execute(String.format(insertPattern,
             device, p2s, timeInterval + i, timeInterval + i * 2));
       }
+//      statement.execute("flush");
       System.out.println("================ flush and close: " + (i + timeInterval));
-      // time partition 2, unseq file 2, overlap with seq file 4
-      for (i = 250; i < 300; i++) {
-        statement.execute(String.format(insertPattern,
-            device, p1s, timeInterval + i, timeInterval + i + unseqDelta));
-        statement.execute(String.format(insertPattern,
-            device, p2s, timeInterval + i, timeInterval + i * 2 + unseqDelta));
-      }
-      statement.execute("flush");
-      System.out.println("================ flush and close: " + (i + timeInterval));
+//      // time partition 2, unseq file 2, overlap with seq file 4
+//      for (i = 250; i < 300; i++) {
+//        statement.execute(String.format(insertPattern,
+//            device, p1s, timeInterval + i, timeInterval + i + unseqDelta));
+//        statement.execute(String.format(insertPattern,
+//            device, p2s, timeInterval + i, timeInterval + i * 2 + unseqDelta));
+//      }
+//      statement.execute("flush");
+//      System.out.println("================ flush and close: " + (i + timeInterval));
     } catch (Exception e) {
       e.printStackTrace();
       fail(e.getMessage());
@@ -148,26 +157,35 @@ public class IndexManagerTest {
       StringBuilder p1ELB = new StringBuilder();
       p1ELBChunkMetas.forEach(p -> p1ELB.append(p.toStringStable()));
       System.out.println(p1ELB);
-      Assert.assertEquals(gtp1ELB, p1ELB.toString());
+//      Assert.assertEquals(gtp1ELB, p1ELB.toString());
 
       List<IndexChunkMeta> p1PAAChunkMetas = indexManager
           .getIndexMetadata(storageGroup, true, p1, IndexType.PAA);
-      StringBuilder p1PAA = new StringBuilder();
+      StringBuilder p1PAA = new StringBuilder("================");
       p1PAAChunkMetas.forEach(p -> p1PAA.append(p.toStringStable()));
       System.out.println(p1PAA);
-      Assert.assertEquals(gtp1PAA, p1PAA.toString());
+////      Assert.assertEquals(gtp1PAA, p1PAA.toString());
+//      String fakeTsFileName = "9587719150666-1-0.tsfile";
+//      IndexFileProcessor processor = indexManager
+//          .getNewIndexFileProcessor(storageGroup, true, 0, fakeTsFileName);
+//      TVListAllocator.getInstance().allocate(TSDataType.INT32);
+//      PAATimeFixedPreprocessor preprocessor = new PAATimeFixedPreprocessor(TSDataType.INT32, 10, 3,
+//          4, 0, true, true);
+//      preprocessor.deserializePrevious(processor.getPreviousMeta().get(p1).get(IndexType.PAA));
+//      System.out.println(preprocessor.getSrcData());
 
-      List<IndexChunkMeta> p2ELBChunkMetas = indexManager
-          .getIndexMetadata(storageGroup, true, p2, IndexType.ELB);
-      StringBuilder p2ELB = new StringBuilder();
-      p2ELBChunkMetas.forEach(p -> p2ELB.append(p.toStringStable()));
-      System.out.println(p2ELB);
-      Assert.assertEquals(gtp2ELB, p2ELB.toString());
-      indexManager.deleteAll();
+//      processor = indexManager
+//          .getNewIndexFileProcessor(storageGroup, false, 0, fakeTsFileName);
+//
+//      preprocessor = new PAATimeFixedPreprocessor(TSDataType.INT32, 10, 3,
+//          4, 0, true, true);
+//      preprocessor.deserializePrevious(processor.getPreviousMeta().get(p1).get(IndexType.PAA));
+//      System.out.println(preprocessor.getSrcData());
     } catch (Exception e) {
       e.printStackTrace();
       fail(e.getMessage());
     }
   }
+
 
 }

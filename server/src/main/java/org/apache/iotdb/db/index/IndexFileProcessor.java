@@ -21,6 +21,7 @@ package org.apache.iotdb.db.index;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_MAP_INIT_RESERVE_SIZE;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -38,13 +39,14 @@ import org.apache.iotdb.db.exception.runtime.FlushRunTimeException;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexManagerException;
+import org.apache.iotdb.db.index.common.IndexRuntimeException;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.flush.IndexBuildTaskPoolManager;
 import org.apache.iotdb.db.index.io.IndexIOWriter;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
 import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
 import org.apache.iotdb.db.index.read.IndexFileResource;
-import org.apache.iotdb.db.index.read.IndexStorageGroupProcessor.AddIndexFileResourcesCallBack;
+import org.apache.iotdb.db.index.read.IndexStorageGroupProcessor.UpdateIndexFileResourcesCallBack;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.db.utils.datastructure.TVList;
@@ -59,6 +61,22 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
 
   private static final Logger logger = LoggerFactory.getLogger(IndexFileProcessor.class);
   private final String storageGroupName;
+
+
+  /**
+   * previousMetaPointer is just a point of StorageGroup, thus it can be initialized by null. In
+   * general, it won't be updated until the file is closed. when the file is closed, the newly
+   * generated map in {@code serializeForNextOpen} will directly update the supper
+   * StorageGroupProcessor (not directly replace, but insert layer by layer).  At this time, this
+   * map will be updated naturally, but this indexFileProcessor will also be closed at once, so this
+   * update will not affect anything.
+   *
+   * However, it is necessary to consider potentially very complicated and special situations, such
+   * as: deleting the index, removing the index and then adding the index exactly same as the
+   * previous one, without closing current index file. Will this bring about inconsistency between
+   * StorageGroupProcessor and IndexFileProcessor?  We must be very cautious.
+   */
+  private final Map<String, Map<IndexType, ByteBuffer>> previousMetaPointer;
   private String indexFilePath;
 
   private String indexParentDir;
@@ -73,7 +91,7 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
 
   private IndexIOWriter writer;
   private final boolean sequence;
-  private final AddIndexFileResourcesCallBack addResourcesCallBack;
+  private final UpdateIndexFileResourcesCallBack addResourcesCallBack;
 
   private static final long LONGEST_FLUSH_IO_WAIT_MS = 60000;
 
@@ -88,13 +106,17 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
   private volatile boolean isFlushing;
   private AtomicInteger numIndexBuildTasks;
   private volatile boolean closed;
+  private final long partitionId;
 
   public IndexFileProcessor(String storageGroupName, String indexParentDir, String indexFilePath,
-      boolean sequence, AddIndexFileResourcesCallBack addResourcesCallBack) {
+      boolean sequence, long partitionId,
+      Map<String, Map<IndexType, ByteBuffer>> previousMetaPointer,
+      UpdateIndexFileResourcesCallBack addResourcesCallBack) {
     this.storageGroupName = storageGroupName;
     this.indexParentDir = indexParentDir;
     this.indexFilePath = indexFilePath;
     this.sequence = sequence;
+    this.partitionId = partitionId;
     this.addResourcesCallBack = addResourcesCallBack;
     this.indexBuildPoolManager = IndexBuildTaskPoolManager.getInstance();
     this.writer = new IndexIOWriter(indexFilePath);
@@ -103,7 +125,12 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
     numIndexBuildTasks = new AtomicInteger(0);
     isFlushing = false;
     closed = false;
+    if (previousMetaPointer == null) {
+      throw new IndexRuntimeException("previousMeta, maybe potential error");
+    }
+    this.previousMetaPointer = previousMetaPointer;
     refreshSeriesIndexMapFromMManager();
+    System.out.println(allPathsIndexMap);
   }
 
   private void refreshSeriesIndexMapFromMManager() {
@@ -119,7 +146,16 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
       for (Entry<IndexType, IndexInfo> entry : pathIndexInfoMap.entrySet()) {
         IndexType indexType = entry.getKey();
         IndexInfo indexInfo = entry.getValue();
-        pathIndexMap.putIfAbsent(indexType, IndexType.constructIndex(path, indexType, indexInfo));
+        ByteBuffer previous = previousMetaPointer.containsKey(path) ?
+            previousMetaPointer.get(path).get(indexType) : null;
+        if (previous != null) {
+          previous = previous.duplicate();
+        }
+//        System.out.println(String.format("============= constructIndex: %s,%d,%s-%s: %s", sequence, partitionId, path, indexType, (previous == null) ? "null" : previous.capacity()));
+        if (!pathIndexMap.containsKey(indexType)) {
+          IoTDBIndex index = IndexType.constructIndex(path, indexType, indexInfo, previous);
+          pathIndexMap.putIfAbsent(indexType, index);
+        }
       }
     });
     // remove indexes that are removed from the previous map
@@ -178,9 +214,12 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
           // Another flush task starts between isFlushing = true and write lock.
           if (!isFlushing) {
             IndexFileResource resource = writer.endFile();
+            // store Preprocessor
+            Map<String, Map<IndexType, ByteBuffer>> saved = serializeForNextOpen();
             if (resource != null) {
-              addResourcesCallBack.call(sequence, resource);
+              addResourcesCallBack.call(sequence, partitionId, resource, saved);
             }
+            closeAndRelease();
             closed = true;
           }
         } finally {
@@ -191,6 +230,33 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
         }
       }
     }
+  }
+
+  private void closeAndRelease() {
+    allPathsIndexMap.forEach((path, pathMap) -> {
+      pathMap.forEach((indexType, index) -> index.closeAndRelease());
+      pathMap.clear();
+    });
+    allPathsIndexMap.clear();
+    flushTaskQueue.clear();
+    flushTaskQueue = null;
+  }
+
+  private Map<String, Map<IndexType, ByteBuffer>> serializeForNextOpen() throws IOException {
+    Map<String, Map<IndexType, ByteBuffer>> saved = new HashMap<>(allPathsIndexMap.size());
+    for (Entry<String, Map<IndexType, IoTDBIndex>> e : allPathsIndexMap.entrySet()) {
+      String path = e.getKey();
+      Map<IndexType, IoTDBIndex> pathMap = e.getValue();
+      Map<IndexType, ByteBuffer> savedPathMap = new EnumMap<>(IndexType.class);
+      for (Entry<IndexType, IoTDBIndex> entry : pathMap.entrySet()) {
+        IndexType indexType = entry.getKey();
+        IoTDBIndex index = entry.getValue();
+        ByteBuffer output = index.serialize();
+        savedPathMap.put(indexType, output);
+      }
+      saved.put(path, savedPathMap);
+    }
+    return saved;
   }
 
 
@@ -262,7 +328,9 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
           long waitingTime = System.currentTimeMillis() - startTiming;
           if (waitingTime > LONGEST_FLUSH_IO_WAIT_MS) {
             logger.error("Too long time no more task, discard the potential rest, return");
-            break;
+            System.out.println("Too long time no more task, discard the potential rest, return");
+            //TODO we comment the break for debugging, but remember to uncomment back
+//            break;
           }
         }
         try {
@@ -274,7 +342,7 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
       } else {
         try {
           startTiming = -1;
-          System.out.println(String.format("IO thread: get task: %s", indexFlushChunk));
+//          System.out.println(String.format("IO thread: get task: %s", indexFlushChunk));
           writer.writeIndexData(indexFlushChunk);
           // we can release the memory of indexFlushChunk
           updateMemAndNotify(-indexFlushChunk.getDataSize());
@@ -355,12 +423,12 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
 
   private void flushAndAddToQueue(IoTDBIndex index, Path path) {
     try {
+      System.out.println("[[[[[[[[[[[[[[[[[[[[[[[[   FLUSH   ]]]]]]]]]]]]]]]]]]]]]]]]");
       IndexFlushChunk indexFlushChunk = index.flush();
       flushTaskQueue.add(indexFlushChunk);
       long chunkDataSize = indexFlushChunk.getDataSize();
       long clearSize = index.clear();
-      System.out.println(String.format("%s-%s flush, add chunk %s, clear %d",
-          path, index.getIndexType(), chunkDataSize, clearSize));
+//      System.out.println(String.format("%s-%s flush, add chunk %s, clear %d", path, index.getIndexType(), chunkDataSize, clearSize));
       updateMemAndNotify(chunkDataSize - clearSize);
     } catch (IndexManagerException e) {
       logger.error("flush path {} errors!", path, e);
@@ -370,11 +438,14 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
   public void startFlushMemTable() {
 //    System.out.println("||||||||||||||||||||  startFlushMemTable try lock");
     lock.writeLock().lock();
-    if (closed) {
-      System.out.println("closed index file !!!!!");
-      throw new RuntimeException("closed index file !!!!!");
-    }
     try {
+      if (closed) {
+        System.out.println("closed index file !!!!!");
+        throw new IndexRuntimeException("closed index file !!!!!");
+      }
+      if (isFlushing) {
+        throw new IndexRuntimeException("There has been a flushing, do you want to wait?");
+      }
       this.isFlushing = true;
       this.flushTaskQueue = new ConcurrentLinkedQueue<>();
       this.flushTaskFuture = indexBuildPoolManager.submit(flushRunTask);
@@ -404,10 +475,10 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
       allPathsIndexMap.get(path.getFullPath()).forEach((indexType, index) -> {
         Runnable buildTask = () -> {
           int nowNum = numIndexBuildTasks.incrementAndGet();
-          System.out.println(
-              String.format("%s-%s start, current task %d", path, index.getIndexType(), nowNum));
+//          System.out.println(
+//              String.format("%s-%s start, current task %d", path, index.getIndexType(), nowNum));
           try {
-            IndexPreprocessor preprocessor = index.initIndexPreprocessor(tvList);
+            IndexPreprocessor preprocessor = index.startFlushTask(tvList);
             int previousOffset = Integer.MIN_VALUE;
             while (preprocessor.hasNext()) {
               int currentOffset = preprocessor.getCurrentChunkOffset();
@@ -430,6 +501,7 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
             if (preprocessor.getCurrentChunkSize() > 0) {
               flushAndAddToQueue(index, path);
             }
+            index.endFlushTask();
           } catch (IndexManagerException e) {
             //Give up the following data, but the previously serialized chunk will not be affected.
             logger.error("build index failed", e);
@@ -473,4 +545,10 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
   public AtomicInteger getNumIndexBuildTasks() {
     return numIndexBuildTasks;
   }
+
+  @TestOnly
+  public Map<String, Map<IndexType, ByteBuffer>> getPreviousMeta() {
+    return previousMetaPointer;
+  }
+
 }

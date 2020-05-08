@@ -22,6 +22,7 @@ import static org.apache.iotdb.db.index.common.IndexFunc.SIM_ET;
 import static org.apache.iotdb.db.index.common.IndexFunc.LEN;
 import static org.apache.iotdb.db.index.common.IndexFunc.SIM_ST;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -113,8 +114,7 @@ public enum IndexType {
     }
   }
 
-  public static IoTDBIndex constructIndex(String path, IndexType indexType, IndexInfo indexInfo) {
-    indexInfo.setProps(uppercaseProps(indexInfo.getProps()));
+  private static IoTDBIndex newIndexByType(String path, IndexType indexType, IndexInfo indexInfo) {
     switch (indexType) {
       case ELB:
         return new ELBIndex(path, indexInfo);
@@ -128,6 +128,15 @@ public enum IndexType {
     }
   }
 
+  public static IoTDBIndex constructIndex(String path, IndexType indexType, IndexInfo indexInfo,
+      ByteBuffer previous) {
+//    System.out.println(String.format("============= ininininininin constructIndex: %s-%s: %s", path, indexType, (previous == null) ? "null" : previous.toString()));
+    indexInfo.setProps(uppercaseProps(indexInfo.getProps()));
+    IoTDBIndex index = newIndexByType(path, indexType, indexInfo);
+    index.initPreprocessor(previous);
+    return index;
+  }
+
   /**
    * Construct an index for an index-query
    */
@@ -139,23 +148,9 @@ public enum IndexType {
       throw new IllegalIndexParamException(
           String.format("%s.%s not found, why it escapes the check?", path, indexType));
     }
-    IoTDBIndex iotIndex;
-    switch (indexType) {
-      case ELB:
-        iotIndex = new ELBIndex(path, indexInfo);
-        break;
-      case PAA:
-        iotIndex = new PAAIndex(path, indexInfo);
-        break;
-      case NO_INDEX:
-        iotIndex = new NoIndex(path, indexInfo);
-        break;
-      case KV_INDEX:
-      default:
-        throw new NotImplementedException("unsupported index type:" + indexType);
-    }
-    iotIndex.initQuery(queryProps, indexFuncs);
-    return iotIndex;
+    IoTDBIndex index = newIndexByType(path, indexType, indexInfo);
+    index.initQuery(queryProps, indexFuncs);
+    return index;
   }
 
   private static Map<String, String> uppercaseProps(Map<String, String> props) {

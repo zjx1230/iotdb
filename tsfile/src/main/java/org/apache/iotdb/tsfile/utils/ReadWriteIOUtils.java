@@ -628,6 +628,21 @@ public class ReadWriteIOUtils {
     return byteBuffer;
   }
 
+  public static ByteBuffer readByteBufferWithSelfDescriptionLength(InputStream inputStream)
+      throws IOException {
+    int length = readInt(inputStream);
+    byte[] bytes = new byte[length];
+    int readLen = inputStream.read(bytes);
+    if (readLen != length) {
+      throw new IOException(String.format("Intend to read %d bytes but %d are actually returned",
+          length, readLen));
+    }
+    ByteBuffer byteBuffer = ByteBuffer.allocate(length);
+    byteBuffer.put(bytes);
+    byteBuffer.flip();
+    return byteBuffer;
+  }
+
   /**
    * read bytes from buffer with offset position to the end of buffer.
    */

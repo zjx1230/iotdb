@@ -1,19 +1,17 @@
 package org.apache.iotdb.db.index.read;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import org.apache.iotdb.db.index.common.IndexQueryException;
-import org.apache.iotdb.db.utils.datastructure.primitive.LongPrimitiveList;
 
-public class TimeRange {
+public class TimeRangeOld {
 
   private final List<Long> times = new ArrayList<>();
 
-  public TimeRange() {
+  public TimeRangeOld() {
   }
 
-  public TimeRange(long... times) {
+  public TimeRangeOld(long... times) {
     for (long time : times) {
       this.times.add(time);
     }
@@ -47,7 +45,7 @@ public class TimeRange {
   }
 
 
-  public void updateUsableRange(TimeRange usableRangeInCurrentChunk) {
+  public void updateUsableRange(TimeRangeOld usableRangeInCurrentChunk) {
     throw new UnsupportedOperationException();
   }
 }

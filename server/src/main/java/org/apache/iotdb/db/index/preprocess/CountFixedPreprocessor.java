@@ -54,29 +54,29 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
   /**
    * Create CountFixedPreprocessor
    *
-   * @param srcData cannot be empty or null
+   * @param tsDataType data type
    * @param windowRange the sliding window range
    * @param slideStep the update size
    * @param storeIdentifier true if we need to store all identifiers. The cost will be counted.
    */
-  public CountFixedPreprocessor(TVList srcData, int windowRange, int slideStep,
+  public CountFixedPreprocessor(TSDataType tsDataType, int windowRange, int slideStep,
       boolean storeIdentifier, boolean storeAligned) {
-    super(srcData, WindowType.COUNT_FIXED, windowRange, slideStep);
+    super(tsDataType, WindowType.COUNT_FIXED, windowRange, slideStep);
     this.storeIdentifier = storeIdentifier;
     this.storeAligned = storeAligned;
-    initTimeFixedParams();
   }
 
 
-  public CountFixedPreprocessor(TVList srcData, int windowRange, int slideStep) {
-    this(srcData, windowRange, slideStep, true, true);
+  public CountFixedPreprocessor(TSDataType tsDataType, int windowRange, int slideStep) {
+    this(tsDataType, windowRange, slideStep, true, true);
   }
 
-  public CountFixedPreprocessor(TVList srcData, int windowRange) {
-    this(srcData, windowRange, 1, true, true);
+  public CountFixedPreprocessor(TSDataType tsDataType, int windowRange) {
+    this(tsDataType, windowRange, 1, true, true);
   }
 
-  private void initTimeFixedParams() {
+  @Override
+  protected void initParams() {
     currentProcessedIdx = -1;
     this.totalProcessedCount = (srcData.size() - this.windowRange) / slideStep + 1;
     currentStartTimeIdx = -slideStep;
@@ -219,9 +219,9 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
 
   @Override
   public long clear() {
+    long toBeReleased = 0;
     flushedOffset = currentProcessedIdx + 1;
     chunkStartTime = -1;
-    long toBeReleased = 0;
     if (storeIdentifier) {
       toBeReleased += identifierList.size() * Long.BYTES;
       identifierList.clearAndRelease();
@@ -245,7 +245,17 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
     return res;
   }
 
+  @Override
+  public int nextUnprocessedWindowStartIdx() {
+    int next = currentStartTimeIdx + slideStep;
+    if (next >= srcData.size()) {
+      next = srcData.size();
+    }
+    return next;
+  }
+
   public int getCurrentIdx() {
     return currentProcessedIdx;
   }
+
 }

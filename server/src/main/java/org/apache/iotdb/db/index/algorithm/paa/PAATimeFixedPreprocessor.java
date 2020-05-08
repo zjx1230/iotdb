@@ -19,46 +19,59 @@ import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
  */
 public class PAATimeFixedPreprocessor extends TimeFixedPreprocessor {
 
-  public PAATimeFixedPreprocessor(TVList srcData, int windowRange, int slideStep, int paaDim,
-      boolean storeIdentifier, boolean storeAligned) {
-    super(srcData, windowRange, slideStep, paaDim, storeIdentifier, storeAligned);
+  public PAATimeFixedPreprocessor(TSDataType tsDataType, int windowRange, int slideStep, int paaDim,
+      long timeAnchor, boolean storeIdentifier, boolean storeAligned) {
+    super(tsDataType, windowRange, slideStep, paaDim, timeAnchor, storeIdentifier, storeAligned);
+  }
+
+  public PAATimeFixedPreprocessor(TSDataType tsDataType, int windowRange, int slideStep, int paaDim,
+      boolean storeIdentifier, boolean storeAligned, long timeAnchor) {
+    super(tsDataType, windowRange, slideStep, paaDim, timeAnchor, storeIdentifier, storeAligned);
   }
 
 
-  /**
-   * Find the idx of the minimum timestamp greater than or equal to {@code targetTimestamp}.  If
-   * not, return the idx of the timestamp closest to {@code targetTimestamp}.
-   *
-   * @param curIdx the idx to start scanning
-   * @param targetTimestamp the target
-   * @return the idx of the minimum timestamp >= {@code targetTimestamp}
-   */
-  @Override
-  protected int locatedIdxToTimestamp(int curIdx, long targetTimestamp) {
-    while (curIdx < srcData.size() - 1 && srcData.getTime(curIdx) < targetTimestamp) {
-      curIdx++;
+  protected boolean checkValid(int startIdx, long startTime, long endTime) {
+    long segStartTime;
+    long segEndTime;
+    int idx = startIdx;
+    // every segment should have at least one point
+    for (int i = 0; i < alignedDim; i++) {
+      segStartTime = startTime + i * intervalWidth;
+      segEndTime = segStartTime + intervalWidth - 1;
+      idx = locatedIdxToTimestamp(idx, segStartTime);
+      if (!isDataInRange(idx, segStartTime, segEndTime)) {
+        return false;
+      }
     }
-    return curIdx;
+    return true;
   }
 
   /**
-   * Use AVERAGE ALIGN to calculate PAA feature.
+   * Use AVERAGE ALIGN to calculate PAA feature. In addition, PAA requires every segment has at
+   * least one point. If {@linkplain #windowRange} isn't divided by {@linkplain #alignedDim}, PAA
+   * discards the rest to guarantee the lower-bounding property.
    *
    * @param startIdx the idx from which we start to search the closest timestamp.
-   * @param leftBorderTimestamp the left border of sequence to be aligned.
+   * @param windowStartTime the left border of sequence to be aligned.
    */
   @Override
-  protected TVList createAlignedSequence(long leftBorderTimestamp, int startIdx) {
+  protected TVList createAlignedSequence(long windowStartTime, int startIdx) {
     TVList seq = TVListAllocator.getInstance().allocate(TSDataType.FLOAT);
+    int windowStartIdx = locatedIdxToTimestamp(startIdx, windowStartTime);
+    long windowEndTime = windowStartTime + alignedDim * intervalWidth - 1;
+    if (!checkValid(windowStartIdx, windowStartTime, windowEndTime)) {
+      return seq;
+    }
+    int segStartIdx = windowStartIdx;
+    int segEndIdx;
+    long segmentStartTime = windowStartTime;
+    long segmentEndTime;
     for (int i = 0; i < alignedDim; i++) {
-      startIdx = locatedIdxToTimestamp(startIdx, leftBorderTimestamp);
-      int endIdx = locatedIdxToTimestamp(startIdx, leftBorderTimestamp + intervalWidth);
-      if (endIdx == startIdx) {
-        // If there is no next timestamp, the current interval calculates at least one data point
-        endIdx++;
-      }
+      segStartIdx = locatedIdxToTimestamp(segStartIdx, segmentStartTime);
+      segmentEndTime = segmentStartTime + intervalWidth - 1;
+      segEndIdx = locatedIdxToTimestamp(segStartIdx, segmentEndTime + 1) - 1;
       float sum = 0;
-      for (int idx = startIdx; idx < endIdx; idx++) {
+      for (int idx = segStartIdx; idx <= segEndIdx; idx++) {
         switch (srcData.getDataType()) {
           case INT32:
             sum += srcData.getInt(idx);
@@ -76,8 +89,8 @@ public class PAATimeFixedPreprocessor extends TimeFixedPreprocessor {
             throw new NotImplementedException(srcData.getDataType().toString());
         }
       }
-      seq.putFloat(leftBorderTimestamp, sum / (endIdx - startIdx));
-      leftBorderTimestamp += intervalWidth;
+      seq.putFloat(segmentStartTime, sum / (segEndIdx - segStartIdx + 1));
+      segmentStartTime += intervalWidth;
     }
     return seq;
   }

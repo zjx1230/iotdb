@@ -13,12 +13,15 @@ import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import org.apache.iotdb.db.index.algorithm.MBRIndex;
 import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.CalcParam;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.SingleParamSchema;
+import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexManagerException;
 import org.apache.iotdb.db.index.distance.Distance;
@@ -63,14 +66,14 @@ public class ELBIndex extends MBRIndex {
   }
 
   @Override
-  public IndexPreprocessor initIndexPreprocessor(TVList tvList) {
+  public void initPreprocessor(ByteBuffer previous) {
     if (this.indexPreprocessor != null) {
       this.indexPreprocessor.clear();
     }
-    this.elbTimeFixedPreprocessor = new ELBCountFixedPreprocessor(tvList, windowRange, slideStep,
+    this.elbTimeFixedPreprocessor = new ELBCountFixedPreprocessor(tsDataType, windowRange, slideStep,
         featureDim, distance, calcParam, elbType, true, false, false);
     this.indexPreprocessor = elbTimeFixedPreprocessor;
-    return indexPreprocessor;
+    indexPreprocessor.deserializePrevious(previous);
   }
 
   /**
@@ -109,6 +112,11 @@ public class ELBIndex extends MBRIndex {
 
   @Override
   public void delete() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void initQuery(Map<String, String> queryProps, List<IndexFunc> indexFuncs) {
     throw new UnsupportedOperationException();
   }
 }
