@@ -41,7 +41,7 @@ import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexManagerException;
 import org.apache.iotdb.db.index.common.IndexRuntimeException;
 import org.apache.iotdb.db.index.common.IndexType;
-import org.apache.iotdb.db.index.flush.IndexBuildTaskPoolManager;
+import org.apache.iotdb.db.index.io.IndexBuildTaskPoolManager;
 import org.apache.iotdb.db.index.io.IndexIOWriter;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
 import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;

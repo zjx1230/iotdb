@@ -18,7 +18,6 @@
  */
 package org.apache.iotdb.db.index.common;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.iotdb.db.metadata.MetadataOperationType;
