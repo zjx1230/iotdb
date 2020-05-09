@@ -35,6 +35,7 @@ import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.metadata.StorageGroupNotSetException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.exception.runtime.SQLParserException;
+import org.apache.iotdb.db.index.common.IndexConstant;
 import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metrics.server.SqlArgument;
@@ -80,6 +81,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import static org.apache.iotdb.db.conf.IoTDBConfig.PATH_PATTERN;
+import static org.apache.iotdb.db.index.common.IndexFunc.getIndexFunc;
 import static org.apache.iotdb.db.qp.physical.sys.ShowPlan.ShowContentType.TIMESERIES;
 
 
@@ -729,7 +731,6 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
         }
         seriesTypes = getSeriesTypesByString(respColumns, null);
         break;
-      case QUERY_INDEX:
       case AGGREGATION:
       case GROUPBY:
       case GROUP_BY_FILL:
@@ -742,10 +743,24 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
         for (int i = 0; i < paths.size(); i++) {
           respColumns.add(aggregations.get(i) + "(" + paths.get(i).getFullPath() + ")");
         }
-        if (plan.getOperatorType() == OperatorType.QUERY_INDEX) {
-          seriesTypes = IndexFunc.getSeriesByFunc(paths, aggregations);
-        } else {
-          seriesTypes = getSeriesTypesByPath(paths, aggregations);
+        seriesTypes = getSeriesTypesByPath(paths, aggregations);
+        break;
+      case QUERY_INDEX:
+        aggregations = plan.getAggregations();
+        if (aggregations.size() != paths.size()) {
+          for (int i = 1; i < paths.size(); i++) {
+            aggregations.add(aggregations.get(0));
+          }
+        }
+        // Each index query has an ID column to the left.
+        seriesTypes = new ArrayList<>();
+        for (int i = 0; i < paths.size(); i++) {
+          respColumns.add(IndexConstant.ID + i);
+          respColumns.add(aggregations.get(i) + "(" + paths.get(i).getFullPath() + ")");
+
+          seriesTypes.add(TSDataType.INT32);
+          TSDataType dataType = getIndexFunc(aggregations.get(i)).getType();
+          seriesTypes.add(dataType);
         }
         break;
       default:

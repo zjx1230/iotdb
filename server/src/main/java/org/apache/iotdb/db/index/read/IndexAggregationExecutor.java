@@ -2,6 +2,7 @@ package org.apache.iotdb.db.index.read;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -12,18 +13,27 @@ import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.index.IndexManager;
 import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexManagerException;
+import org.apache.iotdb.db.index.common.IndexQueryException;
 import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.qp.physical.crud.QueryIndexPlan;
 import org.apache.iotdb.db.query.aggregation.AggregateResult;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.QueryResourceManager;
+import org.apache.iotdb.db.query.dataset.ListDataSet;
+import org.apache.iotdb.db.query.dataset.SingleDataSet;
 import org.apache.iotdb.db.query.executor.AggregationExecutor;
 import org.apache.iotdb.db.query.reader.series.SeriesAggregateReader;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.statistics.Statistics;
 import org.apache.iotdb.tsfile.read.common.BatchData;
+import org.apache.iotdb.tsfile.read.common.Field;
 import org.apache.iotdb.tsfile.read.common.Path;
+import org.apache.iotdb.tsfile.read.common.RowRecord;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
+import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
+import org.apache.iotdb.tsfile.utils.Binary;
+import org.apache.iotdb.tsfile.utils.Pair;
 
 public class IndexAggregationExecutor extends AggregationExecutor {
 
@@ -38,40 +48,71 @@ public class IndexAggregationExecutor extends AggregationExecutor {
   }
 
   /**
-   * Compared to super method, it create IndexAggregateResult instead of Other AggregateResult
+   * using aggregate result data list construct QueryDataSet.
    *
-   * @param pathIdx the idx of path
-   * @param tsDataType path type
+   * @param aggregateResultList aggregate result list
    */
+  @Override
+  protected QueryDataSet constructDataSet(List<AggregateResult> aggregateResultList) {
+    List<Path> dupSeries = new ArrayList<>();
+    List<TSDataType> dupTypes = new ArrayList<>();
+    for (int i = 0; i < selectedSeries.size(); i++) {
+      dupSeries.add(selectedSeries.get(i));
+      dupSeries.add(selectedSeries.get(i));
+      dupTypes.add(TSDataType.INT32);
+      dupTypes.add(((IndexFuncResult) aggregateResultList.get(i)).getIndexFuncDataType());
+    }
+    ListDataSet dataSet = new ListDataSet(dupSeries, dupTypes);
+    int reminding = aggregateResultList.size();
+    while (reminding > 0) {
+      RowRecord record = new RowRecord(0);
+      for (AggregateResult resultData : aggregateResultList) {
+        IndexFuncResult indexResult = (IndexFuncResult) resultData;
+        TSDataType dataType = indexResult.getIndexFuncDataType();
+        Pair<Integer, Object> pair = indexResult.getNextPair();
+        if (pair.left != -1) {
+          record.addField(pair.left, TSDataType.INT32);
+          record.addField(pair.right, dataType);
+        } else {
+          record.addField(new Binary("-"), TSDataType.TEXT);
+          reminding--;
+        }
+      }
+      if (reminding == 0) {
+        break;
+      }
+      dataSet.putRecord(record);
+    }
+    return dataSet;
+  }
+
   /**
    * get aggregation result for one series
    *
-   * @param pathToAggrIndexes entry of path to aggregation indexes map
+   * @param pathToAggIndexes entry of path to aggregation indexes map
    * @param timeFilter time filter
    * @param context query context
    * @return AggregateResult list
    */
   @Override
   protected List<AggregateResult> aggregateOneSeries(
-      Map.Entry<Path, List<Integer>> pathToAggrIndexes,
+      Map.Entry<Path, List<Integer>> pathToAggIndexes,
       Set<String> measurements, Filter timeFilter, QueryContext context)
       throws IOException, QueryProcessException, StorageEngineException {
     List<IndexFuncResult> indexFuncResults = new ArrayList<>();
-    List<IndexFunc> indexFuncs = new ArrayList<>();
 
-    Path seriesPath = pathToAggrIndexes.getKey();
-    TSDataType tsDataType = dataTypes.get(pathToAggrIndexes.getValue().get(0));
+    Path seriesPath = pathToAggIndexes.getKey();
+    TSDataType tsDataType = dataTypes.get(pathToAggIndexes.getValue().get(0));
 
-    for (int i : pathToAggrIndexes.getValue()) {
+    for (int i : pathToAggIndexes.getValue()) {
       // construct AggregateResult
       IndexFunc indexFunc = IndexFunc.getIndexFunc(aggregations.get(i));
-      IndexFuncResult aggregateResult = new IndexFuncResult(indexFunc, tsDataType, indexType);
+      IndexFuncResult aggregateResult = new IndexFuncResult(indexFunc, tsDataType);
       indexFuncResults.add(aggregateResult);
-      indexFuncs.add(indexFunc);
     }
     try {
       aggregateOneSeriesIndex(seriesPath, measurements, context, timeFilter, tsDataType,
-          indexFuncResults, indexFuncs);
+          indexFuncResults);
     } catch (MetadataException e) {
       throw new QueryProcessException(e);
     }
@@ -87,7 +128,7 @@ public class IndexAggregationExecutor extends AggregationExecutor {
    */
   private void aggregateOneSeriesIndex(Path seriesPath, Set<String> measurements,
       QueryContext context, Filter timeFilter, TSDataType tsDataType,
-      List<IndexFuncResult> indexFuncResults, List<IndexFunc> indexFuncs)
+      List<IndexFuncResult> indexFuncResults)
       throws StorageEngineException, IOException, QueryProcessException, MetadataException {
 
     // construct series reader without value filter
@@ -95,7 +136,7 @@ public class IndexAggregationExecutor extends AggregationExecutor {
         .getQueryDataSource(seriesPath, context, timeFilter);
     IndexQueryReader indexQueryReader = IndexManager.getInstance()
         .getQuerySource(seriesPath, indexType);
-    indexQueryReader.initQueryCondition(queryProps, indexFuncs);
+    indexQueryReader.initQueryCondition(queryProps, indexFuncResults);
     // update filter by TTL
     timeFilter = queryDataSource.updateFilterUsingTTL(timeFilter);
 
@@ -124,10 +165,7 @@ public class IndexAggregationExecutor extends AggregationExecutor {
    */
   private void aggregateFromIndexReader(SeriesAggregateReader seriesReader,
       IndexQueryReader indexQueryReader, List<IndexFuncResult> indexFuncResults,
-      Filter timeFilter)
-      throws QueryProcessException, IOException {
-    int remainingToCalculate = indexFuncResults.size();
-    boolean[] isCalculatedArray = new boolean[indexFuncResults.size()];
+      Filter timeFilter) throws QueryProcessException, IOException {
     while (seriesReader.hasNextFile()) {
       // cal by file statistics
       // Compared the super method, we remove the branch of canUseCurrentFileStatistics
@@ -136,13 +174,14 @@ public class IndexAggregationExecutor extends AggregationExecutor {
         indexQueryReader.updateUsableRange(seriesReader.getUnOverlappedInCurrentChunk());
         Statistics chunkStatistics = seriesReader.currentChunkStatistics();
         // Index is no-false-negative, but not no-false-positive
-        if (indexQueryReader
-            .canSkipDataRange(chunkStatistics.getStartTime(), chunkStatistics.getEndTime())) {
+        long startTime = chunkStatistics.getStartTime();
+        long endTime = chunkStatistics.getEndTime();
+        if (indexQueryReader.canSkipDataRange(startTime, endTime)) {
           seriesReader.skipCurrentChunk();
           continue;
         }
-        remainingToCalculate = aggregateIndexOverlappedPages(seriesReader, indexQueryReader,
-            indexFuncResults, isCalculatedArray, remainingToCalculate, timeFilter);
+        int remainingToCalculate = aggregateIndexOverlappedPages(seriesReader, indexQueryReader,
+            indexFuncResults, timeFilter);
         if (remainingToCalculate == 0) {
           return;
         }
@@ -155,37 +194,24 @@ public class IndexAggregationExecutor extends AggregationExecutor {
    */
   private int aggregateIndexOverlappedPages(SeriesAggregateReader seriesReader,
       IndexQueryReader indexQueryReader, List<IndexFuncResult> aggregateResultList,
-      boolean[] isCalculatedArray,
-      int remainingToCalculate, Filter timeFilter)
-      throws IOException, IndexManagerException {
+      Filter timeFilter)
+      throws IOException, IndexManagerException, IndexQueryException {
     // cal by page data
-    int newRemainingToCalculate = remainingToCalculate;
-    while (seriesReader.hasNextPage()) {
+    int remainingToCalculate = Integer.MAX_VALUE;
+    while (remainingToCalculate > 0 && seriesReader.hasNextPage()) {
       Statistics pageStatistics = seriesReader.currentPageStatistics();
       // Index is no-false-negative, but not no-false-positive
-      if (indexQueryReader
-          .canSkipDataRange(pageStatistics.getStartTime(), pageStatistics.getEndTime())) {
+      //TODO Note that, after calling hasNextPage, seriesReader.currentPageStatistics always return null. So we cannot skip pages yet.
+      if (pageStatistics != null && indexQueryReader.canSkipDataRange(
+          pageStatistics.getStartTime(), pageStatistics.getEndTime())) {
         seriesReader.skipCurrentPage();
         continue;
       }
       BatchData nextOverlappedPageData = seriesReader.nextPage();
-      indexQueryReader
-          .appendDataAndPostProcess(nextOverlappedPageData, aggregateResultList,
-              isCalculatedArray, timeFilter);
-      for (int i = 0; i < aggregateResultList.size(); i++) {
-        if (!isCalculatedArray[i]) {
-          AggregateResult aggregateResult = aggregateResultList.get(i);
-          if (aggregateResult.isCalculatedAggregationResult()) {
-            isCalculatedArray[i] = true;
-            newRemainingToCalculate--;
-            if (newRemainingToCalculate == 0) {
-              return newRemainingToCalculate;
-            }
-          }
-        }
-      }
+      remainingToCalculate = indexQueryReader
+          .appendDataAndPostProcess(nextOverlappedPageData, aggregateResultList, timeFilter);
     }
-    return newRemainingToCalculate;
+    return remainingToCalculate;
   }
 
 }

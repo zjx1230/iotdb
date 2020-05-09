@@ -53,7 +53,7 @@ import java.util.*;
 
 public class AggregationExecutor {
 
-  private List<Path> selectedSeries;
+  protected List<Path> selectedSeries;
   protected List<TSDataType> dataTypes;
   protected List<String> aggregations;
   protected IExpression expression;
@@ -119,6 +119,8 @@ public class AggregationExecutor {
 
     for (int i : pathToAggrIndexes.getValue()) {
       // construct AggregateResult
+      // For index, the type depends on IndexFunc, but not series data type.
+      // A temporary hack: The type of AggregateResult will be redefined in IoTDBIndex#initQuery
       AggregateResult aggregateResult = AggregateResultFactory
           .getAggrResultByName(aggregations.get(i), tsDataType);
       aggregateResultList.add(aggregateResult);
@@ -305,7 +307,7 @@ public class AggregationExecutor {
    *
    * @param aggregateResultList aggregate result list
    */
-  private QueryDataSet constructDataSet(List<AggregateResult> aggregateResultList) {
+  protected QueryDataSet constructDataSet(List<AggregateResult> aggregateResultList) {
     RowRecord record = new RowRecord(0);
     for (AggregateResult resultData : aggregateResultList) {
       TSDataType dataType = resultData.getResultDataType();

@@ -152,9 +152,9 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
   }
 
   @Override
-  public List<Object> getLatestN_L1_Identifiers(int latestN) {
+  public List<Identifier> getLatestN_L1_Identifiers(int latestN) {
     latestN = Math.min(getCurrentChunkSize(), latestN);
-    List<Object> res = new ArrayList<>(latestN);
+    List<Identifier> res = new ArrayList<>(latestN);
     if (latestN == 0) {
       return res;
     }

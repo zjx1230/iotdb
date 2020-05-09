@@ -18,8 +18,12 @@
  */
 package org.apache.iotdb.db.qp.physical.crud;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import org.apache.iotdb.db.index.common.IndexConstant;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.qp.logical.Operator;
 import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
@@ -27,6 +31,7 @@ import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
 public class QueryIndexPlan extends AggregationPlan {
   private Map<String, String> props;
   private IndexType indexType;
+  private Map<String, Integer> dupPathToIndex;
 
   public QueryIndexPlan() {
     super();
@@ -47,6 +52,24 @@ public class QueryIndexPlan extends AggregationPlan {
     indexQueryPlan.setRowLimit(aggregationPlan.getRowLimit());
     indexQueryPlan.setRowOffset(aggregationPlan.getRowOffset());
     return indexQueryPlan;
+  }
+
+  public void setPathToIndex(Map<String, Integer> pathToIndex) {
+    this.dupPathToIndex = new HashMap<>();
+    List<String> dupList = new ArrayList<>(pathToIndex.size() * 2);
+    pathToIndex.forEach((s,i)->{
+      dupList.add(i*2, IndexConstant.ID + i);
+      dupList.add(i*2+1, s);
+    });
+    for (int i = 0; i < dupList.size(); i++) {
+      dupPathToIndex.put(dupList.get(i), i);
+    }
+
+  }
+
+  @Override
+  public Map<String, Integer> getPathToIndex() {
+    return dupPathToIndex;
   }
 
 

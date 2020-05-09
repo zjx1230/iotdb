@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import org.apache.iotdb.db.index.common.IndexRuntimeException;
 import org.apache.iotdb.db.index.common.IndexUtils;
+import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.preprocess.TimeFixedPreprocessor;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
@@ -125,8 +126,9 @@ public class PAATimeFixedPreprocessor extends TimeFixedPreprocessor {
     if (!storeIdentifier) {
       throw new IOException("In PAA index, must store the identifier list");
     }
-    ReadWriteIOUtils.write(identifierList.getLong(actualIdx * 3), outputStream);
-    ReadWriteIOUtils.write(identifierList.getLong(actualIdx * 3 + 1), outputStream);
-    ReadWriteIOUtils.write((int) identifierList.getLong(actualIdx * 3 + 2), outputStream);
+    Identifier identifier = new Identifier(identifierList.getLong(actualIdx * 3),
+        identifierList.getLong(actualIdx * 3 + 1),
+        (int) identifierList.getLong(actualIdx * 3 + 2));
+    identifier.serialize(outputStream);
   }
 }

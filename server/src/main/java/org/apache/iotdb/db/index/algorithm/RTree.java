@@ -181,6 +181,47 @@ public class RTree<T> {
     }
   }
 
+  public List<T> searchWithThreshold(final float[] coords, final float[] dimensions, double thres) {
+    assert (coords.length == numDims);
+    assert (dimensions.length == numDims);
+    LinkedList<T> results = new LinkedList<>();
+    searchWithThreshold(coords, dimensions, root, results, thres);
+    return results;
+  }
+
+  private double mbrED(float[] aCoords, float[] aDims, float[] bCoords, float[] bDims) {
+    float dist = 0;
+    for (int i = 0; i < aCoords.length; i++) {
+      float al = aCoords[i];
+      float au = aCoords[i] + aDims[i];
+      float bl = bCoords[i];
+      float bu = bCoords[i] + bDims[i];
+      if (al > bu) {
+        dist += (al - bu) * (al - bu);
+      } else if (bl > au) {
+        dist += (bl - au) * (bl - au);
+      }
+    }
+    return Math.sqrt(dist);
+  }
+
+  private void searchWithThreshold(final float[] coords, final float[] dimensions, final Node n,
+      final LinkedList<T> results, double threshold) {
+    if (n.leaf) {
+      for (Node e : n.children) {
+        if (mbrED(coords, dimensions, e.coords, e.dimensions) <= threshold) {
+          results.add(((EntryNode<T>) e).value);
+        }
+      }
+    } else {
+      for (Node c : n.children) {
+        if (isOverlap(coords, dimensions, c.coords, c.dimensions)) {
+          searchWithThreshold(coords, dimensions, c, results, threshold);
+        }
+      }
+    }
+  }
+
   /**
    * Deletes the entry associated with the given rectangle from the RTree
    *

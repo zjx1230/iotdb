@@ -18,7 +18,7 @@
  */
 package org.apache.iotdb.db.index.algorithm;
 
-import static org.apache.iotdb.db.index.TestUtils.deserializeIndexChunk;
+import static org.apache.iotdb.db.index.IndexTestUtils.deserializeIndexChunk;
 import static org.apache.iotdb.db.index.common.IndexConstant.DISTANCE;
 import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE;
 import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE_ELE;
@@ -39,8 +39,8 @@ import java.util.concurrent.ExecutionException;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.IndexFileProcessor;
-import org.apache.iotdb.db.index.TestUtils;
-import org.apache.iotdb.db.index.TestUtils.Validation;
+import org.apache.iotdb.db.index.IndexTestUtils;
+import org.apache.iotdb.db.index.IndexTestUtils.Validation;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
@@ -67,6 +67,7 @@ public class ELBAndPAAIndexTest {
   private static final String p2 = "root.v.p2";
   private static final String tempIndexFileDir = "index/root.v/";
   private static final String tempIndexFileName = "index/root.v/demo_elb_paa_index";
+  private long defaultBufferSize;
 
   private void prepareMManager() throws MetadataException {
     MManager mManager = MManager.getInstance();
@@ -95,13 +96,17 @@ public class ELBAndPAAIndexTest {
     MManager.getInstance().init();
     MManager.getInstance().clear();
     EnvironmentUtils.envSetUp();
-    TestUtils.clearIndexFile(tempIndexFileName);
+    defaultBufferSize = IoTDBDescriptor.getInstance().getConfig().getIndexBufferSize();
+    IoTDBDescriptor.getInstance().getConfig().setIndexBufferSize(500);
+
+    IndexTestUtils.clearIndexFile(tempIndexFileName);
   }
 
   @After
   public void tearDown() throws Exception {
+    IoTDBDescriptor.getInstance().getConfig().setIndexBufferSize(defaultBufferSize);
     EnvironmentUtils.cleanEnv();
-    TestUtils.clearIndexFile(tempIndexFileName);
+    IndexTestUtils.clearIndexFile(tempIndexFileName);
   }
 
 
@@ -109,7 +114,6 @@ public class ELBAndPAAIndexTest {
   public void testMultiThreadWrite()
       throws MetadataException, ExecutionException, InterruptedException, IOException {
     prepareMManager();
-    IoTDBDescriptor.getInstance().getConfig().setIndexBufferSize(500);
     FSFactoryProducer.getFSFactory().getFile(tempIndexFileDir).mkdirs();
     // Prepare data
     TVList p1List = TVListAllocator.getInstance().allocate(TSDataType.INT32);
@@ -123,7 +127,7 @@ public class ELBAndPAAIndexTest {
         + "(0,[0-18,10])(1,[20-38,10])(2,[40-58,10])(3,[60-78,10])"
         + "(4,[80-98,10])(5,[100-118,10])(6,[120-138,10])(7,[140-158,10])"
         + "(8,[160-178,10])(9,[180-198,10])";
-    String gtStrP1PAA = "(0,[0-9,4])(1,[10-19,4])(2,[20-29,4])(3,[30-39,4])(4,[40-49,4])(5,[50-59,4])(6,[60-69,4])(7,[70-79,4])(8,[80-89,4])(9,[90-99,4])(10,[100-109,4])(11,[110-119,4])(12,[120-129,4])(13,[130-139,4])(14,[140-149,4])(15,[150-159,4])(16,[160-169,4])(17,[170-179,4])(18,[180-189,4])";
+    String gtStrP1PAA = "(0,[0-9,5])(1,[10-19,5])(2,[20-29,5])(3,[30-39,5])(4,[40-49,5])(5,[50-59,5])(6,[60-69,5])(7,[70-79,5])(8,[80-89,5])(9,[90-99,5])(10,[100-109,5])(11,[110-119,5])(12,[120-129,5])(13,[130-139,5])(14,[140-149,5])(15,[150-159,5])(16,[160-169,5])(17,[170-179,5])(18,[180-189,5])";
     String gtStrP2ELB = ""
         + "(0,[0-27,10])(1,[30-57,10])(2,[60-87,10])(3,[90-117,10])"
         + "(4,[120-147,10])(5,[150-177,10])(6,[180-207,10])(7,[210-237,10])"
@@ -139,6 +143,7 @@ public class ELBAndPAAIndexTest {
     tasks.add(new Validation(p2, p2List, gtP2));
     // check result
     checkIndexFlushAndResult(tasks, storageGroup, tempIndexFileDir, tempIndexFileName);
+    FSFactoryProducer.getFSFactory().getFile(tempIndexFileDir).delete();
   }
 
   private static void checkIndexFlushAndResult(List<Validation> tasks, String storageGroup,

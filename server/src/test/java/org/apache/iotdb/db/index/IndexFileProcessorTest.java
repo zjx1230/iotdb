@@ -18,14 +18,13 @@
  */
 package org.apache.iotdb.db.index;
 
-import static org.apache.iotdb.db.index.TestUtils.deserializeIndexChunk;
+import static org.apache.iotdb.db.index.IndexTestUtils.deserializeIndexChunk;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_SLIDE_STEP;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
 import static org.apache.iotdb.db.index.common.IndexType.NO_INDEX;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,13 +33,11 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
-import org.apache.iotdb.db.index.TestUtils.Validation;
+import org.apache.iotdb.db.index.IndexTestUtils.Validation;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexIOReader;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
-import org.apache.iotdb.db.index.read.IndexFileResource;
-import org.apache.iotdb.db.index.read.IndexStorageGroupProcessor.UpdateIndexFileResourcesCallBack;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
@@ -87,7 +84,7 @@ public class IndexFileProcessorTest {
     EnvironmentUtils.envSetUp();
     MManager.getInstance().init();
     MManager.getInstance().clear();
-    TestUtils.clearIndexFile(tempIndexFileName);
+    IndexTestUtils.clearIndexFile(tempIndexFileName);
     defaultIndexBufferSize = IoTDBDescriptor.getInstance().getConfig().getIndexBufferSize();
     IoTDBDescriptor.getInstance().getConfig().setIndexBufferSize(100);
     FSFactoryProducer.getFSFactory().getFile(tempIndexFileDir).mkdirs();
@@ -95,7 +92,7 @@ public class IndexFileProcessorTest {
 
   @After
   public void tearDown() throws Exception {
-    TestUtils.clearIndexFile(tempIndexFileName);
+    IndexTestUtils.clearIndexFile(tempIndexFileName);
     IoTDBDescriptor.getInstance().getConfig().setIndexBufferSize(defaultIndexBufferSize);
     EnvironmentUtils.cleanEnv();
 

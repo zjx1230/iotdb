@@ -18,40 +18,34 @@
  */
 package org.apache.iotdb.db.index.common;
 
-import static org.apache.iotdb.db.index.common.IndexFunc.SIM_ET;
-import static org.apache.iotdb.db.index.common.IndexFunc.LEN;
-import static org.apache.iotdb.db.index.common.IndexFunc.SIM_ST;
-
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.algorithm.NoIndex;
 import org.apache.iotdb.db.index.algorithm.elb.ELBIndex;
 import org.apache.iotdb.db.index.algorithm.paa.PAAIndex;
+import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 
 public enum IndexType {
 
-  NO_INDEX(SIM_ST, SIM_ET, LEN),
-  PAA(SIM_ST, SIM_ET, LEN),
-  ELB(SIM_ST, SIM_ET, LEN),
-  KV_INDEX();
+  NO_INDEX,
+  PAA,
+  ELB,
+  KV_INDEX;
 
-  private final Set<IndexFunc> func;
-
-  IndexType(IndexFunc... func) {
-    this.func = new HashSet<>(Arrays.asList(func));
-  }
-
-  public Set<IndexFunc> getSupportedFunc() {
-    return func;
-  }
+//  private final Set<IndexFunc> func;
+//
+//  IndexType(IndexFunc... func) {
+//    this.func = new HashSet<>(Arrays.asList(func));
+//  }
+//
+//  public Set<IndexFunc> getSupportedFunc() {
+//    return func;
+//  }
 
   /**
    * judge the index type.
@@ -141,7 +135,8 @@ public enum IndexType {
    * Construct an index for an index-query
    */
   public static IoTDBIndex constructQueryIndex(String path, IndexType indexType,
-      Map<String, String> queryProps, List<IndexFunc> indexFuncs) {
+      Map<String, String> queryProps, List<IndexFuncResult> indexFuncs)
+      throws UnsupportedIndexQueryException {
     queryProps = uppercaseProps(queryProps);
     IndexInfo indexInfo = MManager.getInstance().getIndexInfoByPath(path, indexType);
     if (indexInfo == null) {
@@ -150,6 +145,7 @@ public enum IndexType {
     }
     IoTDBIndex index = newIndexByType(path, indexType, indexInfo);
     index.initQuery(queryProps, indexFuncs);
+
     return index;
   }
 

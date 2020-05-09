@@ -10,6 +10,7 @@ import org.apache.iotdb.db.index.common.IllegalIndexParamException;
 import org.apache.iotdb.db.index.common.IndexRuntimeException;
 import org.apache.iotdb.db.index.distance.Distance;
 import org.apache.iotdb.db.index.preprocess.CountFixedPreprocessor;
+import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
@@ -41,9 +42,8 @@ public class ELBCountFixedPreprocessor extends CountFixedPreprocessor {
    * adjacent {@code windowRange/b} sequence.
    */
   public ELBCountFixedPreprocessor(TSDataType tsDataType, int windowRange, int slideStep,
-      int blockNum,
-      Distance distance, CalcParam calcParam, ELBType elbType, boolean storeIdentifier,
-      boolean storeAligned, boolean storeFeature) {
+      int blockNum, Distance distance, CalcParam calcParam, ELBType elbType,
+      boolean storeIdentifier, boolean storeAligned, boolean storeFeature) {
     super(tsDataType, windowRange, slideStep, storeIdentifier, storeAligned);
     this.storeFeature = storeFeature;
     if (blockNum > windowRange) {
@@ -157,8 +157,9 @@ public class ELBCountFixedPreprocessor extends CountFixedPreprocessor {
     if (!storeIdentifier) {
       throw new IOException("In ELB index, must store the identifier list");
     }
-    ReadWriteIOUtils.write(identifierList.getLong(actualIdx * 3), outputStream);
-    ReadWriteIOUtils.write(identifierList.getLong(actualIdx * 3 + 1), outputStream);
-    ReadWriteIOUtils.write((int) identifierList.getLong(actualIdx * 3 + 2), outputStream);
+    Identifier identifier = new Identifier(identifierList.getLong(actualIdx * 3),
+        identifierList.getLong(actualIdx * 3 + 1),
+        (int) identifierList.getLong(actualIdx * 3 + 2));
+    identifier.serialize(outputStream);
   }
 }

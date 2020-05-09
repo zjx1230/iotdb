@@ -1,6 +1,6 @@
 package org.apache.iotdb.db.index.io;
 
-import static org.apache.iotdb.db.index.TestUtils.TEST_INDEX_FILE_NAME;
+import static org.apache.iotdb.db.index.IndexTestUtils.TEST_INDEX_FILE_NAME;
 import static org.apache.iotdb.db.index.common.IndexType.ELB;
 import static org.apache.iotdb.db.index.common.IndexType.PAA;
 
@@ -15,7 +15,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.iotdb.db.index.TestUtils;
+import org.apache.iotdb.db.index.IndexTestUtils;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexIOReader.IndexPair;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
@@ -36,12 +36,12 @@ public class IndexIOWriterTest {
 
   @Before
   public void setUp() throws Exception {
-    TestUtils.clearIndexFile(TEST_INDEX_FILE_NAME);
+    IndexTestUtils.clearIndexFile(TEST_INDEX_FILE_NAME);
   }
 
   @After
   public void tearDown() throws Exception {
-    TestUtils.clearIndexFile(TEST_INDEX_FILE_NAME);
+    IndexTestUtils.clearIndexFile(TEST_INDEX_FILE_NAME);
 
   }
 

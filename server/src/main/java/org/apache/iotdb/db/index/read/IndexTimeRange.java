@@ -11,24 +11,29 @@ public class IndexTimeRange {
   private Filter timeFilter;
 
   public IndexTimeRange() {
-    timeFilter = TimeFilter.lt(Long.MAX_VALUE);
+    timeFilter = TimeFilter.gt(Long.MAX_VALUE);
   }
 
 
   public void addRange(long startTime, long endTime) {
+//    if (timeFilter == null) {
+//      timeFilter = toFilter(startTime, endTime);
+//      return;
+//    }
     timeFilter = FilterFactory.or(timeFilter, toFilter(startTime, endTime));
   }
+
   public void pruneRange(long startTime, long endTime) {
+//    if (timeFilter == null) {
+//      timeFilter = TimeFilter.not(toFilter(startTime, endTime));
+//    }
     timeFilter = FilterFactory.and(timeFilter, TimeFilter.not(toFilter(startTime, endTime)));
   }
 
   /**
-   *
-   * @param startTime
-   * @param endTime
    * @return True if this range fully contains [start, end]
    */
-  public boolean fullyContains(long startTime, long endTime){
+  public boolean fullyContains(long startTime, long endTime) {
     return timeFilter.containStartEndTime(startTime, endTime);
   }
 
@@ -37,8 +42,12 @@ public class IndexTimeRange {
   }
 
 
-
   public void updateUsableRange(IndexTimeRange usableRangeInCurrentChunk) {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public String toString() {
+    return timeFilter == null ? "null" : timeFilter.toString();
   }
 }

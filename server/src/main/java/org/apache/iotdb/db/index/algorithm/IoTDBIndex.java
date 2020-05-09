@@ -14,14 +14,16 @@ import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexManagerException;
+import org.apache.iotdb.db.index.common.IndexQueryException;
 import org.apache.iotdb.db.index.common.IndexRuntimeException;
 import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.index.common.UnsupportedIndexQueryException;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategy;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategyType;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
-import org.apache.iotdb.db.index.read.IndexFuncResult;
+import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -45,8 +47,6 @@ public abstract class IoTDBIndex {
   protected int windowRange;
   protected int slideStep;
   protected IndexPreprocessor indexPreprocessor;
-  protected Map<String, String> queryProps;
-  protected List<IndexFunc> indexFuncs;
 
   public IoTDBIndex(String path, IndexInfo indexInfo) {
     try {
@@ -177,10 +177,16 @@ public abstract class IoTDBIndex {
     return indexPreprocessor == null ? 0 : indexPreprocessor.getAmortizedSize();
   }
 
-  public void initQuery(Map<String, String> queryProps, List<IndexFunc> indexFuncs) {
-    this.queryProps = queryProps;
-    this.indexFuncs = indexFuncs;
-  }
+  /**
+   * Initial parameters by query, check if all query conditions and function types are supported
+   *
+   * @param queryConditions query conditions
+   * @throws org.apache.iotdb.db.index.common.IllegalIndexParamException when conditions or funcs
+   * are not supported
+   */
+  public abstract void initQuery(Map<String, String> queryConditions,
+      List<IndexFuncResult> indexFuncResults) throws UnsupportedIndexQueryException;
+
 
   /**
    * query on path with parameters, return the candidate list. return null is regarded as Nothing to
@@ -193,32 +199,18 @@ public abstract class IoTDBIndex {
   public abstract List<Identifier> queryByIndex(ByteBuffer indexChunkData)
       throws IndexManagerException;
 
-  /**
-   * query on path with parameters, return result by limitSize
-   *
-   * @return the query response
-   */
-  public void postProcessNext(List<IndexFuncResult> aggregateResultList,
-      boolean[] isCalculatedArray) throws IndexManagerException {
-    for (int i = 0; i < aggregateResultList.size(); i++) {
-      if (!isCalculatedArray[i]) {
-        if (postProcessNext(aggregateResultList.get(i))) {
-          isCalculatedArray[i] = true;
-        }
-      }
-    }
-  }
 
   /**
    * IndexPreprocessor has preprocess a new sequence, produce L1, L2 or L3 features as user's
    * configuration. Calculates functions you support and fill into {@code funcResult}.
    *
-   * Returns {@code true} if all calculations of this function have been completed. If so, this AggregateResult will not
-   * be called next time.
+   * Returns {@code true} if all calculations of this function have been completed. If so, this
+   * AggregateResult will not be called next time.
    *
    * @throws UnsupportedOperationException If you meet an unsupported AggregateResult
    */
-  public abstract boolean postProcessNext(IndexFuncResult funcResult) throws IndexManagerException;
+  public abstract int postProcessNext(List<IndexFuncResult> indexFuncResults)
+      throws IndexQueryException;
 
   /**
    * the file is no more needed. Stop ongoing construction and flush operations, clear memory

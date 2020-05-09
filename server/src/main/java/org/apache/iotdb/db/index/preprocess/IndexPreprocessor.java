@@ -151,17 +151,17 @@ public abstract class IndexPreprocessor {
    * get the latest N L1-identifiers, including the current one. The caller needs to release them
    * after use.
    */
-  public abstract List<Object> getLatestN_L1_Identifiers(int latestN);
+  public abstract List<Identifier> getLatestN_L1_Identifiers(int latestN);
 
   /**
    * get current L1 identifier. The caller needs to release them after use.
    */
-  public Object getCurrent_L1_Identifier() {
-    List<Object> res = getLatestN_L1_Identifiers(1);
+  public Identifier getCurrent_L1_Identifier() {
+    List<Identifier> res = getLatestN_L1_Identifiers(1);
     return res.isEmpty() ? null : res.get(0);
   }
 
-  public List<Object> getAll_L1_Identifiers() {
+  public List<Identifier> getAll_L1_Identifiers() {
     int chunkNum = getCurrentChunkSize();
     return getLatestN_L1_Identifiers(chunkNum);
   }

@@ -71,6 +71,7 @@ public class IndexManager implements IService {
     return new IndexQueryReader(seriesPath, indexType, seq, unseq);
   }
 
+  @TestOnly
   public List<IndexChunkMeta> getIndexMetadata(String storageGroup, boolean sequence,
       String seriesPath, IndexType indexType) throws IOException {
     IndexStorageGroupProcessor sgProcessor = createStorageGroupProcessor(storageGroup);

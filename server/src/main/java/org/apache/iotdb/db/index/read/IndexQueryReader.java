@@ -2,6 +2,7 @@ package org.apache.iotdb.db.index.read;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -11,9 +12,11 @@ import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexManagerException;
 import org.apache.iotdb.db.index.common.IndexQueryException;
 import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.index.common.UnsupportedIndexQueryException;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
+import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.index.read.optimize.IndexQueryOptimize;
 import org.apache.iotdb.db.index.read.optimize.NaiveOptimizer;
 import org.apache.iotdb.tsfile.read.common.BatchData;
@@ -36,7 +39,6 @@ public class IndexQueryReader {
   private final IndexType indexType;
   private PriorityQueue<IndexChunkMeta> seqResources;
 
-  int seqIdx = 0;
 
   /**
    * unused up to now
@@ -48,7 +50,6 @@ public class IndexQueryReader {
    */
   private IndexTimeRange indexUsableRange = new IndexTimeRange();
   private IndexTimeRange indexPrunedRange = new IndexTimeRange();
-  private List<IndexFunc> indexFuncs;
   private IoTDBIndex index;
   private IndexQueryOptimize optimizer;
 
@@ -67,14 +68,15 @@ public class IndexQueryReader {
   }
 
   /**
-   * 获得chunkmeta之后调用，告诉reader，这次查询的所有条件，以及查询的所有indexFunc
+   * Invoke after having chunkMeta, tell reader about all condition
    */
-  public void initQueryCondition(Map<String, String> queryProps, List<IndexFunc> indexFuncs) {
-    this.indexFuncs = indexFuncs;
-    this.index = IndexType
-        .constructQueryIndex(seriesPath.getFullPath(), indexType, queryProps, indexFuncs);
+  void initQueryCondition(Map<String, String> queryProps,
+      List<IndexFuncResult> indexFuncResults) throws UnsupportedIndexQueryException {
+//    List<IndexFunc> indexFuncs = new ArrayList<>();
+//    indexFuncResults.forEach(p -> indexFuncs.add(p.getIndexFunc()));
+    String path = seriesPath.getFullPath();
+    index = IndexType.constructQueryIndex(path, indexType, queryProps, indexFuncResults);
     index.initPreprocessor(null);
-
   }
 
   /**
@@ -83,7 +85,7 @@ public class IndexQueryReader {
    * We appreciate more readers familiar with the reading process to review this code.  So far, we
    * tend to add more if-condition and throwing exception to uncover the potential bugs.
    */
-  void updateUsableRange(long[] usableRange) throws IndexQueryException {
+  void updateUsableRange(long[] usableRange) {
     if (usableRange.length != 2) {
       throw new UnsupportedOperationException("series reader gives me a range length > 2");
     }
@@ -93,13 +95,12 @@ public class IndexQueryReader {
       return;
     }
     this.indexUsableRange.addRange(start, end);
-    updateIndexChunk(start, end);
   }
 
   private boolean chunkOverlapData(IndexChunkMeta indexChunkMeta, long dataStartTime,
       long dataEndTime) {
-    return indexChunkMeta.getStartTime() >= dataEndTime
-        && indexChunkMeta.getEndTime() <= dataStartTime;
+    return indexChunkMeta.getStartTime() <= dataEndTime
+        && indexChunkMeta.getEndTime() >= dataStartTime;
   }
 
   /**
@@ -108,16 +109,21 @@ public class IndexQueryReader {
   private void updateIndexChunk(long dataStartTime, long dataEndTime) {
     while (!seqResources.isEmpty()) {
       IndexChunkMeta chunkMeta = seqResources.peek();
-      if (chunkOverlapData(chunkMeta, dataStartTime, dataEndTime) &&
-          optimizer.needUnpackIndexChunk(indexUsableRange, chunkMeta.getStartTime(),
-              chunkMeta.getEndTime())) {
+      if (chunkMeta.getStartTime() > dataEndTime) {
+        break;
+      }
+      else if (chunkMeta.getEndTime() < dataStartTime) {
+        seqResources.poll();
+      } else if (optimizer.needUnpackIndexChunk(indexUsableRange, chunkMeta.getStartTime(),
+          chunkMeta.getEndTime())) {
         chunkMeta = seqResources.poll();
         ByteBuffer chunkData;
         try {
           chunkData = chunkMeta.unpack();
           List<Identifier> candidateList = index.queryByIndex(chunkData);
-          if(candidateList != null)
+          if (candidateList != null) {
             updatePrunedRange(chunkMeta, candidateList);
+          }
         } catch (IOException e) {
           logger.error("unpack chunk failed:{}, skip it", chunkMeta, e);
         } catch (IndexManagerException e) {
@@ -133,7 +139,7 @@ public class IndexQueryReader {
   }
 
 
-  public boolean canSkipDataRange(long dataStartTime, long dataEndTime) {
+  boolean canSkipDataRange(long dataStartTime, long dataEndTime) {
     updateIndexChunk(dataStartTime, dataEndTime);
     return indexPrunedRange.fullyContains(dataStartTime, dataEndTime);
   }
@@ -141,16 +147,17 @@ public class IndexQueryReader {
   /**
    * 新来一批数据,处理完，写出去
    */
-  public void appendDataAndPostProcess(BatchData nextOverlappedPageData,
-      List<IndexFuncResult> aggregateResultList, boolean[] isCalculatedArray, Filter timeFilter)
-      throws IndexManagerException {
+  int appendDataAndPostProcess(BatchData nextOverlappedPageData,
+      List<IndexFuncResult> aggregateResultList, Filter timeFilter)
+      throws IndexManagerException, IndexQueryException {
+    int reminding = Integer.MAX_VALUE;
     IndexPreprocessor preprocessor = index.startFlushTask(nextOverlappedPageData);
-    while (preprocessor.hasNext(timeFilter)) {
+    while (reminding > 0 && preprocessor.hasNext(timeFilter)) {
       preprocessor.processNext();
-      index.postProcessNext(aggregateResultList, isCalculatedArray);
+      reminding = index.postProcessNext(aggregateResultList);
     }
     index.endFlushTask();
-    throw new UnsupportedOperationException();
+    return reminding;
   }
 
   /**
@@ -159,7 +166,6 @@ public class IndexQueryReader {
   public void release() {
     seqResources.clear();
     unseqResources.clear();
-    indexFuncs.clear();
     index.closeAndRelease();
   }
 }

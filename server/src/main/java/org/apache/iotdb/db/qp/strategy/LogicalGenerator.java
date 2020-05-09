@@ -23,6 +23,7 @@ import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.runtime.SQLParserException;
 import org.apache.iotdb.db.index.common.IndexManagerException;
 import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.qp.constant.DatetimeUtils;
 import org.apache.iotdb.db.qp.constant.SQLConstant;
 import org.apache.iotdb.db.qp.logical.RootOperator;
@@ -949,8 +950,10 @@ public class LogicalGenerator extends SqlBaseBaseListener {
     Map<String, String> props = new HashMap<>(properties.size(), 1);
     if (ctx.property(0) != null) {
       for (PropertyContext property : properties) {
-        props.put(property.ID().getText().toLowerCase(),
-            property.propertyValue().getText().toLowerCase());
+        String k = property.ID().getText().toUpperCase();
+        String v = property.propertyValue().getText().toUpperCase();
+        v = IndexUtils.removeQuotation(v);
+        props.put(k,v);
       }
     }
 

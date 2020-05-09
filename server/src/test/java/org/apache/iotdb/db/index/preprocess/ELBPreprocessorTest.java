@@ -1,6 +1,6 @@
 package org.apache.iotdb.db.index.preprocess;
 
-import static org.apache.iotdb.db.index.TestUtils.TwoDimDoubleArrayToString;
+import static org.apache.iotdb.db.index.IndexTestUtils.TwoDimDoubleArrayToString;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

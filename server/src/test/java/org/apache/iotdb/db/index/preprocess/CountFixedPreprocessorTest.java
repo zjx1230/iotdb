@@ -3,7 +3,7 @@ package org.apache.iotdb.db.index.preprocess;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
-import org.apache.iotdb.db.index.TestUtils;
+import org.apache.iotdb.db.index.IndexTestUtils;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -126,11 +126,11 @@ public class CountFixedPreprocessorTest {
       System.out.println("idx:" + idx);
       countFixed.processNext();
       //L1 latest
-      Identifier identifierL1 = (Identifier) countFixed.getCurrent_L1_Identifier();
+      Identifier identifierL1 = countFixed.getCurrent_L1_Identifier();
       System.out.println(identifierL1);
       Assert.assertEquals(groundTruthL1[idx], identifierL1.toString());
       //L1 latest N, get data more than processed, it's expected to return only the processed data.
-      List<Object> L1s = countFixed.getLatestN_L1_Identifiers(idx + 5);
+      List<Identifier> L1s = countFixed.getLatestN_L1_Identifiers(idx + 5);
       for (int i = 0; i <= idx; i++) {
         System.out.println(L1s.get(i).toString());
         Assert.assertEquals(groundTruthL1[i], L1s.get(i).toString());
@@ -138,13 +138,13 @@ public class CountFixedPreprocessorTest {
 
       //L2 latest
       TVList seqL2 = (TVList) countFixed.getCurrent_L2_AlignedSequence();
-      System.out.println(TestUtils.tvListToString(seqL2));
-      Assert.assertEquals(groundTruthL2[idx], TestUtils.tvListToString(seqL2));
+      System.out.println(IndexTestUtils.tvListToString(seqL2));
+      Assert.assertEquals(groundTruthL2[idx], IndexTestUtils.tvListToString(seqL2));
       //L2 latest N
       List<Object> L2s = countFixed.getLatestN_L2_AlignedSequences(idx + 5);
       for (int i = 0; i <= idx; i++) {
-        System.out.println(TestUtils.tvListToString((TVList) L2s.get(i)));
-        Assert.assertEquals(groundTruthL2[i], TestUtils.tvListToString((TVList) L2s.get(i)));
+        System.out.println(IndexTestUtils.tvListToString((TVList) L2s.get(i)));
+        Assert.assertEquals(groundTruthL2[i], IndexTestUtils.tvListToString((TVList) L2s.get(i)));
       }
       //release
       TVListAllocator.getInstance().release(seqL2);

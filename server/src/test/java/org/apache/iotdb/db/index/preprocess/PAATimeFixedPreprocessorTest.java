@@ -5,7 +5,7 @@ import static org.apache.iotdb.tsfile.file.metadata.enums.TSDataType.INT32;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
-import org.apache.iotdb.db.index.TestUtils;
+import org.apache.iotdb.db.index.IndexTestUtils;
 import org.apache.iotdb.db.index.algorithm.paa.PAATimeFixedPreprocessor;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
@@ -18,11 +18,11 @@ public class PAATimeFixedPreprocessorTest {
   @Test
   public void testCreateAlignedSequence() throws IOException {
     String[] groundTruthL1 = new String[]{
-        "[0-19,4]",
-        "[5-24,4]",
-        "[10-29,4]",
-        "[15-34,4]",
-        "[20-39,4]"
+        "[0-19,7]",
+        "[5-24,7]",
+        "[10-29,6]",
+        "[15-34,7]",
+        "[20-39,7]"
     };
     String[] groundTruthL2 = new String[]{
         "{[0,1.50],[5,7.50],[10,12.00],[15,16.50],}",
@@ -87,7 +87,7 @@ public class PAATimeFixedPreprocessorTest {
         Assert.assertEquals(groundTruthL1[idx], identifierL1.toString());
       }
       //L1 latest N
-      List<Object> L1s = timeFixed.getLatestN_L1_Identifiers(idx + 5);
+      List<Identifier> L1s = timeFixed.getLatestN_L1_Identifiers(idx + 5);
       for (int i = 0; i <= idx; i++) {
         System.out.println(L1s.get(i).toString());
         if (toAssert) {
@@ -97,16 +97,16 @@ public class PAATimeFixedPreprocessorTest {
 
       //L2 latest
       TVList seqL2 = (TVList) timeFixed.getCurrent_L2_AlignedSequence();
-      System.out.println(TestUtils.tvListToString(seqL2));
+      System.out.println(IndexTestUtils.tvListToString(seqL2));
       if (toAssert) {
-        Assert.assertEquals(groundTruthL2[idx], TestUtils.tvListToString(seqL2));
+        Assert.assertEquals(groundTruthL2[idx], IndexTestUtils.tvListToString(seqL2));
       }
       //L2 latest N
       List<Object> L2s = timeFixed.getLatestN_L2_AlignedSequences(idx + 5);
       for (int i = 0; i <= idx; i++) {
-        System.out.println(TestUtils.tvListToString((TVList) L2s.get(i)));
+        System.out.println(IndexTestUtils.tvListToString((TVList) L2s.get(i)));
         if (toAssert) {
-          Assert.assertEquals(groundTruthL2[i], TestUtils.tvListToString((TVList) L2s.get(i)));
+          Assert.assertEquals(groundTruthL2[i], IndexTestUtils.tvListToString((TVList) L2s.get(i)));
         }
       }
       //release
@@ -122,8 +122,8 @@ public class PAATimeFixedPreprocessorTest {
         "",
         "",
         "",
-        "[12-31,4]",
-        "[17-36,4]"
+        "[12-31,7]",
+        "[17-36,7]"
     };
     String[] groundTruthL2 = new String[]{
         "",
@@ -160,23 +160,23 @@ public class PAATimeFixedPreprocessorTest {
 
     List<Object> L2s = timeFixed.getLatestN_L2_AlignedSequences(4);
     Assert.assertEquals(2, L2s.size());
-    Assert.assertEquals(groundTruthL2[3], TestUtils.tvListToString((TVList) L2s.get(0)));
-    Assert.assertEquals(groundTruthL2[4], TestUtils.tvListToString((TVList) L2s.get(1)));
+    Assert.assertEquals(groundTruthL2[3], IndexTestUtils.tvListToString((TVList) L2s.get(0)));
+    Assert.assertEquals(groundTruthL2[4], IndexTestUtils.tvListToString((TVList) L2s.get(1)));
   }
 
 
   @Test
   public void testAlignedAndPrevious() throws IOException {
     String[] groundTruthL1 = new String[]{
-        "[27-46,4]",
-        "[32-51,4]",
-        "[37-56,4]",
-        "[42-61,4]",
-        "[47-66,4]",
-        "[52-71,4]",
-        "[57-76,4]",
-        "[62-81,4]",
-        "[67-86,4]",
+        "[27-46,7]",
+        "[32-51,7]",
+        "[37-56,6]",
+        "[42-61,7]",
+        "[47-66,7]",
+        "[52-71,6]",
+        "[57-76,7]",
+        "[62-81,7]",
+        "[67-86,6]",
     };
     String[] groundTruthL2 = new String[]{
         "{[27,28.50],[32,34.50],[37,39.00],[42,43.50],}",
@@ -202,7 +202,7 @@ public class PAATimeFixedPreprocessorTest {
     timeFixed.appendNewSrcData(srcData);
     while (timeFixed.hasNext()) {
       timeFixed.processNext();
-      Identifier identifierL1 = (Identifier) timeFixed.getCurrent_L1_Identifier();
+      Identifier identifierL1 = timeFixed.getCurrent_L1_Identifier();
       System.out.println(identifierL1);
     }
     ByteBuffer previous = timeFixed.serializePrevious();
@@ -224,8 +224,8 @@ public class PAATimeFixedPreprocessorTest {
   @Test
   public void testNoRestForNextOpen() throws IOException {
     String[] groundTruthL1 = new String[]{
-        "[20-29,5]",
-        "[30-39,5]",
+        "[20-29,10]",
+        "[30-39,10]",
     };
     String[] groundTruthL2 = new String[]{
         "{[20,20.50],[22,22.50],[24,24.50],[26,26.50],[28,28.50],}",
@@ -240,7 +240,7 @@ public class PAATimeFixedPreprocessorTest {
     int slideStep = 10;
     int timeAnchor = 0;
     PAATimeFixedPreprocessor timeFixed = new PAATimeFixedPreprocessor(INT32, windowRange,
-        slideStep, alignedSequenceLength, timeAnchor, true, true);
+        slideStep, alignedSequenceLength, timeAnchor, true, false);
     timeFixed.appendNewSrcData(srcData);
     while (timeFixed.hasNext()) {
       timeFixed.processNext();
@@ -259,7 +259,7 @@ public class PAATimeFixedPreprocessorTest {
         slideStep, alignedSequenceLength, timeAnchor, true, true);
     timeFixed2.deserializePrevious(previous);
     timeFixed2.appendNewSrcData(srcData2);
-    assertL1AndL2(timeFixed2, groundTruthL1, groundTruthL2, true);
+    assertL1AndL2(timeFixed2, groundTruthL1, groundTruthL2, false);
     timeFixed2.closeAndRelease();
   }
 
@@ -267,11 +267,11 @@ public class PAATimeFixedPreprocessorTest {
   @Test
   public void testMissingWindow() throws IOException {
     String[] groundTruthL1 = new String[]{
-        "[27-46,4]",
-        "[32-51,4]",
-        "[37-56,4]",
-        "[42-61,4]",
-        "[67-86,4]",
+        "[27-46,7]",
+        "[32-51,7]",
+        "[37-56,6]",
+        "[42-61,6]",
+        "[67-86,6]",
     };
     String[] groundTruthL2 = new String[]{
         "{[27,28.50],[32,34.50],[37,39.00],[42,43.50],}",
@@ -319,11 +319,11 @@ public class PAATimeFixedPreprocessorTest {
   @Test
   public void testUnDividable() throws IOException {
     String[] groundTruthL1 = new String[]{
-        "[12-31,6]",
-        "[17-36,6]",
+        "[12-31,7]",
+        "[17-36,7]",
         "[22-41,6]",
-        "[27-46,6]",
-        "[32-51,6]",
+        "[27-46,7]",
+        "[32-51,7]",
         "[37-56,6]",
     };
     String[] groundTruthL2 = new String[]{

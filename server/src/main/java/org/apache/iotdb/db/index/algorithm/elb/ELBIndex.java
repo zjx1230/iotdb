@@ -10,13 +10,19 @@ import static org.apache.iotdb.db.index.common.IndexConstant.ELB_DEFAULT_THRESHO
 import static org.apache.iotdb.db.index.common.IndexConstant.ELB_THRESHOLD_BASE;
 import static org.apache.iotdb.db.index.common.IndexConstant.ELB_THRESHOLD_RATIO;
 import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE;
+import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
+import static org.apache.iotdb.db.index.common.IndexConstant.THRESHOLD;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import jdk.internal.util.xml.impl.Input;
 import org.apache.iotdb.db.index.algorithm.MBRIndex;
 import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.CalcParam;
@@ -24,14 +30,17 @@ import org.apache.iotdb.db.index.algorithm.elb.pattern.SingleParamSchema;
 import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexManagerException;
+import org.apache.iotdb.db.index.common.IndexQueryException;
+import org.apache.iotdb.db.index.common.IndexUtils;
+import org.apache.iotdb.db.index.common.UnsupportedIndexQueryException;
 import org.apache.iotdb.db.index.distance.Distance;
 import org.apache.iotdb.db.index.preprocess.Identifier;
-import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
-import org.apache.iotdb.db.index.read.IndexFuncResult;
-import org.apache.iotdb.db.query.aggregation.AggregateResult;
+import org.apache.iotdb.db.index.read.func.IndexFuncFactory;
+import org.apache.iotdb.db.index.read.func.IndexFuncResult;
+import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.tsfile.read.common.Path;
-import org.apache.iotdb.tsfile.utils.Pair;
+import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,6 +57,9 @@ public class ELBIndex extends MBRIndex {
 
 
   private ELBCountFixedPreprocessor elbTimeFixedPreprocessor;
+
+  // Only for query
+  private Map<Integer, Identifier> identifierMap = new HashMap<>();
 
   public ELBIndex(String path, IndexInfo indexInfo) {
     super(path, indexInfo, true);
@@ -109,23 +121,85 @@ public class ELBIndex extends MBRIndex {
   }
 
   @Override
+  public void initQuery(Map<String, String> queryConditions, List<IndexFuncResult> indexFuncResults)
+      throws UnsupportedIndexQueryException {
+    for (IndexFuncResult result : indexFuncResults) {
+      switch (result.getIndexFunc()) {
+        case TIME_RANGE:
+        case SIM_ST:
+        case SIM_ET:
+        case SERIES_LEN:
+        case ED:
+        case DTW:
+          result.setIsTensor(true);
+          break;
+        default:
+          throw new UnsupportedIndexQueryException(indexFuncResults.toString());
+      }
+      result.setIndexFuncDataType(result.getIndexFunc().getType());
+    }
+    if (queryConditions.containsKey(THRESHOLD)) {
+      this.threshold = Double.parseDouble(queryConditions.get(THRESHOLD));
+    } else {
+      this.threshold = Double.MAX_VALUE;
+    }
+    if (queryConditions.containsKey(PATTERN)) {
+      this.patterns = IndexUtils.parseNumericPattern(queryConditions.get(PATTERN));
+    } else {
+      throw new UnsupportedIndexQueryException("missing parameter: " + PATTERN);
+    }
+  }
+
+
+  @Override
   protected BiConsumer<Integer, ByteBuffer> getDeserializeFunc() {
-    throw new UnsupportedOperationException();
+    return (idx, input) -> {
+      Identifier identifier = Identifier.deserialize(input);
+      identifierMap.put(idx, identifier);
+    };
   }
 
   @Override
   protected List<Identifier> getQueryCandidates(List<Integer> candidateIds) {
-
-    throw new UnsupportedOperationException();
+    List<Identifier> res = new ArrayList<>(identifierMap.size());
+    identifierMap.forEach(res::add);
+    this.identifierMap.clear();
+    return res;
   }
 
   @Override
-  protected void fillQueryFeature() {
-    throw new UnsupportedOperationException();
+  protected double calcLowerBoundThreshold(double queryThreshold) {
+    return 0;
+  }
+
+  /**
+   * Same as PAAIndex, the query of ELB is in form of PAA
+   */
+  @Override
+  protected void calcAndFillQueryFeature() {
+    Arrays.fill(currentRanges, 0);
+    int intervalWidth = windowRange / featureDim;
+    for (int i = 0; i < featureDim; i++) {
+      for (int j = 0; j < intervalWidth; j++) {
+        currentCorners[i] += patterns[i * intervalWidth + j];
+      }
+      currentCorners[i] /= intervalWidth;
+    }
   }
 
   @Override
-  public boolean postProcessNext(IndexFuncResult funcResult) throws IndexManagerException {
-    throw new UnsupportedOperationException();
+  public int postProcessNext(List<IndexFuncResult> funcResult) throws IndexQueryException {
+    TVList aligned = (TVList) indexPreprocessor.getCurrent_L2_AlignedSequence();
+    double ed = IndexFuncFactory.calcEuclidean(aligned, patterns);
+    System.out.println(String.format(
+        "ELB Process: ed:%.3f: %s", ed, IndexUtils.tvListToStr(aligned)));
+    int reminding = funcResult.size();
+    if (ed <= threshold) {
+      for (IndexFuncResult result : funcResult) {
+        IndexFuncFactory.basicSimilarityCalc(result, indexPreprocessor, patterns);
+      }
+    }
+    TVListAllocator.getInstance().release(aligned);
+    return reminding;
   }
 }

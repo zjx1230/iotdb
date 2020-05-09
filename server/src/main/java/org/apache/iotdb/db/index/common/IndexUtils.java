@@ -1,9 +1,12 @@
 package org.apache.iotdb.db.index.common;
 
+import java.io.IOException;
+import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.read.TimeValuePair;
 
 public class IndexUtils {
 
@@ -74,5 +77,53 @@ public class IndexUtils {
       }
     }
     return maxValue - minValue;
+  }
+
+  public static double[] parseNumericPattern(String patternStr){
+    String[] ns = patternStr.split(",");
+    double[] res = new double[ns.length];
+    for (int i = 0; i < ns.length; i++) {
+      res[i] = Double.parseDouble(ns[i]);
+    }
+    return res;
+  }
+
+  public static String removeQuotation(String v) {
+    int start = 0;
+    int end = v.length();
+    if(v.startsWith("\'") || v.startsWith("\"")){
+      start = 1;
+    }
+    if(v.endsWith("\'") || v.endsWith("\"")){
+      end = v.length() - 1;
+    }
+    return v.substring(start, end);
+  }
+
+  @TestOnly
+  public static String tvListToStr(TVList tvList) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("{");
+    for (int i = 0; i < tvList.size(); i++) {
+      TimeValuePair pair = tvList.getTimeValuePair(i);
+      switch (tvList.getDataType()) {
+        case INT32:
+          sb.append(String.format("[%d,%d],", pair.getTimestamp(), pair.getValue().getInt()));
+          break;
+        case INT64:
+          sb.append(String.format("[%d,%d],", pair.getTimestamp(), pair.getValue().getLong()));
+          break;
+        case FLOAT:
+          sb.append(String.format("[%d,%.2f],", pair.getTimestamp(), pair.getValue().getFloat()));
+          break;
+        case DOUBLE:
+          sb.append(String.format("[%d,%.2f],", pair.getTimestamp(), pair.getValue().getDouble()));
+          break;
+        default:
+          throw new NotImplementedException(tvList.getDataType().toString());
+      }
+    }
+    sb.append("}");
+    return sb.toString();
   }
 }

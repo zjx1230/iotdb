@@ -90,7 +90,6 @@ public class IndexIOReader {
 //      getDataByChunkMeta
 
       IndexChunkMeta chunkMeta = IndexChunkMeta.deserializeFrom(indexInputStream);
-      chunkMeta.setReadDataCallback(this::getDataByChunkMeta);
       res.add(chunkMeta);
     }
     return res;
@@ -98,6 +97,7 @@ public class IndexIOReader {
 
   @FunctionalInterface
   public static interface ReadDataByChunkMetaCallback {
+
     ByteBuffer call(IndexChunkMeta indexMeta) throws IOException;
   }
 
@@ -137,6 +137,7 @@ public class IndexIOReader {
     if (pair.list == null) {
       pair.list = loadOnePathMetadata(pair.chunkListPos);
     }
+    pair.list.forEach(p -> p.setReadDataCallback(this::getDataByChunkMeta));
     return Collections.unmodifiableList(pair.list);
   }
 

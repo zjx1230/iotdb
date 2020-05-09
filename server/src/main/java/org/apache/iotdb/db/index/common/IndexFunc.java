@@ -1,16 +1,43 @@
 package org.apache.iotdb.db.index.common;
 
+import static org.apache.iotdb.db.index.common.IndexFunc.FeatureLayer.ALIGNED;
+import static org.apache.iotdb.db.index.common.IndexFunc.FeatureLayer.IDENTIFIER;
+import static org.apache.iotdb.db.index.common.IndexFunc.FeatureLayer.UNKNOWN_LAYER;
 import static org.apache.iotdb.tsfile.file.metadata.enums.TSDataType.DOUBLE;
 import static org.apache.iotdb.tsfile.file.metadata.enums.TSDataType.INT32;
 import static org.apache.iotdb.tsfile.file.metadata.enums.TSDataType.INT64;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.common.Path;
 
 public enum IndexFunc {
-  SIM_ST(INT64), SIM_ET(INT64), DIST(DOUBLE), LEN(INT32), CATEGORY, UNKNOWN;
+  TIME_RANGE(INT64), SERIES_LEN(INT32), SIM_ST(INT64), SIM_ET(INT64),
+  ED(DOUBLE), DTW(DOUBLE),
+  CATEGORY, UNKNOWN;
+
+  private static final Map<IndexFunc, FeatureLayer> funcLayers = new HashMap<>();
+
+  static {
+    funcLayers.put(SIM_ST, IDENTIFIER);
+    funcLayers.put(SIM_ET, IDENTIFIER);
+    funcLayers.put(TIME_RANGE, IDENTIFIER);
+    funcLayers.put(SERIES_LEN, IDENTIFIER);
+
+    funcLayers.put(ED, ALIGNED);
+    funcLayers.put(DTW, ALIGNED);
+
+    funcLayers.put(CATEGORY, UNKNOWN_LAYER);
+    funcLayers.put(UNKNOWN, UNKNOWN_LAYER);
+  }
+
+  public static IndexFunc getIndexFunc(String indexFuncString) {
+    String normalized = indexFuncString.toUpperCase();
+    return IndexFunc.valueOf(normalized);
+  }
 
   private TSDataType type;
 
@@ -40,20 +67,12 @@ public enum IndexFunc {
     return type;
   }
 
-  public static IndexFunc getIndexFunc(String indexFuncString) {
-    String normalized = indexFuncString.toUpperCase();
-    switch (normalized) {
-      case "SIM_ST":
-        return SIM_ST;
-      case "SIM_ET":
-        return SIM_ET;
-      case "DIST":
-        return DIST;
-      case "LEN":
-        return LEN;
-      default:
-//        return UNKNOWN;
-        throw new IllegalIndexParamException("never seen index func:" + indexFuncString);
-    }
+  public enum FeatureLayer {
+    IDENTIFIER, ALIGNED, FEATURE, UNKNOWN_LAYER
+  }
+
+
+  public static FeatureLayer getFuncNeedFeatureLayer(IndexFunc func) {
+    return funcLayers.getOrDefault(func, FeatureLayer.UNKNOWN_LAYER);
   }
 }

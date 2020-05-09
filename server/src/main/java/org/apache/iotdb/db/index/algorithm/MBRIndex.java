@@ -9,21 +9,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 import java.util.function.BiConsumer;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.index.algorithm.RTree.SeedPicker;
-import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexManagerException;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
 import org.apache.iotdb.db.index.preprocess.Identifier;
-import org.apache.iotdb.db.query.aggregation.AggregateResult;
-import org.apache.iotdb.tsfile.read.filter.basic.Filter;
-import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,6 +49,8 @@ public abstract class MBRIndex extends IoTDBIndex {
   protected RTree<Integer> rTree;
   protected float[] currentCorners;
   protected float[] currentRanges;
+  protected double[] patterns;
+  protected double threshold;
   private int maxEntries;
   private int minEntries;
   private int amortizedPerInputCost;
@@ -166,7 +161,10 @@ public abstract class MBRIndex extends IoTDBIndex {
 
   protected abstract List<Identifier> getQueryCandidates(List<Integer> candidateIds);
 
-  protected abstract void fillQueryFeature();
+  /**
+   *
+   */
+  protected abstract void calcAndFillQueryFeature();
 
   @Override
   public IndexFlushChunk flush() {
@@ -213,13 +211,14 @@ public abstract class MBRIndex extends IoTDBIndex {
 
   @Override
   public List<Identifier> queryByIndex(ByteBuffer indexChunkData) throws IndexManagerException {
-    RTree<Integer> rtree = RTree.deserialize(indexChunkData, getDeserializeFunc());
-    fillQueryFeature();
-    if (usePointType) {
-      Arrays.fill(currentRanges, 0);
-    }
-    List<Integer> candidateIds = rTree.search(currentCorners, currentRanges);
+    calcAndFillQueryFeature();
+    RTree<Integer> chunkRTree = RTree.deserialize(indexChunkData, getDeserializeFunc());
+    double lowerBoundThreshold = calcLowerBoundThreshold(threshold);
+    List<Integer> candidateIds = chunkRTree
+        .searchWithThreshold(currentCorners, currentRanges, lowerBoundThreshold);
     return getQueryCandidates(candidateIds);
   }
+
+  protected abstract double calcLowerBoundThreshold(double queryThreshold);
 
 }

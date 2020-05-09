@@ -166,10 +166,9 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
       // it's a naive identifier, we can refine it in the future.
       identifierList.putLong(currentStartTime);
       identifierList.putLong(currentEndTime);
-      // TimeFixed feature has fixed dimension of aligned sequence.
-      // If necessary, the fixed dimension can be changed to the number of actual data points
-      // within the time range of the aligned sequence.
-      identifierList.putLong(alignedDim);
+      int currentStartTimeIdx = locatedIdxToTimestamp(scanIdx, currentStartTime);
+      int pointSize = locatedIdxToTimestamp(scanIdx, currentEndTime + 1) - currentStartTimeIdx;
+      identifierList.putLong(pointSize);
     }
     if (alignedDim != -1) {
       if (currentAligned != null) {
@@ -255,9 +254,9 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
   }
 
   @Override
-  public List<Object> getLatestN_L1_Identifiers(int latestN) {
+  public List<Identifier> getLatestN_L1_Identifiers(int latestN) {
     latestN = Math.min(getCurrentChunkSize(), latestN);
-    List<Object> res = new ArrayList<>(latestN);
+    List<Identifier> res = new ArrayList<>(latestN);
     if (latestN == 0) {
       return res;
     }
@@ -275,8 +274,11 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
     }
     long startTimePastN = currentStartTime - (latestN - 1) * slideStep;
     while (startTimePastN <= currentStartTime) {
+      int startTimePastNIdx = locatedIdxToTimestamp(0, startTimePastN);
+      int pointSize = locatedIdxToTimestamp(startTimePastNIdx, startTimePastN + windowRange)
+          - startTimePastNIdx;
       res.add(new Identifier(startTimePastN, startTimePastN + windowRange - 1,
-          alignedDim));
+          pointSize));
       startTimePastN += slideStep;
     }
     return res;

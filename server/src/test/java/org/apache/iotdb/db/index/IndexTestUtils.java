@@ -8,6 +8,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.function.BiConsumer;
 import org.apache.iotdb.db.index.algorithm.RTree;
+import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.utils.datastructure.TVList;
@@ -17,7 +18,20 @@ import org.apache.iotdb.tsfile.read.TimeValuePair;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
-public class TestUtils {
+public class IndexTestUtils {
+
+  public static String funcForm(IndexFunc func, String path) {
+    return funcForm(func, path, true);
+  }
+
+  public static String funcForm(IndexFunc func, String path, boolean lowerCase) {
+    String funcStr = func.toString();
+    if (lowerCase) {
+      funcStr = funcStr.toLowerCase();
+    }
+    return String.format("%s(%s)", funcStr, path);
+  }
+
 
   public static String TEST_INDEX_FILE_NAME = "test_index";
 
