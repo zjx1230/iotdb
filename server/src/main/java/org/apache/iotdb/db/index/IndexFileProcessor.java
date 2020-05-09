@@ -423,7 +423,6 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
 
   private void flushAndAddToQueue(IoTDBIndex index, Path path) {
     try {
-      System.out.println("[[[[[[[[[[[[[[[[[[[[[[[[   FLUSH   ]]]]]]]]]]]]]]]]]]]]]]]]");
       IndexFlushChunk indexFlushChunk = index.flush();
       flushTaskQueue.add(indexFlushChunk);
       long chunkDataSize = indexFlushChunk.getDataSize();

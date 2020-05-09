@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import org.apache.iotdb.db.index.common.IllegalIndexParamException;
 import org.apache.iotdb.db.index.common.IndexRuntimeException;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.db.utils.datastructure.TVList;
@@ -40,6 +41,15 @@ import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
  */
 public abstract class IndexPreprocessor {
 
+  /**
+   * In the BUILD and QUERY modes, the preprocessor works differently.  For example, {@linkplain
+   * org.apache.iotdb.db.index.algorithm.elb.ELBCountFixedPreprocessor ELBCountFixedPreprocessor}
+   * does not need to generate L3 feature in QUERY-Mode, and NoIndex does not need to generate L1
+   * Identifier and L2 Aligned sequence in BUILD-Mode.
+   *
+   * The Default is BUILD-mode, i.e., inQueryMode=false
+   */
+  protected boolean inQueryMode = false;
   /**
    * the type of sliding window, see {@linkplain WindowType}
    */
@@ -88,6 +98,10 @@ public abstract class IndexPreprocessor {
   }
 
   protected abstract void initParams();
+
+  public void setInQueryMode(boolean inQueryMode) {
+    this.inQueryMode = inQueryMode;
+  }
 
   /**
    * clear data which has been processed
@@ -153,6 +167,18 @@ public abstract class IndexPreprocessor {
    */
   public abstract List<Identifier> getLatestN_L1_Identifiers(int latestN);
 
+  public TVList get_L0_SourceData(long startTime, long endTime) {
+    TVList res = TVListAllocator.getInstance().allocate(srcData.getDataType());
+    int idx = 0;
+    while (idx < srcData.size() && srcData.getTime(idx) < startTime) {
+      idx++;
+    }
+    while (idx < srcData.size() && srcData.getTime(idx) <= endTime){
+      IndexUtils.putAnyValue(srcData, idx, res);
+      idx++;
+    }
+    return res;
+  }
   /**
    * get current L1 identifier. The caller needs to release them after use.
    */

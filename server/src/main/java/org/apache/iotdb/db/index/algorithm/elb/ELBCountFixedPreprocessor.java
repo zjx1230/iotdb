@@ -67,10 +67,12 @@ public class ELBCountFixedPreprocessor extends CountFixedPreprocessor {
   @Override
   public void processNext() {
     super.processNext();
-    currentMBR.clearButNotRelease();
-    elbFeatureExtractor.calcELBFeature(currentStartTimeIdx, currentMBR);
-    if (storeFeature) {
-      mbrs.putAllDouble(currentMBR);
+    if (!inQueryMode) {
+      currentMBR.clearButNotRelease();
+      elbFeatureExtractor.calcELBFeature(currentStartTimeIdx, currentMBR);
+      if (storeFeature) {
+        mbrs.putAllDouble(currentMBR);
+      }
     }
   }
 

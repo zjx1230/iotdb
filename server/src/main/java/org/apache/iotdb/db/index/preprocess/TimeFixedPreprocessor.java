@@ -330,7 +330,7 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
       toBeReleased += identifierList.size() * Long.BYTES;
       identifierList.clearAndRelease();
     }
-    if (alignedDim != -1 && storeAligned) {
+    if (alignedDim != -1 && alignedList != null) {
       for (TVList tv : alignedList) {
         toBeReleased += getDataTypeSize(srcData.getDataType()) * alignedDim;
         TVListAllocator.getInstance().release(tv);

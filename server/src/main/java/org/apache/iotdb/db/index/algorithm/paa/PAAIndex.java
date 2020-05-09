@@ -6,14 +6,15 @@ import static org.apache.iotdb.db.index.common.IndexConstant.THRESHOLD;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import org.apache.iotdb.db.index.algorithm.MBRIndex;
 import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexManagerException;
 import org.apache.iotdb.db.index.common.IndexQueryException;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.common.UnsupportedIndexQueryException;
@@ -35,12 +36,15 @@ public class PAAIndex extends MBRIndex {
 
   private PAATimeFixedPreprocessor paaTimeFixedPreprocessor;
 
+  // Only for query
+  private Map<Integer, Identifier> identifierMap = new HashMap<>();
+
   public PAAIndex(String path, IndexInfo indexInfo) {
     super(path, indexInfo, true);
   }
 
   @Override
-  public void initPreprocessor(ByteBuffer previous) {
+  public void initPreprocessor(ByteBuffer previous, boolean inQueryMode) {
     if (this.indexPreprocessor != null) {
       this.indexPreprocessor.clear();
     }
@@ -111,38 +115,63 @@ public class PAAIndex extends MBRIndex {
 
   @Override
   protected BiConsumer<Integer, ByteBuffer> getDeserializeFunc() {
-    throw new UnsupportedOperationException();
+    return (idx, input) -> {
+      Identifier identifier = Identifier.deserialize(input);
+      identifierMap.put(idx, identifier);
+    };
   }
 
   @Override
   protected List<Identifier> getQueryCandidates(List<Integer> candidateIds) {
+    List<Identifier> res = new ArrayList<>(candidateIds.size());
+    candidateIds.forEach(i->res.add(identifierMap.get(i)));
+    this.identifierMap.clear();
+    return res;
+  }
 
-    throw new UnsupportedOperationException();
+
+  /**
+   * PAA has lower bounding property.
+   */
+  @Override
+  protected double calcLowerBoundThreshold(double queryThreshold) {
+    return queryThreshold;
   }
 
   @Override
   protected void calcAndFillQueryFeature() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  protected double calcLowerBoundThreshold(double queryThreshold) {
-    return 0;
+    Arrays.fill(currentCorners, 0);
+    Arrays.fill(currentRanges, 0);
+    int intervalWidth = windowRange / featureDim;
+    for (int i = 0; i < featureDim; i++) {
+      for (int j = 0; j < intervalWidth; j++) {
+        currentCorners[i] += patterns[i * intervalWidth + j];
+      }
+      currentCorners[i] /= intervalWidth;
+    }
   }
 
   @Override
   public int postProcessNext(List<IndexFuncResult> funcResult) throws IndexQueryException {
-    TVList aligned = (TVList) indexPreprocessor.getCurrent_L2_AlignedSequence();
+    Identifier identifier =  indexPreprocessor.getCurrent_L1_Identifier();
+    TVList srcList = indexPreprocessor
+        .get_L0_SourceData(identifier.getStartTime(), identifier.getEndTime());
+    TVList aligned = IndexUtils.alignUniform(srcList, patterns.length);
     double ed = IndexFuncFactory.calcEuclidean(aligned, patterns);
     System.out.println(String.format(
-        "ELB Process: ed:%.3f: %s", ed, IndexUtils.tvListToStr(aligned)));
+        "PAA Process: ed:%.3f: %s", ed, IndexUtils.tvListToStr(aligned)));
     int reminding = funcResult.size();
     if (ed <= threshold) {
       for (IndexFuncResult result : funcResult) {
-        IndexFuncFactory.basicSimilarityCalc(result, indexPreprocessor, patterns);
+        if (result.getIndexFunc() == IndexFunc.ED) {
+          result.addScalar(ed);
+        } else {
+          IndexFuncFactory.basicSimilarityCalc(result, indexPreprocessor, patterns);
+        }
       }
     }
     TVListAllocator.getInstance().release(aligned);
+
     return reminding;
   }
 }

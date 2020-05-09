@@ -1,4 +1,4 @@
-package org.apache.iotdb.db.index.algorithm;
+package org.apache.iotdb.db.index.algorithm.paa;
 
 import static org.apache.iotdb.db.index.IndexTestUtils.funcForm;
 import static org.apache.iotdb.db.index.common.IndexConstant.DISTANCE;
@@ -24,7 +24,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class ELBIndexReadIT {
+public class PAAIndexReadIT {
 
   private static final String insertPattern = "INSERT INTO %s(timestamp, %s) VALUES (%d, %d)";
   private static final String storageGroup = "root.v";
@@ -54,13 +54,10 @@ public class ELBIndexReadIT {
           .execute(String.format("CREATE TIMESERIES %s WITH DATATYPE=INT32,ENCODING=PLAIN", p1));
       statement
           .execute(String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", p2));
-//      statement
-//          .execute(String.format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d",
-//              p1, IndexType.NO_INDEX, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 5));
+
       statement.execute(String
-          .format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d, %s=%s, %s=%s",
-              p1, IndexType.ELB, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 5, DISTANCE, L_INFINITY,
-              ELB_TYPE, ELB_TYPE_ELE));
+          .format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d",
+              p1, IndexType.PAA, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 5));
 
 
       long i;
@@ -160,7 +157,7 @@ public class ELBIndexReadIT {
       pattern.append("\'");
       double threshold = 5;
       String querySQL = String.format(
-          "SELECT INDEX sim_st(%s),sim_et(%s),ed(%s) FROM %s WHERE time >= 50 WITH INDEX=ELB, threshold=%s, pattern=%s",
+          "SELECT INDEX sim_st(%s),sim_et(%s),ed(%s) FROM %s WHERE time >= 50 WITH INDEX=PAA, threshold=%s, pattern=%s",
           p1s, p1s, p1s, device, threshold, pattern);
       boolean hasIndex = statement.execute(querySQL);
 
@@ -203,7 +200,7 @@ public class ELBIndexReadIT {
       pattern.append("\'");
       double threshold = 5;
       boolean hasIndex = statement.execute(String.format(
-          "SELECT INDEX sim_st(%s),sim_et(%s),ed(%s) FROM %s WITH INDEX=ELB, threshold=%s, pattern=%s",
+          "SELECT INDEX sim_st(%s),sim_et(%s),ed(%s) FROM %s WITH INDEX=PAA, threshold=%s, pattern=%s",
           p1s, p1s, p1s, device, threshold, pattern));
 
       Assert.assertTrue(hasIndex);

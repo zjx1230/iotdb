@@ -42,7 +42,7 @@ public class NoIndex extends IoTDBIndex {
 
 
   @Override
-  public void initPreprocessor(ByteBuffer previous) {
+  public void initPreprocessor(ByteBuffer previous, boolean inQueryMode) {
     if (this.indexPreprocessor != null) {
       this.indexPreprocessor.clear();
     }

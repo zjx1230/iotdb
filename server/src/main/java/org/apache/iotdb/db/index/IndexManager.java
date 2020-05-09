@@ -46,6 +46,7 @@ import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.db.writelog.node.ExclusiveWriteLogNode;
 import org.apache.iotdb.db.writelog.node.WriteLogNode;
 import org.apache.iotdb.tsfile.read.common.Path;
+import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,14 +62,15 @@ public class IndexManager implements IService {
   private IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
 
 
-  public IndexQueryReader getQuerySource(Path seriesPath, IndexType indexType)
+  public IndexQueryReader getQuerySource(Path seriesPath, IndexType indexType,
+      Filter timeFilter)
       throws IOException, MetadataException {
     String series = seriesPath.getFullPath();
     String storageGroupName = MManager.getInstance().getStorageGroupName(series);
     IndexStorageGroupProcessor sgProcessor = createStorageGroupProcessor(storageGroupName);
     List<IndexChunkMeta> seq = sgProcessor.getIndexMetadata(true, series, indexType);
     List<IndexChunkMeta> unseq = sgProcessor.getIndexMetadata(false, series, indexType);
-    return new IndexQueryReader(seriesPath, indexType, seq, unseq);
+    return new IndexQueryReader(seriesPath, indexType, timeFilter, seq, unseq);
   }
 
   @TestOnly

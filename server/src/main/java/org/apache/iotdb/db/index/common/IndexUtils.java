@@ -1,6 +1,7 @@
 package org.apache.iotdb.db.index.common;
 
 import java.io.IOException;
+import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
@@ -18,7 +19,7 @@ public class IndexUtils {
     return getDataTypeSize(srcData.getTsDataType());
   }
 
-  public static int getDataTypeSize(TSDataType dataType){
+  public static int getDataTypeSize(TSDataType dataType) {
     switch (dataType) {
       case INT32:
       case FLOAT:
@@ -79,7 +80,7 @@ public class IndexUtils {
     return maxValue - minValue;
   }
 
-  public static double[] parseNumericPattern(String patternStr){
+  public static double[] parseNumericPattern(String patternStr) {
     String[] ns = patternStr.split(",");
     double[] res = new double[ns.length];
     for (int i = 0; i < ns.length; i++) {
@@ -91,10 +92,10 @@ public class IndexUtils {
   public static String removeQuotation(String v) {
     int start = 0;
     int end = v.length();
-    if(v.startsWith("\'") || v.startsWith("\"")){
+    if (v.startsWith("\'") || v.startsWith("\"")) {
       start = 1;
     }
-    if(v.endsWith("\'") || v.endsWith("\"")){
+    if (v.endsWith("\'") || v.endsWith("\"")) {
       end = v.length() - 1;
     }
     return v.substring(start, end);
@@ -125,5 +126,85 @@ public class IndexUtils {
     }
     sb.append("}");
     return sb.toString();
+  }
+
+
+  /**
+   * Align {@code src} into equally spaced sequences of {@code alignedSize}
+   *
+   * @param src to be transformed
+   * @param alignedSize target size
+   * @return a list with the same length as target
+   */
+  public static TVList alignUniform(TVList src, int alignedSize) {
+    TVList res = TVListAllocator.getInstance().allocate(src.getDataType());
+    if (src.size() == 0) {
+      return res;
+    }
+    long interval = (src.getLastTime() - src.getTime(0)) / (alignedSize - 1);
+
+    int idx = 0;
+    long newDelta;
+    for (int i = 0; i < alignedSize; i++) {
+      long timestamp = src.getTime(0) + i * interval;
+      long minDelta = Math.abs(src.getTime(idx) - timestamp);
+      while (idx < src.size() - 1
+          && (newDelta = Math.abs(src.getTime(idx + 1) - timestamp)) < minDelta) {
+        minDelta = newDelta;
+        idx++;
+      }
+      putAnyValue(src, idx, res, timestamp);
+    }
+    return res;
+  }
+
+  public static void putAnyValue(TVList src, int srcIdx, TVList target) {
+    assert src.getDataType() == target.getDataType();
+    assert srcIdx < src.size();
+    long time = src.getTime(srcIdx);
+    switch (src.getDataType()) {
+      case BOOLEAN:
+        target.putBoolean(time, src.getBoolean(srcIdx));
+        break;
+      case INT32:
+        target.putInt(time, src.getInt(srcIdx));
+        break;
+      case INT64:
+        target.putLong(time, src.getLong(srcIdx));
+        break;
+      case FLOAT:
+        target.putFloat(time, src.getFloat(srcIdx));
+        break;
+      case DOUBLE:
+        target.putDouble(time, src.getDouble(srcIdx));
+        break;
+      case TEXT:
+        target.putBinary(time, src.getBinary(srcIdx));
+        break;
+    }
+  }
+
+  public static void putAnyValue(TVList src, int srcIdx, TVList target, long time) {
+    assert src.getDataType() == target.getDataType() && srcIdx < src.size();
+    switch (src.getDataType()) {
+      case BOOLEAN:
+        target.putBoolean(time, src.getBoolean(srcIdx));
+        break;
+      case INT32:
+        target.putInt(time, src.getInt(srcIdx));
+        break;
+      case INT64:
+        target.putLong(time, src.getLong(srcIdx));
+        break;
+      case FLOAT:
+        target.putFloat(time, src.getFloat(srcIdx));
+        break;
+      case DOUBLE:
+        target.putDouble(time, src.getDouble(srcIdx));
+        break;
+      case TEXT:
+        target.putBinary(time, src.getBinary(srcIdx));
+        break;
+    }
   }
 }

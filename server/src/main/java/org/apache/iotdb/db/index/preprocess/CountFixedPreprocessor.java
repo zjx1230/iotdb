@@ -243,11 +243,11 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
     chunkStartTime = -1;
     chunkEndTime = -1;
 
-    if (storeIdentifier) {
+    if (identifierList != null) {
       toBeReleased += identifierList.size() * Long.BYTES;
       identifierList.clearAndRelease();
     }
-    if (storeAligned) {
+    if (alignedList != null) {
       toBeReleased += alignedList.size() * Integer.BYTES;
       alignedList.clearAndRelease();
     }

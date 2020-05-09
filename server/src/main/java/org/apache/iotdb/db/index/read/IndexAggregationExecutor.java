@@ -2,7 +2,6 @@ package org.apache.iotdb.db.index.read;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,13 +20,11 @@ import org.apache.iotdb.db.query.aggregation.AggregateResult;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.QueryResourceManager;
 import org.apache.iotdb.db.query.dataset.ListDataSet;
-import org.apache.iotdb.db.query.dataset.SingleDataSet;
 import org.apache.iotdb.db.query.executor.AggregationExecutor;
 import org.apache.iotdb.db.query.reader.series.SeriesAggregateReader;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.statistics.Statistics;
 import org.apache.iotdb.tsfile.read.common.BatchData;
-import org.apache.iotdb.tsfile.read.common.Field;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.read.common.RowRecord;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
@@ -135,7 +132,7 @@ public class IndexAggregationExecutor extends AggregationExecutor {
     QueryDataSource queryDataSource = QueryResourceManager.getInstance()
         .getQueryDataSource(seriesPath, context, timeFilter);
     IndexQueryReader indexQueryReader = IndexManager.getInstance()
-        .getQuerySource(seriesPath, indexType);
+        .getQuerySource(seriesPath, indexType, timeFilter);
     indexQueryReader.initQueryCondition(queryProps, indexFuncResults);
     // update filter by TTL
     timeFilter = queryDataSource.updateFilterUsingTTL(timeFilter);
@@ -209,7 +206,7 @@ public class IndexAggregationExecutor extends AggregationExecutor {
       }
       BatchData nextOverlappedPageData = seriesReader.nextPage();
       remainingToCalculate = indexQueryReader
-          .appendDataAndPostProcess(nextOverlappedPageData, aggregateResultList, timeFilter);
+          .appendDataAndPostProcess(nextOverlappedPageData, aggregateResultList);
     }
     return remainingToCalculate;
   }

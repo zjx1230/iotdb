@@ -107,7 +107,7 @@ public abstract class IoTDBIndex {
    * Note that, the implementation should call {@code deserializePrevious(ByteBuffer byteBuffer)}
    * after initialize the preprocessor.
    */
-  public abstract void initPreprocessor(ByteBuffer previous);
+  public abstract void initPreprocessor(ByteBuffer previous, boolean inQueryMode);
 
   /**
    * Given a tvList with {@code tvListStartIdx}, we want to know whether to build index for tvList

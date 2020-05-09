@@ -62,7 +62,7 @@ public class ELBIndex extends MBRIndex {
   private Map<Integer, Identifier> identifierMap = new HashMap<>();
 
   public ELBIndex(String path, IndexInfo indexInfo) {
-    super(path, indexInfo, true);
+    super(path, indexInfo, false);
     initELBParam();
   }
 
@@ -81,12 +81,13 @@ public class ELBIndex extends MBRIndex {
   }
 
   @Override
-  public void initPreprocessor(ByteBuffer previous) {
+  public void initPreprocessor(ByteBuffer previous, boolean inQueryMode) {
     if (this.indexPreprocessor != null) {
       this.indexPreprocessor.clear();
     }
     this.elbTimeFixedPreprocessor = new ELBCountFixedPreprocessor(tsDataType, windowRange,
         slideStep, featureDim, distance, calcParam, elbType, true, false, false);
+    elbTimeFixedPreprocessor.setInQueryMode(inQueryMode);
     this.indexPreprocessor = elbTimeFixedPreprocessor;
     indexPreprocessor.deserializePrevious(previous);
   }
@@ -161,8 +162,8 @@ public class ELBIndex extends MBRIndex {
 
   @Override
   protected List<Identifier> getQueryCandidates(List<Integer> candidateIds) {
-    List<Identifier> res = new ArrayList<>(identifierMap.size());
-    identifierMap.forEach(res::add);
+    List<Identifier> res = new ArrayList<>(candidateIds.size());
+    candidateIds.forEach(i->res.add(identifierMap.get(i)));
     this.identifierMap.clear();
     return res;
   }
@@ -177,6 +178,7 @@ public class ELBIndex extends MBRIndex {
    */
   @Override
   protected void calcAndFillQueryFeature() {
+    Arrays.fill(currentCorners, 0);
     Arrays.fill(currentRanges, 0);
     int intervalWidth = windowRange / featureDim;
     for (int i = 0; i < featureDim; i++) {
@@ -191,8 +193,8 @@ public class ELBIndex extends MBRIndex {
   public int postProcessNext(List<IndexFuncResult> funcResult) throws IndexQueryException {
     TVList aligned = (TVList) indexPreprocessor.getCurrent_L2_AlignedSequence();
     double ed = IndexFuncFactory.calcEuclidean(aligned, patterns);
-    System.out.println(String.format(
-        "ELB Process: ed:%.3f: %s", ed, IndexUtils.tvListToStr(aligned)));
+//    System.out.println(String.format(
+//        "ELB Process: ed:%.3f: %s", ed, IndexUtils.tvListToStr(aligned)));
     int reminding = funcResult.size();
     if (ed <= threshold) {
       for (IndexFuncResult result : funcResult) {

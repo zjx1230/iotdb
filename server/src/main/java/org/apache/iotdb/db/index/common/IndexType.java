@@ -124,10 +124,9 @@ public enum IndexType {
 
   public static IoTDBIndex constructIndex(String path, IndexType indexType, IndexInfo indexInfo,
       ByteBuffer previous) {
-//    System.out.println(String.format("============= ininininininin constructIndex: %s-%s: %s", path, indexType, (previous == null) ? "null" : previous.toString()));
     indexInfo.setProps(uppercaseProps(indexInfo.getProps()));
     IoTDBIndex index = newIndexByType(path, indexType, indexInfo);
-    index.initPreprocessor(previous);
+    index.initPreprocessor(previous, false);
     return index;
   }
 
