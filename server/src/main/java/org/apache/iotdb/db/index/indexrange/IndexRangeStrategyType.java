@@ -18,11 +18,9 @@
  */
 package org.apache.iotdb.db.index.indexrange;
 
-import org.apache.iotdb.tsfile.exception.NotImplementedException;
-
 public enum IndexRangeStrategyType {
 
-  NAIVE;
+  DEFAULT, NAIVE, UNIFORM;
 
   /**
    * judge the index type.
@@ -32,10 +30,12 @@ public enum IndexRangeStrategyType {
    */
   public static IndexRangeStrategyType deserialize(short i) {
     switch (i) {
-      case 0:
+      case 1:
         return NAIVE;
+      case 2:
+        return UNIFORM;
       default:
-        throw new NotImplementedException("Given strategy is not implemented");
+        return DEFAULT;
     }
   }
 
@@ -51,27 +51,22 @@ public enum IndexRangeStrategyType {
   public short serialize() {
     switch (this) {
       case NAIVE:
-        return 0;
+        return 1;
+      case UNIFORM:
+        return 2;
       default:
-        throw new NotImplementedException("Given strategy is not implemented");
+        return 0;
     }
   }
 
-  public static IndexRangeStrategyType getIndexStrategyType(String indexStrategyType) {
-    String normalized = indexStrategyType.toUpperCase();
-    switch (normalized) {
-      case "NAIVE":
-        return NAIVE;
-      default:
-        throw new NotImplementedException("unsupported index type:" + indexStrategyType);
-    }
-  }
 
   public static IndexRangeStrategy getIndexStrategy(String indexTypeString) {
     String normalized = indexTypeString.toUpperCase();
     switch (normalized) {
       case "NAIVE":
         return new NaiveStrategy();
+      case "UNIFORM":
+        return new UniformStrategy();
       default:
         return new DefaultStrategy();
     }
