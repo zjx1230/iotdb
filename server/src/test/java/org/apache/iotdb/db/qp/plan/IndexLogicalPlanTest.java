@@ -71,8 +71,8 @@ public class IndexLogicalPlanTest {
     Assert.assertEquals(IndexType.PAA, createOperator.getIndexType());
     Assert.assertEquals(50, createOperator.getTime());
     Assert.assertEquals(2, createOperator.getProps().size());
-    Assert.assertEquals("100", createOperator.getProps().get("window_length"));
-    Assert.assertEquals("0.5", createOperator.getProps().get("merge_threshold"));
+    Assert.assertEquals("100", createOperator.getProps().get("WINDOW_LENGTH"));
+    Assert.assertEquals("0.5", createOperator.getProps().get("MERGE_THRESHOLD"));
 
   }
 
@@ -109,8 +109,8 @@ public class IndexLogicalPlanTest {
 
     Assert.assertEquals(IndexType.PAA, queryOperator.getIndexType());
     Assert.assertEquals(2, queryOperator.getProps().size());
-    Assert.assertEquals("5", queryOperator.getProps().get("threshold"));
-    Assert.assertEquals("dtw", queryOperator.getProps().get("distance"));
+    Assert.assertEquals("5", queryOperator.getProps().get("threshold".toUpperCase()));
+    Assert.assertEquals("dtw".toUpperCase(), queryOperator.getProps().get("distance".toUpperCase()));
   }
 
 
