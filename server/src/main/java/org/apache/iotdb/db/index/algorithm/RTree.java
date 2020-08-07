@@ -232,7 +232,7 @@ public class RTree<T> {
       }
     } else {
       for (Node c : n.children) {
-        if (isOverlap(coords, dimensions, c.coords, c.dimensions)) {
+        if (mbrED(coords, dimensions, c.coords, c.dimensions) <= threshold) {
           searchWithThreshold(coords, dimensions, c, results, threshold);
         }
       }
