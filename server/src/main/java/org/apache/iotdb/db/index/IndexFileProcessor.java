@@ -233,8 +233,10 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
       pathMap.clear();
     });
     allPathsIndexMap.clear();
-    flushTaskQueue.clear();
-    flushTaskQueue = null;
+    if (flushTaskQueue != null){
+      flushTaskQueue.clear();
+      flushTaskQueue = null;
+    }
   }
 
   private Map<String, Map<IndexType, ByteBuffer>> serializeForNextOpen() throws IOException {

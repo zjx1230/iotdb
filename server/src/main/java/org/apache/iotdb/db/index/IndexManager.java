@@ -21,12 +21,17 @@ package org.apache.iotdb.db.index;
 import static org.apache.iotdb.db.conf.IoTDBConstant.SEQUENCE_FLODER_NAME;
 import static org.apache.iotdb.db.conf.IoTDBConstant.UNSEQUENCE_FLODER_NAME;
 import static org.apache.iotdb.db.index.common.IndexConstant.META_DIR_NAME;
+import static org.apache.iotdb.db.index.common.IndexConstant.STORAGE_GROUP_INDEXED_SUFFIX;
+import static org.apache.iotdb.db.index.common.IndexConstant.STORAGE_GROUP_INDEXING_SUFFIX;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.NoSuchFileException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
@@ -151,6 +156,7 @@ public class IndexManager implements IService {
     IndexBuildTaskPoolManager.getInstance().start();
     try {
       JMXService.registerMBean(this, ServiceType.INDEX_SERVICE.getJmxName());
+      cleanIndexData();
     } catch (Exception e) {
       throw new StartupException(this.getID().getName(), e.getMessage());
     }
@@ -209,24 +215,38 @@ public class IndexManager implements IService {
    * When IoTDB restarts, check all index storage groups and delete index data and sg_metadata files
    * for deleted tsfile storage groups.
    */
-  public synchronized void refreshIndexData() {
+  public synchronized void cleanIndexData() throws IOException {
     String indexDataSeqDir =
         DirectoryManager.getInstance().getIndexRootFolder() + File.separator + SEQUENCE_FLODER_NAME;
     String indexDataUnSeqDir =
         DirectoryManager.getInstance().getIndexRootFolder() + File.separator
             + UNSEQUENCE_FLODER_NAME;
-//
-//    if (fsFactory.getFile(indexParentDir).mkdirs()) {
-//      logger.info("create the index folder {}", indexParentDir);
-//    }
-//    String fullFilePath = indexParentDir + File.separator + getIndexFileName(tsFileName);
-//
-//    File indexMetaDir = fsFactory.getFile(this.metaDirPath);
-//    File indexRootDir = fsFactory.getFile(DirectoryManager.getInstance().getIndexRootFolder());
-//
-//    Map<String, Map<IndexType, IndexInfo>> indexInfoMap = MManager
-//        .getInstance().getAllIndexInfosInStorageGroup(storageGroupName);
+    //collection all storage group names appearing in the index root dir.
+    List<String> storageGroupList = new ArrayList<>();
+    for (File sgDir : Objects.requireNonNull(fsFactory.getFile(indexDataSeqDir).listFiles())) {
+      storageGroupList.add(sgDir.getName());
+    }
+    for (String storageGroupName : storageGroupList) {
+      Map<String, Map<IndexType, IndexInfo>> indexInfoMap = MManager
+          .getInstance().getAllIndexInfosInStorageGroup(storageGroupName);
+      if (indexInfoMap.isEmpty()) {
+        //delete seq files
+        try {
+          FileUtils.deleteDirectory(
+              fsFactory.getFile(indexDataSeqDir + File.separator + storageGroupName));
+          //delete unseq files
+          FileUtils.deleteDirectory(
+              fsFactory.getFile(indexDataUnSeqDir + File.separator + storageGroupName));
+        } catch (NoSuchFileException ignored) {
+        }
 
+        //delete metadata
+        String indexSGMetaFileName = metaDirPath + File.separator + storageGroupName;
+        fsFactory.getFile(indexSGMetaFileName + STORAGE_GROUP_INDEXING_SUFFIX).delete();
+        fsFactory.getFile(indexSGMetaFileName + STORAGE_GROUP_INDEXED_SUFFIX).delete();
+      }
+
+    }
   }
 
   private static class InstanceHolder {
