@@ -20,28 +20,20 @@ package org.apache.iotdb.db.index;
 import static org.apache.iotdb.db.index.common.IndexConstant.DISTANCE;
 import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE;
 import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE_ELE;
-import static org.apache.iotdb.db.index.common.IndexConstant.INDEXED_SUFFIX;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_SLIDE_STEP;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
 import static org.apache.iotdb.db.index.common.IndexConstant.L_INFINITY;
 import static org.junit.Assert.fail;
 
-import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 import java.util.List;
-import org.apache.iotdb.db.conf.directories.DirectoryManager;
-import org.apache.iotdb.db.index.algorithm.paa.PAATimeFixedPreprocessor;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
-import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
-import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.jdbc.Config;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -173,14 +165,14 @@ public class IndexPreprocesorOverlapTest {
       //reload
       System.out.println("closed!");
       List<IndexChunkMeta> p1ELBChunkMetas = indexManager
-          .getIndexMetadata(storageGroup, true, p1, IndexType.ELB);
+          .getIndexSGMetadata(storageGroup, true, p1, IndexType.ELB);
       StringBuilder p1ELB = new StringBuilder();
       p1ELBChunkMetas.forEach(p -> p1ELB.append(p.toStringStable()));
       System.out.println(p1ELB);
 //      Assert.assertEquals(gtp1ELB, p1ELB.toString());
 
       List<IndexChunkMeta> p1PAAChunkMetas = indexManager
-          .getIndexMetadata(storageGroup, true, p1, IndexType.PAA);
+          .getIndexSGMetadata(storageGroup, true, p1, IndexType.PAA);
       StringBuilder p1PAA = new StringBuilder("================");
       p1PAAChunkMetas.forEach(p -> p1PAA.append(p.toStringStable()));
       System.out.println(p1PAA);

@@ -17,6 +17,8 @@
  */
 package org.apache.iotdb.db.index.algorithm;
 
+import static org.junit.Assert.fail;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -24,7 +26,8 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.function.BiConsumer;
-import org.apache.iotdb.db.index.algorithm.RTree.SeedPicker;
+import org.apache.iotdb.db.index.algorithm.RTree.RNode;
+import org.apache.iotdb.db.index.algorithm.RTree.SeedsPicker;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -33,40 +36,40 @@ public class RTreeTest {
 
   @Test
   public void testRTreeToString() {
-    String gt = "maxEntries:4,minEntries:2,numDims:2,seedPicker:LINEAR\n"
-        + "Node{coords=[0.0, 0.0], dimensions=[19.0, 17.0], leaf=false}\n"
-        + "--Node{coords=[0.0, 0.0], dimensions=[19.0, 17.0], leaf=false}\n"
-        + "----Node{coords=[15.0, 13.0], dimensions=[4.0, 1.0], leaf=true}\n"
-        + "------Entry: 4,Node{coords=[19.0, 14.0], dimensions=[0.0, 0.0], leaf=true}\n"
-        + "------Entry: 2,Node{coords=[15.0, 13.0], dimensions=[0.0, 0.0], leaf=true}\n"
-        + "----Node{coords=[2.0, 2.0], dimensions=[15.0, 15.0], leaf=true}\n"
-        + "------Entry: 5,Node{coords=[17.0, 17.0], dimensions=[0.0, 0.0], leaf=true}\n"
-        + "------Entry: 15,Node{coords=[5.0, 5.0], dimensions=[0.0, 0.0], leaf=true}\n"
-        + "------Entry: 17,Node{coords=[2.0, 2.0], dimensions=[0.0, 0.0], leaf=true}\n"
-        + "------Entry: 18,Node{coords=[5.0, 13.0], dimensions=[0.0, 0.0], leaf=true}\n"
-        + "----Node{coords=[0.0, 0.0], dimensions=[12.0, 8.0], leaf=true}\n"
-        + "------Entry: 3,Node{coords=[11.0, 1.0], dimensions=[0.0, 0.0], leaf=true}\n"
-        + "------Entry: 0,Node{coords=[0.0, 8.0], dimensions=[0.0, 0.0], leaf=true}\n"
-        + "------Entry: 1,Node{coords=[9.0, 7.0], dimensions=[0.0, 0.0], leaf=true}\n"
-        + "------Entry: 12,Node{coords=[12.0, 0.0], dimensions=[0.0, 0.0], leaf=true}\n"
-        + "----Node{coords=[3.0, 2.0], dimensions=[10.0, 1.0], leaf=true}\n"
-        + "------Entry: 6,Node{coords=[13.0, 2.0], dimensions=[0.0, 0.0], leaf=true}\n"
-        + "------Entry: 13,Node{coords=[3.0, 2.0], dimensions=[0.0, 0.0], leaf=true}\n"
-        + "------Entry: 14,Node{coords=[12.0, 3.0], dimensions=[0.0, 0.0], leaf=true}\n"
-        + "--Node{coords=[1.0, 0.0], dimensions=[17.0, 15.0], leaf=false}\n"
-        + "----Node{coords=[4.0, 7.0], dimensions=[0.0, 8.0], leaf=true}\n"
-        + "------Entry: 8,Node{coords=[4.0, 15.0], dimensions=[0.0, 0.0], leaf=true}\n"
-        + "------Entry: 11,Node{coords=[4.0, 7.0], dimensions=[0.0, 0.0], leaf=true}\n"
-        + "----Node{coords=[17.0, 7.0], dimensions=[1.0, 8.0], leaf=true}\n"
-        + "------Entry: 19,Node{coords=[18.0, 15.0], dimensions=[0.0, 0.0], leaf=true}\n"
-        + "------Entry: 16,Node{coords=[17.0, 7.0], dimensions=[0.0, 0.0], leaf=true}\n"
-        + "----Node{coords=[1.0, 0.0], dimensions=[14.0, 8.0], leaf=true}\n"
-        + "------Entry: 9,Node{coords=[1.0, 0.0], dimensions=[0.0, 0.0], leaf=true}\n"
-        + "------Entry: 7,Node{coords=[15.0, 4.0], dimensions=[0.0, 0.0], leaf=true}\n"
-        + "------Entry: 10,Node{coords=[3.0, 8.0], dimensions=[0.0, 0.0], leaf=true}\n";
+    String gt = "nMax:4,nMin:2,dim:2,seedsPicker:LINEAR\n"
+        + "RNode{LB=[0.0, 0.0], UB=[19.0, 17.0], leaf=false}\n"
+        + "--RNode{LB=[0.0, 8.0], UB=[19.0, 17.0], leaf=false}\n"
+        + "----RNode{LB=[15.0, 13.0], UB=[19.0, 17.0], leaf=true}\n"
+        + "------Item: 4,RNode{LB=[19.0, 14.0], UB=[19.0, 14.0], leaf=true}\n"
+        + "------Item: 2,RNode{LB=[15.0, 13.0], UB=[15.0, 13.0], leaf=true}\n"
+        + "------Item: 5,RNode{LB=[17.0, 17.0], UB=[17.0, 17.0], leaf=true}\n"
+        + "------Item: 19,RNode{LB=[18.0, 15.0], UB=[18.0, 15.0], leaf=true}\n"
+        + "----RNode{LB=[0.0, 8.0], UB=[3.0, 8.0], leaf=true}\n"
+        + "------Item: 0,RNode{LB=[0.0, 8.0], UB=[0.0, 8.0], leaf=true}\n"
+        + "------Item: 10,RNode{LB=[3.0, 8.0], UB=[3.0, 8.0], leaf=true}\n"
+        + "----RNode{LB=[4.0, 13.0], UB=[5.0, 15.0], leaf=true}\n"
+        + "------Item: 8,RNode{LB=[4.0, 15.0], UB=[4.0, 15.0], leaf=true}\n"
+        + "------Item: 18,RNode{LB=[5.0, 13.0], UB=[5.0, 13.0], leaf=true}\n"
+        + "--RNode{LB=[1.0, 0.0], UB=[17.0, 7.0], leaf=false}\n"
+        + "----RNode{LB=[11.0, 0.0], UB=[12.0, 1.0], leaf=true}\n"
+        + "------Item: 12,RNode{LB=[12.0, 0.0], UB=[12.0, 0.0], leaf=true}\n"
+        + "------Item: 3,RNode{LB=[11.0, 1.0], UB=[11.0, 1.0], leaf=true}\n"
+        + "----RNode{LB=[12.0, 2.0], UB=[15.0, 4.0], leaf=true}\n"
+        + "------Item: 7,RNode{LB=[15.0, 4.0], UB=[15.0, 4.0], leaf=true}\n"
+        + "------Item: 6,RNode{LB=[13.0, 2.0], UB=[13.0, 2.0], leaf=true}\n"
+        + "------Item: 14,RNode{LB=[12.0, 3.0], UB=[12.0, 3.0], leaf=true}\n"
+        + "----RNode{LB=[4.0, 5.0], UB=[17.0, 7.0], leaf=true}\n"
+        + "------Item: 1,RNode{LB=[9.0, 7.0], UB=[9.0, 7.0], leaf=true}\n"
+        + "------Item: 11,RNode{LB=[4.0, 7.0], UB=[4.0, 7.0], leaf=true}\n"
+        + "------Item: 15,RNode{LB=[5.0, 5.0], UB=[5.0, 5.0], leaf=true}\n"
+        + "------Item: 16,RNode{LB=[17.0, 7.0], UB=[17.0, 7.0], leaf=true}\n"
+        + "----RNode{LB=[1.0, 0.0], UB=[3.0, 2.0], leaf=true}\n"
+        + "------Item: 9,RNode{LB=[1.0, 0.0], UB=[1.0, 0.0], leaf=true}\n"
+        + "------Item: 13,RNode{LB=[3.0, 2.0], UB=[3.0, 2.0], leaf=true}\n"
+        + "------Item: 17,RNode{LB=[2.0, 2.0], UB=[2.0, 2.0], leaf=true}\n";
     int dim = 2;
     Random random = new Random(0);
-    RTree<Integer> rTree = new RTree<>(4, 2, 2, SeedPicker.LINEAR);
+    RTree<Integer> rTree = new RTree<>(4, 2, 2, SeedsPicker.LINEAR);
     for (int i = 0; i < 20; i++) {
       float[] in = new float[2];
       for (int j = 0; j < dim; j++) {
@@ -74,8 +77,10 @@ public class RTreeTest {
       }
       System.out.println(String.format("add: %s, value: %d", Arrays.toString(in), i));
       rTree.insert(in, i);
+      if (!checkRTree(rTree)) {
+        fail();
+      }
     }
-//    System.out.println(inputData);
     System.out.println(rTree);
     Assert.assertEquals(gt, rTree.toString());
   }
@@ -84,7 +89,7 @@ public class RTreeTest {
   public void testRTreeSerialization() throws IOException {
     int dim = 2;
     Random random = new Random(0);
-    RTree<Integer> rTree = new RTree<>(4, 2, 2, SeedPicker.LINEAR);
+    RTree<Integer> rTree = new RTree<>(4, 2, 2, SeedsPicker.LINEAR);
     int dataSize = 20;
     int[] beforeData = new int[dataSize];
     for (int i = 0; i < 20; i++) {
@@ -123,4 +128,72 @@ public class RTreeTest {
 
   }
 
+  /**
+   * check whether the tree satisfies constraints:
+   * <p><ul>
+   * <li>Root node has no parent, the number of children is less than nMaxPerNode.</li>
+   * <li>The number of children in other inner nodes is between nMinPerNode and nMaxPerNode.</li>
+   * <li>The number of items in a leaf node is between 1 and nMaxPerNode.</li>
+   * <li>The upper/lower bound of a node should be tight.</li>
+   * <li>If Node_A is Node_B's parent, Node_B.parent should point to Node_A</li>
+   * </ul>
+   * </p>
+   */
+  public boolean checkRTree(RTree rTree) {
+    return checkNode(rTree, rTree.root);
+  }
+
+  private boolean checkNode(RTree rTree, RNode node) {
+    //check number of children
+    int nChildren = node.children.size();
+    if (node == rTree.root) {
+      if (nChildren > rTree.nMaxPerNode) {
+        System.out.println("Invalid: root has too many children: " + nChildren);
+        return false;
+      }
+    } else if (node.isLeaf) {
+      if (nChildren > rTree.nMaxPerNode) {
+        System.out.println("Invalid: leaf has too many children: " + nChildren);
+        return false;
+      }
+    } else {
+      if (nChildren > rTree.nMaxPerNode || nChildren < rTree.nMinPerNode) {
+        System.out.println("Invalid: root has invalid children: " + nChildren);
+        return false;
+      }
+    }
+    //check bound tightness
+    if (nChildren > 0) {
+      for (int i = 0; i < rTree.dim; i++) {
+        float minLb = Float.MAX_VALUE;
+        float maxUb = -Float.MAX_VALUE;
+        for (RNode child : node.children) {
+          if (child.lbs[i] < minLb) {
+            minLb = child.lbs[i];
+          }
+          if (child.ubs[i] > maxUb) {
+            maxUb = child.ubs[i];
+          }
+        }
+        if (node.lbs[i] != minLb || node.ubs[i] != maxUb) {
+          System.out.println("Invalid: node bound is not tight. ");
+          return false;
+        }
+      }
+    }
+    //check parent relationship
+    for (RNode child : node.children) {
+      if (child.parent != node) {
+        System.out.println("Invalid: parent-child relationship");
+        return false;
+      }
+    }
+    //check its children recursively
+    for (RNode child : node.children) {
+      if (!checkNode(rTree, child)) {
+        return false;
+      }
+    }
+    return true;
+  }
 }

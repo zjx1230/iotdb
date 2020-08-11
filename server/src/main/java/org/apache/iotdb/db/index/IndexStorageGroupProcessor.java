@@ -15,18 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.iotdb.db.index.read;
+package org.apache.iotdb.db.index;
 
 import static org.apache.iotdb.db.conf.IoTDBConstant.SEQUENCE_FLODER_NAME;
 import static org.apache.iotdb.db.conf.IoTDBConstant.UNSEQUENCE_FLODER_NAME;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEXED_SUFFIX;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEXING_SUFFIX;
-import static org.apache.iotdb.db.index.common.IndexConstant.META_DIR_NAME;
 import static org.apache.iotdb.db.index.common.IndexConstant.STORAGE_GROUP_INDEXED_SUFFIX;
 import static org.apache.iotdb.db.index.common.IndexConstant.STORAGE_GROUP_INDEXING_SUFFIX;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -40,16 +38,12 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
-import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
-import org.apache.iotdb.db.index.IndexFileProcessor;
-import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
 import org.apache.iotdb.db.index.io.IndexIOReader;
+import org.apache.iotdb.db.index.read.IndexFileResource;
 import org.apache.iotdb.db.utils.FileUtils;
 import org.apache.iotdb.tsfile.common.constant.TsFileConstant;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
@@ -68,7 +62,7 @@ public class IndexStorageGroupProcessor {
   private static final Logger logger = LoggerFactory.getLogger(IndexStorageGroupProcessor.class);
   private final String seqDir;
   private final String unseqDir;
-  private final String metaFileName;
+  private final String indexSGMetaFileName;
   private final String storageGroupName;
 
   /**
@@ -91,9 +85,8 @@ public class IndexStorageGroupProcessor {
   private List<IndexFileResource> seqResourceList = new ArrayList<>();
 
 
-  private final Map<Long, Map<String, Map<IndexType, ByteBuffer>>> seqMetadata = new TreeMap<>();
-  private final Map<Long, Map<String, Map<IndexType, ByteBuffer>>> unseqMetadata = new TreeMap<>();
-  private Lock lock;
+  private final Map<Long, Map<String, Map<IndexType, ByteBuffer>>> indexSGSeqMetadata = new TreeMap<>();
+  private final Map<Long, Map<String, Map<IndexType, ByteBuffer>>> indexSGUnseqMetadata = new TreeMap<>();
   private FSFactory fsFactory = FSFactoryProducer.getFSFactory();
 
   public IndexStorageGroupProcessor(String storageGroupName, String metaDir) {
@@ -104,8 +97,7 @@ public class IndexStorageGroupProcessor {
             + File.separator + storageGroupName;
     this.unseqDir = DirectoryManager.getInstance().getIndexRootFolder() + File.separator
         + UNSEQUENCE_FLODER_NAME + File.separator + storageGroupName;
-    this.metaFileName = metaDir + File.separator + storageGroupName;
-    lock = new ReentrantLock();
+    this.indexSGMetaFileName = metaDir + File.separator + storageGroupName;
     try {
       recover();
     } catch (IOException e) {
@@ -223,7 +215,7 @@ public class IndexStorageGroupProcessor {
     String indexParentDir = sequence ? seqDir : unseqDir;
     indexParentDir += File.separator + partitionId;
 
-    if (SystemFileFactory.INSTANCE.getFile(indexParentDir).mkdirs()) {
+    if (fsFactory.getFile(indexParentDir).mkdirs()) {
       logger.info("create the index folder {}", indexParentDir);
     }
     String fullFilePath = indexParentDir + File.separator + getIndexFileName(tsFileName);
@@ -231,9 +223,9 @@ public class IndexStorageGroupProcessor {
     IndexFileProcessor fileProcessor = processorMap.get(fullFilePath);
     if (fileProcessor == null) {
       Map<String, Map<IndexType, ByteBuffer>> previousMeta = sequence ?
-          seqMetadata.computeIfAbsent(partitionId, p -> new HashMap<>()) :
-          unseqMetadata.computeIfAbsent(partitionId, p -> new HashMap<>());
-      fileProcessor = new IndexFileProcessor(storageGroupName, indexParentDir, fullFilePath,
+          indexSGSeqMetadata.computeIfAbsent(partitionId, p -> new HashMap<>()) :
+          indexSGUnseqMetadata.computeIfAbsent(partitionId, p -> new HashMap<>());
+      fileProcessor = new IndexFileProcessor(storageGroupName, fullFilePath,
           sequence, partitionId, previousMeta, this::updateIndexFileResources);
       IndexFileProcessor oldProcessor = processorMap.putIfAbsent(fullFilePath, fileProcessor);
       if (oldProcessor != null) {
@@ -243,30 +235,18 @@ public class IndexStorageGroupProcessor {
     return fileProcessor;
   }
 
-  /**
-   * if there is, clone and return
-   */
-//  private ByteBuffer getPreviousMeta(boolean sequence, long partitionId) {
-//    Map<Long, Map<String, Map<IndexType, ByteBuffer>>> metadata =
-//        sequence ? seqMetadata : unseqMetadata;
-//    Map<String, Map<IndexType, ByteBuffer>> partitionMap = ;
-//    if (partitionMap == null) {
-//      return null;
-//    }
-//
-//  }
   private void updateIndexFileResources(boolean sequence, long partitionId,
       IndexFileResource resources, Map<String, Map<IndexType, ByteBuffer>> indexSaved) {
-    Map<Long, Map<String, Map<IndexType, ByteBuffer>>> metadata;
+    Map<Long, Map<String, Map<IndexType, ByteBuffer>>> indexSGMetadata;
     if (sequence) {
       seqResourceList.add(resources);
-      metadata = seqMetadata;
+      indexSGMetadata = indexSGSeqMetadata;
     } else {
       unseqResourceList.add(resources);
-      metadata = unseqMetadata;
+      indexSGMetadata = indexSGUnseqMetadata;
     }
     // update resource
-    Map<String, Map<IndexType, ByteBuffer>> partitionMap = metadata
+    Map<String, Map<IndexType, ByteBuffer>> partitionMap = indexSGMetadata
         .computeIfAbsent(partitionId, p -> new HashMap<>());
     indexSaved.forEach((path, savedPathMap) -> {
       Map<IndexType, ByteBuffer> pathMap = partitionMap
@@ -332,7 +312,7 @@ public class IndexStorageGroupProcessor {
     if (unseqFile.exists()) {
       FileUtils.deleteDirectory(unseqFile);
     }
-    File metaFile = new File(metaFileName);
+    File metaFile = new File(indexSGMetaFileName);
     if (metaFile.exists()) {
       FileUtils.deleteDirectory(metaFile);
     }
@@ -344,11 +324,11 @@ public class IndexStorageGroupProcessor {
     unseqIndexProcessorMap.clear();
     seqResourceList.clear();
     unseqResourceList.clear();
-    seqMetadata.clear();
-    unseqMetadata.clear();
+    indexSGSeqMetadata.clear();
+    indexSGUnseqMetadata.clear();
   }
 
-  public List<IndexChunkMeta> getIndexMetadata(boolean sequence, String seriesPath,
+  public List<IndexChunkMeta> getIndexSGMetadata(boolean sequence, String seriesPath,
       IndexType indexType) throws IOException {
     List<IndexChunkMeta> res = new ArrayList<>();
     List<IndexFileResource> resourceList = getSeqOrUnseqResources(sequence);
@@ -358,10 +338,11 @@ public class IndexStorageGroupProcessor {
     return res;
   }
 
-  private void serializeMetadata(Map<Long, Map<String, Map<IndexType, ByteBuffer>>> metadata,
+  private void serializeIndexSGMetadata(
+      Map<Long, Map<String, Map<IndexType, ByteBuffer>>> indexSGMetadata,
       OutputStream outputStream) throws IOException {
-    ReadWriteIOUtils.write(metadata.size(), outputStream);
-    for (Entry<Long, Map<String, Map<IndexType, ByteBuffer>>> pEntry : metadata.entrySet()) {
+    ReadWriteIOUtils.write(indexSGMetadata.size(), outputStream);
+    for (Entry<Long, Map<String, Map<IndexType, ByteBuffer>>> pEntry : indexSGMetadata.entrySet()) {
       Long partitionId = pEntry.getKey();
       Map<String, Map<IndexType, ByteBuffer>> partitionMap = pEntry.getValue();
       ReadWriteIOUtils.write(partitionId, outputStream);
@@ -381,7 +362,8 @@ public class IndexStorageGroupProcessor {
     }
   }
 
-  private void deserializeMetadata(Map<Long, Map<String, Map<IndexType, ByteBuffer>>> metadata,
+  private void deserializeIndexSGMetadata(
+      Map<Long, Map<String, Map<IndexType, ByteBuffer>>> indexSGMetadata,
       InputStream inputStream) throws IOException {
     int size = ReadWriteIOUtils.readInt(inputStream);
     for (int i = 0; i < size; i++) {
@@ -400,35 +382,35 @@ public class IndexStorageGroupProcessor {
         }
         partitionMap.put(path, pathMap);
       }
-      metadata.put(partitionId, partitionMap);
+      indexSGMetadata.put(partitionId, partitionMap);
     }
   }
 
   private void serialize() throws IOException {
     OutputStream outputStream = fsFactory
-        .getBufferedOutputStream(this.metaFileName + STORAGE_GROUP_INDEXING_SUFFIX);
+        .getBufferedOutputStream(this.indexSGMetaFileName + STORAGE_GROUP_INDEXING_SUFFIX);
     // add
-    serializeMetadata(seqMetadata, outputStream);
-    serializeMetadata(unseqMetadata, outputStream);
+    serializeIndexSGMetadata(indexSGSeqMetadata, outputStream);
+    serializeIndexSGMetadata(indexSGUnseqMetadata, outputStream);
     outputStream.close();
-    File src = fsFactory.getFile(this.metaFileName + STORAGE_GROUP_INDEXING_SUFFIX);
-    File dest = fsFactory.getFile(this.metaFileName + STORAGE_GROUP_INDEXED_SUFFIX);
+    File src = fsFactory.getFile(this.indexSGMetaFileName + STORAGE_GROUP_INDEXING_SUFFIX);
+    File dest = fsFactory.getFile(this.indexSGMetaFileName + STORAGE_GROUP_INDEXED_SUFFIX);
     dest.delete();
     fsFactory.moveFile(src, dest);
   }
 
   private void deserialize() throws IOException {
-    if (!fsFactory.getFile(this.metaFileName + STORAGE_GROUP_INDEXED_SUFFIX).exists()) {
-      File tmpMetaFile = fsFactory.getFile(this.metaFileName + STORAGE_GROUP_INDEXED_SUFFIX);
+    if (!fsFactory.getFile(this.indexSGMetaFileName + STORAGE_GROUP_INDEXED_SUFFIX).exists()) {
+      File tmpMetaFile = fsFactory.getFile(this.indexSGMetaFileName + STORAGE_GROUP_INDEXED_SUFFIX);
       if (tmpMetaFile.exists()) {
         tmpMetaFile.delete();
       }
       return;
     }
     InputStream inputStream = fsFactory.getBufferedInputStream(
-        this.metaFileName + STORAGE_GROUP_INDEXED_SUFFIX);
-    deserializeMetadata(seqMetadata, inputStream);
-    deserializeMetadata(unseqMetadata, inputStream);
+        this.indexSGMetaFileName + STORAGE_GROUP_INDEXED_SUFFIX);
+    deserializeIndexSGMetadata(indexSGSeqMetadata, inputStream);
+    deserializeIndexSGMetadata(indexSGUnseqMetadata, inputStream);
     inputStream.close();
   }
 

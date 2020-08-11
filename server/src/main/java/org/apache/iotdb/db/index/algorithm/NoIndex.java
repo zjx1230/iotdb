@@ -26,10 +26,10 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexManagerException;
-import org.apache.iotdb.db.index.common.IndexQueryException;
+import org.apache.iotdb.db.exception.index.IndexManagerException;
+import org.apache.iotdb.db.exception.index.IndexQueryException;
 import org.apache.iotdb.db.index.common.IndexUtils;
-import org.apache.iotdb.db.index.common.UnsupportedIndexQueryException;
+import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
 import org.apache.iotdb.db.index.preprocess.CountFixedPreprocessor;
 import org.apache.iotdb.db.index.preprocess.Identifier;
@@ -37,7 +37,6 @@ import org.apache.iotdb.db.index.read.func.IndexFuncFactory;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -129,7 +128,7 @@ public class NoIndex extends IoTDBIndex {
 
   @Override
   public void initQuery(Map<String, String> queryConditions, List<IndexFuncResult> indexFuncResults)
-      throws UnsupportedIndexQueryException {
+      throws UnsupportedIndexFuncException {
     for (IndexFuncResult result : indexFuncResults) {
       switch (result.getIndexFunc()) {
         case TIME_RANGE:
@@ -141,7 +140,7 @@ public class NoIndex extends IoTDBIndex {
           result.setIsTensor(true);
           break;
         default:
-          throw new UnsupportedIndexQueryException(indexFuncResults.toString());
+          throw new UnsupportedIndexFuncException(indexFuncResults.toString());
       }
       result.setIndexFuncDataType(result.getIndexFunc().getType());
     }
@@ -153,7 +152,7 @@ public class NoIndex extends IoTDBIndex {
     if (queryConditions.containsKey(PATTERN)) {
       this.patterns = IndexUtils.parseNumericPattern(queryConditions.get(PATTERN));
     } else {
-      throw new UnsupportedIndexQueryException("missing parameter: " + PATTERN);
+      throw new UnsupportedIndexFuncException("missing parameter: " + PATTERN);
     }
   }
 

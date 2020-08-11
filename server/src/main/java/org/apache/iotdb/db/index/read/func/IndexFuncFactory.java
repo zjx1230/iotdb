@@ -17,8 +17,8 @@
  */
 package org.apache.iotdb.db.index.read.func;
 
-import org.apache.iotdb.db.index.common.IndexQueryException;
-import org.apache.iotdb.db.index.common.IndexRuntimeException;
+import org.apache.iotdb.db.exception.index.IndexRuntimeException;
+import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
@@ -46,7 +46,7 @@ public class IndexFuncFactory {
 
   public static void basicSimilarityCalc(IndexFuncResult funcResult,
       IndexPreprocessor indexPreprocessor, double[] patterns)
-      throws IndexQueryException {
+      throws UnsupportedIndexFuncException {
     Identifier identifier;
     TVList aligned;
     switch (funcResult.getIndexFunc()) {
@@ -79,7 +79,7 @@ public class IndexFuncFactory {
         TVListAllocator.getInstance().release(aligned);
         break;
       default:
-        throw new IndexQueryException("Unsupported query:" + funcResult.getIndexFunc());
+        throw new UnsupportedIndexFuncException("Unsupported query:" + funcResult.getIndexFunc());
     }
   }
 

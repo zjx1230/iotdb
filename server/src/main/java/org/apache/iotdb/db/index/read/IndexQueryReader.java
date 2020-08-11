@@ -28,10 +28,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
-import org.apache.iotdb.db.index.common.IndexManagerException;
-import org.apache.iotdb.db.index.common.IndexQueryException;
+import org.apache.iotdb.db.exception.index.IndexManagerException;
+import org.apache.iotdb.db.exception.index.IndexQueryException;
 import org.apache.iotdb.db.index.common.IndexType;
-import org.apache.iotdb.db.index.common.UnsupportedIndexQueryException;
+import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
@@ -95,7 +95,7 @@ public class IndexQueryReader {
    * Invoke after having chunkMeta, tell reader about all condition
    */
   void initQueryCondition(Map<String, String> queryProps,
-      List<IndexFuncResult> indexFuncResults) throws UnsupportedIndexQueryException {
+      List<IndexFuncResult> indexFuncResults) throws UnsupportedIndexFuncException {
 //    List<IndexFunc> indexFuncs = new ArrayList<>();
 //    indexFuncResults.forEach(p -> indexFuncs.add(p.getIndexFunc()));
     String path = seriesPath.getFullPath();

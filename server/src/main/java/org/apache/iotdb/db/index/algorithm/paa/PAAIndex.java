@@ -32,9 +32,9 @@ import java.util.function.BiConsumer;
 import org.apache.iotdb.db.index.algorithm.MBRIndex;
 import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexQueryException;
+import org.apache.iotdb.db.exception.index.IndexQueryException;
 import org.apache.iotdb.db.index.common.IndexUtils;
-import org.apache.iotdb.db.index.common.UnsupportedIndexQueryException;
+import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.read.func.IndexFuncFactory;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
@@ -78,8 +78,8 @@ public class PAAIndex extends MBRIndex {
    */
   @Override
   protected int fillCurrentFeature() {
-    paaTimeFixedPreprocessor.copyFeature(currentCorners);
-    Arrays.fill(currentRanges, 0);
+    paaTimeFixedPreprocessor.copyFeature(currentLowerBounds);
+    System.arraycopy(currentLowerBounds,0,currentUpperBounds,0,currentLowerBounds.length);
     return paaTimeFixedPreprocessor.getSliceNum() - 1;
   }
 
@@ -102,7 +102,7 @@ public class PAAIndex extends MBRIndex {
 
   @Override
   public void initQuery(Map<String, String> queryConditions, List<IndexFuncResult> indexFuncResults)
-      throws UnsupportedIndexQueryException {
+      throws UnsupportedIndexFuncException {
     for (IndexFuncResult result : indexFuncResults) {
       switch (result.getIndexFunc()) {
         case TIME_RANGE:
@@ -114,7 +114,7 @@ public class PAAIndex extends MBRIndex {
           result.setIsTensor(true);
           break;
         default:
-          throw new UnsupportedIndexQueryException(indexFuncResults.toString());
+          throw new UnsupportedIndexFuncException(indexFuncResults.toString());
       }
       result.setIndexFuncDataType(result.getIndexFunc().getType());
     }
@@ -126,7 +126,7 @@ public class PAAIndex extends MBRIndex {
     if (queryConditions.containsKey(PATTERN)) {
       this.patterns = IndexUtils.parseNumericPattern(queryConditions.get(PATTERN));
     } else {
-      throw new UnsupportedIndexQueryException("missing parameter: " + PATTERN);
+      throw new UnsupportedIndexFuncException("missing parameter: " + PATTERN);
     }
   }
 
@@ -157,14 +157,15 @@ public class PAAIndex extends MBRIndex {
 
   @Override
   protected void calcAndFillQueryFeature() {
-    Arrays.fill(currentCorners, 0);
-    Arrays.fill(currentRanges, 0);
+    Arrays.fill(currentLowerBounds, 0);
+    Arrays.fill(currentUpperBounds, 0);
     int intervalWidth = windowRange / featureDim;
     for (int i = 0; i < featureDim; i++) {
       for (int j = 0; j < intervalWidth; j++) {
-        currentCorners[i] += patterns[i * intervalWidth + j];
+        currentLowerBounds[i] += patterns[i * intervalWidth + j];
       }
-      currentCorners[i] /= intervalWidth;
+      currentLowerBounds[i] /= intervalWidth;
+      currentUpperBounds[i] /= currentLowerBounds[i];
     }
   }
 

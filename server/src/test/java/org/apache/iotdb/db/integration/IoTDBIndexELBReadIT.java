@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.iotdb.db.index.algorithm;
+package org.apache.iotdb.db.integration;
 
 import static org.apache.iotdb.db.index.IndexTestUtils.funcForm;
 import static org.apache.iotdb.db.index.common.IndexConstant.DISTANCE;
@@ -41,7 +41,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class ELBIndexReadIT {
+public class IoTDBIndexELBReadIT {
 
   private static final String insertPattern = "INSERT INTO %s(timestamp, %s) VALUES (%d, %d)";
   private static final String storageGroup = "root.v";

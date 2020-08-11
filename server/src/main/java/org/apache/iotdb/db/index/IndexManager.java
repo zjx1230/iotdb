@@ -18,6 +18,8 @@
  */
 package org.apache.iotdb.db.index;
 
+import static org.apache.iotdb.db.conf.IoTDBConstant.SEQUENCE_FLODER_NAME;
+import static org.apache.iotdb.db.conf.IoTDBConstant.UNSEQUENCE_FLODER_NAME;
 import static org.apache.iotdb.db.index.common.IndexConstant.META_DIR_NAME;
 
 import java.io.File;
@@ -29,20 +31,21 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
-import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.exception.StartupException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
+import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexBuildTaskPoolManager;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
 import org.apache.iotdb.db.index.read.IndexQueryReader;
-import org.apache.iotdb.db.index.read.IndexStorageGroupProcessor;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.service.IService;
 import org.apache.iotdb.db.service.JMXService;
 import org.apache.iotdb.db.service.ServiceType;
 import org.apache.iotdb.db.utils.FileUtils;
 import org.apache.iotdb.db.utils.TestOnly;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.slf4j.Logger;
@@ -59,6 +62,7 @@ public class IndexManager implements IService {
 
   private IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
 
+  private FSFactory fsFactory = FSFactoryProducer.getFSFactory();
 
   public IndexQueryReader getQuerySource(Path seriesPath, IndexType indexType,
       Filter timeFilter)
@@ -66,16 +70,16 @@ public class IndexManager implements IService {
     String series = seriesPath.getFullPath();
     String storageGroupName = MManager.getInstance().getStorageGroupName(series);
     IndexStorageGroupProcessor sgProcessor = createStorageGroupProcessor(storageGroupName);
-    List<IndexChunkMeta> seq = sgProcessor.getIndexMetadata(true, series, indexType);
-    List<IndexChunkMeta> unseq = sgProcessor.getIndexMetadata(false, series, indexType);
+    List<IndexChunkMeta> seq = sgProcessor.getIndexSGMetadata(true, series, indexType);
+    List<IndexChunkMeta> unseq = sgProcessor.getIndexSGMetadata(false, series, indexType);
     return new IndexQueryReader(seriesPath, indexType, timeFilter, seq, unseq);
   }
 
   @TestOnly
-  public List<IndexChunkMeta> getIndexMetadata(String storageGroup, boolean sequence,
+  public List<IndexChunkMeta> getIndexSGMetadata(String storageGroup, boolean sequence,
       String seriesPath, IndexType indexType) throws IOException {
     IndexStorageGroupProcessor sgProcessor = createStorageGroupProcessor(storageGroup);
-    return sgProcessor.getIndexMetadata(sequence, seriesPath, indexType);
+    return sgProcessor.getIndexSGMetadata(sequence, seriesPath, indexType);
   }
 
   public IndexFileProcessor getNewIndexFileProcessor(String storageGroup, boolean sequence,
@@ -85,7 +89,7 @@ public class IndexManager implements IService {
   }
 
   private IndexStorageGroupProcessor createStorageGroupProcessor(String storageGroup) {
-    checkMetaDataDir();
+    checkIndexSGMetaDataDir();
     IndexStorageGroupProcessor processor = processorMap.get(storageGroup);
     if (processor == null) {
       processor = new IndexStorageGroupProcessor(storageGroup, metaDirPath);
@@ -97,13 +101,13 @@ public class IndexManager implements IService {
     return processor;
   }
 
-  private void checkMetaDataDir() {
-    File metaDir = SystemFileFactory.INSTANCE.getFile(this.metaDirPath);
+  private void checkIndexSGMetaDataDir() {
+    File metaDir = fsFactory.getFile(this.metaDirPath);
     if (!metaDir.exists()) {
-      boolean mk = SystemFileFactory.INSTANCE.getFile(this.metaDirPath).mkdirs();
+      boolean mk = fsFactory.getFile(this.metaDirPath).mkdirs();
       if (mk) {
-        logger.info("create index metadata folder {}", this.metaDirPath);
-        System.out.println("create index metadata folder " + this.metaDirPath);
+        logger.info("create index SG metadata folder {}", this.metaDirPath);
+        System.out.println("create index SG metadata folder " + this.metaDirPath);
       }
     }
   }
@@ -190,15 +194,39 @@ public class IndexManager implements IService {
       IndexStorageGroupProcessor processor = entry.getValue();
       processor.deleteAll();
     }
-    File indexMetaDir = new File(metaDirPath);
+    File indexMetaDir = fsFactory.getFile(this.metaDirPath);
     if (indexMetaDir.exists()) {
       FileUtils.deleteDirectory(indexMetaDir);
     }
-    File indexRootDir = new File(DirectoryManager.getInstance().getIndexRootFolder());
+    File indexRootDir = fsFactory.getFile(DirectoryManager.getInstance().getIndexRootFolder());
     if (indexRootDir.exists()) {
       FileUtils.deleteDirectory(indexRootDir);
     }
     clear();
+  }
+
+  /**
+   * When IoTDB restarts, check all index storage groups and delete index data and sg_metadata files
+   * for deleted tsfile storage groups.
+   */
+  public synchronized void refreshIndexData() {
+    String indexDataSeqDir =
+        DirectoryManager.getInstance().getIndexRootFolder() + File.separator + SEQUENCE_FLODER_NAME;
+    String indexDataUnSeqDir =
+        DirectoryManager.getInstance().getIndexRootFolder() + File.separator
+            + UNSEQUENCE_FLODER_NAME;
+//
+//    if (fsFactory.getFile(indexParentDir).mkdirs()) {
+//      logger.info("create the index folder {}", indexParentDir);
+//    }
+//    String fullFilePath = indexParentDir + File.separator + getIndexFileName(tsFileName);
+//
+//    File indexMetaDir = fsFactory.getFile(this.metaDirPath);
+//    File indexRootDir = fsFactory.getFile(DirectoryManager.getInstance().getIndexRootFolder());
+//
+//    Map<String, Map<IndexType, IndexInfo>> indexInfoMap = MManager
+//        .getInstance().getAllIndexInfosInStorageGroup(storageGroupName);
+
   }
 
   private static class InstanceHolder {
@@ -208,11 +236,4 @@ public class IndexManager implements IService {
 
     private static IndexManager instance = new IndexManager();
   }
-
-//  public String toString() {
-//    return String
-//        .format("the size of Index Build Task Pool: %d", indexBuildPool.getWorkingTasksNumber());
-//  }
-
-
 }

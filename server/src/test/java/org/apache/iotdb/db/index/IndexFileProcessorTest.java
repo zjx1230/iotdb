@@ -129,7 +129,7 @@ public class IndexFileProcessorTest {
   private static void checkIndexFlushAndResult(List<Validation> tasks, String storageGroup,
       String indexFileDir, String indexFileName)
       throws ExecutionException, InterruptedException, IOException {
-    IndexFileProcessor indexFileProcessor = new IndexFileProcessor(storageGroup, indexFileDir,
+    IndexFileProcessor indexFileProcessor = new IndexFileProcessor(storageGroup,
         indexFileName, true, 0, new HashMap<>(), (a, b, c, d) -> {
     });
 

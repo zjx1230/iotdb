@@ -20,7 +20,7 @@ package org.apache.iotdb.db.index.algorithm.elb.pattern;
 import static org.apache.iotdb.db.index.common.IndexUtils.getDoubleFromAnyType;
 
 import java.util.Arrays;
-import org.apache.iotdb.db.index.common.IllegalIndexParamException;
+import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.index.distance.Distance;
 import org.apache.iotdb.db.index.distance.LNormDouble;
 import org.apache.iotdb.db.utils.datastructure.TVList;

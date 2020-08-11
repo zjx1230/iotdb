@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.iotdb.db.index;
+package org.apache.iotdb.db.integration;
 
 import static org.apache.iotdb.db.index.IndexTestUtils.deserializeIndexChunk;
 import static org.apache.iotdb.db.index.common.IndexConstant.DISTANCE;
@@ -38,10 +38,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
-import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.IndexTestUtils.Validation;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
@@ -54,15 +52,13 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class IndexWriteIT {
+public class IoTDBIndexWriteIT {
 
   private static final String storageGroup = "root.v";
   private static final String p1 = "root.v.p1";
   private static final String p2 = "root.v.p2";
   private static final String p1Sensor = "p1";
   private static final String p2Sensor = "p2";
-  private static final String tempIndexFileDir = "index/root.v/";
-  private static final String tempIndexFileName = "index/root.v/demo_elb_paa_index";
   private long defaultIndexBufferSize;
 
   @Before
@@ -78,7 +74,7 @@ public class IndexWriteIT {
     EnvironmentUtils.cleanEnv();
   }
 
-  private void prepareMManager(Statement statement) throws MetadataException, SQLException {
+  private void prepareMManager(Statement statement) throws SQLException {
     statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroup));
     statement.execute(String.format("CREATE TIMESERIES %s WITH DATATYPE=INT32,ENCODING=PLAIN", p1));
     statement.execute(String.format("CREATE TIMESERIES %s WITH DATATYPE=INT32,ENCODING=PLAIN", p2));
@@ -154,7 +150,7 @@ public class IndexWriteIT {
       // check result
       checkIndexFlushAndResult(tasks, indexFile);
       System.out.println("finished!");
-    } catch (MetadataException | InterruptedException | IOException | ExecutionException e) {
+    } catch (InterruptedException | IOException e) {
       e.printStackTrace();
       Assert.fail();
     }
@@ -162,7 +158,7 @@ public class IndexWriteIT {
 
 
   private static void checkIndexFlushAndResult(List<Validation> tasks, String indexFileName)
-      throws ExecutionException, InterruptedException, IOException {
+      throws IOException {
     //read and check
     IndexIOReader reader = new IndexIOReader(indexFileName, false);
     for (Validation task : tasks) {

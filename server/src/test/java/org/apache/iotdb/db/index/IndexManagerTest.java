@@ -161,21 +161,21 @@ public class IndexManagerTest {
       //reload
       System.out.println("closed!");
       List<IndexChunkMeta> p1ELBChunkMetas = indexManager
-          .getIndexMetadata(storageGroup, true, p1, IndexType.ELB);
+          .getIndexSGMetadata(storageGroup, true, p1, IndexType.ELB);
       StringBuilder p1ELB = new StringBuilder();
       p1ELBChunkMetas.forEach(p -> p1ELB.append(p.toStringStable()));
       System.out.println(p1ELB);
       Assert.assertEquals(gtp1ELB, p1ELB.toString());
 
       List<IndexChunkMeta> p1PAAChunkMetas = indexManager
-          .getIndexMetadata(storageGroup, true, p1, IndexType.PAA);
+          .getIndexSGMetadata(storageGroup, true, p1, IndexType.PAA);
       StringBuilder p1PAA = new StringBuilder();
       p1PAAChunkMetas.forEach(p -> p1PAA.append(p.toStringStable()));
       System.out.println(p1PAA);
       Assert.assertEquals(gtp1PAA, p1PAA.toString());
 
       List<IndexChunkMeta> p2ELBChunkMetas = indexManager
-          .getIndexMetadata(storageGroup, true, p2, IndexType.ELB);
+          .getIndexSGMetadata(storageGroup, true, p2, IndexType.ELB);
       StringBuilder p2ELB = new StringBuilder();
       p2ELBChunkMetas.forEach(p -> p2ELB.append(p.toStringStable()));
       System.out.println(p2ELB);

@@ -16,25 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.iotdb.db.index.common;
+package org.apache.iotdb.db.exception.index;
 
 public class IllegalIndexParamException extends RuntimeException {
 
   private static final long serialVersionUID = -5037203268436084405L;
 
-  public IllegalIndexParamException() {
-    super();
-  }
-
-  public IllegalIndexParamException(String message, Throwable cause) {
-    super(message, cause);
-  }
-
   public IllegalIndexParamException(String message) {
     super(message);
   }
 
-  public IllegalIndexParamException(Throwable cause) {
-    super(cause);
-  }
 }

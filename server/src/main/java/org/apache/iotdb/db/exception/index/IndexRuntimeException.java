@@ -16,15 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.iotdb.db.index.common;
+package org.apache.iotdb.db.exception.index;
 
 public class IndexRuntimeException extends RuntimeException {
 
   private static final long serialVersionUID = 5946611722012179976L;
-
-  public IndexRuntimeException() {
-    super();
-  }
 
   public IndexRuntimeException(String message, Throwable cause) {
     super(message, cause);
@@ -32,9 +28,5 @@ public class IndexRuntimeException extends RuntimeException {
 
   public IndexRuntimeException(String message) {
     super(message);
-  }
-
-  public IndexRuntimeException(Throwable cause) {
-    super(cause);
   }
 }

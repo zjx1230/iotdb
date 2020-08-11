@@ -22,6 +22,10 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
+import org.apache.iotdb.db.exception.index.IndexManagerException;
+import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
+import org.apache.iotdb.db.exception.index.UnsupportedIndexTypeException;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.algorithm.NoIndex;
 import org.apache.iotdb.db.index.algorithm.elb.ELBIndex;
@@ -92,7 +96,8 @@ public enum IndexType {
     }
   }
 
-  public static IndexType getIndexType(String indexTypeString) throws IndexManagerException {
+  public static IndexType getIndexType(String indexTypeString)
+      throws UnsupportedIndexTypeException {
     String normalized = indexTypeString.toUpperCase();
     switch (normalized) {
       case "NO_INDEX":
@@ -104,7 +109,7 @@ public enum IndexType {
       case "KV_INDEX":
         return KV_INDEX;
       default:
-        throw new IndexManagerException("unsupported index type:" + indexTypeString);
+        throw new UnsupportedIndexTypeException("unsupported index type:" + indexTypeString);
     }
   }
 
@@ -135,7 +140,7 @@ public enum IndexType {
    */
   public static IoTDBIndex constructQueryIndex(String path, IndexType indexType,
       Map<String, String> queryProps, List<IndexFuncResult> indexFuncs)
-      throws UnsupportedIndexQueryException {
+      throws UnsupportedIndexFuncException {
     queryProps = uppercaseProps(queryProps);
     IndexInfo indexInfo = MManager.getInstance().getIndexInfoByPath(path, indexType);
     if (indexInfo == null) {

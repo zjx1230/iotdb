@@ -44,9 +44,9 @@ import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.CalcParam;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.SingleParamSchema;
 import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexQueryException;
+import org.apache.iotdb.db.exception.index.IndexQueryException;
 import org.apache.iotdb.db.index.common.IndexUtils;
-import org.apache.iotdb.db.index.common.UnsupportedIndexQueryException;
+import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.index.distance.Distance;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.read.func.IndexFuncFactory;
@@ -112,7 +112,7 @@ public class ELBIndex extends MBRIndex {
    */
   @Override
   protected int fillCurrentFeature() {
-    elbTimeFixedPreprocessor.copyFeature(currentCorners, currentRanges);
+    elbTimeFixedPreprocessor.copyFeature(currentLowerBounds, currentUpperBounds);
     return elbTimeFixedPreprocessor.getSliceNum() - 1;
   }
 
@@ -135,7 +135,7 @@ public class ELBIndex extends MBRIndex {
 
   @Override
   public void initQuery(Map<String, String> queryConditions, List<IndexFuncResult> indexFuncResults)
-      throws UnsupportedIndexQueryException {
+      throws UnsupportedIndexFuncException {
     for (IndexFuncResult result : indexFuncResults) {
       switch (result.getIndexFunc()) {
         case TIME_RANGE:
@@ -147,7 +147,7 @@ public class ELBIndex extends MBRIndex {
           result.setIsTensor(true);
           break;
         default:
-          throw new UnsupportedIndexQueryException(indexFuncResults.toString());
+          throw new UnsupportedIndexFuncException(indexFuncResults.toString());
       }
       result.setIndexFuncDataType(result.getIndexFunc().getType());
     }
@@ -159,7 +159,7 @@ public class ELBIndex extends MBRIndex {
     if (queryConditions.containsKey(PATTERN)) {
       this.patterns = IndexUtils.parseNumericPattern(queryConditions.get(PATTERN));
     } else {
-      throw new UnsupportedIndexQueryException("missing parameter: " + PATTERN);
+      throw new UnsupportedIndexFuncException("missing parameter: " + PATTERN);
     }
   }
 
@@ -190,14 +190,15 @@ public class ELBIndex extends MBRIndex {
    */
   @Override
   protected void calcAndFillQueryFeature() {
-    Arrays.fill(currentCorners, 0);
-    Arrays.fill(currentRanges, 0);
+    Arrays.fill(currentLowerBounds, 0);
+    Arrays.fill(currentUpperBounds, 0);
     int intervalWidth = windowRange / featureDim;
     for (int i = 0; i < featureDim; i++) {
       for (int j = 0; j < intervalWidth; j++) {
-        currentCorners[i] += patterns[i * intervalWidth + j];
+        currentLowerBounds[i] += patterns[i * intervalWidth + j];
       }
-      currentCorners[i] /= intervalWidth;
+      currentLowerBounds[i] /= intervalWidth;
+      currentUpperBounds[i] = currentLowerBounds[i];
     }
   }
 

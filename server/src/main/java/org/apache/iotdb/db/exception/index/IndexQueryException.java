@@ -15,26 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.iotdb.db.index.common;
+package org.apache.iotdb.db.exception.index;
 
 
-import org.apache.iotdb.db.exception.IoTDBException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
-import org.apache.iotdb.rpc.TSStatusCode;
 
-public class UnsupportedIndexQueryException extends QueryProcessException {
+public class IndexQueryException extends QueryProcessException {
 
-  private static final long serialVersionUID = 4185676677334759039L;
+  private static final long serialVersionUID = 9019233783504576296L;
 
-  public UnsupportedIndexQueryException(String message) {
-    super(message, TSStatusCode.INDEX_PROCESS_ERROR.getStatusCode());
-  }
-
-  public UnsupportedIndexQueryException(String message, int errorCode) {
+  public IndexQueryException(String message, int errorCode) {
     super(message, errorCode);
-  }
-
-  public UnsupportedIndexQueryException(IoTDBException e) {
-    super(e);
   }
 }

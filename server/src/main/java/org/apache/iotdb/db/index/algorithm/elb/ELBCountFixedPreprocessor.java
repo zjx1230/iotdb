@@ -23,14 +23,13 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.CalcParam;
-import org.apache.iotdb.db.index.common.IllegalIndexParamException;
-import org.apache.iotdb.db.index.common.IndexRuntimeException;
+import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
+import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.index.distance.Distance;
 import org.apache.iotdb.db.index.preprocess.CountFixedPreprocessor;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 /**
  * ELB (Equal-Length Block), a feature for efficient adjacent sequence pruning. <p>
@@ -149,15 +148,16 @@ public class ELBCountFixedPreprocessor extends CountFixedPreprocessor {
   /**
    * custom for {@linkplain ELBIndex}
    *
-   * @param currentCorners current corners
+   * @param currentLowerBounds
+   * @param currentUpperBounds
    */
-  void copyFeature(float[] currentCorners, float[] currentRanges) {
-    if (blockNum != currentCorners.length || blockNum != currentRanges.length) {
+  void copyFeature(float[] currentLowerBounds, float[] currentUpperBounds) {
+    if (blockNum != currentLowerBounds.length || blockNum != currentUpperBounds.length) {
       throw new IndexRuntimeException("blockDim != currentCorners or currentRanges length");
     }
     for (int i = 0; i < blockNum; i++) {
-      currentCorners[i] = (float) currentMBR.getDouble(2 * i + 1);
-      currentRanges[i] = (float) currentMBR.getDouble(2 * i) - currentCorners[i];
+      currentLowerBounds[i] = (float) currentMBR.getDouble(2 * i + 1);
+      currentUpperBounds[i] = (float) currentMBR.getDouble(2 * i);
     }
   }
 

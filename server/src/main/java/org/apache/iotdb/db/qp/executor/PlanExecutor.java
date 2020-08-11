@@ -72,7 +72,7 @@ import org.apache.iotdb.db.exception.metadata.PathNotExistException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.index.IndexManager;
 import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexManagerException;
+import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.mnode.InternalMNode;
@@ -268,8 +268,6 @@ public class PlanExecutor implements IPlanExecutor {
       } else if (queryPlan instanceof QueryIndexPlan) {
         QueryIndexPlan queryIndexPlan = (QueryIndexPlan) queryPlan;
         queryDataSet = queryRouter.aggregate(queryIndexPlan, context);
-//        queryDataSet = indexManager.query(queryIndexPlan, context);
-//        throw new IndexManagerException("TODO 1ksi1ksd");
       } else if (queryPlan instanceof AggregationPlan) {
         AggregationPlan aggregationPlan = (AggregationPlan) queryPlan;
         queryDataSet = queryRouter.aggregate(aggregationPlan, context);
@@ -1069,8 +1067,7 @@ public class PlanExecutor implements IPlanExecutor {
     Map<String, String> props = createIndexPlan.getProps();
     IndexInfo indexInfo = new IndexInfo(indexType, startTime, props);
     try {
-      List<String> allFullPaths = mManager.createIndex(prefixPathStrs, indexInfo);
-//      indexManager.createIndex(allFullPaths, indexInfo);
+      mManager.createIndex(prefixPathStrs, indexInfo);
     } catch (MetadataException e) {
       throw new IndexManagerException(e);
     }
@@ -1083,8 +1080,7 @@ public class PlanExecutor implements IPlanExecutor {
     paths.forEach(pre -> prefixPathStrs.add(pre.getFullPath()));
     IndexType indexType = dropIndexPlan.getIndexType();
     try {
-      List<String> allFullPaths = mManager.dropIndex(prefixPathStrs, indexType);
-//      indexManager.dropIndex(allFullPaths, indexType);
+      mManager.dropIndex(prefixPathStrs, indexType);
     } catch (MetadataException e) {
       throw new IndexManagerException(e);
     }

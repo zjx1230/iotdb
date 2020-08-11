@@ -30,9 +30,9 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.function.BiConsumer;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.index.algorithm.RTree.SeedPicker;
+import org.apache.iotdb.db.index.algorithm.RTree.SeedsPicker;
 import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexManagerException;
+import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.slf4j.Logger;
@@ -64,13 +64,11 @@ public abstract class MBRIndex extends IoTDBIndex {
   /**
    * For generality, RTree only store ids of identifiers or others.
    */
-  protected RTree<Integer> rTree;
-  protected float[] currentCorners;
-  protected float[] currentRanges;
+  private RTree<Integer> rTree;
+  protected float[] currentLowerBounds;
+  protected float[] currentUpperBounds;
   protected double[] patterns;
   protected double threshold;
-  private int maxEntries;
-  private int minEntries;
   private int amortizedPerInputCost;
 
   public MBRIndex(String path, IndexInfo indexInfo, boolean usePointType) {
@@ -81,22 +79,22 @@ public abstract class MBRIndex extends IoTDBIndex {
 
   private void initRTree() {
     this.featureDim = Integer.parseInt(props.getOrDefault(FEATURE_DIM, "4"));
-    this.maxEntries = Integer.parseInt(props.getOrDefault(MAX_ENTRIES, "50"));
-    this.minEntries = Integer.parseInt(props.getOrDefault(MIN_ENTRIES, "2"));
-    if (maxEntries < minEntries) {
+    int nMaxPerNode = Integer.parseInt(props.getOrDefault(MAX_ENTRIES, "50"));
+    int nMinPerNode = Integer.parseInt(props.getOrDefault(MIN_ENTRIES, "2"));
+    if (nMaxPerNode < nMinPerNode) {
       logger.warn("param error: max_entries cannot be less than min_entries, swap them");
-      maxEntries = Math.max(minEntries, maxEntries);
-      minEntries = Math.min(minEntries, maxEntries);
+      nMaxPerNode = Math.max(nMinPerNode, nMaxPerNode);
+      nMinPerNode = Math.min(nMinPerNode, nMaxPerNode);
     }
-    if (maxEntries <= 1) {
+    if (nMaxPerNode <= 1) {
       logger.warn("param error: max_entries cannot be less than 2. set to default 50");
-      maxEntries = 50;
+      nMaxPerNode = 50;
     }
-    this.amortizedPerInputCost = calcAmortizedCost(maxEntries, minEntries);
-    SeedPicker seedPicker = SeedPicker.valueOf(props.getOrDefault(SEED_PICKER, "LINEAR"));
-    rTree = new RTree<>(maxEntries, minEntries, featureDim, seedPicker);
-    currentCorners = new float[featureDim];
-    currentRanges = new float[featureDim];
+    this.amortizedPerInputCost = calcAmortizedCost(nMaxPerNode, nMinPerNode);
+    SeedsPicker seedPicker = SeedsPicker.valueOf(props.getOrDefault(SEED_PICKER, "LINEAR"));
+    rTree = new RTree<>(nMaxPerNode, nMinPerNode, featureDim, seedPicker);
+    currentLowerBounds = new float[featureDim];
+    currentUpperBounds = new float[featureDim];
 
   }
 
@@ -160,9 +158,9 @@ public abstract class MBRIndex extends IoTDBIndex {
   public boolean buildNext() {
     int currentIdx = fillCurrentFeature();
     if (usePointType) {
-      rTree.insert(currentCorners, currentIdx);
+      rTree.insert(currentLowerBounds, currentIdx);
     } else {
-      rTree.insert(currentCorners, currentRanges, currentIdx);
+      rTree.insert(currentLowerBounds, currentUpperBounds, currentIdx);
     }
     return true;
   }
@@ -233,7 +231,7 @@ public abstract class MBRIndex extends IoTDBIndex {
     RTree<Integer> chunkRTree = RTree.deserialize(indexChunkData, getDeserializeFunc());
     double lowerBoundThreshold = calcLowerBoundThreshold(threshold);
     List<Integer> candidateIds = chunkRTree
-        .searchWithThreshold(currentCorners, currentRanges, lowerBoundThreshold);
+        .searchWithThreshold(currentLowerBounds, currentUpperBounds, lowerBoundThreshold);
     return getQueryCandidates(candidateIds);
   }
 

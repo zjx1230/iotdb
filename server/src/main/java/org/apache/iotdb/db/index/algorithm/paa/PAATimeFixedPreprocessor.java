@@ -19,7 +19,7 @@ package org.apache.iotdb.db.index.algorithm.paa;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import org.apache.iotdb.db.index.common.IndexRuntimeException;
+import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.preprocess.TimeFixedPreprocessor;
@@ -27,7 +27,6 @@ import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 /**
  * PAA (Piecewise Aggregate Approximation), a classical feature in time series. <p>
@@ -116,15 +115,15 @@ public class PAATimeFixedPreprocessor extends TimeFixedPreprocessor {
   /**
    * custom for {@linkplain PAAIndex}
    *
-   * @param currentCorners current corners
+   * @param currentCoordinates current corners
    */
-  void copyFeature(float[] currentCorners) {
-    if (currentAligned.size() != currentCorners.length) {
+  void copyFeature(float[] currentCoordinates) {
+    if (currentAligned.size() != currentCoordinates.length) {
       throw new IndexRuntimeException(String.format("paa aligned.size %d != corners.length %d",
-          currentAligned.size(), currentCorners.length));
+          currentAligned.size(), currentCoordinates.length));
     }
-    for (int i = 0; i < currentCorners.length; i++) {
-      currentCorners[i] = IndexUtils.getFloatFromAnyType(currentAligned, i);
+    for (int i = 0; i < currentCoordinates.length; i++) {
+      currentCoordinates[i] = IndexUtils.getFloatFromAnyType(currentAligned, i);
     }
   }
 

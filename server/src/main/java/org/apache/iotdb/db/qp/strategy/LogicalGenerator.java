@@ -20,8 +20,9 @@ package org.apache.iotdb.db.qp.strategy;
 
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.exception.index.UnsupportedIndexTypeException;
 import org.apache.iotdb.db.exception.runtime.SQLParserException;
-import org.apache.iotdb.db.index.common.IndexManagerException;
+import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.qp.constant.DatetimeUtils;
@@ -41,7 +42,6 @@ import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.read.common.Path;
-import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.utils.StringContainer;
 
 import java.io.File;
@@ -942,7 +942,7 @@ public class LogicalGenerator extends SqlBaseBaseListener {
     IndexType indexType;
     try {
       indexType = IndexType.getIndexType(ctx.indexName.getText());
-    } catch (IndexManagerException e) {
+    } catch (UnsupportedIndexTypeException e) {
       throw new SQLParserException(String.format("index type %s is not supported.", ctx.indexName.getText()));
     }
 
@@ -1124,7 +1124,7 @@ public class LogicalGenerator extends SqlBaseBaseListener {
     dropIndexOperator.setSelectOperator(selectOp);
     try {
       dropIndexOperator.setIndexType(IndexType.getIndexType(ctx.indexName.getText()));
-    } catch (IndexManagerException e) {
+    } catch (UnsupportedIndexTypeException e) {
       throw new SQLParserException(String.format("index type %s is not supported.", ctx.indexName.getText()));
     }
     initializedOperator = dropIndexOperator;

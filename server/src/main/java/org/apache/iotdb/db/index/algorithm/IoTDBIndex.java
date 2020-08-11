@@ -27,13 +27,14 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexManagerException;
-import org.apache.iotdb.db.index.common.IndexQueryException;
-import org.apache.iotdb.db.index.common.IndexRuntimeException;
+import org.apache.iotdb.db.exception.index.IndexManagerException;
+import org.apache.iotdb.db.exception.index.IndexQueryException;
+import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.index.common.IndexType;
-import org.apache.iotdb.db.index.common.UnsupportedIndexQueryException;
+import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategy;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategyType;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
@@ -197,11 +198,11 @@ public abstract class IoTDBIndex {
    * Initial parameters by query, check if all query conditions and function types are supported
    *
    * @param queryConditions query conditions
-   * @throws org.apache.iotdb.db.index.common.IllegalIndexParamException when conditions or funcs
+   * @throws IllegalIndexParamException when conditions or funcs
    * are not supported
    */
   public abstract void initQuery(Map<String, String> queryConditions,
-      List<IndexFuncResult> indexFuncResults) throws UnsupportedIndexQueryException;
+      List<IndexFuncResult> indexFuncResults) throws UnsupportedIndexFuncException;
 
 
   /**
