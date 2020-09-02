@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.iotdb.db.integration;
+package org.apache.iotdb.db.index.it;
 
 import static org.apache.iotdb.db.index.IndexTestUtils.deserializeIndexChunk;
 import static org.apache.iotdb.db.index.common.IndexConstant.DISTANCE;
@@ -27,7 +27,7 @@ import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_SLIDE_STEP;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
 import static org.apache.iotdb.db.index.common.IndexConstant.L_INFINITY;
 import static org.apache.iotdb.db.index.common.IndexType.ELB;
-import static org.apache.iotdb.db.index.common.IndexType.PAA;
+import static org.apache.iotdb.db.index.common.IndexType.PAA_INDEX;
 
 import java.io.File;
 import java.io.IOException;
@@ -84,7 +84,7 @@ public class IoTDBIndexWriteIT {
             ELB_TYPE, ELB_TYPE_ELE));
     statement.execute(String
         .format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d",
-            p1, IndexType.PAA, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 10));
+            p1, IndexType.PAA_INDEX, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 10));
     statement.execute(String
         .format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d, %s=%s, %s=%s",
             p2, IndexType.ELB, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 10, DISTANCE, L_INFINITY,
@@ -140,7 +140,7 @@ public class IoTDBIndexWriteIT {
           + "(8,[240-267,10])(9,[270-297,10])";
       List<Pair<IndexType, String>> gtP1 = new ArrayList<>();
       gtP1.add(new Pair<>(ELB, gtStrP1ELB));
-      gtP1.add(new Pair<>(PAA, gtStrP1PAA));
+      gtP1.add(new Pair<>(PAA_INDEX, gtStrP1PAA));
       List<Pair<IndexType, String>> gtP2 = new ArrayList<>();
       gtP2.add(new Pair<>(ELB, gtStrP2ELB));
 

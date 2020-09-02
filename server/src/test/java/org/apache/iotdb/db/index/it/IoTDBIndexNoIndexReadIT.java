@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.iotdb.db.integration;
+package org.apache.iotdb.db.index.it;
 
 import static org.apache.iotdb.db.index.IndexTestUtils.funcForm;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_SLIDE_STEP;

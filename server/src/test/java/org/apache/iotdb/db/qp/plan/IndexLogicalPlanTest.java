@@ -20,29 +20,16 @@ package org.apache.iotdb.db.qp.plan;
 
 import static org.junit.Assert.assertEquals;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.exception.query.LogicalOptimizeException;
-import org.apache.iotdb.db.exception.query.QueryProcessException;
-import org.apache.iotdb.db.exception.runtime.SQLParserException;
 import org.apache.iotdb.db.index.common.IndexType;
-import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.qp.Planner;
 import org.apache.iotdb.db.qp.logical.Operator;
 import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
-import org.apache.iotdb.db.qp.logical.RootOperator;
 import org.apache.iotdb.db.qp.logical.crud.QueryIndexOperator;
-import org.apache.iotdb.db.qp.logical.crud.QueryOperator;
 import org.apache.iotdb.db.qp.logical.sys.CreateIndexOperator;
-import org.apache.iotdb.db.qp.logical.sys.DeleteStorageGroupOperator;
 import org.apache.iotdb.db.qp.logical.sys.DropIndexOperator;
-import org.apache.iotdb.db.qp.logical.sys.SetStorageGroupOperator;
-import org.apache.iotdb.db.qp.physical.PhysicalPlan;
 import org.apache.iotdb.db.qp.strategy.ParseDriver;
-import org.apache.iotdb.db.qp.strategy.optimizer.ConcatPathOptimizer;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.junit.Assert;
 import org.junit.Before;
@@ -68,7 +55,7 @@ public class IndexLogicalPlanTest {
     Assert.assertNotNull(createOperator.getSelectedPaths());
     Assert.assertEquals("root.vehicle.d1.s1", createOperator.getSelectedPaths().get(0).toString());
     Assert.assertNull(createOperator.getFromOperator());
-    Assert.assertEquals(IndexType.PAA, createOperator.getIndexType());
+    Assert.assertEquals(IndexType.PAA_INDEX, createOperator.getIndexType());
     Assert.assertEquals(50, createOperator.getTime());
     Assert.assertEquals(2, createOperator.getProps().size());
     Assert.assertEquals("100", createOperator.getProps().get("WINDOW_LENGTH"));
@@ -86,7 +73,7 @@ public class IndexLogicalPlanTest {
     Assert.assertNotNull(dropIndexOperator.getSelectedPaths());
     Assert.assertEquals("root.vehicle.d1.s1", dropIndexOperator.getSelectedPaths().get(0).toString());
     Assert.assertNull(dropIndexOperator.getFromOperator());
-    Assert.assertEquals(IndexType.PAA, dropIndexOperator.getIndexType());
+    Assert.assertEquals(IndexType.PAA_INDEX, dropIndexOperator.getIndexType());
   }
 
   @Test
@@ -107,7 +94,7 @@ public class IndexLogicalPlanTest {
     Assert.assertEquals("root.vehicle.d1",
         queryOperator.getFromOperator().getPrefixPaths().get(0).getFullPath());
 
-    Assert.assertEquals(IndexType.PAA, queryOperator.getIndexType());
+    Assert.assertEquals(IndexType.PAA_INDEX, queryOperator.getIndexType());
     Assert.assertEquals(2, queryOperator.getProps().size());
     Assert.assertEquals("5", queryOperator.getProps().get("threshold".toUpperCase()));
     Assert.assertEquals("dtw".toUpperCase(), queryOperator.getProps().get("distance".toUpperCase()));

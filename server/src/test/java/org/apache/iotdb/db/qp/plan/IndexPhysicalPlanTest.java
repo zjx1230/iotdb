@@ -84,7 +84,7 @@ public class IndexPhysicalPlanTest {
     aa.put("asd", "asd");
     aa.put("asd2", "frd");
     aa.put("asd4", "zxc");
-    indexInfoMaps.put(IndexType.PAA, new IndexInfo(IndexType.PAA, 1, aa));
+    indexInfoMaps.put(IndexType.PAA_INDEX, new IndexInfo(IndexType.PAA_INDEX, 1, aa));
     indexInfoMaps.put(IndexType.ELB, new IndexInfo(IndexType.ELB, 2, aa));
     indexInfoMaps.put(IndexType.KV_INDEX, new IndexInfo(IndexType.KV_INDEX, 2, aa));
     Collection<IndexInfo> rr = indexInfoMaps.values();

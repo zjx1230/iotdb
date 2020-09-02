@@ -19,7 +19,7 @@ package org.apache.iotdb.db.index.io;
 
 import static org.apache.iotdb.db.index.IndexTestUtils.TEST_INDEX_FILE_NAME;
 import static org.apache.iotdb.db.index.common.IndexType.ELB;
-import static org.apache.iotdb.db.index.common.IndexType.PAA;
+import static org.apache.iotdb.db.index.common.IndexType.PAA_INDEX;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -133,9 +133,9 @@ public class IndexIOWriterTest {
     // writer
     IndexIOWriter writer = new IndexIOWriter(TEST_INDEX_FILE_NAME);
     fakeInsert(p1, ELB, 1, 5, new byte[]{1, 2, 3}, writer, gtMap);
-    fakeInsert(p1, PAA, 2, 7, new byte[]{11, 12, 13}, writer, gtMap);
+    fakeInsert(p1, PAA_INDEX, 2, 7, new byte[]{11, 12, 13}, writer, gtMap);
     fakeInsert(p2, ELB, 3, 6, new byte[]{21, 22, 23}, writer, gtMap);
-    fakeInsert(p1, PAA, 10, 20, new byte[]{31, 32, 33}, writer, gtMap);
+    fakeInsert(p1, PAA_INDEX, 10, 20, new byte[]{31, 32, 33}, writer, gtMap);
     writer.endFile();
 
     IndexIOReader reader = new IndexIOReader(TEST_INDEX_FILE_NAME, false);

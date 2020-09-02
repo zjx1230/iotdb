@@ -26,7 +26,7 @@ import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_SLIDE_STEP;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
 import static org.apache.iotdb.db.index.common.IndexConstant.L_INFINITY;
 import static org.apache.iotdb.db.index.common.IndexType.ELB;
-import static org.apache.iotdb.db.index.common.IndexType.PAA;
+import static org.apache.iotdb.db.index.common.IndexType.PAA_INDEX;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -88,7 +88,7 @@ public class ELBAndPAAIndexTest {
     paaProps.put(INDEX_SLIDE_STEP, "10");
 
     mManager.createIndex(Collections.singletonList(new PartialPath(p1)), new IndexInfo(ELB, 0, elbProps));
-    mManager.createIndex(Collections.singletonList(new PartialPath(p1)), new IndexInfo(PAA, 0, paaProps));
+    mManager.createIndex(Collections.singletonList(new PartialPath(p1)), new IndexInfo(PAA_INDEX, 0, paaProps));
     mManager.createIndex(Collections.singletonList(new PartialPath(p2)), new IndexInfo(ELB, 0, elbProps));
   }
 
@@ -135,7 +135,7 @@ public class ELBAndPAAIndexTest {
         + "(8,[240-267,10])(9,[270-297,10])";
     List<Pair<IndexType, String>> gtP1 = new ArrayList<>();
     gtP1.add(new Pair<>(ELB, gtStrP1ELB));
-    gtP1.add(new Pair<>(PAA, gtStrP1PAA));
+    gtP1.add(new Pair<>(PAA_INDEX, gtStrP1PAA));
     List<Pair<IndexType, String>> gtP2 = new ArrayList<>();
     gtP2.add(new Pair<>(ELB, gtStrP2ELB));
 

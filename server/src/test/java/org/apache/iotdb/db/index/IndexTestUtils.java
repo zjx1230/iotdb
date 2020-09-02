@@ -128,7 +128,7 @@ public class IndexTestUtils {
           sb.append(Identifier.deserialize(byteBuffer));
         }
         return sb.toString();
-      case PAA:
+      case PAA_INDEX:
       case ELB:
         BiConsumer<Integer, ByteBuffer> deserial = (i, b) -> {
           Identifier id = Identifier.deserialize(b);

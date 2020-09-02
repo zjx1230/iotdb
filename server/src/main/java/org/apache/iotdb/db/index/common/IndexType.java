@@ -23,7 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
-import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexTypeException;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
@@ -37,7 +36,7 @@ import org.apache.iotdb.tsfile.exception.NotImplementedException;
 public enum IndexType {
 
   NO_INDEX,
-  PAA,
+  PAA_INDEX,
   ELB,
   KV_INDEX;
 
@@ -62,7 +61,7 @@ public enum IndexType {
       case 0:
         return NO_INDEX;
       case 1:
-        return PAA;
+        return PAA_INDEX;
       case 2:
         return ELB;
       case 3:
@@ -85,7 +84,7 @@ public enum IndexType {
     switch (this) {
       case NO_INDEX:
         return 0;
-      case PAA:
+      case PAA_INDEX:
         return 1;
       case ELB:
         return 2;
@@ -99,17 +98,11 @@ public enum IndexType {
   public static IndexType getIndexType(String indexTypeString)
       throws UnsupportedIndexTypeException {
     String normalized = indexTypeString.toUpperCase();
-    switch (normalized) {
-      case "NO_INDEX":
-        return NO_INDEX;
-      case "PAA":
-        return PAA;
-      case "ELB":
-        return ELB;
-      case "KV_INDEX":
-        return KV_INDEX;
-      default:
-        throw new UnsupportedIndexTypeException("unsupported index type:" + indexTypeString);
+    try {
+      return IndexType.valueOf(normalized);
+    }
+    catch (IllegalArgumentException e){
+      throw new UnsupportedIndexTypeException("unsupported index type:" + indexTypeString);
     }
   }
 
@@ -117,7 +110,7 @@ public enum IndexType {
     switch (indexType) {
       case ELB:
         return new ELBIndex(path, indexInfo);
-      case PAA:
+      case PAA_INDEX:
         return new PAAIndex(path, indexInfo);
       case NO_INDEX:
         return new NoIndex(path, indexInfo);

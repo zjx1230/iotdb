@@ -15,18 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.iotdb.db.integration;
+package org.apache.iotdb.db.index.it;
 
 import static org.apache.iotdb.db.index.IndexTestUtils.funcForm;
-import static org.apache.iotdb.db.index.common.IndexConstant.DISTANCE;
-import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE;
-import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE_ELE;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_SLIDE_STEP;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
-import static org.apache.iotdb.db.index.common.IndexConstant.L_INFINITY;
 import static org.apache.iotdb.db.index.common.IndexFunc.ED;
 import static org.apache.iotdb.db.index.common.IndexFunc.SIM_ET;
 import static org.apache.iotdb.db.index.common.IndexFunc.SIM_ST;
+import static org.apache.iotdb.db.index.common.IndexType.PAA_INDEX;
 import static org.junit.Assert.fail;
 
 import java.sql.Connection;
@@ -41,7 +38,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class IoTDBIndexELBReadIT {
+public class IoTDBIndexPAAReadIT {
 
   private static final String insertPattern = "INSERT INTO %s(timestamp, %s) VALUES (%d, %d)";
   private static final String storageGroup = "root.v";
@@ -71,13 +68,10 @@ public class IoTDBIndexELBReadIT {
           .execute(String.format("CREATE TIMESERIES %s WITH DATATYPE=INT32,ENCODING=PLAIN", p1));
       statement
           .execute(String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", p2));
-//      statement
-//          .execute(String.format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d",
-//              p1, IndexType.NO_INDEX, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 5));
+
       statement.execute(String
-          .format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d, %s=%s, %s=%s",
-              p1, IndexType.ELB, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 5, DISTANCE, L_INFINITY,
-              ELB_TYPE, ELB_TYPE_ELE));
+          .format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d",
+              p1, PAA_INDEX, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 5));
 
 
       long i;
@@ -177,8 +171,8 @@ public class IoTDBIndexELBReadIT {
       pattern.append("\'");
       double threshold = 5;
       String querySQL = String.format(
-          "SELECT INDEX sim_st(%s),sim_et(%s),ed(%s) FROM %s WHERE time >= 50 WITH INDEX=ELB, threshold=%s, pattern=%s",
-          p1s, p1s, p1s, device, threshold, pattern);
+          "SELECT INDEX sim_st(%s),sim_et(%s),ed(%s) FROM %s WHERE time >= 50 WITH INDEX=%s, threshold=%s, pattern=%s",
+          p1s, p1s, p1s, device, PAA_INDEX, threshold, pattern);
       boolean hasIndex = statement.execute(querySQL);
 
       Assert.assertTrue(hasIndex);
@@ -207,7 +201,6 @@ public class IoTDBIndexELBReadIT {
 
   @Test
   public void distanceMeasureIT2() throws ClassNotFoundException {
-//    Thread.sleep(60000);
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection = DriverManager.
         getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
@@ -220,8 +213,8 @@ public class IoTDBIndexELBReadIT {
       pattern.append("\'");
       double threshold = 5;
       boolean hasIndex = statement.execute(String.format(
-          "SELECT INDEX sim_st(%s),sim_et(%s),ed(%s) FROM %s WITH INDEX=ELB, threshold=%s, pattern=%s",
-          p1s, p1s, p1s, device, threshold, pattern));
+          "SELECT INDEX sim_st(%s),sim_et(%s),ed(%s) FROM %s WITH INDEX=%s, threshold=%s, pattern=%s",
+          p1s, p1s, p1s, device, PAA_INDEX, threshold, pattern));
 
       Assert.assertTrue(hasIndex);
       String[] gt = {
