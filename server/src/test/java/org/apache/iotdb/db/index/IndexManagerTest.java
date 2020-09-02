@@ -35,6 +35,7 @@ import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.metadata.MManager;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.db.utils.FileUtils;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
@@ -56,14 +57,14 @@ public class IndexManagerTest {
   private void prepareMManager() throws MetadataException {
     MManager mManager = MManager.getInstance();
     mManager.init();
-    mManager.setStorageGroup(storageGroup);
-    mManager.createTimeseries(p1, TSDataType.INT32, TSEncoding.PLAIN,
+    mManager.setStorageGroup(new PartialPath(storageGroup));
+    mManager.createTimeseries(new PartialPath(p1), TSDataType.INT32, TSEncoding.PLAIN,
         CompressionType.UNCOMPRESSED, null);
     Map<String, String> props = new HashMap<>();
     props.put(INDEX_WINDOW_RANGE, "5");
     props.put(INDEX_SLIDE_STEP, "5");
 
-    mManager.createIndex(Collections.singletonList(p1), new IndexInfo(NO_INDEX, 0, props));
+    mManager.createIndex(Collections.singletonList(new PartialPath(p1)), new IndexInfo(NO_INDEX, 0, props));
   }
 
   private long defaultIndexBufferSize;

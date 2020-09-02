@@ -41,7 +41,7 @@ public class FlinkTsFileBatchSource {
 
 	public static void main(String[] args) throws Exception {
 		String path = "test.tsfile";
-		TsFlieUtils.writeTsFile(path);
+		TsFileUtils.writeTsFile(path);
 		new File(path).deleteOnExit();
 		String[] filedNames = {
 			QueryConstant.RESERVED_TIME,
@@ -63,7 +63,7 @@ public class FlinkTsFileBatchSource {
 		};
 		List<Path> paths = Arrays.stream(filedNames)
 			.filter(s -> !s.equals(QueryConstant.RESERVED_TIME))
-			.map(Path::new)
+			.map(s -> new Path(s, true))
 			.collect(Collectors.toList());
 		RowTypeInfo rowTypeInfo = new RowTypeInfo(typeInformations, filedNames);
 		QueryExpression queryExpression = QueryExpression.create(paths, null);

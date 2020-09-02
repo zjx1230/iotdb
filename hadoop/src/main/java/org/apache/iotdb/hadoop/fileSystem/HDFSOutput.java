@@ -18,17 +18,14 @@
  */
 package org.apache.iotdb.hadoop.fileSystem;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.iotdb.tsfile.write.writer.TsFileOutput;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
 
 
 /**
@@ -40,13 +37,11 @@ public class HDFSOutput implements TsFileOutput {
   private FSDataOutputStream fsDataOutputStream;
   private FileSystem fs;
   private Path path;
-  private static final Logger logger = LoggerFactory.getLogger(HDFSOutput.class);
 
   public HDFSOutput(String filePath, boolean overwrite) throws IOException {
     this(filePath, new Configuration(), overwrite);
     path = new Path(filePath);
   }
-
 
   public HDFSOutput(String filePath, Configuration configuration, boolean overwrite)
       throws IOException {
@@ -77,7 +72,6 @@ public class HDFSOutput implements TsFileOutput {
 
   @Override
   public void close() throws IOException {
-    flush();
     fsDataOutputStream.close();
   }
 
@@ -88,17 +82,15 @@ public class HDFSOutput implements TsFileOutput {
 
   @Override
   public void flush() throws IOException {
-    this.fsDataOutputStream.flush();
+    this.fsDataOutputStream.hflush();
   }
 
   @Override
-  public void truncate(long position) throws IOException {
+  public void truncate(long size) throws IOException {
     if (fs.exists(path)) {
       fsDataOutputStream.close();
     }
-    if (!fs.truncate(path, position)) {
-      logger.error("Failed to truncate file {}. ", path.toUri().toString());
-    }
+    fs.truncate(path, size);
     if (fs.exists(path)) {
       fsDataOutputStream = fs.append(path);
     }

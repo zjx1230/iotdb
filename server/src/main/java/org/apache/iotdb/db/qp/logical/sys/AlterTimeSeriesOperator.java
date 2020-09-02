@@ -19,14 +19,13 @@
 
 package org.apache.iotdb.db.qp.logical.sys;
 
-import org.apache.iotdb.db.qp.logical.RootOperator;
-import org.apache.iotdb.tsfile.read.common.Path;
-
 import java.util.Map;
+import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.qp.logical.RootOperator;
 
 public class AlterTimeSeriesOperator extends RootOperator {
 
-  private Path path;
+  private PartialPath path;
 
   private AlterType alterType;
 
@@ -38,6 +37,7 @@ public class AlterTimeSeriesOperator extends RootOperator {
   private Map<String, String> alterMap;
 
   // used when the alterType is UPSERT
+  private String alias;
   private Map<String, String> tagsMap;
   private Map<String, String> attributesMap;
 
@@ -46,11 +46,11 @@ public class AlterTimeSeriesOperator extends RootOperator {
     operatorType = OperatorType.ALTER_TIMESERIES;
   }
 
-  public Path getPath() {
+  public PartialPath getPath() {
     return path;
   }
 
-  public void setPath(Path path) {
+  public void setPath(PartialPath path) {
     this.path = path;
   }
 
@@ -84,6 +84,14 @@ public class AlterTimeSeriesOperator extends RootOperator {
 
   public void setAttributesMap(Map<String, String> attributesMap) {
     this.attributesMap = attributesMap;
+  }
+
+  public String getAlias() {
+    return alias;
+  }
+
+  public void setAlias(String alias) {
+    this.alias = alias;
   }
 
   public enum AlterType {

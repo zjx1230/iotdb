@@ -31,7 +31,8 @@ import org.apache.iotdb.tsfile.utils.Binary;
 
 public class CommonUtils {
 
-  private CommonUtils(){}
+  private CommonUtils() {
+  }
 
   /**
    * get JDK version.
@@ -71,14 +72,7 @@ public class CommonUtils {
     try {
       switch (dataType) {
         case BOOLEAN:
-          value = value.toLowerCase();
-          if (SQLConstant.BOOLEAN_FALSE_NUM.equals(value) || SQLConstant.BOOLEN_FALSE.equals(value)) {
-            return false;
-          }
-          if (SQLConstant.BOOLEAN_TRUE_NUM.equals(value) || SQLConstant.BOOLEN_TRUE.equals(value)) {
-            return true;
-          }
-          throw new QueryProcessException("The BOOLEAN should be true/TRUE, false/FALSE or 0/1");
+          return parseBoolean(value);
         case INT32:
           return Integer.parseInt(value);
         case INT64:
@@ -89,19 +83,57 @@ public class CommonUtils {
           return Double.parseDouble(value);
         case TEXT:
           if ((value.startsWith(SQLConstant.QUOTE) && value.endsWith(SQLConstant.QUOTE))
-                  || (value.startsWith(SQLConstant.DQUOTE) && value.endsWith(SQLConstant.DQUOTE))) {
+              || (value.startsWith(SQLConstant.DQUOTE) && value.endsWith(SQLConstant.DQUOTE))) {
             if (value.length() == 1) {
               return new Binary(value);
             } else {
               return new Binary(value.substring(1, value.length() - 1));
             }
           }
-          throw new QueryProcessException("The TEXT data type should be covered by \" or '");
+
+          return new Binary(value);
         default:
           throw new QueryProcessException("Unsupported data type:" + dataType);
       }
     } catch (NumberFormatException e) {
       throw new QueryProcessException(e.getMessage());
     }
+  }
+
+  @TestOnly
+  public static Object parseValueForTest(TSDataType dataType, String value)
+      throws QueryProcessException {
+    try {
+      switch (dataType) {
+        case BOOLEAN:
+          return parseBoolean(value);
+        case INT32:
+          return Integer.parseInt(value);
+        case INT64:
+          return Long.parseLong(value);
+        case FLOAT:
+          return Float.parseFloat(value);
+        case DOUBLE:
+          return Double.parseDouble(value);
+        case TEXT:
+          return new Binary(value);
+        default:
+          throw new QueryProcessException("Unsupported data type:" + dataType);
+      }
+    } catch (NumberFormatException e) {
+      throw new QueryProcessException(e.getMessage());
+    }
+  }
+
+  private static boolean parseBoolean(String value) throws QueryProcessException {
+    value = value.toLowerCase();
+    if (SQLConstant.BOOLEAN_FALSE_NUM.equals(value) || SQLConstant.BOOLEAN_FALSE
+        .equals(value)) {
+      return false;
+    }
+    if (SQLConstant.BOOLEAN_TRUE_NUM.equals(value) || SQLConstant.BOOLEAN_TRUE.equals(value)) {
+      return true;
+    }
+    throw new QueryProcessException("The BOOLEAN should be true/TRUE, false/FALSE or 0/1");
   }
 }

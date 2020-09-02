@@ -26,6 +26,10 @@ public class IndexManagerException extends QueryProcessException {
 
   private static final long serialVersionUID = 1233035822169501915L;
 
+  public IndexManagerException(String message) {
+    super(message);
+  }
+
   public IndexManagerException(IoTDBException e) {
     super(e);
   }

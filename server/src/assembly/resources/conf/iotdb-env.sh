@@ -159,6 +159,12 @@ fi
 
 calculate_heap_sizes
 
+## Set heap size by percentage of total memory
+#max_percentage=90
+#min_percentage=50
+#MAX_HEAP_SIZE="`expr $system_memory_in_mb \* $max_percentage / 100`M"
+#HEAP_NEWSIZE="`expr $system_memory_in_mb \* $min_percentage / 100`M"
+
 # Maximum heap size
 #MAX_HEAP_SIZE="2G"
 # Minimum heap size
@@ -181,6 +187,7 @@ if [ ${JMX_LOCAL} = "false" ]; then
   chmod 600 ${IOTDB_CONF}/jmx.access
   IOTDB_JMX_OPTS="$IOTDB_JMX_OPTS -Dcom.sun.management.jmxremote"
   IOTDB_JMX_OPTS="$IOTDB_JMX_OPTS -Dcom.sun.management.jmxremote.port=$JMX_PORT"
+  IOTDB_JMX_OPTS="$IOTDB_JMX_OPTS -Dcom.sun.management.jmxremote.rmi.port=$JMX_PORT"
   IOTDB_JMX_OPTS="$IOTDB_JMX_OPTS -Djava.rmi.server.randomIDs=true"
   IOTDB_JMX_OPTS="$IOTDB_JMX_OPTS -Dcom.sun.management.jmxremote.authenticate=true"
   IOTDB_JMX_OPTS="$IOTDB_JMX_OPTS -Dcom.sun.management.jmxremote.ssl=false"

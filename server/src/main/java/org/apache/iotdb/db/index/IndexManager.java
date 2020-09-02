@@ -37,13 +37,17 @@ import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.exception.StartupException;
+import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
+import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexBuildTaskPoolManager;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
 import org.apache.iotdb.db.index.read.IndexQueryReader;
 import org.apache.iotdb.db.metadata.MManager;
+import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.metadata.mnode.StorageGroupMNode;
 import org.apache.iotdb.db.service.IService;
 import org.apache.iotdb.db.service.JMXService;
 import org.apache.iotdb.db.service.ServiceType;
@@ -73,7 +77,9 @@ public class IndexManager implements IService {
       Filter timeFilter)
       throws IOException, MetadataException {
     String series = seriesPath.getFullPath();
-    String storageGroupName = MManager.getInstance().getStorageGroupName(series);
+    StorageGroupMNode storageGroup = MManager.getInstance()
+        .getStorageGroupNodeByPath(new PartialPath(series));
+    String storageGroupName = storageGroup.getName();
     IndexStorageGroupProcessor sgProcessor = createStorageGroupProcessor(storageGroupName);
     List<IndexChunkMeta> seq = sgProcessor.getIndexSGMetadata(true, series, indexType);
     List<IndexChunkMeta> unseq = sgProcessor.getIndexSGMetadata(false, series, indexType);
@@ -189,7 +195,7 @@ public class IndexManager implements IService {
   }
 
   public static IndexManager getInstance() {
-    return IndexManager.InstanceHolder.instance;
+    return InstanceHolder.instance;
   }
 
   public synchronized void deleteAll() throws IOException {

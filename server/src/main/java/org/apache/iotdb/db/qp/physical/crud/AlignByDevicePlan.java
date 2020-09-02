@@ -20,6 +20,7 @@ package org.apache.iotdb.db.qp.physical.crud;
 
 import java.util.List;
 import java.util.Map;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.logical.Operator;
 import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -29,13 +30,18 @@ public class AlignByDevicePlan extends QueryPlan {
 
   private List<String> measurements; // to record result measurement columns, e.g. temperature, status, speed
   // to check data type consistency for the same name sensor of different devices
-  private List<String> devices;
-  private Map<String, TSDataType> measurementDataTypeMap;
+  private List<PartialPath> devices;
+  // to record the datatype of the column in the result set
+  private Map<String, TSDataType> columnDataTypeMap;
   private Map<String, IExpression> deviceToFilterMap;
   // to record different kinds of measurement
   private Map<String, MeasurementType> measurementTypeMap;
 
-  private GroupByPlan groupByPlan;
+  // to record the real type of the measurement
+  private Map<String, TSDataType> measurementDataTypeMap;
+
+  private GroupByTimePlan groupByTimePlan;
+
   private FillQueryPlan fillQueryPlan;
   private AggregationPlan aggregationPlan;
 
@@ -51,21 +57,21 @@ public class AlignByDevicePlan extends QueryPlan {
     return measurements;
   }
 
-  public void setDevices(List<String> devices) {
+  public void setDevices(List<PartialPath> devices) {
     this.devices = devices;
   }
 
-  public List<String> getDevices() {
+  public List<PartialPath> getDevices() {
     return devices;
   }
 
-  public void setMeasurementDataTypeMap(
-      Map<String, TSDataType> measurementDataTypeMap) {
-    this.measurementDataTypeMap = measurementDataTypeMap;
+  public void setColumnDataTypeMap(
+      Map<String, TSDataType> columnDataTypeMap) {
+    this.columnDataTypeMap = columnDataTypeMap;
   }
 
-  public Map<String, TSDataType> getMeasurementDataTypeMap() {
-    return measurementDataTypeMap;
+  public Map<String, TSDataType> getColumnDataTypeMap() {
+    return columnDataTypeMap;
   }
 
   public Map<String, IExpression> getDeviceToFilterMap() {
@@ -85,13 +91,22 @@ public class AlignByDevicePlan extends QueryPlan {
     this.measurementTypeMap = measurementTypeMap;
   }
 
-  public GroupByPlan getGroupByPlan() {
-    return groupByPlan;
+  public Map<String, TSDataType> getMeasurementDataTypeMap() {
+    return measurementDataTypeMap;
   }
 
-  public void setGroupByPlan(GroupByPlan groupByPlan) {
-    this.groupByPlan = groupByPlan;
-    this.setOperatorType(OperatorType.GROUPBY);
+  public void setMeasurementDataTypeMap(Map<String, TSDataType> measurementDataTypeMap) {
+    this.measurementDataTypeMap = measurementDataTypeMap;
+  }
+
+
+  public GroupByTimePlan getGroupByTimePlan() {
+    return groupByTimePlan;
+  }
+
+  public void setGroupByTimePlan(GroupByTimePlan groupByTimePlan) {
+    this.groupByTimePlan = groupByTimePlan;
+    this.setOperatorType(OperatorType.GROUPBYTIME);
   }
 
   public FillQueryPlan getFillQueryPlan() {

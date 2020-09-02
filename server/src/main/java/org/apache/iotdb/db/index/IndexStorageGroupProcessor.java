@@ -149,9 +149,9 @@ public class IndexStorageGroupProcessor {
    */
   private int compareFileName(File o1, File o2) {
     String[] items1 = o1.getName().replace(INDEXED_SUFFIX, "")
-        .split(IoTDBConstant.TSFILE_NAME_SEPARATOR);
+        .split(IoTDBConstant.FILE_NAME_SEPARATOR);
     String[] items2 = o2.getName().replace(INDEXED_SUFFIX, "")
-        .split(IoTDBConstant.TSFILE_NAME_SEPARATOR);
+        .split(IoTDBConstant.FILE_NAME_SEPARATOR);
     long ver1 = Long.parseLong(items1[0]);
     long ver2 = Long.parseLong(items2[0]);
     int cmp = Long.compare(ver1, ver2);

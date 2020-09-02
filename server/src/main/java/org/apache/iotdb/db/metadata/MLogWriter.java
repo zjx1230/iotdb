@@ -18,26 +18,28 @@
  */
 package org.apache.iotdb.db.metadata;
 
-import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
-import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexType;
-import org.apache.iotdb.db.qp.physical.sys.CreateTimeSeriesPlan;
-import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Map;
+import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
+import org.apache.iotdb.db.qp.physical.sys.CreateTimeSeriesPlan;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexType;
 
 public class MLogWriter {
 
   private static final Logger logger = LoggerFactory.getLogger(MLogWriter.class);
+  private File logFile;
   private BufferedWriter writer;
+  private int lineNumber;
 
   public MLogWriter(String schemaDir, String logFileName) throws IOException {
     File metadataDir = SystemFileFactory.INSTANCE.getFile(schemaDir);
@@ -49,13 +51,10 @@ public class MLogWriter {
       }
     }
 
-    File logFile = SystemFileFactory.INSTANCE.getFile(schemaDir + File.separator + logFileName);
-
-    FileWriter fileWriter;
-    fileWriter = new FileWriter(logFile, true);
+    logFile = SystemFileFactory.INSTANCE.getFile(schemaDir + File.separator + logFileName);
+    FileWriter fileWriter = new FileWriter(logFile, true);
     writer = new BufferedWriter(fileWriter);
   }
-
 
   public void close() throws IOException {
     writer.close();
@@ -63,8 +62,8 @@ public class MLogWriter {
 
   public void createTimeseries(CreateTimeSeriesPlan plan, long offset) throws IOException {
     writer.write(String.format("%s,%s,%s,%s,%s", MetadataOperationType.CREATE_TIMESERIES,
-        plan.getPath().getFullPath(), plan.getDataType().serialize(), plan.getEncoding().serialize(),
-        plan.getCompressor().serialize()));
+        plan.getPath().getFullPath(), plan.getDataType().serialize(),
+        plan.getEncoding().serialize(), plan.getCompressor().serialize()));
 
     writer.write(",");
     if (plan.getProps() != null) {
@@ -88,16 +87,13 @@ public class MLogWriter {
     if (offset >= 0) {
       writer.write(String.valueOf(offset));
     }
-
-    writer.newLine();
-    writer.flush();
+    newLine();
   }
 
 
   public void deleteTimeseries(String path) throws IOException {
     writer.write(MetadataOperationType.DELETE_TIMESERIES + "," + path);
-    writer.newLine();
-    writer.flush();
+    newLine();
   }
 
   public void createIndex(String path, IndexInfo indexInfo) throws IOException {
@@ -116,32 +112,32 @@ public class MLogWriter {
 
   public void setStorageGroup(String storageGroup) throws IOException {
     writer.write(MetadataOperationType.SET_STORAGE_GROUP + "," + storageGroup);
-    writer.newLine();
-    writer.flush();
+    newLine();
   }
 
   public void deleteStorageGroup(String storageGroup) throws IOException {
     writer.write(MetadataOperationType.DELETE_STORAGE_GROUP + "," + storageGroup);
-    writer.newLine();
-    writer.flush();
+    newLine();
   }
 
   public void setTTL(String storageGroup, long ttl) throws IOException {
     writer.write(String.format("%s,%s,%s", MetadataOperationType.SET_TTL, storageGroup, ttl));
-    writer.newLine();
-    writer.flush();
+    newLine();
   }
 
   public void changeOffset(String path, long offset) throws IOException {
     writer.write(String.format("%s,%s,%s", MetadataOperationType.CHANGE_OFFSET, path, offset));
-    writer.newLine();
-    writer.flush();
+    newLine();
+  }
+
+  public void changeAlias(String path, String alias) throws IOException {
+    writer.write(String.format("%s,%s,%s", MetadataOperationType.CHANGE_ALIAS, path, alias));
+    newLine();
   }
 
   public static void upgradeMLog(String schemaDir, String logFileName) throws IOException {
-    File logFile = FSFactoryProducer.getFSFactory()
-        .getFile(schemaDir + File.separator + logFileName);
-    File tmpLogFile = new File(logFile.getAbsolutePath() + ".tmp");
+    File logFile = SystemFileFactory.INSTANCE.getFile(schemaDir + File.separator + logFileName);
+    File tmpLogFile = SystemFileFactory.INSTANCE.getFile(logFile.getAbsolutePath() + ".tmp");
 
     // if both old mlog and mlog.tmp do not exist, nothing to do
     if (!logFile.exists() && !tmpLogFile.exists()) {
@@ -171,17 +167,33 @@ public class MLogWriter {
         writer.write(buf.toString());
         writer.newLine();
         writer.flush();
-
       }
     }
-
-    // upgrade finished, delete old mlog file
-    if (!logFile.delete()) {
-      throw new IOException("Deleting " + logFile + "failed.");
-    }
-
-    // rename tmpLogFile to mlog
-    FSFactoryProducer.getFSFactory().moveFile(tmpLogFile, logFile);
   }
 
+
+  public void clear() throws IOException {
+    writer.close();
+    Files.delete(logFile.toPath());
+    FileWriter fileWriter = new FileWriter(logFile, true);
+    writer = new BufferedWriter(fileWriter);
+    lineNumber = 0;
+  }
+
+  private void newLine() throws IOException {
+    writer.newLine();
+    writer.flush();
+    ++lineNumber;
+  }
+
+  int getLineNumber() {
+    return lineNumber;
+  }
+
+  /**
+   * only used for initialize a mlog file writer.
+   */
+  void setLineNumber(int number) {
+    lineNumber = number;
+  }
 }

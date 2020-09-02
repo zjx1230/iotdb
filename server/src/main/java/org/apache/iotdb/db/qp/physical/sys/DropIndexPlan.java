@@ -25,33 +25,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
 import org.apache.iotdb.db.qp.physical.PhysicalPlan;
 import org.apache.iotdb.tsfile.read.common.Path;
 
 public class DropIndexPlan extends PhysicalPlan {
 
-  protected List<Path> paths;
+  protected List<PartialPath> paths;
   private IndexType indexType;
 
-//  public CreateIndexPlan() {
-//    super(false, OperatorType.CREATE_INDEX);
-//    canbeSplit = false;
-//  }
-
-  public DropIndexPlan(List<Path> paths, IndexType indexType) {
+  public DropIndexPlan(List<PartialPath> paths, IndexType indexType) {
     super(false, OperatorType.DROP_INDEX);
     this.paths = paths;
     this.indexType = indexType;
-//    canbeSplit = false;
+
   }
 
-  public void setPaths(List<Path> paths) {
+  public void setPaths(List<PartialPath> paths) {
     this.paths = paths;
   }
 
   @Override
-  public List<Path> getPaths() {
+  public List<PartialPath> getPaths() {
     return paths;
   }
 
@@ -64,7 +60,7 @@ public class DropIndexPlan extends PhysicalPlan {
   }
 
   @Override
-  public void serializeTo(DataOutputStream stream) throws IOException {
+  public void serialize(DataOutputStream stream) throws IOException {
     throw new IOException("when do we need serializeTo?");
 //    stream.writeByte((byte) PhysicalPlanType.CREATE_TIMESERIES.ordinal());
 //    byte[] pathBytes = path.getFullPath().getBytes();
@@ -76,7 +72,7 @@ public class DropIndexPlan extends PhysicalPlan {
   }
 
   @Override
-  public void deserializeFrom(ByteBuffer buffer) {
+  public void deserialize(ByteBuffer buffer) {
     throw new RuntimeException("when do we need deserializeFrom?");
 //    int length = buffer.getInt();
 //    byte[] pathBytes = new byte[length];

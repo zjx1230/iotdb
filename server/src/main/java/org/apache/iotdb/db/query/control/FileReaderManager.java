@@ -23,8 +23,10 @@ import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.service.IService;
 import org.apache.iotdb.db.service.ServiceType;
+import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.UnClosedTsFileReader;
+import org.apache.iotdb.tsfile.v1.read.TsFileSequenceReaderForV1;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -147,6 +149,7 @@ public class FileReaderManager implements IService {
    * @return the reader of the file specified by filePath.
    * @throws IOException when reader cannot be created.
    */
+  @SuppressWarnings("squid:S2095")
   public synchronized TsFileSequenceReader get(String filePath, boolean isClosed)
       throws IOException {
 
@@ -158,9 +161,24 @@ public class FileReaderManager implements IService {
         logger.warn("Query has opened {} files !", readerMap.size());
       }
 
-      TsFileSequenceReader tsFileReader = !isClosed ? new UnClosedTsFileReader(filePath)
-          : new TsFileSequenceReader(filePath);
-
+      TsFileSequenceReader tsFileReader = null;
+      // check if the file is old version
+      if (!isClosed) {
+        tsFileReader = new UnClosedTsFileReader(filePath);
+      }
+      else {
+        tsFileReader = new TsFileSequenceReader(filePath);
+        switch (tsFileReader.readVersionNumber()) {
+          case TSFileConfig.VERSION_NUMBER_V1:
+            tsFileReader.close();
+            tsFileReader = new TsFileSequenceReaderForV1(filePath);
+            break;
+          case TSFileConfig.VERSION_NUMBER:
+            break;
+          default:
+            throw new IOException("The version of this TsFile is not corrent. ");
+        }
+      }
       readerMap.put(filePath, tsFileReader);
       return tsFileReader;
     }
@@ -174,12 +192,12 @@ public class FileReaderManager implements IService {
    * of a reader equals zero, the reader can be closed and removed.
    */
   void increaseFileReaderReference(TsFileResource tsFile, boolean isClosed) {
-    tsFile.getWriteQueryLock().readLock().lock();
+    tsFile.readLock();
     synchronized (this) {
       if (!isClosed) {
-        unclosedReferenceMap.computeIfAbsent(tsFile.getPath(), k -> new AtomicInteger()).getAndIncrement();
+        unclosedReferenceMap.computeIfAbsent(tsFile.getTsFilePath(), k -> new AtomicInteger()).getAndIncrement();
       } else {
-        closedReferenceMap.computeIfAbsent(tsFile.getPath(), k -> new AtomicInteger()).getAndIncrement();
+        closedReferenceMap.computeIfAbsent(tsFile.getTsFilePath(), k -> new AtomicInteger()).getAndIncrement();
       }
     }
   }
@@ -190,13 +208,13 @@ public class FileReaderManager implements IService {
    */
   void decreaseFileReaderReference(TsFileResource tsFile, boolean isClosed) {
     synchronized (this) {
-      if (!isClosed && unclosedReferenceMap.containsKey(tsFile.getPath())) {
-        unclosedReferenceMap.get(tsFile.getPath()).decrementAndGet();
-      } else if (closedReferenceMap.containsKey(tsFile.getPath())){
-        closedReferenceMap.get(tsFile.getPath()).decrementAndGet();
+      if (!isClosed && unclosedReferenceMap.containsKey(tsFile.getTsFilePath())) {
+        unclosedReferenceMap.get(tsFile.getTsFilePath()).decrementAndGet();
+      } else if (closedReferenceMap.containsKey(tsFile.getTsFilePath())){
+        closedReferenceMap.get(tsFile.getTsFilePath()).decrementAndGet();
       }
     }
-    tsFile.getWriteQueryLock().readLock().unlock();
+    tsFile.readUnlock();
   }
 
   /**
@@ -230,8 +248,8 @@ public class FileReaderManager implements IService {
    * This method is only for unit tests.
    */
   public synchronized boolean contains(TsFileResource tsFile, boolean isClosed) {
-    return (isClosed && closedFileReaderMap.containsKey(tsFile.getPath()))
-        || (!isClosed && unclosedFileReaderMap.containsKey(tsFile.getPath()));
+    return (isClosed && closedFileReaderMap.containsKey(tsFile.getTsFilePath()))
+        || (!isClosed && unclosedFileReaderMap.containsKey(tsFile.getTsFilePath()));
   }
 
   @Override

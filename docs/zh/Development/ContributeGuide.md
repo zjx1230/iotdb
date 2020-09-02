@@ -27,7 +27,7 @@ IoTDB 官网：https://iotdb.apache.org/
 
 代码库：https://github.com/apache/incubator-iotdb/tree/master
 
-快速上手：http://iotdb.apache.org/UserGuide/master/0-Get%20Started/1-QuickStart.html
+快速上手：http://iotdb.apache.org/UserGuide/master/Get%20Started/QuickStart.html
 
 Jira 任务管理：https://issues.apache.org/jira/projects/IOTDB/issues
 
@@ -101,7 +101,9 @@ IoTDB 所有官网上的内容都在项目根目录的 docs 中：
 
 ### Intellij idea
 
-推荐使用 Intellij idea。```mvn clean package -DskipTests``` 之后把 ```server/target/generated-sources/antlr4``` 和 ```service-rpc/target/generated-sources/thrift``` 标记为 ```Source Root```。 
+推荐使用 Intellij idea。```mvn clean package -DskipTests``` 
+
+之后把 ```antlr/target/generated-sources/antlr4``` 和 ```thrift/target/generated-sources/thrift``` 标记为 ```Source Root```。 
 
 ### Eclipse
 

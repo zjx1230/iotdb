@@ -21,6 +21,10 @@ package org.apache.iotdb.db.conf;
 import static org.apache.iotdb.tsfile.common.constant.TsFileConstant.PATH_ROOT;
 import static org.apache.iotdb.tsfile.common.constant.TsFileConstant.PATH_SEPARATOR;
 
+import java.io.File;
+import java.time.ZoneId;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.engine.memtable.IWritableMemChunk;
 import org.apache.iotdb.db.engine.merge.selector.MergeFileStrategy;
@@ -28,15 +32,12 @@ import org.apache.iotdb.db.exception.LoadConfigurationException;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.service.TSServiceImpl;
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
+import org.apache.iotdb.tsfile.common.constant.TsFileConstant;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.fileSystem.FSType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.time.ZoneId;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class IoTDBConfig {
 
@@ -48,14 +49,21 @@ public class IoTDBConfig {
       "org.apache.iotdb.db.conf.directories.strategy.";
   private static final String DEFAULT_MULTI_DIR_STRATEGY = "MaxDiskUsableSpaceFirstStrategy";
 
-  private static final String NODE_MATCHER =
-      "[" + PATH_SEPARATOR + "]" + "([a-zA-Z0-9\u2E80-\u9FFF_]+)";
+  // e.g., a31+/$%#&[]{}3e4
+  private static final String ID_MATCHER = "([a-zA-Z0-9/@#$%&{}\\[\\]\\-+\\u2E80-\\u9FFF_]+)";
 
-  // for path like: root.sg1.d1."1.2.3" or root.sg1.d1.'1.2.3', only occurs in the end of the path and only occurs once
-  private static final String NODE_WITH_QUOTATION_MARK_MATCHER =
-      "[" + PATH_SEPARATOR + "][\"|\']([a-zA-Z0-9\u2E80-\u9FFF_]+)(" + NODE_MATCHER + ")+[\"|\']";
+  private static final String STORAGE_GROUP_MATCHER = "([a-zA-Z0-9_.\\u2E80-\\u9FFF]+)";
+
+  // e.g.,  .s1
+  private static final String PARTIAL_NODE_MATCHER = "[" + PATH_SEPARATOR + "]" + ID_MATCHER;
+
+  // for path like: root.sg1.d1."1.2.3", root.sg.d1."1.2.3"
+  private static final String NODE_MATCHER =
+      "[" + PATH_SEPARATOR + "]([\"])?" + ID_MATCHER + "(" + PARTIAL_NODE_MATCHER + ")*([\"])?";
   public static final Pattern PATH_PATTERN = Pattern
-      .compile(PATH_ROOT + "(" + NODE_MATCHER + ")+(" + NODE_WITH_QUOTATION_MARK_MATCHER + ")?");
+      .compile(PATH_ROOT + "(" + NODE_MATCHER + ")+(" + NODE_MATCHER + ")?");
+
+  public static final Pattern STORAGE_GROUP_PATTERN = Pattern.compile(STORAGE_GROUP_MATCHER);
 
   /**
    * Port which the metrics service listens to.
@@ -90,6 +98,12 @@ public class IoTDBConfig {
   private String mqttPayloadFormatter = "json";
 
   /**
+   * max mqtt message size
+   */
+  private int mqttMaxMessageSize = 1048576;
+
+
+  /**
    * Rpc binding address.
    */
   private String rpcAddress = "0.0.0.0";
@@ -108,16 +122,6 @@ public class IoTDBConfig {
    * Max concurrent client number
    */
   private int rpcMaxConcurrentClientNum = 65535;
-
-  /**
-   * JMX user name
-   */
-  private String jmxUser = "admin";
-
-  /**
-   * JMX user password
-   */
-  private String jmxPassword = "password";
 
   /**
    * Memory allocated for the read process
@@ -172,22 +176,29 @@ public class IoTDBConfig {
   /**
    * System directory, including version file for each storage group and metadata
    */
-  private String systemDir = "data" + File.separator + "system";
+  private String systemDir = baseDir + File.separator + IoTDBConstant.SYSTEM_FOLDER_NAME;
 
   /**
    * Schema directory, including storage set of values.
    */
-  private String schemaDir = "data" + File.separator + "system" + File.separator + "schema";
+  private String schemaDir = baseDir + File.separator + IoTDBConstant.SYSTEM_FOLDER_NAME
+      + File.separator + IoTDBConstant.SCHEMA_FOLDER_NAME;
 
   /**
    * Sync directory, including the lock file, uuid file, device owner map
    */
-  private String syncDir = "data" + File.separator + "system" + File.separator + "sync";
+  private String syncDir = baseDir + File.separator + IoTDBConstant.SYSTEM_FOLDER_NAME
+      + File.separator + IoTDBConstant.SYNC_FOLDER_NAME;
+
+  /**
+   * Performance tracing directory, stores performance tracing files
+   */
+  private String tracingDir = baseDir + File.separator + IoTDBConstant.TRACING_FOLDER_NAME;
 
   /**
    * Query directory, stores temporary files of query
    */
-  private String queryDir = "data" + File.separator + "query";
+  private String queryDir = baseDir + File.separator + IoTDBConstant.QUERY_FOLDER_NAME;
 
   /**
    * Data directory of data. It can be settled as dataDirs = {"data1", "data2", "data3"};
@@ -202,7 +213,7 @@ public class IoTDBConfig {
   /**
    * Wal directory.
    */
-  private String walFolder = "data" + File.separator + "wal";
+  private String walDir = baseDir + File.separator + "wal";
 
   /**
    * Maximum MemTable number in MemTable pool.
@@ -266,31 +277,52 @@ public class IoTDBConfig {
   /**
    * When a memTable's size (in byte) exceeds this, the memtable is flushed to disk.
    */
-  private long memtableSizeThreshold = 128 * 1024 * 1024L;
+  private long memtableSizeThreshold = 1024 * 1024 * 1024L;
+
+  /**
+   * When average series point number reaches this, flush the memtable to disk
+   */
+  private int avgSeriesPointNumberThreshold = 100000;
+
+  /**
+   * When merge point number reaches this, merge the vmfile to the tsfile.
+   */
+  private int mergeChunkPointNumberThreshold = 100000;
+
+  /**
+   * Is vm merge enable
+   */
+  private boolean enableVm = false;
+
+  /**
+   * The max vm num of each memtable. When vm num exceeds this, the vm files will merge to one.
+   */
+  private int maxVmNum = 10;
+
+  /**
+   * When vmfiles merge times exceeds this, merge the vmfile to the tsfile.
+   */
+  private int maxMergeChunkNumInTsFile = 100;
 
   /**
    * whether to cache meta data(ChunkMetaData and TsFileMetaData) or not.
    */
   private boolean metaDataCacheEnable = true;
-  /**
-   * Memory allocated for fileMetaData cache in read process
-   */
-  private long allocateMemoryForFileMetaDataCache = allocateMemoryForRead * 7 / 39;
 
   /**
    * Memory allocated for timeSeriesMetaData cache in read process
    */
-  private long allocateMemoryForTimeSeriesMetaDataCache = allocateMemoryForRead * 10 / 39;
+  private long allocateMemoryForTimeSeriesMetaDataCache = allocateMemoryForRead / 10;
 
   /**
    * Memory allocated for chunkMetaData cache in read process
    */
-  private long allocateMemoryForChunkMetaDataCache = allocateMemoryForRead * 5 / 39;
+  private long allocateMemoryForChunkMetaDataCache = allocateMemoryForRead / 10;
 
   /**
    * Memory allocated for chunk cache in read process
    */
-  private long allocateMemoryForChunkCache = allocateMemoryForRead * 5 / 39;
+  private long allocateMemoryForChunkCache = allocateMemoryForRead / 10;
 
   /**
    * The statMonitor writes statistics info into IoTDB every backLoopPeriodSec secs. The default
@@ -314,7 +346,12 @@ public class IoTDBConfig {
   /**
    * Cache size of {@code checkAndGetDataTypeCache} in {@link MManager}.
    */
-  private int mManagerCacheSize = 400000;
+  private int mManagerCacheSize = 300000;
+
+  /**
+   * Cache size of {@code checkAndGetDataTypeCache} in {@link MManager}.
+   */
+  private int mRemoteSchemaCacheSize = 100000;
 
   /**
    * Is external sort enable.
@@ -325,12 +362,12 @@ public class IoTDBConfig {
    * The threshold of items in external sort. If the number of chunks participating in sorting
    * exceeds this threshold, external sorting is enabled, otherwise memory sorting is used.
    */
-  private int externalSortThreshold = 60;
+  private int externalSortThreshold = 1000;
 
   /**
    * Is this IoTDB instance a receiver of sync or not.
    */
-  private boolean isSyncEnable = true;
+  private boolean isSyncEnable = false;
   /**
    * If this IoTDB instance is a receiver of sync, set the server port.
    */
@@ -357,6 +394,11 @@ public class IoTDBConfig {
   private boolean enablePerformanceStat = false;
 
   /**
+   * Is performance tracing enable.
+   */
+  private boolean enablePerformanceTracing = false;
+
+  /**
    * The display of stat performance interval in ms.
    */
   private long performanceStatDisplayInterval = 60000;
@@ -378,22 +420,43 @@ public class IoTDBConfig {
   /**
    * Secret key for watermark
    */
-  private String watermarkSecretKey = "QWERTYUIOP*&=";
+  private String watermarkSecretKey = "IoTDB*2019@Beijing";
 
   /**
    * Bit string of watermark
    */
-  private String watermarkBitString = "11001010010101";
+  private String watermarkBitString = "100101110100";
 
   /**
    * Watermark method and parameters
    */
-  private String watermarkMethod = "GroupBasedLSBMethod(embed_row_cycle=5,embed_lsb_num=5)";
+  private String watermarkMethod = "GroupBasedLSBMethod(embed_row_cycle=2,embed_lsb_num=5)";
 
   /**
    * Switch of creating schema automatically
    */
   private boolean enableAutoCreateSchema = true;
+
+  /**
+   * register time series as which type when receiving boolean string "true" or "false"
+   */
+  private TSDataType booleanStringInferType = TSDataType.BOOLEAN;
+
+  /**
+   * register time series as which type when receiving an integer string "67"
+   */
+  private TSDataType integerStringInferType = TSDataType.FLOAT;
+
+  /**
+   * register time series as which type when receiving a floating number string "6.7"
+   */
+  private TSDataType floatingStringInferType = TSDataType.FLOAT;
+
+  /**
+   * register time series as which type when receiving the Literal NaN. Values can be DOUBLE, FLOAT
+   * or TEXT
+   */
+  private TSDataType nanStringInferType = TSDataType.DOUBLE;
 
   /**
    * Storage group level when creating schema automatically is enabled
@@ -461,13 +524,13 @@ public class IoTDBConfig {
    * be continued, otherwise, the unfinished parts of such merges will not be continued while the
    * finished parts still remain as they are.
    */
-  private boolean continueMergeAfterReboot = true;
+  private boolean continueMergeAfterReboot = false;
 
   /**
    * A global merge will be performed each such interval, that is, each storage group will be merged
    * (if proper merge candidates can be found). Unit: second.
    */
-  private long mergeIntervalSec = 2 * 3600L;
+  private long mergeIntervalSec = 0L;
 
   /**
    * When set to true, all merges becomes full merge (the whole SeqFiles are re-written despite how
@@ -546,14 +609,14 @@ public class IoTDBConfig {
   private String kerberosKeytabFilePath = "/path";
 
   /**
-   * kerberos pricipal
+   * kerberos principal
    */
   private String kerberosPrincipal = "principal";
 
   /**
    * the num of memtable in each storage group
    */
-  private int memtableNumInEachStorageGroup = 10;
+  private int concurrentWritingTimePartition = 1;
 
   /**
    * the default fill interval in LinearFill and PreviousFill, -1 means infinite past time
@@ -561,11 +624,33 @@ public class IoTDBConfig {
   private int defaultFillInterval = -1;
 
   /**
-   * default TTL for storage groups that are not set TTL by statements, in ms Notice: if this
-   * property is changed, previous created storage group which are not set TTL will also be
-   * affected.
+   * default TTL for storage groups that are not set TTL by statements, in ms
+   * Notice: if this property is changed, previous created storage group which are not set TTL
+   * will also be affected.
    */
   private long defaultTTL = Long.MAX_VALUE;
+
+  /**
+   * The default value of primitive array size in array pool
+   */
+  private int primitiveArraySize = 128;
+
+  /**
+   * whether enable data partition. If disabled, all data belongs to partition 0
+   */
+  private boolean enablePartition = false;
+
+  /**
+   * Interval line number of mlog.txt when creating a checkpoint and saving snapshot of mtree
+   */
+  private int mtreeSnapshotInterval = 100000;
+
+  /**
+   * Threshold interval time of MTree modification. If the last modification time is less than this
+   * threshold, MTree snapshot will not be created. Unit: second. Default: 1 hour(3600 seconds)
+   */
+  private int mtreeSnapshotThresholdTime = 3600;
+
   /**
    * Time range for partitioning data inside each storage group, the unit is second
    */
@@ -580,16 +665,29 @@ public class IoTDBConfig {
   // max size for tag and attribute of one time series
   private int tagAttributeTotalSize = 700;
 
+  // In one insert (one device, one timestamp, multiple measurements),
+  // if enable partial insert, one measurement failure will not impact other measurements
+  private boolean enablePartialInsert = true;
+
+  // Open ID Secret
+  private String openIdProviderUrl = null;
+
+  // the authorizer provider class which extends BasicAuthorizer
+  private String authorizerProvider = "org.apache.iotdb.db.auth.authorizer.LocalFileAuthorizer";
+
+  // time in nanosecond precision when starting up
+  private long startUpNanosecond = System.nanoTime();
+
   public IoTDBConfig() {
     // empty constructor
   }
 
-  public int getMemtableNumInEachStorageGroup() {
-    return memtableNumInEachStorageGroup;
+  public int getConcurrentWritingTimePartition() {
+    return concurrentWritingTimePartition;
   }
 
-  void setMemtableNumInEachStorageGroup(int memtableNumInEachStorageGroup) {
-    this.memtableNumInEachStorageGroup = memtableNumInEachStorageGroup;
+  void setConcurrentWritingTimePartition(int concurrentWritingTimePartition) {
+    this.concurrentWritingTimePartition = concurrentWritingTimePartition;
   }
 
   public int getDefaultFillInterval() {
@@ -598,6 +696,30 @@ public class IoTDBConfig {
 
   public void setDefaultFillInterval(int defaultFillInterval) {
     this.defaultFillInterval = defaultFillInterval;
+  }
+
+  public boolean isEnablePartition() {
+    return enablePartition;
+  }
+
+  public void setEnablePartition(boolean enablePartition) {
+    this.enablePartition = enablePartition;
+  }
+
+  public int getMtreeSnapshotInterval() {
+    return mtreeSnapshotInterval;
+  }
+
+  public void setMtreeSnapshotInterval(int mtreeSnapshotInterval) {
+    this.mtreeSnapshotInterval = mtreeSnapshotInterval;
+  }
+
+  public int getMtreeSnapshotThresholdTime() {
+    return mtreeSnapshotThresholdTime;
+  }
+
+  public void setMtreeSnapshotThresholdTime(int mtreeSnapshotThresholdTime) {
+    this.mtreeSnapshotThresholdTime = mtreeSnapshotThresholdTime;
   }
 
   public long getPartitionInterval() {
@@ -625,12 +747,14 @@ public class IoTDBConfig {
    * if the folders are relative paths, add IOTDB_HOME as the path prefix
    */
   private void formulateFolders() {
-    baseDir = addHomeDir(baseDir);
     systemDir = addHomeDir(systemDir);
     schemaDir = addHomeDir(schemaDir);
     syncDir = addHomeDir(syncDir);
-    walFolder = addHomeDir(walFolder);
+
+    tracingDir = addHomeDir(tracingDir);
+    walDir = addHomeDir(walDir);
     indexRootFolder = addHomeDir(indexRootFolder);
+
 
     if (TSFileDescriptor.getInstance().getConfig().getTSFileStorageFs().equals(FSType.HDFS)) {
       String hdfsDir = getHdfsDir();
@@ -677,7 +801,7 @@ public class IoTDBConfig {
     if (getMultiDirStrategyClassName() == null) {
       multiDirStrategyClassName = DEFAULT_MULTI_DIR_STRATEGY;
     }
-    if (!getMultiDirStrategyClassName().contains(".")) {
+    if (!getMultiDirStrategyClassName().contains(TsFileConstant.PATH_SEPARATOR)) {
       multiDirStrategyClassName = MULTI_DIR_STRATEGY_PREFIX + multiDirStrategyClassName;
     }
 
@@ -721,22 +845,6 @@ public class IoTDBConfig {
     this.enableMetricService = enableMetricService;
   }
 
-  public String getJmxUser() {
-    return jmxUser;
-  }
-
-  public void setJmxUser(String jmxUser) {
-    this.jmxUser = jmxUser;
-  }
-
-  public String getJmxPassword() {
-    return jmxPassword;
-  }
-
-  public void setJmxPassword(String jmxPassword) {
-    this.jmxPassword = jmxPassword;
-  }
-
   void setDataDirs(String[] dataDirs) {
     this.dataDirs = dataDirs;
   }
@@ -761,7 +869,13 @@ public class IoTDBConfig {
     return timestampPrecision;
   }
 
-  void setTimestampPrecision(String timestampPrecision) {
+  public void setTimestampPrecision(String timestampPrecision) {
+    if (!(timestampPrecision.equals("ms") || timestampPrecision.equals("us")
+        || timestampPrecision.equals("ns"))) {
+      logger.error("Wrong timestamp precision, please set as: ms, us or ns ! Current is: "
+          + timestampPrecision);
+      System.exit(-1);
+    }
     this.timestampPrecision = timestampPrecision;
   }
 
@@ -813,6 +927,14 @@ public class IoTDBConfig {
     this.syncDir = syncDir;
   }
 
+  public String getTracingDir() {
+    return tracingDir;
+  }
+
+  void setTracingDir(String tracingDir) {
+    this.tracingDir = tracingDir;
+  }
+
   public String getQueryDir() {
     return queryDir;
   }
@@ -821,12 +943,12 @@ public class IoTDBConfig {
     this.queryDir = queryDir;
   }
 
-  public String getWalFolder() {
-    return walFolder;
+  public String getWalDir() {
+    return walDir;
   }
 
-  void setWalFolder(String walFolder) {
-    this.walFolder = walFolder;
+  void setWalDir(String walDir) {
+    this.walDir = walDir;
   }
 
   public String getMultiDirStrategyClassName() {
@@ -933,11 +1055,19 @@ public class IoTDBConfig {
     this.mManagerCacheSize = mManagerCacheSize;
   }
 
+  public int getmRemoteSchemaCacheSize() {
+    return mRemoteSchemaCacheSize;
+  }
+
+  public void setmRemoteSchemaCacheSize(int mRemoteSchemaCacheSize) {
+    this.mRemoteSchemaCacheSize = mRemoteSchemaCacheSize;
+  }
+
   public boolean isSyncEnable() {
     return isSyncEnable;
   }
 
-  void setSyncEnable(boolean syncEnable) {
+  public void setSyncEnable(boolean syncEnable) {
     isSyncEnable = syncEnable;
   }
 
@@ -955,14 +1085,6 @@ public class IoTDBConfig {
 
   void setLanguageVersion(String languageVersion) {
     this.languageVersion = languageVersion;
-  }
-
-  public String getBaseDir() {
-    return baseDir;
-  }
-
-  void setBaseDir(String baseDir) {
-    this.baseDir = baseDir;
   }
 
   public String getIpWhiteList() {
@@ -1093,6 +1215,14 @@ public class IoTDBConfig {
     this.enablePerformanceStat = enablePerformanceStat;
   }
 
+  public boolean isEnablePerformanceTracing() {
+    return enablePerformanceTracing;
+  }
+
+  public void setEnablePerformanceTracing(boolean enablePerformanceTracing) {
+    this.enablePerformanceTracing = enablePerformanceTracing;
+  }
+
   public long getPerformanceStatDisplayInterval() {
     return performanceStatDisplayInterval;
   }
@@ -1107,6 +1237,14 @@ public class IoTDBConfig {
 
   void setPerformanceStatMemoryInKB(int performanceStatMemoryInKB) {
     this.performanceStatMemoryInKB = performanceStatMemoryInKB;
+  }
+
+  public boolean isEnablePartialInsert() {
+    return enablePartialInsert;
+  }
+
+  public void setEnablePartialInsert(boolean enablePartialInsert) {
+    this.enablePartialInsert = enablePartialInsert;
   }
 
   public boolean isForceFullMerge() {
@@ -1133,6 +1271,29 @@ public class IoTDBConfig {
     this.memtableSizeThreshold = memtableSizeThreshold;
   }
 
+  public int getAvgSeriesPointNumberThreshold() {
+    return avgSeriesPointNumberThreshold;
+  }
+
+  public void setAvgSeriesPointNumberThreshold(int avgSeriesPointNumberThreshold) {
+    this.avgSeriesPointNumberThreshold = avgSeriesPointNumberThreshold;
+  }
+
+  public int getMergeChunkPointNumberThreshold() {
+    return mergeChunkPointNumberThreshold;
+  }
+
+  public void setMergeChunkPointNumberThreshold(int mergeChunkPointNumberThreshold) {
+    this.mergeChunkPointNumberThreshold = mergeChunkPointNumberThreshold;
+  }
+
+  public int getMaxMergeChunkNumInTsFile() {
+    return maxMergeChunkNumInTsFile;
+  }
+
+  public void setMaxMergeChunkNumInTsFile(int maxMergeChunkNumInTsFile) {
+    this.maxMergeChunkNumInTsFile = maxMergeChunkNumInTsFile;
+  }
   public MergeFileStrategy getMergeFileStrategy() {
     return mergeFileStrategy;
   }
@@ -1140,6 +1301,22 @@ public class IoTDBConfig {
   public void setMergeFileStrategy(
       MergeFileStrategy mergeFileStrategy) {
     this.mergeFileStrategy = mergeFileStrategy;
+  }
+
+  public boolean isEnableVm() {
+    return enableVm;
+  }
+
+  public void setEnableVm(boolean enableVm) {
+    this.enableVm = enableVm;
+  }
+
+  public int getMaxVmNum() {
+    return maxVmNum;
+  }
+
+  public void setMaxVmNum(int maxVmNum) {
+    this.maxVmNum = maxVmNum;
   }
 
   public int getMergeChunkSubThreadNum() {
@@ -1172,14 +1349,6 @@ public class IoTDBConfig {
 
   public void setMetaDataCacheEnable(boolean metaDataCacheEnable) {
     this.metaDataCacheEnable = metaDataCacheEnable;
-  }
-
-  public long getAllocateMemoryForFileMetaDataCache() {
-    return allocateMemoryForFileMetaDataCache;
-  }
-
-  void setAllocateMemoryForFileMetaDataCache(long allocateMemoryForFileMetaDataCache) {
-    this.allocateMemoryForFileMetaDataCache = allocateMemoryForFileMetaDataCache;
   }
 
   public long getAllocateMemoryForTimeSeriesMetaDataCache() {
@@ -1275,6 +1444,48 @@ public class IoTDBConfig {
 
   public void setAutoCreateSchemaEnabled(boolean enableAutoCreateSchema) {
     this.enableAutoCreateSchema = enableAutoCreateSchema;
+  }
+
+  public TSDataType getBooleanStringInferType() {
+    return booleanStringInferType;
+  }
+
+  public void setBooleanStringInferType(
+      TSDataType booleanStringInferType) {
+    this.booleanStringInferType = booleanStringInferType;
+  }
+
+  public TSDataType getIntegerStringInferType() {
+    return integerStringInferType;
+  }
+
+  public void setIntegerStringInferType(
+      TSDataType integerStringInferType) {
+    this.integerStringInferType = integerStringInferType;
+  }
+
+  public TSDataType getFloatingStringInferType() {
+    return floatingStringInferType;
+  }
+
+  public void setFloatingStringInferType(
+      TSDataType floatingNumberStringInferType) {
+    this.floatingStringInferType = floatingNumberStringInferType;
+  }
+
+  public TSDataType getNanStringInferType() {
+    return nanStringInferType;
+  }
+
+  public void setNanStringInferType(TSDataType nanStringInferType) {
+    if (nanStringInferType != TSDataType.DOUBLE &&
+        nanStringInferType != TSDataType.FLOAT &&
+        nanStringInferType != TSDataType.TEXT) {
+      throw new IllegalArgumentException(
+          "Config Property nan_string_infer_type can only be FLOAT, DOUBLE or TEXT but is "
+              + nanStringInferType);
+    }
+    this.nanStringInferType = nanStringInferType;
   }
 
   public int getDefaultStorageGroupLevel() {
@@ -1541,6 +1752,50 @@ public class IoTDBConfig {
     this.mqttPayloadFormatter = mqttPayloadFormatter;
   }
 
+  public int getMqttMaxMessageSize() {
+    return mqttMaxMessageSize;
+  }
+
+  public void setMqttMaxMessageSize(int mqttMaxMessageSize) {
+    this.mqttMaxMessageSize = mqttMaxMessageSize;
+  }
+
+  public int getTagAttributeTotalSize() {
+    return tagAttributeTotalSize;
+  }
+
+  public void setTagAttributeTotalSize(int tagAttributeTotalSize) {
+    this.tagAttributeTotalSize = tagAttributeTotalSize;
+  }
+
+  public int getPrimitiveArraySize() {
+    return primitiveArraySize;
+  }
+
+  public void setPrimitiveArraySize(int primitiveArraySize) {
+    this.primitiveArraySize = primitiveArraySize;
+  }
+
+  public String getOpenIdProviderUrl() {
+    return openIdProviderUrl;
+  }
+
+  public void setOpenIdProviderUrl(String openIdProviderUrl) {
+    this.openIdProviderUrl = openIdProviderUrl;
+  }
+
+  public String getAuthorizerProvider() {
+    return authorizerProvider;
+  }
+
+  public void setAuthorizerProvider(String authorizerProvider) {
+    this.authorizerProvider = authorizerProvider;
+  }
+
+  public long getStartUpNanosecond() {
+    return startUpNanosecond;
+  }
+
   public boolean isEnableIndex() {
     return enableIndex;
   }
@@ -1571,13 +1826,5 @@ public class IoTDBConfig {
 
   public void setDefaultIndexWindowRange(int defaultIndexWindowRange) {
     this.defaultIndexWindowRange = defaultIndexWindowRange;
-  }
-
-  public int getTagAttributeTotalSize() {
-    return tagAttributeTotalSize;
-  }
-
-  public void setTagAttributeTotalSize(int tagAttributeTotalSize) {
-    this.tagAttributeTotalSize = tagAttributeTotalSize;
   }
 }

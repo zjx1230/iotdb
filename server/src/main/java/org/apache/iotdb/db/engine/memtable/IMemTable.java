@@ -24,8 +24,8 @@ import org.apache.iotdb.db.engine.modification.Deletion;
 import org.apache.iotdb.db.engine.querycontext.ReadOnlyMemChunk;
 import org.apache.iotdb.db.exception.WriteProcessException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
+import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
-import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
@@ -56,7 +56,17 @@ public interface IMemTable {
    */
   long memSize();
 
-  void insert(InsertPlan insertPlan) throws WriteProcessException;
+  /**
+   * @return whether the average number of points in each WritableChunk reaches the threshold
+   */
+  boolean reachTotalPointNumThreshold();
+
+  int getSeriesNumber();
+
+  long getTotalPointsNum();
+
+
+  void insert(InsertRowPlan insertRowPlan) throws WriteProcessException;
 
   /**
    * [start, end)
@@ -81,9 +91,10 @@ public interface IMemTable {
    *
    * @param deviceId the deviceId of the timeseries to be deleted.
    * @param measurementId the measurementId of the timeseries to be deleted.
-   * @param timestamp the upper-bound of deletion time.
+   * @param startTimestamp the lower-bound of deletion time.
+   * @param endTimestamp the upper-bound of deletion time
    */
-  void delete(String deviceId, String measurementId, long timestamp);
+  void delete(String deviceId, String measurementId, long startTimestamp, long endTimestamp);
 
   /**
    * Delete data in it whose timestamp <= 'timestamp' and belonging to timeseries

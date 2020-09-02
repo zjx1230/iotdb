@@ -26,30 +26,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
 import org.apache.iotdb.db.qp.physical.PhysicalPlan;
 import org.apache.iotdb.tsfile.read.common.Path;
 
 public class CreateIndexPlan extends PhysicalPlan {
 
-  protected List<Path> paths;
+  protected List<PartialPath> paths;
   private Map<String, String> props;
   private long time;
   private IndexType indexType;
 
-//  public CreateIndexPlan() {
-//    super(false, OperatorType.CREATE_INDEX);
-//    canbeSplit = false;
-//  }
-
-  public CreateIndexPlan(List<Path> paths, Map<String, String> props, long startTime,
+  public CreateIndexPlan(List<PartialPath> paths, Map<String, String> props, long startTime,
       IndexType indexType) {
     super(false, OperatorType.CREATE_INDEX);
     this.paths = paths;
     this.props = props;
     time = startTime;
     this.indexType = indexType;
-    canbeSplit = false;
+    canBeSplit = false;
   }
 
   public long getTime() {
@@ -76,19 +72,20 @@ public class CreateIndexPlan extends PhysicalPlan {
     this.props = props;
   }
 
-  public void setPaths(List<Path> paths) {
+  public void setPaths(List<PartialPath> paths) {
     this.paths = paths;
   }
 
   @Override
-  public List<Path> getPaths() {
+  public List<PartialPath> getPaths() {
     return paths;
   }
 
   @Override
-  public void serializeTo(DataOutputStream stream) throws IOException {
-    throw new IOException("when do we need serializeTo?");
-//    stream.writeByte((byte) PhysicalPlanType.CREATE_TIMESERIES.ordinal());
+  public void serialize(DataOutputStream stream) throws IOException {
+    throw new RuntimeException("when do we need deserializeFrom?");
+    // TODO add
+//    stream.writeByte((byte) PhysicalPlanType.CREATE_INDEX.ordinal());
 //    byte[] pathBytes = path.getFullPath().getBytes();
 //    stream.writeInt(pathBytes.length);
 //    stream.write(pathBytes);
@@ -98,8 +95,9 @@ public class CreateIndexPlan extends PhysicalPlan {
   }
 
   @Override
-  public void deserializeFrom(ByteBuffer buffer) {
+  public void deserialize(ByteBuffer buffer) {
     throw new RuntimeException("when do we need deserializeFrom?");
+    // TODO add
 //    int length = buffer.getInt();
 //    byte[] pathBytes = new byte[length];
 //    buffer.get(pathBytes);

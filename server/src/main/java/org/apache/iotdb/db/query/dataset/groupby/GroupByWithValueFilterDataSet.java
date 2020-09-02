@@ -19,10 +19,14 @@
 
 package org.apache.iotdb.db.query.dataset.groupby;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
-import org.apache.iotdb.db.qp.physical.crud.GroupByPlan;
+import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.qp.physical.crud.GroupByTimePlan;
 import org.apache.iotdb.db.qp.physical.crud.RawDataQueryPlan;
 import org.apache.iotdb.db.query.aggregation.AggregateResult;
 import org.apache.iotdb.db.query.context.QueryContext;
@@ -33,19 +37,14 @@ import org.apache.iotdb.db.query.reader.series.IReaderByTimestamp;
 import org.apache.iotdb.db.query.reader.series.SeriesReaderByTimestamp;
 import org.apache.iotdb.db.query.timegenerator.ServerTimeGenerator;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.read.common.RowRecord;
 import org.apache.iotdb.tsfile.read.expression.IExpression;
 import org.apache.iotdb.tsfile.read.query.timegenerator.TimeGenerator;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
 public class GroupByWithValueFilterDataSet extends GroupByEngineDataSet {
 
   private List<IReaderByTimestamp> allDataReaderList;
-  private GroupByPlan groupByPlan;
+  private GroupByTimePlan groupByTimePlan;
   private TimeGenerator timestampGenerator;
   /**
    * cached timestamp for next group by partition.
@@ -67,15 +66,15 @@ public class GroupByWithValueFilterDataSet extends GroupByEngineDataSet {
   /**
    * constructor.
    */
-  public GroupByWithValueFilterDataSet(QueryContext context, GroupByPlan groupByPlan)
+  public GroupByWithValueFilterDataSet(QueryContext context, GroupByTimePlan groupByTimePlan)
       throws StorageEngineException, QueryProcessException {
-    super(context, groupByPlan);
+    super(context, groupByTimePlan);
     this.timeStampFetchSize = IoTDBDescriptor.getInstance().getConfig().getBatchSize();
-    initGroupBy(context, groupByPlan);
+    initGroupBy(context, groupByTimePlan);
   }
 
-  public GroupByWithValueFilterDataSet(long queryId, GroupByPlan groupByPlan) {
-    super(new QueryContext(queryId), groupByPlan);
+  public GroupByWithValueFilterDataSet(long queryId, GroupByTimePlan groupByTimePlan) {
+    super(new QueryContext(queryId), groupByTimePlan);
     this.allDataReaderList = new ArrayList<>();
     this.timeStampFetchSize = IoTDBDescriptor.getInstance().getConfig().getBatchSize();
   }
@@ -83,14 +82,14 @@ public class GroupByWithValueFilterDataSet extends GroupByEngineDataSet {
   /**
    * init reader and aggregate function.
    */
-  protected void initGroupBy(QueryContext context, GroupByPlan groupByPlan)
+  protected void initGroupBy(QueryContext context, GroupByTimePlan groupByTimePlan)
       throws StorageEngineException, QueryProcessException {
-    this.timestampGenerator = getTimeGenerator(groupByPlan.getExpression(), context, groupByPlan);
+    this.timestampGenerator = getTimeGenerator(groupByTimePlan.getExpression(), context, groupByTimePlan);
     this.allDataReaderList = new ArrayList<>();
-    this.groupByPlan = groupByPlan;
+    this.groupByTimePlan = groupByTimePlan;
     for (int i = 0; i < paths.size(); i++) {
-      Path path = paths.get(i);
-      allDataReaderList.add(getReaderByTime(path, groupByPlan, dataTypes.get(i), context, null));
+      PartialPath path = (PartialPath) paths.get(i);
+      allDataReaderList.add(getReaderByTime(path, groupByTimePlan, dataTypes.get(i), context, null));
     }
   }
 
@@ -99,7 +98,7 @@ public class GroupByWithValueFilterDataSet extends GroupByEngineDataSet {
     return new ServerTimeGenerator(expression, context, queryPlan);
   }
 
-  protected IReaderByTimestamp getReaderByTime(Path path, RawDataQueryPlan queryPlan,
+  protected IReaderByTimestamp getReaderByTime(PartialPath path, RawDataQueryPlan queryPlan,
       TSDataType dataType, QueryContext context, TsFileFilter fileFilter)
       throws StorageEngineException, QueryProcessException {
     return new SeriesReaderByTimestamp(path, queryPlan.getAllMeasurementsInDevice(path.getDevice()), dataType, context,
@@ -116,8 +115,8 @@ public class GroupByWithValueFilterDataSet extends GroupByEngineDataSet {
     List<AggregateResult> aggregateResultList = new ArrayList<>();
     for (int i = 0; i < paths.size(); i++) {
       aggregateResultList.add(AggregateResultFactory.getAggrResultByName(
-          groupByPlan.getDeduplicatedAggregations().get(i),
-          groupByPlan.getDeduplicatedDataTypes().get(i)));
+          groupByTimePlan.getDeduplicatedAggregations().get(i),
+          groupByTimePlan.getDeduplicatedDataTypes().get(i)));
     }
 
     long[] timestampArray = new long[timeStampFetchSize];

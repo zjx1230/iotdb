@@ -18,25 +18,24 @@
  */
 package org.apache.iotdb.db.query.reader.chunk.metadata;
 
-import org.apache.iotdb.db.engine.querycontext.ReadOnlyMemChunk;
-import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
-import org.apache.iotdb.db.query.context.QueryContext;
-import org.apache.iotdb.tsfile.file.metadata.ChunkMetadata;
-import org.apache.iotdb.tsfile.read.common.Path;
-import org.apache.iotdb.tsfile.read.controller.IChunkMetadataLoader;
-import org.apache.iotdb.tsfile.read.filter.basic.Filter;
-
 import java.io.IOException;
 import java.util.List;
+import org.apache.iotdb.db.engine.querycontext.ReadOnlyMemChunk;
+import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
+import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.query.context.QueryContext;
+import org.apache.iotdb.tsfile.file.metadata.ChunkMetadata;
+import org.apache.iotdb.tsfile.read.controller.IChunkMetadataLoader;
+import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 
 public class MemChunkMetadataLoader implements IChunkMetadataLoader {
 
   private TsFileResource resource;
-  private Path seriesPath;
+  private PartialPath seriesPath;
   private QueryContext context;
   private Filter timeFilter;
 
-  public MemChunkMetadataLoader(TsFileResource resource, Path seriesPath, QueryContext context, Filter timeFilter) {
+  public MemChunkMetadataLoader(TsFileResource resource, PartialPath seriesPath, QueryContext context, Filter timeFilter) {
     this.resource = resource;
     this.seriesPath = seriesPath;
     this.context = context;
@@ -44,7 +43,7 @@ public class MemChunkMetadataLoader implements IChunkMetadataLoader {
   }
 
   @Override
-  public List<ChunkMetadata> loadChunkMetadataList() throws IOException {
+  public List<ChunkMetadata> loadChunkMetadataList() {
     List<ChunkMetadata> chunkMetadataList = resource.getChunkMetadataList();
 
     DiskChunkMetadataLoader.setDiskChunkLoader(chunkMetadataList, resource, seriesPath, context);
@@ -64,5 +63,10 @@ public class MemChunkMetadataLoader implements IChunkMetadataLoader {
             .satisfyStartEndTime(chunkMetaData.getStartTime(), chunkMetaData.getEndTime()))
             || chunkMetaData.getStartTime() > chunkMetaData.getEndTime());
     return chunkMetadataList;
+  }
+
+  @Override
+  public void setDiskChunkLoader(List<ChunkMetadata> chunkMetadataList) throws IOException {
+    // DO NOTHING
   }
 }

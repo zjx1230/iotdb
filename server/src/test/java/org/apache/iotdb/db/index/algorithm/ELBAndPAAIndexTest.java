@@ -46,6 +46,7 @@ import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
 import org.apache.iotdb.db.index.io.IndexIOReader;
 import org.apache.iotdb.db.metadata.MManager;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.db.utils.datastructure.TVList;
@@ -72,10 +73,10 @@ public class ELBAndPAAIndexTest {
   private void prepareMManager() throws MetadataException {
     MManager mManager = MManager.getInstance();
     mManager.init();
-    mManager.setStorageGroup(storageGroup);
-    mManager.createTimeseries(p1, TSDataType.INT32, TSEncoding.PLAIN,
+    mManager.setStorageGroup(new PartialPath(storageGroup));
+    mManager.createTimeseries(new PartialPath(p1), TSDataType.INT32, TSEncoding.PLAIN,
         CompressionType.UNCOMPRESSED, null);
-    mManager.createTimeseries(p2, TSDataType.FLOAT, TSEncoding.PLAIN,
+    mManager.createTimeseries(new PartialPath(p2), TSDataType.FLOAT, TSEncoding.PLAIN,
         CompressionType.UNCOMPRESSED, null);
     Map<String, String> elbProps = new HashMap<>();
     elbProps.put(INDEX_WINDOW_RANGE, "10");
@@ -86,9 +87,9 @@ public class ELBAndPAAIndexTest {
     paaProps.put(INDEX_WINDOW_RANGE, "10");
     paaProps.put(INDEX_SLIDE_STEP, "10");
 
-    mManager.createIndex(Collections.singletonList(p1), new IndexInfo(ELB, 0, elbProps));
-    mManager.createIndex(Collections.singletonList(p1), new IndexInfo(PAA, 0, paaProps));
-    mManager.createIndex(Collections.singletonList(p2), new IndexInfo(ELB, 0, elbProps));
+    mManager.createIndex(Collections.singletonList(new PartialPath(p1)), new IndexInfo(ELB, 0, elbProps));
+    mManager.createIndex(Collections.singletonList(new PartialPath(p1)), new IndexInfo(PAA, 0, paaProps));
+    mManager.createIndex(Collections.singletonList(new PartialPath(p2)), new IndexInfo(ELB, 0, elbProps));
   }
 
   @Before

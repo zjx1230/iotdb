@@ -28,13 +28,13 @@ import java.util.List;
 import java.util.Map;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
-import org.apache.iotdb.db.exception.metadata.MetadataException;
-import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.IndexQueryException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
-import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
+import org.apache.iotdb.db.exception.metadata.MetadataException;
+import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategy;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategyType;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
@@ -42,11 +42,10 @@ import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.metadata.MManager;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.common.BatchData;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Each StorageGroupProcessor contains a IndexProcessor, and each IndexProcessor can contain more
@@ -54,7 +53,6 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class IoTDBIndex {
 
-  private static final Logger logger = LoggerFactory.getLogger(IoTDBIndex.class);
   protected final String path;
   protected final IndexType indexType;
   protected final long confIndexStartTime;
@@ -67,7 +65,7 @@ public abstract class IoTDBIndex {
 
   public IoTDBIndex(String path, IndexInfo indexInfo) {
     try {
-      this.tsDataType = MManager.getInstance().getSeriesType(path);
+      this.tsDataType = MManager.getInstance().getSeriesType(new PartialPath(path));
     } catch (MetadataException e) {
       throw new IndexRuntimeException("get type failed. ", e);
     }
@@ -208,8 +206,6 @@ public abstract class IoTDBIndex {
   /**
    * query on path with parameters, return the candidate list. return null is regarded as Nothing to
    * be pruned.
-   *
-   * TODO It's not gentle enough. null should have close definition as empty list.
    *
    * @return null means nothing to be pruned
    */

@@ -24,15 +24,16 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
 import org.apache.iotdb.db.exception.StorageEngineException;
+import org.apache.iotdb.db.exception.index.IndexQueryException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.index.IndexManager;
 import org.apache.iotdb.db.index.common.IndexFunc;
-import org.apache.iotdb.db.exception.index.IndexManagerException;
-import org.apache.iotdb.db.exception.index.IndexQueryException;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.physical.crud.QueryIndexPlan;
+import org.apache.iotdb.db.qp.physical.crud.RawDataQueryPlan;
 import org.apache.iotdb.db.query.aggregation.AggregateResult;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.QueryResourceManager;
@@ -42,7 +43,6 @@ import org.apache.iotdb.db.query.reader.series.SeriesAggregateReader;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.statistics.Statistics;
 import org.apache.iotdb.tsfile.read.common.BatchData;
-import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.read.common.RowRecord;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
@@ -62,13 +62,14 @@ public class IndexAggregationExecutor extends AggregationExecutor {
   }
 
   /**
-   * using aggregate result data list construct QueryDataSet.
+   * The index function is regarded as a kind of aggregation function.
    *
    * @param aggregateResultList aggregate result list
    */
   @Override
-  protected QueryDataSet constructDataSet(List<AggregateResult> aggregateResultList) {
-    List<Path> dupSeries = new ArrayList<>();
+  protected QueryDataSet constructDataSet(List<AggregateResult> aggregateResultList, RawDataQueryPlan plan)
+      throws QueryProcessException {
+    List<PartialPath> dupSeries = new ArrayList<>();
     List<TSDataType> dupTypes = new ArrayList<>();
     for (int i = 0; i < selectedSeries.size(); i++) {
       dupSeries.add(selectedSeries.get(i));
@@ -110,12 +111,12 @@ public class IndexAggregationExecutor extends AggregationExecutor {
    */
   @Override
   protected List<AggregateResult> aggregateOneSeries(
-      Map.Entry<Path, List<Integer>> pathToAggIndexes,
+      Map.Entry<PartialPath, List<Integer>> pathToAggIndexes,
       Set<String> measurements, Filter timeFilter, QueryContext context)
       throws IOException, QueryProcessException, StorageEngineException {
     List<IndexFuncResult> indexFuncResults = new ArrayList<>();
 
-    Path seriesPath = pathToAggIndexes.getKey();
+    PartialPath seriesPath = pathToAggIndexes.getKey();
     TSDataType tsDataType = dataTypes.get(pathToAggIndexes.getValue().get(0));
 
     for (int i : pathToAggIndexes.getValue()) {
@@ -140,7 +141,7 @@ public class IndexAggregationExecutor extends AggregationExecutor {
    * Override {@linkplain AggregationExecutor#aggregateOneSeries}. Besides {@linkplain
    * QueryDataSource}, we also load the index chunk metadata.
    */
-  private void aggregateOneSeriesIndex(Path seriesPath, Set<String> measurements,
+  private void aggregateOneSeriesIndex(PartialPath seriesPath, Set<String> measurements,
       QueryContext context, Filter timeFilter, TSDataType tsDataType,
       List<IndexFuncResult> indexFuncResults)
       throws StorageEngineException, IOException, QueryProcessException, MetadataException {
@@ -195,7 +196,7 @@ public class IndexAggregationExecutor extends AggregationExecutor {
           continue;
         }
         int remainingToCalculate = aggregateIndexOverlappedPages(seriesReader, indexQueryReader,
-            indexFuncResults, timeFilter);
+            indexFuncResults);
         if (remainingToCalculate == 0) {
           return;
         }
@@ -204,18 +205,17 @@ public class IndexAggregationExecutor extends AggregationExecutor {
   }
 
   /**
-   * 后处理函数
+   * post-processing function
    */
   private int aggregateIndexOverlappedPages(SeriesAggregateReader seriesReader,
-      IndexQueryReader indexQueryReader, List<IndexFuncResult> aggregateResultList,
-      Filter timeFilter)
-      throws IOException, IndexManagerException, IndexQueryException {
+      IndexQueryReader indexQueryReader, List<IndexFuncResult> aggregateResultList)
+      throws IOException, IndexQueryException {
     // cal by page data
     int remainingToCalculate = Integer.MAX_VALUE;
     while (remainingToCalculate > 0 && seriesReader.hasNextPage()) {
       Statistics pageStatistics = seriesReader.currentPageStatistics();
       // Index is no-false-negative, but not no-false-positive
-      //TODO Note that, after calling hasNextPage, seriesReader.currentPageStatistics always return null. So we cannot skip pages yet.
+      //TODO Note that, after calling hasNextPage, seriesReader.currentPageStatistics always return null. So we cannot skip pages.
       if (pageStatistics != null && indexQueryReader.canSkipDataRange(
           pageStatistics.getStartTime(), pageStatistics.getEndTime())) {
         seriesReader.skipCurrentPage();

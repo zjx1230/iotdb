@@ -24,30 +24,40 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.modification.Deletion;
 import org.apache.iotdb.db.engine.modification.Modification;
 import org.apache.iotdb.db.engine.querycontext.ReadOnlyMemChunk;
 import org.apache.iotdb.db.exception.WriteProcessException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
+import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
-import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.rescon.TVListAllocator;
-import org.apache.iotdb.db.utils.CommonUtils;
 import org.apache.iotdb.db.utils.MemUtils;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.tsfile.read.common.TimeRange;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 
 public abstract class AbstractMemTable implements IMemTable {
+
+  private final Map<String, Map<String, IWritableMemChunk>> memTableMap;
 
   private long version = Long.MAX_VALUE;
 
   private List<Modification> modifications = new ArrayList<>();
 
-  private final Map<String, Map<String, IWritableMemChunk>> memTableMap;
+  private int avgSeriesPointNumThreshold = IoTDBDescriptor.getInstance().getConfig()
+      .getAvgSeriesPointNumberThreshold();
 
   private long memSize = 0;
+
+  private int seriesNumber = 0;
+
+  private long totalPointsNum = 0;
+
+  private long totalPointsNumThreshold = 0;
 
   public AbstractMemTable() {
     this.memTableMap = new HashMap<>();
@@ -79,6 +89,8 @@ public abstract class AbstractMemTable implements IMemTable {
     Map<String, IWritableMemChunk> memSeries = memTableMap.get(deviceId);
     if (!memSeries.containsKey(measurement)) {
       memSeries.put(measurement, genMemSeries(schema));
+      seriesNumber++;
+      totalPointsNumThreshold += avgSeriesPointNumThreshold;
     }
     return memSeries.get(measurement);
   }
@@ -86,21 +98,21 @@ public abstract class AbstractMemTable implements IMemTable {
   protected abstract IWritableMemChunk genMemSeries(MeasurementSchema schema);
 
   @Override
-  public void insert(InsertPlan insertPlan) throws WriteProcessException {
-    try {
-      for (int i = 0; i < insertPlan.getValues().length; i++) {
+  public void insert(InsertRowPlan insertRowPlan) {
+    for (int i = 0; i < insertRowPlan.getValues().length; i++) {
 
-        Object value = CommonUtils.parseValue(insertPlan.getSchemas()[i].getType(),
-            insertPlan.getValues()[i]);
-
-        memSize += MemUtils.getRecordSize(insertPlan.getSchemas()[i].getType(), value);
-
-        write(insertPlan.getDeviceId(), insertPlan.getMeasurements()[i],
-            insertPlan.getSchemas()[i], insertPlan.getTime(), value);
+      if (insertRowPlan.getValues()[i] == null) {
+        continue;
       }
-    } catch (QueryProcessException e) {
-      throw new WriteProcessException(e.getMessage());
+
+      Object value = insertRowPlan.getValues()[i];
+      memSize += MemUtils.getRecordSize(insertRowPlan.getSchemas()[i].getType(), value);
+
+      write(insertRowPlan.getDeviceId().getFullPath(), insertRowPlan.getMeasurements()[i],
+          insertRowPlan.getSchemas()[i], insertRowPlan.getTime(), value);
     }
+
+    totalPointsNum += insertRowPlan.getMeasurements().length - insertRowPlan.getFailedMeasurementNumber();
   }
 
   @Override
@@ -108,8 +120,9 @@ public abstract class AbstractMemTable implements IMemTable {
       throws WriteProcessException {
     try {
       write(insertTabletPlan, start, end);
-      long recordSizeInByte = MemUtils.getRecordSize(insertTabletPlan, start, end);
-      memSize += recordSizeInByte;
+      memSize += MemUtils.getRecordSize(insertTabletPlan, start, end);
+      totalPointsNum += (insertTabletPlan.getMeasurements().length - insertTabletPlan.getFailedMeasurementNumber())
+        * (end - start);
     } catch (RuntimeException e) {
       throw new WriteProcessException(e.getMessage());
     }
@@ -126,13 +139,24 @@ public abstract class AbstractMemTable implements IMemTable {
   @Override
   public void write(InsertTabletPlan insertTabletPlan, int start, int end) {
     for (int i = 0; i < insertTabletPlan.getMeasurements().length; i++) {
-      IWritableMemChunk memSeries = createIfNotExistAndGet(insertTabletPlan.getDeviceId(),
+      if (insertTabletPlan.getColumns()[i] == null) {
+        continue;
+      }
+      IWritableMemChunk memSeries = createIfNotExistAndGet(insertTabletPlan.getDeviceId().getFullPath(),
           insertTabletPlan.getMeasurements()[i], insertTabletPlan.getSchemas()[i]);
       memSeries.write(insertTabletPlan.getTimes(), insertTabletPlan.getColumns()[i],
           insertTabletPlan.getDataTypes()[i], start, end);
     }
   }
 
+
+  public int getSeriesNumber() {
+    return seriesNumber;
+  }
+
+  public long getTotalPointsNum() {
+    return totalPointsNum;
+  }
 
   @Override
   public long size() {
@@ -151,10 +175,21 @@ public abstract class AbstractMemTable implements IMemTable {
   }
 
   @Override
+  public boolean reachTotalPointNumThreshold() {
+    if (totalPointsNum == 0) {
+      return false;
+    }
+    return totalPointsNum >= totalPointsNumThreshold;
+  }
+
+  @Override
   public void clear() {
     memTableMap.clear();
     modifications.clear();
     memSize = 0;
+    seriesNumber = 0;
+    totalPointsNum = 0;
+    totalPointsNumThreshold = 0;
   }
 
   @Override
@@ -169,38 +204,46 @@ public abstract class AbstractMemTable implements IMemTable {
     if (!checkPath(deviceId, measurement)) {
       return null;
     }
-    long undeletedTime = findUndeletedTime(deviceId, measurement, timeLowerBound);
+    List<TimeRange> deletionList = constructDeletionList(deviceId, measurement, timeLowerBound);
     IWritableMemChunk memChunk = memTableMap.get(deviceId).get(measurement);
     TVList chunkCopy = memChunk.getTVList().clone();
 
-    chunkCopy.setTimeOffset(undeletedTime);
+    chunkCopy.setDeletionList(deletionList);
     return new ReadOnlyMemChunk(measurement, dataType, encoding, chunkCopy, props, getVersion());
   }
 
-
-  private long findUndeletedTime(String deviceId, String measurement, long timeLowerBound) {
-    long undeletedTime = Long.MIN_VALUE;
+  private List<TimeRange> constructDeletionList(String deviceId, String measurement,
+      long timeLowerBound) {
+    List<TimeRange> deletionList = new ArrayList<>();
+    deletionList.add(new TimeRange(Long.MIN_VALUE, timeLowerBound));
     for (Modification modification : modifications) {
       if (modification instanceof Deletion) {
         Deletion deletion = (Deletion) modification;
         if (deletion.getDevice().equals(deviceId) && deletion.getMeasurement().equals(measurement)
-            && deletion.getTimestamp() > undeletedTime) {
-          undeletedTime = deletion.getTimestamp();
+            && deletion.getEndTime() > timeLowerBound) {
+          long lowerBound = Math.max(deletion.getStartTime(), timeLowerBound);
+          deletionList.add(new TimeRange(lowerBound, deletion.getEndTime()));
         }
       }
     }
-    return Math.max(undeletedTime + 1, timeLowerBound);
+    return TimeRange.sortAndMerge(deletionList);
   }
 
   @Override
-  public void delete(String deviceId, String measurementId, long timestamp) {
+  public void delete(String deviceId, String measurementId, long startTimestamp, long endTimestamp) {
     Map<String, IWritableMemChunk> deviceMap = memTableMap.get(deviceId);
     if (deviceMap != null) {
       IWritableMemChunk chunk = deviceMap.get(measurementId);
       if (chunk == null) {
         return;
       }
-      chunk.delete(timestamp);
+      // If startTimestamp == Long.MIN_VALUE && endTimestamp == Long.MAX_VALUE,
+      // it means that the whole timeseries is deleted
+      if (startTimestamp == Long.MIN_VALUE && endTimestamp == Long.MAX_VALUE) {
+        deviceMap.remove(measurementId);
+      }
+      int deletedPointsNumber = chunk.delete(startTimestamp, endTimestamp);
+      totalPointsNum -= deletedPointsNumber;
     }
   }
 
@@ -209,12 +252,12 @@ public abstract class AbstractMemTable implements IMemTable {
     this.modifications.add(deletion);
   }
 
-  public void setVersion(long version) {
-    this.version = version;
-  }
-
   public long getVersion() {
     return version;
+  }
+
+  public void setVersion(long version) {
+    this.version = version;
   }
 
   @Override
