@@ -29,6 +29,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 import java.util.List;
+import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.index.algorithm.paa.PAATimeFixedPreprocessor;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
@@ -51,6 +52,7 @@ public class IndexPreprocessorOverlapTest {
 
   @Before
   public void setUp() throws Exception {
+    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(true);
     EnvironmentUtils.envSetUp();
     insertSQL();
   }
@@ -58,6 +60,7 @@ public class IndexPreprocessorOverlapTest {
   @After
   public void tearDown() throws Exception {
     EnvironmentUtils.cleanEnv();
+    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
   }
 
   private static void insertSQL() throws ClassNotFoundException {

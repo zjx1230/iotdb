@@ -22,7 +22,9 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.Planner;
 import org.apache.iotdb.db.qp.logical.Operator;
 import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
@@ -47,7 +49,7 @@ public class IndexLogicalPlanTest {
 
   @Test
   public void testParseCreateIndex() {
-    String sqlStr = "CREATE INDEX ON root.vehicle.d1.s1 WHERE time > 50 WITH INDEX=PAA, WINDOW_LENGTH=100, merge_threshold= 0.5";
+    String sqlStr = "CREATE INDEX ON root.vehicle.d1.s1 WHERE time > 50 WITH INDEX=PAA_INDEX, WINDOW_LENGTH=100, merge_threshold= 0.5";
     Operator op = parseDriver.parse(sqlStr, IoTDBDescriptor.getInstance().getConfig().getZoneID());
     Assert.assertEquals(CreateIndexOperator.class, op.getClass());
     CreateIndexOperator createOperator = (CreateIndexOperator) op;
@@ -65,7 +67,7 @@ public class IndexLogicalPlanTest {
 
   @Test
   public void testParseDropIndex() {
-    String sqlStr = "DROP INDEX PAA ON root.vehicle.d1.s1";
+    String sqlStr = "DROP INDEX PAA_INDEX ON root.vehicle.d1.s1";
     Operator op = parseDriver.parse(sqlStr, IoTDBDescriptor.getInstance().getConfig().getZoneID());
     Assert.assertEquals(DropIndexOperator.class, op.getClass());
     DropIndexOperator dropIndexOperator = (DropIndexOperator) op;
@@ -77,9 +79,9 @@ public class IndexLogicalPlanTest {
   }
 
   @Test
-  public void testParseQueryIndex() {
+  public void testParseQueryIndex() throws IllegalPathException {
     String sqlStr = "select index whole_st_time(s1), dist(s2) from root.vehicle.d1 "
-        + "where time <= 51 or !(time != 100 and time < 460) WITH INDEX=PAA, threshold=5, distance=DTW";
+        + "where time <= 51 or !(time != 100 and time < 460) WITH INDEX=PAA_INDEX, threshold=5, distance=DTW";
     Operator op = parseDriver.parse(sqlStr, IoTDBDescriptor.getInstance().getConfig().getZoneID());
     Assert.assertEquals(QueryIndexOperator.class, op.getClass());
     QueryIndexOperator queryOperator = (QueryIndexOperator) op;
@@ -89,7 +91,7 @@ public class IndexLogicalPlanTest {
         queryOperator.getSelectOperator().getAggregations());
     Assert.assertEquals("[or [time<=51][not [and [time<=>100][time<460]]]]",
         queryOperator.getFilterOperator().toString());
-    Assert.assertEquals(Arrays.asList(new Path("s1"), new Path("s2")),
+    Assert.assertEquals(Arrays.asList(new PartialPath("s1"), new PartialPath("s2")),
         queryOperator.getSelectedPaths());
     Assert.assertEquals("root.vehicle.d1",
         queryOperator.getFromOperator().getPrefixPaths().get(0).getFullPath());

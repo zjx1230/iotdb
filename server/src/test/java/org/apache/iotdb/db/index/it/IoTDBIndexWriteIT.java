@@ -64,6 +64,7 @@ public class IoTDBIndexWriteIT {
   @Before
   public void setUp() throws Exception {
     EnvironmentUtils.envSetUp();
+    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(true);
     defaultIndexBufferSize = IoTDBDescriptor.getInstance().getConfig().getIndexBufferSize();
     IoTDBDescriptor.getInstance().getConfig().setIndexBufferSize(1000);
   }
@@ -72,6 +73,7 @@ public class IoTDBIndexWriteIT {
   public void tearDown() throws Exception {
     IoTDBDescriptor.getInstance().getConfig().setIndexBufferSize(defaultIndexBufferSize);
     EnvironmentUtils.cleanEnv();
+    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
   }
 
   private void prepareMManager(Statement statement) throws SQLException {

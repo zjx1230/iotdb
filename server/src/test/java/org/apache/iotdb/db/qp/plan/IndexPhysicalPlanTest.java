@@ -95,30 +95,30 @@ public class IndexPhysicalPlanTest {
 
   @Test
   public void testCreateIndex() throws QueryProcessException {
-    String sqlStr = "CREATE INDEX ON root.vehicle.d1.s1 WHERE time > 50 WITH INDEX=PAA, window_length=100, merge_threshold= 0.5";
+    String sqlStr = "CREATE INDEX ON root.vehicle.d1.s1 WHERE time > 50 WITH INDEX=PAA_INDEX, window_length=100, merge_threshold= 0.5";
 
     Planner processor = new Planner();
     CreateIndexPlan plan = (CreateIndexPlan) processor.parseSQLToPhysicalPlan(sqlStr);
     assertEquals(
-        "paths: [root.vehicle.d1.s1], index type: PAA, start time: 50, props: {WINDOW_LENGTH=100, MERGE_THRESHOLD=0.5}",
+        "paths: [root.vehicle.d1.s1], index type: PAA_INDEX, start time: 50, props: {WINDOW_LENGTH=100, MERGE_THRESHOLD=0.5}",
         plan.toString());
   }
 
   @Test
   public void testDropIndex() throws QueryProcessException {
-    String sqlStr = "DROP INDEX PAA ON root.vehicle.d1.s1";
+    String sqlStr = "DROP INDEX PAA_INDEX ON root.vehicle.d1.s1";
     Planner processor = new Planner();
     DropIndexPlan plan = (DropIndexPlan) processor.parseSQLToPhysicalPlan(sqlStr);
-    assertEquals("paths: [root.vehicle.d1.s1], index type: PAA", plan.toString());
+    assertEquals("paths: [root.vehicle.d1.s1], index type: PAA_INDEX", plan.toString());
   }
 
   @Test
   public void testQueryIndex() throws QueryProcessException {
     String sqlStr = "select index whole_st_time(s1), dist(s2) from root.vehicle.d1 where "
-        + "time <= 51 or !(time != 100 and time < 460) WITH INDEX=PAA, threshold=5, distance=DTW";
+        + "time <= 51 or !(time != 100 and time < 460) WITH INDEX=PAA_INDEX, threshold=5, distance=DTW";
     QueryIndexPlan plan = (QueryIndexPlan) processor.parseSQLToPhysicalPlan(sqlStr);
     Assert.assertEquals(
-        "Aggregation info: Paths: [root.vehicle.d1.s1, root.vehicle.d1.s2], agg names: [whole_st_time, dist], data types: [FLOAT, FLOAT], filter: [((time <= 51 || time == 100) || time >= 460)], index type: PAA, props: {THRESHOLD=5, DISTANCE=DTW}",
+        "Aggregation info: Paths: [root.vehicle.d1.s1, root.vehicle.d1.s2], agg names: [whole_st_time, dist], data types: [FLOAT, FLOAT], filter: [((time <= 51 || time == 100) || time >= 460)], index type: PAA_INDEX, props: {THRESHOLD=5, DISTANCE=DTW}",
         plan.toString());
   }
 
