@@ -17,6 +17,8 @@
  */
 package org.apache.iotdb.db.index.algorithm.elb;
 
+import static org.apache.iotdb.db.index.common.IndexUtils.getDoubleFromAnyType;
+
 import org.apache.iotdb.db.index.algorithm.elb.feature.ElementELBFeature;
 import org.apache.iotdb.db.index.algorithm.elb.feature.SequenceELBFeature;
 import org.apache.iotdb.db.index.algorithm.elb.feature.PatternEnvelope;
@@ -28,6 +30,7 @@ import org.apache.iotdb.db.index.distance.LInfinityNormdouble;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
+import org.apache.iotdb.tsfile.utils.Pair;
 
 /**
  * Memory consumption can be considered constant.
@@ -35,31 +38,23 @@ import org.apache.iotdb.tsfile.exception.NotImplementedException;
 public class ELBFeatureExtractor {
 
   // final fields
-  private final TVList tvList;
   private final int windowRange;
   private final int blockNum;
   private final MilesPattern pattern;
-
-  // parameters to be generator
-
-  private final CalcParam calcParam;
 
   private PatternEnvelope envelope;
   private ELBType elbType;
   private ELBFeature elbFeature;
 
-  public ELBFeatureExtractor(TVList tvList, Distance distance, int windowRange,
-      CalcParam calcParam, int blockNum, ELBType elbType) {
-    this.tvList = tvList;
+  public ELBFeatureExtractor(Distance distance, int windowRange, int blockNum, ELBType elbType) {
     this.windowRange = windowRange;
     this.blockNum = blockNum;
-    this.calcParam = calcParam;
 
     pattern = new MilesPattern(distance);
     this.elbType = elbType;
     if (elbType == ELBType.SEQ && distance instanceof LInfinityNormdouble) {
       throw new NotImplementedException("For ELB-SEQ on L∞-Norm, there is a direct and simple "
-          + "algorithm for Adaptive Post-Processing, But we haven't realized yet.");
+          + "algorithm for Adaptive Post-Processing, But we haven't implemented yet.");
     }
     if (elbType == ELBType.ELE) {
       envelope = new PatternEnvelope();
@@ -70,30 +65,99 @@ public class ELBFeatureExtractor {
   }
 
   /**
-   * Given {@code offset}, calculate ELB features and append to {@code mbrs}
+   * Given {@code offset}, calculate ELB features and append to {@code mbrs}. The pattern threshold
+   * and segmentation will be computed by {@code calcParam}
    *
-   * @param mbrs to be appended.
+   * @param tvList source data
+   * @param offset the pattern is a subsequence of @{tvList} starting from {@code offset}
+   * @param mbrs mbrs should be empty and this function will append the elb features into it.
    */
-  public void calcELBFeature(int offset, PrimitiveList mbrs) {
+  public void calcELBFeature(TVList tvList, int offset, PrimitiveList mbrs, CalcParam calcParam) {
     // refresh array
-    Object[] params = calcParam.refreshParam(tvList, offset, windowRange);
+    Object[] params = calcParam.calculateParam(tvList, offset, windowRange);
     int subpatternCount = (int) params[0];
     double[] thresholdsArray = (double[]) params[1];
     int[] minLeftBorders = (int[]) params[2];
     int[] maxLeftBorders = (int[]) params[3];
-    pattern.refresh(tvList, offset, windowRange, subpatternCount, thresholdsArray, minLeftBorders,
-        maxLeftBorders);
+    pattern
+        .initPattern(tvList, offset, windowRange, subpatternCount, thresholdsArray, minLeftBorders,
+            maxLeftBorders);
     if (elbType == ELBType.ELE) {
       envelope.refresh(pattern);
     }
-    elbFeature.refreshAndAppendToList(pattern, blockNum, envelope, mbrs);
+    Pair<double[], double[]> features = elbFeature
+        .calcPatternFeature(pattern, blockNum, envelope);
+    appendToMBRs(mbrs, features);
+  }
+
+  private void appendToMBRs(PrimitiveList mbrs, Pair<double[], double[]> features) {
+    for (int i = 0; i < blockNum; i++) {
+      mbrs.putDouble(features.left[i]);
+      mbrs.putDouble(features.right[i]);
+    }
+  }
+
+  /**
+   * Given specified thresholds and segmentation, calculate ELB features and append to {@code
+   * mbrs}.
+   *
+   * @param tvList source data
+   * @param offset the pattern is a subsequence of @{tvList} starting from {@code offset}
+   * @return left: upper bounds, right: lower bounds
+   */
+  public Pair<double[], double[]> calcELBFeature(TVList tvList, int offset,
+      double[] thresholdsArray, int[] borders) {
+    // refresh array
+    int subpatternCount = thresholdsArray.length;
+    pattern.initPattern(tvList, offset, windowRange, subpatternCount, thresholdsArray, borders,
+        borders);
+    if (elbType == ELBType.ELE) {
+      envelope.refresh(pattern);
+    }
+    return elbFeature.calcPatternFeature(pattern, blockNum, envelope);
+  }
+
+  public boolean exactDistanceCalc(TVList slidingWindow){
+    return pattern.exactDistanceCalc(slidingWindow);
   }
 
   public enum ELBType {
-    ELE, SEQ
+    ELE, SEQ;
   }
+
+  public static class ELBWindowBlockFeature {
+
+    public long startTime;
+    public long endTime;
+    public double feature;
+
+    public ELBWindowBlockFeature(long startTime, long endTime, double feature) {
+      this.startTime = startTime;
+      this.endTime = endTime;
+      this.feature = feature;
+    }
+  }
+
+  public static double calcWindowBlockFeature(ELBType elbType, TVList tvList, int offset,
+      int blockWidth) {
+    switch (elbType) {
+      case ELE:
+        return getDoubleFromAnyType(tvList, offset + blockWidth - 1);
+      case SEQ:
+        double res = 0;
+        for (int i = offset; i < offset + blockWidth; i++) {
+          res += getDoubleFromAnyType(tvList, i);
+        }
+        return res / blockWidth;
+      default:
+        throw new NotImplementedException("unsupported elb type:" + elbType);
+    }
+  }
+
 
   public int getAmortizedSize() {
     return blockNum * Double.BYTES;
   }
+
+
 }

@@ -96,11 +96,20 @@ public class IndexUtils {
     return maxValue - minValue;
   }
 
-  public static double[] parseNumericPattern(String patternStr) {
+  public static double[] parseStringToDoubleArray(String patternStr) {
     String[] ns = patternStr.split(",");
     double[] res = new double[ns.length];
     for (int i = 0; i < ns.length; i++) {
       res[i] = Double.parseDouble(ns[i]);
+    }
+    return res;
+  }
+
+  public static int[] parseStringToIntArray(String patternStr) {
+    String[] ns = patternStr.split(",");
+    int[] res = new int[ns.length];
+    for (int i = 0; i < ns.length; i++) {
+      res[i] = Integer.parseInt(ns[i]);
     }
     return res;
   }

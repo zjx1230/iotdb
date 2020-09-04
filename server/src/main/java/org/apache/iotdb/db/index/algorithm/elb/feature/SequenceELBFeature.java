@@ -24,7 +24,7 @@ import org.apache.iotdb.db.index.algorithm.elb.pattern.MilesPattern;
 import org.apache.iotdb.db.index.distance.Distance;
 import org.apache.iotdb.db.index.distance.LInfinityNormdouble;
 import org.apache.iotdb.db.index.distance.LNormDouble;
-import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
+import org.apache.iotdb.tsfile.utils.Pair;
 
 /**
  * SEQ-ELB
@@ -43,9 +43,10 @@ public class SequenceELBFeature extends ELBFeature {
 
   /**
    * refresh and calculate new SEQ-ELB
+   * @return
    */
-  public void refreshAndAppendToList(MilesPattern pattern, int blockNum, PatternEnvelope envelope,
-      PrimitiveList mbrs) {
+  @Override
+  public Pair<double[], double[]> calcPatternFeature(MilesPattern pattern, int blockNum, PatternEnvelope envelope) {
     checkAndExpandArrays(blockNum);
     int windowBlockSize = (int) Math.floor(((double) pattern.sequenceLen) / blockNum);
 
@@ -90,7 +91,7 @@ public class SequenceELBFeature extends ELBFeature {
         }
       }
     }
-    appendToMBRs(mbrs, blockNum);
+    return new Pair<>(upperLines, lowerLines);
   }
 
   /**

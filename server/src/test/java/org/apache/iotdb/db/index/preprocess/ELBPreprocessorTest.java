@@ -25,7 +25,7 @@ import java.util.List;
 import org.apache.iotdb.db.index.algorithm.elb.ELBCountFixedPreprocessor;
 import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.CalcParam;
-import org.apache.iotdb.db.index.algorithm.elb.pattern.SingleParamSchema;
+import org.apache.iotdb.db.index.algorithm.elb.pattern.SingleSegmentationParam;
 import org.apache.iotdb.db.index.distance.Distance;
 import org.apache.iotdb.db.index.distance.LInfinityNormdouble;
 import org.apache.iotdb.db.index.distance.LNormDouble;
@@ -53,7 +53,7 @@ public class ELBPreprocessorTest {
     int slideStep = 3;
     int blockNum = 4;
     Distance distance = new LNormDouble(1);
-    CalcParam calcParam = new SingleParamSchema(-1, 0.2, windowRange);
+    CalcParam calcParam = new SingleSegmentationParam(-1, 0.2, windowRange);
     ELBCountFixedPreprocessor elbProcessor = new ELBCountFixedPreprocessor(TSDataType.INT32,
         windowRange, slideStep, blockNum, distance, calcParam, ELBType.SEQ);
     elbProcessor.appendNewSrcData(srcData);
@@ -77,7 +77,7 @@ public class ELBPreprocessorTest {
     int slideStep = 3;
     int blockNum = 4;
     Distance distance = new LInfinityNormdouble();
-    CalcParam calcParam = new SingleParamSchema(-1, 0.2, windowRange);
+    CalcParam calcParam = new SingleSegmentationParam(-1, 0.2, windowRange);
     ELBCountFixedPreprocessor elbProcessor = new ELBCountFixedPreprocessor(TSDataType.INT32,
         windowRange, slideStep, blockNum, distance, calcParam, ELBType.ELE, false, false, true);
     elbProcessor.appendNewSrcData(srcData);
@@ -113,7 +113,7 @@ public class ELBPreprocessorTest {
     int slideStep = 3;
     int blockNum = 4;
     Distance distance = new LInfinityNormdouble();
-    CalcParam calcParam = new SingleParamSchema(-1, 0.2, windowRange);
+    CalcParam calcParam = new SingleSegmentationParam(-1, 0.2, windowRange);
     ELBCountFixedPreprocessor elbProcessor = new ELBCountFixedPreprocessor(TSDataType.INT32,
         windowRange, slideStep, blockNum, distance, calcParam, ELBType.ELE, false, false, true);
     elbProcessor.appendNewSrcData(srcData);

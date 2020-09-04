@@ -35,6 +35,8 @@ public interface Distance {
 
   double distPower(double[] a, int aOffset, TVList b, int bOffset, int length);
 
+  double distPower(TVList a, int aOffset, TVList b, int bOffset, int length);
+
   int distEarlyAbandon(double[] a, int aOffset, double[] b, int bOffset, int length, double thres);
 
   int distEarlyAbandonDetail(double[] a, int aOffset, double[] b, int bOffset, int length,

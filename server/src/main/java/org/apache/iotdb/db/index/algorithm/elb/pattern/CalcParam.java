@@ -22,13 +22,20 @@ import org.apache.iotdb.db.utils.datastructure.TVList;
 public interface CalcParam {
 
   /**
-   * <p>Given a subsequence (specified by {@code tvList},{@code offset},{@code length}, calculate
-   * the pattern parameters: subpattern thresholds, subpattern border ranges.</p>
+   * <p>
+   * A complex pattern contains one or more subpatterns, and they are allowed to specified different
+   * Lp-Norm thresholds. Accordingly, the parameters of ELB patterns include subpattern thresholds
+   * and subpattern segmentation (left and right borders).
+   * </p>
    *
-   * <p>The {@code borderRanges} will support variable border mode.</p>
+   * <p>
+   * In ELB-Index scenario, we use a sliding window or convert a long time series into a list of
+   * subsequence. One subsequence (specified by {@code tvList},{@code offset},{@code length}) is
+   * regarded as a complex pattern. <code>CalcParam</code> is to calculate the pattern parameters:
+   * subpattern thresholds and the left and right borders.</p>
    *
    * @return [subpatternCount, thresholdsArray, minLeftBorders, maxLeftBorders]
    */
-  Object[] refreshParam(TVList tvList, int offset, int length);
+  Object[] calculateParam(TVList tvList, int offset, int length);
 
 }

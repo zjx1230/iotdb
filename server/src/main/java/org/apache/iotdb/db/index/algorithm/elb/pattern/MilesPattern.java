@@ -62,14 +62,14 @@ public class MilesPattern {
   private double[] diff;
   private double[] thresholdPowers;
   private int[] idxSet;
-  public final Distance distance;
+  public final Distance distanceMetric;
   private int tvListOffset;
 
-  public MilesPattern(Distance distance) {
-    this.distance = distance;
+  public MilesPattern(Distance distanceMetric) {
+    this.distanceMetric = distanceMetric;
   }
 
-  public void refresh(TVList tvList, int tvListOffset, int length, int subpatternCount,
+  public void initPattern(TVList tvList, int tvListOffset, int length, int subpatternCount,
       double[] thresholdsArray, int[] minLeftBorders, int[] maxLeftBorders) {
     this.tvList = tvList;
     this.tvListOffset = tvListOffset;
@@ -102,8 +102,8 @@ public class MilesPattern {
     }
     Arrays.fill(thresholdPowers, 0);
     for (int i = 0; i < subpatternCount; i++) {
-      if (distance instanceof LNormDouble) {
-        thresholdPowers[i] = ((LNormDouble) distance).pow(thresholdsArray[i]);
+      if (distanceMetric instanceof LNormDouble) {
+        thresholdPowers[i] = ((LNormDouble) distanceMetric).pow(thresholdsArray[i]);
       }
     }
   }
@@ -188,6 +188,14 @@ public class MilesPattern {
   }
 
 
+  /**
+   *
+   * @param disMetric
+   * @param stream
+   * @param offset
+   * @param bps
+   * @return
+   */
   public int distEarlyAbandonGrain(Distance disMetric, double[] stream, int offset, int[] bps) {
     int ret = 0;
     int len;
@@ -218,6 +226,23 @@ public class MilesPattern {
       }
     }
     return -ret;
+  }
+
+  /**
+   * calculate the exact distance between this pattern and the given sliding window, return whether it is a matched result.
+   * @param slidingWindow to be calculated
+   * @return true if slidingWindow is a matched result.
+   */
+  public boolean exactDistanceCalc(TVList slidingWindow) {
+    int len;
+    for (int i = 0; i < subpatternCount; i++) {
+      len = minLeftBorders[i + 1] - minLeftBorders[i];
+      double dist = distanceMetric.distPower(slidingWindow, minLeftBorders[i], tvList, minLeftBorders[i], len);
+      if (dist > thresholdPowers[i] * len) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public double getDoubleFromRelativeIdx(int idx) {

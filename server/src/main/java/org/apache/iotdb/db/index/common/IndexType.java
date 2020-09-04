@@ -28,6 +28,7 @@ import org.apache.iotdb.db.exception.index.UnsupportedIndexTypeException;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.algorithm.NoIndex;
 import org.apache.iotdb.db.index.algorithm.elb.ELBIndex;
+import org.apache.iotdb.db.index.algorithm.elb.ELBMatch;
 import org.apache.iotdb.db.index.algorithm.paa.PAAIndex;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.metadata.MManager;
@@ -38,17 +39,8 @@ public enum IndexType {
   NO_INDEX,
   PAA_INDEX,
   ELB,
-  KV_INDEX;
-
-//  private final Set<IndexFunc> func;
-//
-//  IndexType(IndexFunc... func) {
-//    this.func = new HashSet<>(Arrays.asList(func));
-//  }
-//
-//  public Set<IndexFunc> getSupportedFunc() {
-//    return func;
-//  }
+  KV_INDEX,
+  ELB_MATCH;
 
   /**
    * judge the index type.
@@ -66,6 +58,8 @@ public enum IndexType {
         return ELB;
       case 3:
         return KV_INDEX;
+      case 4:
+        return ELB_MATCH;
       default:
         throw new NotImplementedException("Given index is not implemented");
     }
@@ -90,6 +84,8 @@ public enum IndexType {
         return 2;
       case KV_INDEX:
         return 3;
+      case ELB_MATCH:
+        return 4;
       default:
         throw new NotImplementedException("Given index is not implemented");
     }
@@ -114,6 +110,8 @@ public enum IndexType {
         return new PAAIndex(path, indexInfo);
       case NO_INDEX:
         return new NoIndex(path, indexInfo);
+      case ELB_MATCH:
+        return new ELBMatch(path, indexInfo);
       case KV_INDEX:
       default:
         throw new NotImplementedException("unsupported index type:" + indexType);

@@ -146,7 +146,6 @@ public class IndexQueryReader {
           List<Identifier> candidateList = index.queryByIndex(chunkData);
           if (candidateList != null) {
             updatePrunedRange(chunkMeta, candidateList);
-            System.out.println();
           }
         } catch (IOException e) {
           logger.error("unpack chunk failed:{}, skip it", chunkMeta, e);

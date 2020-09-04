@@ -47,6 +47,7 @@ public class ELBCountFixedPreprocessor extends CountFixedPreprocessor {
    */
   private final PrimitiveList mbrs;
   private final ELBFeatureExtractor elbFeatureExtractor;
+  private final CalcParam calcParam;
   private final boolean storeFeature;
   private final PrimitiveList currentMBR;
 
@@ -61,6 +62,7 @@ public class ELBCountFixedPreprocessor extends CountFixedPreprocessor {
       int blockNum, Distance distance, CalcParam calcParam, ELBType elbType,
       boolean storeIdentifier, boolean storeAligned, boolean storeFeature) {
     super(tsDataType, windowRange, slideStep, storeIdentifier, storeAligned);
+    this.calcParam = calcParam;
     this.storeFeature = storeFeature;
     if (blockNum > windowRange) {
       throw new IllegalIndexParamException(String
@@ -70,7 +72,7 @@ public class ELBCountFixedPreprocessor extends CountFixedPreprocessor {
     this.blockNum = blockNum;
     this.mbrs = PrimitiveList.newList(TSDataType.DOUBLE);
     this.currentMBR = PrimitiveList.newList(TSDataType.DOUBLE);
-    elbFeatureExtractor = new ELBFeatureExtractor(srcData, distance, windowRange, calcParam,
+    elbFeatureExtractor = new ELBFeatureExtractor(distance, windowRange,
         blockNum, elbType);
   }
 
@@ -85,7 +87,7 @@ public class ELBCountFixedPreprocessor extends CountFixedPreprocessor {
     super.processNext();
     if (!inQueryMode) {
       currentMBR.clearButNotRelease();
-      elbFeatureExtractor.calcELBFeature(currentStartTimeIdx, currentMBR);
+      elbFeatureExtractor.calcELBFeature(srcData, currentStartTimeIdx, currentMBR, calcParam);
       if (storeFeature) {
         mbrs.putAllDouble(currentMBR);
       }

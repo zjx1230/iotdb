@@ -63,6 +63,11 @@ public class LInfinityNormdouble implements Distance {
   }
 
   @Override
+  public double distPower(TVList a, int aOffset, TVList b, int bOffset, int length){
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public int distEarlyAbandon(double[] a, int aOffset, double[] b, int bOffset, int length,
       double threshold) {
     assert a.length >= aOffset + length && a.length >= bOffset + length;

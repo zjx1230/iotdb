@@ -42,7 +42,7 @@ import java.util.function.BiConsumer;
 import org.apache.iotdb.db.index.algorithm.MBRIndex;
 import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.CalcParam;
-import org.apache.iotdb.db.index.algorithm.elb.pattern.SingleParamSchema;
+import org.apache.iotdb.db.index.algorithm.elb.pattern.SingleSegmentationParam;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.exception.index.IndexQueryException;
 import org.apache.iotdb.db.index.common.IndexUtils;
@@ -57,7 +57,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * <p>Use PAA as the feature of MBRIndex.</p>
+ * <p>Use ELB as the feature of MBRIndex.</p>
  */
 
 public class ELBIndex extends MBRIndex {
@@ -88,7 +88,7 @@ public class ELBIndex extends MBRIndex {
       if (thresholdBase == -1 && thresholdRatio == -1) {
         thresholdRatio = ELB_DEFAULT_THRESHOLD_RATIO;
       }
-      this.calcParam = new SingleParamSchema(thresholdBase, thresholdRatio, windowRange);
+      this.calcParam = new SingleSegmentationParam(thresholdBase, thresholdRatio, windowRange);
     }
   }
 
@@ -157,7 +157,7 @@ public class ELBIndex extends MBRIndex {
       this.threshold = Double.MAX_VALUE;
     }
     if (queryConditions.containsKey(PATTERN)) {
-      this.patterns = IndexUtils.parseNumericPattern(queryConditions.get(PATTERN));
+      this.patterns = IndexUtils.parseStringToDoubleArray(queryConditions.get(PATTERN));
     } else {
       throw new UnsupportedIndexFuncException("missing parameter: " + PATTERN);
     }

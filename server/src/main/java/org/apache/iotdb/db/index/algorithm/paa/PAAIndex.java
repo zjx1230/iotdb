@@ -124,7 +124,7 @@ public class PAAIndex extends MBRIndex {
       this.threshold = Double.MAX_VALUE;
     }
     if (queryConditions.containsKey(PATTERN)) {
-      this.patterns = IndexUtils.parseNumericPattern(queryConditions.get(PATTERN));
+      this.patterns = IndexUtils.parseStringToDoubleArray(queryConditions.get(PATTERN));
     } else {
       throw new UnsupportedIndexFuncException("missing parameter: " + PATTERN);
     }

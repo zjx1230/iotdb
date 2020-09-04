@@ -41,6 +41,7 @@ public class IndexConstant {
 
   public static final String PATTERN = "PATTERN";
   public static final String THRESHOLD = "THRESHOLD";
+  public static final String BORDER = "BORDER";
 
   // MBR Index parameters
   public static final String FEATURE_DIM = "FEATURE_DIM";
@@ -67,6 +68,7 @@ public class IndexConstant {
   public static final String ELB_THRESHOLD_RATIO = "ELB_THRESHOLD_RATIO";
   public static final double ELB_DEFAULT_THRESHOLD_RATIO = 0.1;
 
+  public static final String MISSING_PARAM_ERROR_MESSAGE = "missing parameter: %s";
   // index function mapping
 //  private static Map<IndexType, Set<IndexFunc>> indexSupportFunction = new EnumMap<>(
 //      IndexType.class);

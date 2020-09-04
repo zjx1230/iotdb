@@ -21,7 +21,11 @@ import static org.apache.iotdb.db.index.common.IndexUtils.getValueRange;
 
 import org.apache.iotdb.db.utils.datastructure.TVList;
 
-public class SingleParamSchema implements CalcParam {
+/**
+ * It's the special and simplest case where a complex pattern contains only one subpattern. We only
+ * need to determine the subpattern threshold (equivalent to the complex pattern threshold).
+ */
+public class SingleSegmentationParam implements CalcParam {
 
   private final double[] thresholdsArray;
   /**
@@ -34,7 +38,15 @@ public class SingleParamSchema implements CalcParam {
   private double thresholdRatio;
   private final Object[] res;
 
-  public SingleParamSchema(double thresholdBase, double thresholdRatio, int windowRange) {
+  /**
+   * Users can specify the threshold value directly, or provide a threshold ratio. If it's the *
+   * latter, the threshold value is a function of the ratio and the pattern's value range.
+   *
+   * @param thresholdBase if not -1, it's set to the pattern threshold directly.
+   * @param thresholdRatio if not -1, it's used to compute the threshold value.
+   * @param windowRange the length of sliding window, used to determine the pattern borders.
+   */
+  public SingleSegmentationParam(double thresholdBase, double thresholdRatio, int windowRange) {
     this.thresholdBase = thresholdBase;
     this.thresholdRatio = thresholdRatio;
     this.res = new Object[4];
@@ -48,23 +60,24 @@ public class SingleParamSchema implements CalcParam {
     res[3] = maxLeftBorders;
   }
 
-  public SingleParamSchema createInstanceByAbsoluteThreshold(float threshold, int windowRange) {
-    return new SingleParamSchema(threshold, -1, windowRange);
+  public SingleSegmentationParam createInstanceByAbsoluteThreshold(float threshold,
+      int windowRange) {
+    return new SingleSegmentationParam(threshold, -1, windowRange);
   }
 
-  public SingleParamSchema createInstanceByValueRatio(float thresholdRatio, int windowRange) {
-    return new SingleParamSchema(-1, thresholdRatio, windowRange);
+  public SingleSegmentationParam createInstanceByValueRatio(float thresholdRatio, int windowRange) {
+    return new SingleSegmentationParam(-1, thresholdRatio, windowRange);
   }
 
   /**
    * In SinglePattern, only threshold will be modified. We reuse the Array as much as possible.
    */
   @Override
-  public Object[] refreshParam(TVList tvList, int offset, int length) {
+  public Object[] calculateParam(TVList tvList, int offset, int length) {
 
     if (this.thresholdRatio != -1) {
       thresholdsArray[0] = getValueRange(tvList, offset, length) * thresholdRatio;
-    }else{
+    } else {
       thresholdsArray[0] = thresholdBase;
     }
     return res;

@@ -20,6 +20,7 @@ package org.apache.iotdb.db.index.algorithm.elb.feature;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.ELBFeature;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.MilesPattern;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
+import org.apache.iotdb.tsfile.utils.Pair;
 
 /**
  * PatternNode：Pattern is divided into a list of blocks
@@ -29,8 +30,8 @@ public class ElementELBFeature extends ELBFeature {
   /**
    * calculate ELE-ELB.
    */
-  public void refreshAndAppendToList(MilesPattern pattern, int blockNum,
-      PatternEnvelope envelope, PrimitiveList mbrs) {
+  public Pair<double[], double[]> calcPatternFeature(MilesPattern pattern, int blockNum,
+      PatternEnvelope envelope) {
     int windowBlockSize = (int) Math.floor(((double) pattern.sequenceLen) / blockNum);
     checkAndExpandArrays(blockNum);
     for (int i = 0; i < blockNum; i++) {
@@ -50,8 +51,6 @@ public class ElementELBFeature extends ELBFeature {
         }
       }
     }
-
-    appendToMBRs(mbrs, blockNum);
+    return new Pair<>(upperLines, lowerLines);
   }
-
 }

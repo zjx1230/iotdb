@@ -78,10 +78,20 @@ public class LNormDouble implements Distance {
   }
 
   public double distPower(double[] a, int aOffset, TVList b, int bOffset, int length) {
-    assert a.length >= aOffset + length && a.length >= bOffset + length;
+    assert a.length >= aOffset + length && b.size() >= bOffset + length;
     double dis = 0;
     for (int i = 0; i < length; i++) {
       dis += pow(Math.abs(a[i + aOffset] - getDoubleFromAnyType(b, i + bOffset)));
+    }
+    return dis;
+  }
+
+  public double distPower(TVList a, int aOffset, TVList b, int bOffset, int length) {
+    assert a.size() >= aOffset + length && b.size() >= bOffset + length;
+    double dis = 0;
+    for (int i = 0; i < length; i++) {
+      dis += pow(Math.abs(getDoubleFromAnyType(a, i + aOffset) -
+          getDoubleFromAnyType(b, i + bOffset)));
     }
     return dis;
   }

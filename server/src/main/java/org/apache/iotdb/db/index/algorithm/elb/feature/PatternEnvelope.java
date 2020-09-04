@@ -71,7 +71,7 @@ public class PatternEnvelope {
 
   private double mtt(MilesPattern pattern, int k) {
     return Math.pow((double) pattern.maxLeftBorders[k + 1] - pattern.minLeftBorders[k],
-        1 / pattern.distance.getP())
+        1 / pattern.distanceMetric.getP())
         * pattern.thresholdsArray[k];
   }
 

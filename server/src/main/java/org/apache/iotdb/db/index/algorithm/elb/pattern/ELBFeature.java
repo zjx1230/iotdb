@@ -20,6 +20,7 @@ package org.apache.iotdb.db.index.algorithm.elb.pattern;
 import java.util.Arrays;
 import org.apache.iotdb.db.index.algorithm.elb.feature.PatternEnvelope;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
+import org.apache.iotdb.tsfile.utils.Pair;
 
 /**
  * Pattern ELB feature.
@@ -55,14 +56,16 @@ public abstract class ELBFeature {
     Arrays.fill(actualLowers, Double.MAX_VALUE);
   }
 
-  public abstract void refreshAndAppendToList(MilesPattern pattern, int blockNum,
-      PatternEnvelope envelope, PrimitiveList mbrs);
+  /**
+   * calculate pattern block features.
+   * @param pattern the pattern
+   * @param blockNum specified block number
+   * @param envelope calculated envelope
+   * @return left: upper bounds, right: lower bounds
+   */
+  public abstract Pair<double[], double[]> calcPatternFeature(MilesPattern pattern, int blockNum,
+      PatternEnvelope envelope);
 
-  protected void appendToMBRs(PrimitiveList mbrs, int blockNum) {
-    for (int i = 0; i < blockNum; i++) {
-      mbrs.putDouble(upperLines[i]);
-      mbrs.putDouble(lowerLines[i]);
-    }
-  }
+
 
 }
