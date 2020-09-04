@@ -119,6 +119,7 @@ import org.apache.iotdb.tsfile.utils.Pair;
  */
 public class PhysicalGenerator {
 
+  @SuppressWarnings("squid:S3776") // Suppress high Cognitive Complexity warning
   public PhysicalPlan transformToPhysicalPlan(Operator operator) throws QueryProcessException {
     List<PartialPath> paths;
     switch (operator.getType()) {
@@ -339,6 +340,7 @@ public class PhysicalGenerator {
     return SchemaUtils.getSeriesTypesByPath(paths);
   }
 
+  @SuppressWarnings("squid:S3776") // Suppress high Cognitive Complexity warning
   private PhysicalPlan transformQuery(QueryOperator queryOperator) throws QueryProcessException {
     QueryPlan queryPlan;
 
@@ -688,6 +690,7 @@ public class PhysicalGenerator {
     basicOperator.setSinglePath(concatPath);
   }
 
+  @SuppressWarnings("squid:S3776") // Suppress high Cognitive Complexity warning
   private void deduplicate(QueryPlan queryPlan) throws MetadataException {
     // generate dataType first
     List<PartialPath> paths = queryPlan.getPaths();

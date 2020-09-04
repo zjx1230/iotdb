@@ -550,6 +550,7 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
    * @param plan must be a plan for Query: FillQueryPlan, AggregationPlan, GroupByTimePlan, some
    *             AuthorPlan
    */
+  @SuppressWarnings("squid:S3776") // Suppress high Cognitive Complexity warning
   private TSExecuteStatementResp internalExecuteQueryStatement(String statement,
       long statementId, PhysicalPlan plan, int fetchSize, String username) throws IOException {
     auditLogger.debug("Session {} execute Query: {}", currSessionId.get(), statement);
@@ -764,6 +765,7 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
   }
 
   // wide means not align by device
+  @SuppressWarnings("squid:S3776") // Suppress high Cognitive Complexity warning
   private void getWideQueryHeaders(
       QueryPlan plan, List<String> respColumns, List<String> columnTypes)
       throws TException, MetadataException {
@@ -849,7 +851,7 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
     Map<String, String> measurementAliasMap = plan.getMeasurementAliasMap();
     Map<String, MeasurementType> measurementTypeMap = plan.getMeasurementTypeMap();
     for (String measurement : measurements) {
-      TSDataType type = null;
+      TSDataType type = TSDataType.TEXT;
       switch (measurementTypeMap.get(measurement)) {
         case Exist:
           type = measurementDataTypeMap.get(measurement);
@@ -876,6 +878,7 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
     plan.setPaths(null);
   }
 
+  @SuppressWarnings("squid:S3776") // Suppress high Cognitive Complexity warning
   @Override
   public TSFetchResultsResp fetchResults(TSFetchResultsReq req) {
     try {
@@ -1492,6 +1495,7 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
     return RpcUtils.getStatus(TSStatusCode.EXECUTE_STATEMENT_ERROR);
   }
 
+  @SuppressWarnings("squid:S3776") // Suppress high Cognitive Complexity warning
   @Override
   public TSStatus createMultiTimeseries(TSCreateMultiTimeseriesReq req) {
     try {
