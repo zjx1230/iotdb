@@ -20,6 +20,7 @@ package org.apache.iotdb.db.engine;
 
 import java.io.File;
 import java.io.IOException;
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
@@ -36,6 +37,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.io.FileUtils;
+import org.apache.iotdb.cluster.server.Timer;
+import org.apache.iotdb.cluster.server.Timer.Statistic;
 import org.apache.iotdb.db.concurrent.IoTDBThreadPoolFactory;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
@@ -441,7 +444,12 @@ public class StorageEngine implements IService {
     if (processor != null) {
       logger.info("async closing sg processor is called for closing {}, seq = {}, partitionId = {}",
           storageGroupPath, isSeq, partitionId);
+      long start;
+      if (Timer.ENABLE_INSTRUMENTING) {
+        start = System.nanoTime();
+      }
       processor.writeLock();
+      Statistic.RAFT_SENDER_CLOSE_FILE_LOCK_PROCESSOR.addNanoFromStart(start);
       // to avoid concurrent modification problem, we need a new array list
       List<TsFileProcessor> processors = isSeq ?
           new ArrayList<>(processor.getWorkSequenceTsFileProcessors()) :
@@ -449,11 +457,15 @@ public class StorageEngine implements IService {
       try {
         for (TsFileProcessor tsfileProcessor : processors) {
           if (tsfileProcessor.getTimeRangeId() == partitionId) {
+            if (Timer.ENABLE_INSTRUMENTING) {
+              start = System.nanoTime();
+            }
             if (isSync) {
               processor.syncCloseOneTsFileProcessor(isSeq, tsfileProcessor);
             } else {
               processor.asyncCloseOneTsFileProcessor(isSeq, tsfileProcessor);
             }
+            Statistic.RAFT_SENDER_CLOSE_FILE_CLOSE_PROCESSOR.addNanoFromStart(start);
             break;
           }
         }

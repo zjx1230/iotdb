@@ -25,6 +25,8 @@ import org.apache.iotdb.cluster.log.Log;
 import org.apache.iotdb.cluster.log.logtypes.CloseFileLog;
 import org.apache.iotdb.cluster.log.logtypes.PhysicalPlanLog;
 import org.apache.iotdb.cluster.partition.slot.SlotPartitionTable;
+import org.apache.iotdb.cluster.server.Timer;
+import org.apache.iotdb.cluster.server.Timer.Statistic;
 import org.apache.iotdb.cluster.server.member.DataGroupMember;
 import org.apache.iotdb.cluster.server.member.MetaGroupMember;
 import org.apache.iotdb.db.engine.StorageEngine;
@@ -68,9 +70,14 @@ public class DataLogApplier extends BaseApplier {
         }
       } else if (log instanceof CloseFileLog) {
         CloseFileLog closeFileLog = ((CloseFileLog) log);
+        long start;
+        if (Timer.ENABLE_INSTRUMENTING) {
+          start = System.nanoTime();
+        }
         StorageEngine.getInstance().closeProcessor(new PartialPath(closeFileLog.getStorageGroupName()),
             closeFileLog.getPartitionId(),
             closeFileLog.isSeq(), false);
+        Statistic.RAFT_SENDER_CLOSE_FILE_LOG_APPLY.addNanoFromStart(start);
       } else {
         logger.error("Unsupported log: {}", log);
       }
