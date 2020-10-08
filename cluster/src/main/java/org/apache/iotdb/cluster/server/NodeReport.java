@@ -22,6 +22,7 @@ package org.apache.iotdb.cluster.server;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.iotdb.cluster.rpc.thrift.Node;
+import org.apache.iotdb.db.utils.Timer;
 
 /**
  * A node report collects the current runtime information of the local node, which contains:

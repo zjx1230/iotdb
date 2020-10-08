@@ -18,16 +18,16 @@
  */
 
 
-package org.apache.iotdb.cluster.server;
+package org.apache.iotdb.db.utils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.iotdb.cluster.server.member.RaftMember;
 
 public class Timer {
 
   public static final boolean ENABLE_INSTRUMENTING = true;
+  private static boolean raftUseLogDispatcher = true;
 
   private static final String META_GROUP_MEMBER = "Meta group member";
   private static final String DATA_GROUP_MEMBER = "Data group member";
@@ -37,6 +37,14 @@ public class Timer {
 
   // convert nano to milli
   private static final double TIME_SCALE = 1_000_000.0;
+
+  public static boolean isRaftUseLogDispatcher() {
+    return raftUseLogDispatcher;
+  }
+
+  public static void setRaftUseLogDispatcher(boolean raftUseLogDispatcher) {
+    Timer.raftUseLogDispatcher = raftUseLogDispatcher;
+  }
 
   public enum Statistic {
     // A dummy root for the convenience of prints
@@ -63,25 +71,25 @@ public class Timer {
         META_GROUP_MEMBER_EXECUTE_NON_QUERY_IN_LOCAL_GROUP),
     // raft member - sender
     RAFT_SENDER_APPEND_LOG(
-        RAFT_MEMBER_SENDER, "locally append log", TIME_SCALE, !RaftMember.USE_LOG_DISPATCHER,
+        RAFT_MEMBER_SENDER, "locally append log", TIME_SCALE, !isRaftUseLogDispatcher(),
         DATA_GROUP_MEMBER_LOCAL_EXECUTION),
     RAFT_SENDER_COMPETE_LOG_MANAGER_BEFORE_APPEND_V2(
         RAFT_MEMBER_SENDER, "compete for log manager before append", TIME_SCALE,
-        RaftMember.USE_LOG_DISPATCHER, DATA_GROUP_MEMBER_LOCAL_EXECUTION),
+        isRaftUseLogDispatcher(), DATA_GROUP_MEMBER_LOCAL_EXECUTION),
     RAFT_SENDER_APPEND_LOG_V2(
         RAFT_MEMBER_SENDER, "locally append log", TIME_SCALE,
-        RaftMember.USE_LOG_DISPATCHER, DATA_GROUP_MEMBER_LOCAL_EXECUTION),
+        isRaftUseLogDispatcher(), DATA_GROUP_MEMBER_LOCAL_EXECUTION),
     RAFT_SENDER_BUILD_LOG_REQUEST(
         RAFT_MEMBER_SENDER, "build SendLogRequest", TIME_SCALE,
-        RaftMember.USE_LOG_DISPATCHER, DATA_GROUP_MEMBER_LOCAL_EXECUTION),
+        isRaftUseLogDispatcher(), DATA_GROUP_MEMBER_LOCAL_EXECUTION),
     RAFT_SENDER_BUILD_APPEND_REQUEST(
         RAFT_MEMBER_SENDER, "build AppendEntryRequest", TIME_SCALE,
-        RaftMember.USE_LOG_DISPATCHER, RAFT_SENDER_BUILD_LOG_REQUEST),
+        isRaftUseLogDispatcher(), RAFT_SENDER_BUILD_LOG_REQUEST),
     RAFT_SENDER_OFFER_LOG(
         RAFT_MEMBER_SENDER, "offer log to dispatcher", TIME_SCALE,
-        RaftMember.USE_LOG_DISPATCHER, DATA_GROUP_MEMBER_LOCAL_EXECUTION),
+        isRaftUseLogDispatcher(), DATA_GROUP_MEMBER_LOCAL_EXECUTION),
     RAFT_SENDER_SEND_LOG_TO_FOLLOWERS(
-        RAFT_MEMBER_SENDER, "send log to followers", TIME_SCALE, !RaftMember.USE_LOG_DISPATCHER,
+        RAFT_MEMBER_SENDER, "send log to followers", TIME_SCALE, !isRaftUseLogDispatcher(),
         DATA_GROUP_MEMBER_LOCAL_EXECUTION),
     RAFT_SENDER_WAIT_FOR_PREV_LOG(
         RAFT_MEMBER_SENDER, "sender wait for prev log", TIME_SCALE, true,
@@ -90,41 +98,41 @@ public class Timer {
         RAFT_MEMBER_SENDER, "send log", TIME_SCALE, true, RAFT_SENDER_SEND_LOG_TO_FOLLOWERS),
     RAFT_SENDER_VOTE_COUNTER(
         RAFT_MEMBER_SENDER, "wait for votes", TIME_SCALE, true,
-        RaftMember.USE_LOG_DISPATCHER ? DATA_GROUP_MEMBER_LOCAL_EXECUTION
+        isRaftUseLogDispatcher() ? DATA_GROUP_MEMBER_LOCAL_EXECUTION
             : RAFT_SENDER_SEND_LOG_TO_FOLLOWERS),
     RAFT_SENDER_COMMIT_LOG(
-        RAFT_MEMBER_SENDER, "locally commit log", TIME_SCALE, !RaftMember.USE_LOG_DISPATCHER,
+        RAFT_MEMBER_SENDER, "locally commit log", TIME_SCALE, !isRaftUseLogDispatcher(),
         DATA_GROUP_MEMBER_LOCAL_EXECUTION),
     RAFT_SENDER_COMMIT_LOG_V2(
         RAFT_MEMBER_SENDER, "locally commit log(using dispatcher)", TIME_SCALE,
-        RaftMember.USE_LOG_DISPATCHER, DATA_GROUP_MEMBER_LOCAL_EXECUTION),
+        isRaftUseLogDispatcher(), DATA_GROUP_MEMBER_LOCAL_EXECUTION),
     RAFT_SENDER_COMPETE_LOG_MANAGER_BEFORE_COMMIT_V2(
         RAFT_MEMBER_SENDER, "compete for log manager before commit", TIME_SCALE,
-        RaftMember.USE_LOG_DISPATCHER, RAFT_SENDER_COMMIT_LOG_V2),
+        isRaftUseLogDispatcher(), RAFT_SENDER_COMMIT_LOG_V2),
     RAFT_SENDER_COMMIT_LOG_IN_MANAGER_V2(
         RAFT_MEMBER_SENDER, "commit log in log manager", TIME_SCALE,
-        RaftMember.USE_LOG_DISPATCHER, RAFT_SENDER_COMMIT_LOG_V2),
+        isRaftUseLogDispatcher(), RAFT_SENDER_COMMIT_LOG_V2),
     RAFT_SENDER_COMMIT_GET_LOGS(
         RAFT_MEMBER_SENDER, "get logs to be committed", TIME_SCALE,
-        RaftMember.USE_LOG_DISPATCHER, RAFT_SENDER_COMMIT_LOG_IN_MANAGER_V2),
+        isRaftUseLogDispatcher(), RAFT_SENDER_COMMIT_LOG_IN_MANAGER_V2),
     RAFT_SENDER_COMMIT_DELETE_EXCEEDING_LOGS(
         RAFT_MEMBER_SENDER, "delete logs exceeding capacity", TIME_SCALE,
-        RaftMember.USE_LOG_DISPATCHER, RAFT_SENDER_COMMIT_LOG_IN_MANAGER_V2),
+        isRaftUseLogDispatcher(), RAFT_SENDER_COMMIT_LOG_IN_MANAGER_V2),
     RAFT_SENDER_COMMIT_APPEND_AND_STABLE_LOGS(
         RAFT_MEMBER_SENDER, "append and stable committed logs", TIME_SCALE,
-        RaftMember.USE_LOG_DISPATCHER, RAFT_SENDER_COMMIT_LOG_IN_MANAGER_V2),
+        isRaftUseLogDispatcher(), RAFT_SENDER_COMMIT_LOG_IN_MANAGER_V2),
     RAFT_SENDER_COMMIT_APPLY_LOGS(
         RAFT_MEMBER_SENDER, "apply after committing logs", TIME_SCALE,
-        RaftMember.USE_LOG_DISPATCHER, RAFT_SENDER_COMMIT_LOG_IN_MANAGER_V2),
+        isRaftUseLogDispatcher(), RAFT_SENDER_COMMIT_LOG_IN_MANAGER_V2),
     RAFT_SENDER_COMMIT_TO_CONSUMER_LOGS(
         RAFT_MEMBER_SENDER, "provide log to consumer", TIME_SCALE,
-        RaftMember.USE_LOG_DISPATCHER, RAFT_SENDER_COMMIT_APPLY_LOGS),
+        isRaftUseLogDispatcher(), RAFT_SENDER_COMMIT_APPLY_LOGS),
     RAFT_SENDER_COMMIT_EXCLUSIVE_LOGS(
         RAFT_MEMBER_SENDER, "apply logs that cannot run in parallel", TIME_SCALE,
-        RaftMember.USE_LOG_DISPATCHER, RAFT_SENDER_COMMIT_APPLY_LOGS),
+        isRaftUseLogDispatcher(), RAFT_SENDER_COMMIT_APPLY_LOGS),
     RAFT_SENDER_COMMIT_WAIT_LOG_APPLY_V2(
         RAFT_MEMBER_SENDER, "wait until log is applied", TIME_SCALE,
-        RaftMember.USE_LOG_DISPATCHER, RAFT_SENDER_COMMIT_LOG_V2),
+        isRaftUseLogDispatcher(), RAFT_SENDER_COMMIT_LOG_V2),
     RAFT_SENDER_IN_APPLY_QUEUE(
         RAFT_MEMBER_SENDER, "in apply queue", TIME_SCALE, true,
         RAFT_SENDER_COMMIT_WAIT_LOG_APPLY_V2),
@@ -134,15 +142,9 @@ public class Timer {
     RAFT_SENDER_CLOSE_FILE_LOG_APPLY(
         RAFT_MEMBER_SENDER, "apply close file log", TIME_SCALE, true,
         RAFT_SENDER_DATA_LOG_APPLY),
-    RAFT_SENDER_CLOSE_FILE_LOCK_PROCESSOR(
-        RAFT_MEMBER_SENDER, "close file - lock processor", TIME_SCALE, true,
-        RAFT_SENDER_CLOSE_FILE_LOG_APPLY),
-    RAFT_SENDER_CLOSE_FILE_CLOSE_PROCESSOR(
-        RAFT_MEMBER_SENDER, "close file - close processor", TIME_SCALE, true,
-        RAFT_SENDER_CLOSE_FILE_LOG_APPLY),
     RAFT_SENDER_LOG_FROM_CREATE_TO_ACCEPT(
         RAFT_MEMBER_SENDER, "log from create to accept", TIME_SCALE,
-        RaftMember.USE_LOG_DISPATCHER, DATA_GROUP_MEMBER_LOCAL_EXECUTION),
+        isRaftUseLogDispatcher(), DATA_GROUP_MEMBER_LOCAL_EXECUTION),
     // raft member - receiver
     RAFT_RECEIVER_LOG_PARSE(
         RAFT_MEMBER_RECEIVER, "log parse", TIME_SCALE, true, RAFT_SENDER_SEND_LOG),
@@ -158,7 +160,18 @@ public class Timer {
         META_GROUP_MEMBER_EXECUTE_NON_QUERY_IN_LOCAL_GROUP),
     LOG_DISPATCHER_FROM_CREATE_TO_END(
         LOG_DISPATCHER, "from create to end", TIME_SCALE, true,
-        META_GROUP_MEMBER_EXECUTE_NON_QUERY_IN_LOCAL_GROUP);
+        META_GROUP_MEMBER_EXECUTE_NON_QUERY_IN_LOCAL_GROUP),
+    // stand-alone operations
+    CLOSE_FILE(
+        RAFT_MEMBER_SENDER, "close file", TIME_SCALE, true,
+        RAFT_SENDER_CLOSE_FILE_LOG_APPLY),
+    CLOSE_FILE_LOCK_PROCESSOR(
+        RAFT_MEMBER_SENDER, "close file - lock processor", TIME_SCALE, true,
+        CLOSE_FILE),
+    CLOSE_FILE_CLOSE_PROCESSOR(
+        RAFT_MEMBER_SENDER, "close file - close processor", TIME_SCALE, true,
+        CLOSE_FILE);
+
 
     String className;
     String blockName;

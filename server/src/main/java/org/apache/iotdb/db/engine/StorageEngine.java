@@ -20,7 +20,6 @@ package org.apache.iotdb.db.engine;
 
 import java.io.File;
 import java.io.IOException;
-import java.sql.Time;
 import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
@@ -37,8 +36,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.io.FileUtils;
-import org.apache.iotdb.cluster.server.Timer;
-import org.apache.iotdb.cluster.server.Timer.Statistic;
 import org.apache.iotdb.db.concurrent.IoTDBThreadPoolFactory;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
@@ -74,6 +71,8 @@ import org.apache.iotdb.db.service.IoTDB;
 import org.apache.iotdb.db.service.ServiceType;
 import org.apache.iotdb.db.utils.FilePathUtils;
 import org.apache.iotdb.db.utils.TestOnly;
+import org.apache.iotdb.db.utils.Timer;
+import org.apache.iotdb.db.utils.Timer.Statistic;
 import org.apache.iotdb.db.utils.UpgradeUtils;
 import org.apache.iotdb.rpc.TSStatusCode;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -440,6 +439,10 @@ public class StorageEngine implements IService {
   public void closeProcessor(PartialPath storageGroupPath, long partitionId, boolean isSeq,
       boolean isSync)
       throws StorageGroupNotSetException {
+    long allStart;
+    if (Timer.ENABLE_INSTRUMENTING) {
+      allStart = System.nanoTime();
+    }
     StorageGroupProcessor processor = processorMap.get(storageGroupPath);
     if (processor != null) {
       logger.info("async closing sg processor is called for closing {}, seq = {}, partitionId = {}",
@@ -449,7 +452,7 @@ public class StorageEngine implements IService {
         start = System.nanoTime();
       }
       processor.writeLock();
-      Statistic.RAFT_SENDER_CLOSE_FILE_LOCK_PROCESSOR.addNanoFromStart(start);
+      Statistic.CLOSE_FILE_LOCK_PROCESSOR.addNanoFromStart(start);
       // to avoid concurrent modification problem, we need a new array list
       List<TsFileProcessor> processors = isSeq ?
           new ArrayList<>(processor.getWorkSequenceTsFileProcessors()) :
@@ -465,12 +468,13 @@ public class StorageEngine implements IService {
             } else {
               processor.asyncCloseOneTsFileProcessor(isSeq, tsfileProcessor);
             }
-            Statistic.RAFT_SENDER_CLOSE_FILE_CLOSE_PROCESSOR.addNanoFromStart(start);
+            Statistic.CLOSE_FILE_CLOSE_PROCESSOR.addNanoFromStart(start);
             break;
           }
         }
       } finally {
         processor.writeUnlock();
+        Statistic.CLOSE_FILE.addNanoFromStart(allStart);
       }
     } else {
       throw new StorageGroupNotSetException(storageGroupPath.getFullPath());
