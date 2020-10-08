@@ -31,9 +31,10 @@ public class Timer {
 
   private static final String META_GROUP_MEMBER = "Meta group member";
   private static final String DATA_GROUP_MEMBER = "Data group member";
-  private static final String RAFT_MEMBER_SENDER = " Raft member(sender)";
-  private static final String RAFT_MEMBER_RECEIVER = " Raft member(receiver)";
+  private static final String RAFT_MEMBER_SENDER = "Raft member(sender)";
+  private static final String RAFT_MEMBER_RECEIVER = "Raft member(receiver)";
   private static final String LOG_DISPATCHER = "Log dispatcher";
+  private static final String STORAGE_ENGINE = "Storage Engine";
 
   // convert nano to milli
   private static final double TIME_SCALE = 1_000_000.0;
@@ -161,15 +162,21 @@ public class Timer {
     LOG_DISPATCHER_FROM_CREATE_TO_END(
         LOG_DISPATCHER, "from create to end", TIME_SCALE, true,
         META_GROUP_MEMBER_EXECUTE_NON_QUERY_IN_LOCAL_GROUP),
-    // stand-alone operations
+    // storage engine
     CLOSE_FILE(
-        RAFT_MEMBER_SENDER, "close file", TIME_SCALE, true,
-        RAFT_SENDER_CLOSE_FILE_LOG_APPLY),
-    CLOSE_FILE_LOCK_PROCESSOR(
-        RAFT_MEMBER_SENDER, "close file - lock processor", TIME_SCALE, true,
+        STORAGE_ENGINE, "close file", TIME_SCALE, true,
+        ROOT),
+    CLOSE_FILE_LOCK_SG_PROCESSOR(
+        STORAGE_ENGINE, "close file - lock SG processor", TIME_SCALE, true,
         CLOSE_FILE),
-    CLOSE_FILE_CLOSE_PROCESSOR(
-        RAFT_MEMBER_SENDER, "close file - close processor", TIME_SCALE, true,
+    CLOSE_FILE_CLOSE_SG_PROCESSOR(
+        STORAGE_ENGINE, "close file - close SG processor", TIME_SCALE, true,
+        CLOSE_FILE),
+    CLOSE_FILE_CLOSE_TSFILE_PROCESSOR(
+        STORAGE_ENGINE, "close file - close TsFile processor", TIME_SCALE, true,
+        CLOSE_FILE),
+    CLOSE_FILE_MOVE_MEMTABLE_TO_FLUSH(
+        STORAGE_ENGINE, "close file - move memtable to flush", TIME_SCALE, true,
         CLOSE_FILE);
 
 

@@ -22,6 +22,7 @@ import static org.apache.iotdb.db.conf.adapter.IoTDBConfigDynamicAdapter.MEMTABL
 
 import java.io.File;
 import java.io.IOException;
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -54,6 +55,8 @@ import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.rescon.MemTablePool;
 import org.apache.iotdb.db.utils.QueryUtils;
+import org.apache.iotdb.db.utils.Timer;
+import org.apache.iotdb.db.utils.Timer.Statistic;
 import org.apache.iotdb.db.writelog.manager.MultiFileLogNodeManager;
 import org.apache.iotdb.db.writelog.node.WriteLogNode;
 import org.apache.iotdb.rpc.RpcUtils;
@@ -376,6 +379,10 @@ public class TsFileProcessor {
 
       //we have to add the memtable into flushingList first and then set the shouldClose tag.
       // see https://issues.apache.org/jira/browse/IOTDB-510
+      long start;
+      if (Timer.ENABLE_INSTRUMENTING) {
+        start = System.nanoTime();
+      }
       IMemTable tmpMemTable = workMemTable == null || workMemTable.memSize() == 0
           ? new NotifyFlushMemTable()
           : workMemTable;
@@ -388,6 +395,7 @@ public class TsFileProcessor {
         logger.error("{}: {} async close failed, because", storageGroupName,
             tsFileResource.getTsFile().getName(), e);
       }
+      Statistic.CLOSE_FILE_MOVE_MEMTABLE_TO_FLUSH.addNanoFromStart(start);
     } finally {
       flushQueryLock.writeLock().unlock();
       if (logger.isDebugEnabled()) {

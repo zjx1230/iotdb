@@ -452,7 +452,7 @@ public class StorageEngine implements IService {
         start = System.nanoTime();
       }
       processor.writeLock();
-      Statistic.CLOSE_FILE_LOCK_PROCESSOR.addNanoFromStart(start);
+      Statistic.CLOSE_FILE_LOCK_SG_PROCESSOR.addNanoFromStart(start);
       // to avoid concurrent modification problem, we need a new array list
       List<TsFileProcessor> processors = isSeq ?
           new ArrayList<>(processor.getWorkSequenceTsFileProcessors()) :
@@ -468,7 +468,7 @@ public class StorageEngine implements IService {
             } else {
               processor.asyncCloseOneTsFileProcessor(isSeq, tsfileProcessor);
             }
-            Statistic.CLOSE_FILE_CLOSE_PROCESSOR.addNanoFromStart(start);
+            Statistic.CLOSE_FILE_CLOSE_SG_PROCESSOR.addNanoFromStart(start);
             break;
           }
         }

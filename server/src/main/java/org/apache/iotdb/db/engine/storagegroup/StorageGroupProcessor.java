@@ -88,6 +88,8 @@ import org.apache.iotdb.db.service.IoTDB;
 import org.apache.iotdb.db.service.UpgradeSevice;
 import org.apache.iotdb.db.utils.CopyOnReadLinkedList;
 import org.apache.iotdb.db.utils.TestOnly;
+import org.apache.iotdb.db.utils.Timer;
+import org.apache.iotdb.db.utils.Timer.Statistic;
 import org.apache.iotdb.db.writelog.recover.TsFileRecoverPerformer;
 import org.apache.iotdb.rpc.RpcUtils;
 import org.apache.iotdb.rpc.TSStatusCode;
@@ -1038,7 +1040,12 @@ public class StorageGroupProcessor {
     if (sequence) {
       closingSequenceTsFileProcessor.add(tsFileProcessor);
       updateEndTimeMap(tsFileProcessor);
+      long start;
+      if (Timer.ENABLE_INSTRUMENTING) {
+        start = System.nanoTime();
+      }
       tsFileProcessor.asyncClose();
+      Statistic.CLOSE_FILE_CLOSE_TSFILE_PROCESSOR.addNanoFromStart(start);
 
       workSequenceTsFileProcessors.remove(tsFileProcessor.getTimeRangeId());
       // if unsequence files don't contain this time range id, we should remove it's version controller
