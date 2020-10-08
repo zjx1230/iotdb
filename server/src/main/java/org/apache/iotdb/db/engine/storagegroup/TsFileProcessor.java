@@ -483,12 +483,18 @@ public class TsFileProcessor {
    * flushManager again.
    */
   private void addAMemtableIntoFlushingList(IMemTable tobeFlushed) throws IOException {
+    long start;
+    if (Timer.ENABLE_INSTRUMENTING) {
+      start = System.nanoTime();
+    }
     if (!tobeFlushed.isSignalMemTable() &&
         (!updateLatestFlushTimeCallback.call(this) || tobeFlushed.memSize() == 0)) {
       logger.warn("This normal memtable is empty, skip it in flush. {}: {} Memetable info: {}",
           storageGroupName, tsFileResource.getTsFile().getName(), tobeFlushed.getMemTableMap());
       return;
     }
+    Statistic.CLOSE_FILE_UPDATE_FLUSH_TIME.addNanoFromStart(start);
+
     flushingMemTables.addLast(tobeFlushed);
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -498,14 +504,25 @@ public class TsFileProcessor {
     }
     long cur = versionController.nextVersion();
     tobeFlushed.setVersion(cur);
+
+    if (Timer.ENABLE_INSTRUMENTING) {
+      start = System.nanoTime();
+    }
     if (IoTDBDescriptor.getInstance().getConfig().isEnableWal()) {
       getLogNode().notifyStartFlush();
     }
+    Statistic.CLOSE_FILE_NOTIFY_START_FLUSH.addNanoFromStart(start);
+
+
     if (!tobeFlushed.isSignalMemTable()) {
       totalMemTableSize += tobeFlushed.memSize();
     }
     workMemTable = null;
+    if (Timer.ENABLE_INSTRUMENTING) {
+      start = System.nanoTime();
+    }
     FlushManager.getInstance().registerTsFileProcessor(this);
+    Statistic.CLOSE_FILE_REGISTER_FLUSH.addNanoFromStart(start);
   }
 
 

@@ -174,10 +174,19 @@ public class Timer {
         CLOSE_FILE),
     CLOSE_FILE_CLOSE_TSFILE_PROCESSOR(
         STORAGE_ENGINE, "close file - close TsFile processor", TIME_SCALE, true,
-        CLOSE_FILE),
+        CLOSE_FILE_CLOSE_SG_PROCESSOR),
     CLOSE_FILE_MOVE_MEMTABLE_TO_FLUSH(
         STORAGE_ENGINE, "close file - move memtable to flush", TIME_SCALE, true,
-        CLOSE_FILE);
+        CLOSE_FILE_CLOSE_TSFILE_PROCESSOR),
+    CLOSE_FILE_UPDATE_FLUSH_TIME(
+        STORAGE_ENGINE, "close file - update flush time", TIME_SCALE, true,
+        CLOSE_FILE_MOVE_MEMTABLE_TO_FLUSH),
+    CLOSE_FILE_NOTIFY_START_FLUSH(
+        STORAGE_ENGINE, "close file - notify start flush", TIME_SCALE, true,
+        CLOSE_FILE_MOVE_MEMTABLE_TO_FLUSH),
+    CLOSE_FILE_REGISTER_FLUSH(
+        STORAGE_ENGINE, "close file - register flush", TIME_SCALE, true,
+        CLOSE_FILE_MOVE_MEMTABLE_TO_FLUSH);
 
 
     String className;
