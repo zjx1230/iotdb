@@ -186,7 +186,10 @@ public class Timer {
         CLOSE_FILE_MOVE_MEMTABLE_TO_FLUSH),
     CLOSE_FILE_REGISTER_FLUSH(
         STORAGE_ENGINE, "close file - register flush", TIME_SCALE, true,
-        CLOSE_FILE_MOVE_MEMTABLE_TO_FLUSH);
+        CLOSE_FILE_MOVE_MEMTABLE_TO_FLUSH),
+    INSERT_TABLET(
+        STORAGE_ENGINE, "insert tablet", TIME_SCALE, true,
+        ROOT);
 
 
     String className;

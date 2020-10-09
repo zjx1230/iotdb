@@ -129,6 +129,8 @@ import org.apache.iotdb.db.query.executor.QueryRouter;
 import org.apache.iotdb.db.service.IoTDB;
 import org.apache.iotdb.db.utils.AuthUtils;
 import org.apache.iotdb.db.utils.FileLoaderUtils;
+import org.apache.iotdb.db.utils.Timer;
+import org.apache.iotdb.db.utils.Timer.Statistic;
 import org.apache.iotdb.db.utils.UpgradeUtils;
 import org.apache.iotdb.tsfile.common.constant.TsFileConstant;
 import org.apache.iotdb.tsfile.exception.filter.QueryFilterOptimizationException;
@@ -967,6 +969,10 @@ public class PlanExecutor implements IPlanExecutor {
 
   @Override
   public void insertTablet(InsertTabletPlan insertTabletPlan) throws QueryProcessException {
+    long start;
+    if (Timer.ENABLE_INSTRUMENTING) {
+      start = System.nanoTime();
+    }
     MNode deviceMNode = null;
     try {
       insertTabletPlan.setMeasurementMNodes(new MeasurementMNode[insertTabletPlan.getMeasurements().length]);
@@ -983,6 +989,7 @@ public class PlanExecutor implements IPlanExecutor {
         deviceMNode.readUnlock();
       }
     }
+    Statistic.INSERT_TABLET.addNanoFromStart(start);
   }
 
   private boolean operateAuthor(AuthorPlan author) throws QueryProcessException {
