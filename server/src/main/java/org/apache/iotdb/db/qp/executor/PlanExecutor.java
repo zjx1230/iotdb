@@ -1018,7 +1018,7 @@ public class PlanExecutor implements IPlanExecutor {
     Map<String, String> props = createIndexPlan.getProps();
     IndexInfo indexInfo = new IndexInfo(indexType, startTime, props);
     try {
-      mManager.createIndex(partialPaths, indexInfo);
+      IndexManager.getInstance().getIndexRegister().createIndex(partialPaths, indexInfo);
     } catch (MetadataException e) {
       throw new IndexManagerException(e);
     }
@@ -1030,7 +1030,7 @@ public class PlanExecutor implements IPlanExecutor {
     List<PartialPath> partialPaths = new ArrayList<>(paths);
     IndexType indexType = dropIndexPlan.getIndexType();
     try {
-      mManager.dropIndex(partialPaths, indexType);
+      IndexManager.getInstance().getIndexRegister().dropIndex(partialPaths, indexType);
     } catch (MetadataException e) {
       throw new IndexManagerException(e);
     }

@@ -37,9 +37,7 @@ import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.exception.StartupException;
-import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
-import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexBuildTaskPoolManager;
@@ -70,6 +68,19 @@ public class IndexManager implements IService {
   private final Map<String, IndexStorageGroupProcessor> processorMap;
 
   private IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
+
+  public IndexUsability getIndexUsabilityRanger() {
+    return indexUsabilityRanger;
+  }
+
+  public IndexRegister getIndexRegister() {
+    return indexRegister;
+  }
+
+  private IndexUsability indexUsabilityRanger = new IndexUsability(null);
+  private IndexRegister indexRegister = new IndexRegister();
+
+//  public IndexRangeStrategy indexRangeStrategy = new NaiveStrategy();
 
   private FSFactory fsFactory = FSFactoryProducer.getFSFactory();
 
@@ -233,8 +244,8 @@ public class IndexManager implements IService {
       storageGroupList.add(sgDir.getName());
     }
     for (String storageGroupName : storageGroupList) {
-      Map<String, Map<IndexType, IndexInfo>> indexInfoMap = MManager
-          .getInstance().getAllIndexInfosInStorageGroup(storageGroupName);
+      Map<String, Map<IndexType, IndexInfo>> indexInfoMap = indexRegister
+          .getAllIndexInfosInStorageGroup(storageGroupName);
       if (indexInfoMap.isEmpty()) {
         //delete seq files
         try {

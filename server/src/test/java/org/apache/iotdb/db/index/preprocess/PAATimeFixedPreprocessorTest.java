@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import org.apache.iotdb.db.index.IndexTestUtils;
-import org.apache.iotdb.db.index.algorithm.paa.PAATimeFixedPreprocessor;
+import org.apache.iotdb.db.index.algorithm.paa.PAATimeFixedFeatureExtractor;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -56,7 +56,7 @@ public class PAATimeFixedPreprocessorTest {
     int alignedSequenceLength = 4;
     int slideStep = 5;
 
-    PAATimeFixedPreprocessor timeFixedWithoutStored = new PAATimeFixedPreprocessor(TSDataType.INT32,
+    PAATimeFixedFeatureExtractor timeFixedWithoutStored = new PAATimeFixedFeatureExtractor(TSDataType.INT32,
         windowRange, slideStep, alignedSequenceLength, 0, false, false);
     timeFixedWithoutStored.appendNewSrcData(srcData);
     assertL1AndL2(timeFixedWithoutStored, groundTruthL1, groundTruthL2);
@@ -72,13 +72,13 @@ public class PAATimeFixedPreprocessorTest {
     int windowRange = 20;
     int alignedSequenceLength = 4;
     int slideStep = 5;
-    PAATimeFixedPreprocessor timeFixed = new PAATimeFixedPreprocessor(TSDataType.INT32, windowRange,
+    PAATimeFixedFeatureExtractor timeFixed = new PAATimeFixedFeatureExtractor(TSDataType.INT32, windowRange,
         slideStep, alignedSequenceLength, 0, true, true);
     timeFixed.appendNewSrcData(srcData);
     Assert.assertFalse(timeFixed.hasNext());
     timeFixed.clear();
     System.out.println();
-    PAATimeFixedPreprocessor timeFixedWithoutStored = new PAATimeFixedPreprocessor(TSDataType.INT32,
+    PAATimeFixedFeatureExtractor timeFixedWithoutStored = new PAATimeFixedFeatureExtractor(TSDataType.INT32,
         windowRange, slideStep, alignedSequenceLength, 3, false, false);
     timeFixedWithoutStored.appendNewSrcData(srcData);
     Assert.assertFalse(timeFixedWithoutStored.hasNext());
@@ -86,12 +86,12 @@ public class PAATimeFixedPreprocessorTest {
   }
 
 
-  private void assertL1AndL2(TimeFixedPreprocessor timeFixed, String[] groundTruthL1,
+  private void assertL1AndL2(TimeFixedFeatureExtractor timeFixed, String[] groundTruthL1,
       String[] groundTruthL2) throws IOException {
     assertL1AndL2(timeFixed, groundTruthL1, groundTruthL2, true);
   }
 
-  private void assertL1AndL2(TimeFixedPreprocessor timeFixed, String[] groundTruthL1,
+  private void assertL1AndL2(TimeFixedFeatureExtractor timeFixed, String[] groundTruthL1,
       String[] groundTruthL2, boolean toAssert) throws IOException {
     int idx = 0;
     while (timeFixed.hasNext()) {
@@ -156,7 +156,7 @@ public class PAATimeFixedPreprocessorTest {
     int windowRange = 20;
     int alignedSequenceLength = 4;
     int slideStep = 5;
-    PAATimeFixedPreprocessor timeFixed = new PAATimeFixedPreprocessor(TSDataType.INT32, windowRange,
+    PAATimeFixedFeatureExtractor timeFixed = new PAATimeFixedFeatureExtractor(TSDataType.INT32, windowRange,
         slideStep, alignedSequenceLength, 2, true, true);
     timeFixed.appendNewSrcData(srcData);
 
@@ -214,7 +214,7 @@ public class PAATimeFixedPreprocessorTest {
     int alignedSequenceLength = 4;
     int slideStep = 5;
     int timeAnchor = 2;
-    PAATimeFixedPreprocessor timeFixed = new PAATimeFixedPreprocessor(TSDataType.INT32, windowRange,
+    PAATimeFixedFeatureExtractor timeFixed = new PAATimeFixedFeatureExtractor(TSDataType.INT32, windowRange,
         slideStep, alignedSequenceLength, timeAnchor, true, true);
     timeFixed.appendNewSrcData(srcData);
     while (timeFixed.hasNext()) {
@@ -230,7 +230,7 @@ public class PAATimeFixedPreprocessorTest {
       srcData2.putInt(i * 3, i * 3);
     }
 
-    PAATimeFixedPreprocessor timeFixed2 = new PAATimeFixedPreprocessor(INT32, windowRange,
+    PAATimeFixedFeatureExtractor timeFixed2 = new PAATimeFixedFeatureExtractor(INT32, windowRange,
         slideStep, alignedSequenceLength, timeAnchor, true, true);
     timeFixed2.deserializePrevious(previous);
     timeFixed2.appendNewSrcData(srcData2);
@@ -256,7 +256,7 @@ public class PAATimeFixedPreprocessorTest {
     int alignedSequenceLength = 5;
     int slideStep = 10;
     int timeAnchor = 0;
-    PAATimeFixedPreprocessor timeFixed = new PAATimeFixedPreprocessor(INT32, windowRange,
+    PAATimeFixedFeatureExtractor timeFixed = new PAATimeFixedFeatureExtractor(INT32, windowRange,
         slideStep, alignedSequenceLength, timeAnchor, true, false);
     timeFixed.appendNewSrcData(srcData);
     while (timeFixed.hasNext()) {
@@ -272,7 +272,7 @@ public class PAATimeFixedPreprocessorTest {
       srcData2.putInt(i, i);
     }
 
-    PAATimeFixedPreprocessor timeFixed2 = new PAATimeFixedPreprocessor(INT32, windowRange,
+    PAATimeFixedFeatureExtractor timeFixed2 = new PAATimeFixedFeatureExtractor(INT32, windowRange,
         slideStep, alignedSequenceLength, timeAnchor, true, true);
     timeFixed2.deserializePrevious(previous);
     timeFixed2.appendNewSrcData(srcData2);
@@ -305,7 +305,7 @@ public class PAATimeFixedPreprocessorTest {
     int alignedSequenceLength = 4;
     int slideStep = 5;
     int timeAnchor = 2;
-    PAATimeFixedPreprocessor timeFixed = new PAATimeFixedPreprocessor(INT32, windowRange,
+    PAATimeFixedFeatureExtractor timeFixed = new PAATimeFixedFeatureExtractor(INT32, windowRange,
         slideStep, alignedSequenceLength, timeAnchor, false, false);
     timeFixed.appendNewSrcData(srcData);
     while (timeFixed.hasNext()) {
@@ -325,7 +325,7 @@ public class PAATimeFixedPreprocessorTest {
       srcData2.putInt(i * 3, i * 3);
     }
 
-    PAATimeFixedPreprocessor timeFixed2 = new PAATimeFixedPreprocessor(INT32, windowRange,
+    PAATimeFixedFeatureExtractor timeFixed2 = new PAATimeFixedFeatureExtractor(INT32, windowRange,
         slideStep, alignedSequenceLength, timeAnchor, true, true);
     timeFixed2.deserializePrevious(previous.duplicate());
     timeFixed2.appendNewSrcData(srcData2);
@@ -359,7 +359,7 @@ public class PAATimeFixedPreprocessorTest {
     int alignedSequenceLength = 6;
     int slideStep = 5;
     int timeAnchor = 2;
-    PAATimeFixedPreprocessor timeFixed = new PAATimeFixedPreprocessor(TSDataType.INT32, windowRange,
+    PAATimeFixedFeatureExtractor timeFixed = new PAATimeFixedFeatureExtractor(TSDataType.INT32, windowRange,
         slideStep, alignedSequenceLength, timeAnchor, false, false);
     timeFixed.appendNewSrcData(srcData);
     while (timeFixed.hasNext()) {
@@ -375,14 +375,14 @@ public class PAATimeFixedPreprocessorTest {
       srcData2.putInt(i * 3, i * 3);
     }
 
-    PAATimeFixedPreprocessor timeFixed2 = new PAATimeFixedPreprocessor(INT32, windowRange,
+    PAATimeFixedFeatureExtractor timeFixed2 = new PAATimeFixedFeatureExtractor(INT32, windowRange,
         slideStep, alignedSequenceLength, timeAnchor, false, false);
     timeFixed2.deserializePrevious(previous.duplicate());
     timeFixed2.appendNewSrcData(srcData2);
     assertL1AndL2(timeFixed2, groundTruthL1, groundTruthL2, true);
     timeFixed2.closeAndRelease();
 
-    PAATimeFixedPreprocessor timeFixed3 = new PAATimeFixedPreprocessor(INT32, windowRange,
+    PAATimeFixedFeatureExtractor timeFixed3 = new PAATimeFixedFeatureExtractor(INT32, windowRange,
         slideStep, alignedSequenceLength, timeAnchor, true, true);
     timeFixed3.deserializePrevious(previous.duplicate());
     timeFixed3.appendNewSrcData(srcData2);

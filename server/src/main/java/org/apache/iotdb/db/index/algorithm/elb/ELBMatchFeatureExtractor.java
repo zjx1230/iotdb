@@ -26,7 +26,7 @@ import java.util.List;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBWindowBlockFeature;
-import org.apache.iotdb.db.index.preprocess.CountFixedPreprocessor;
+import org.apache.iotdb.db.index.preprocess.CountFixedFeatureExtractor;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
@@ -41,7 +41,7 @@ import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
  * <p>Refer to: Kang R, et al. Matching Consecutive Subpatterns over Streaming Time Series[C]
  * APWeb-WAIM Joint International Conference. Springer, Cham, 2018: 90-105.</p>
  */
-public class ELBMatchPreprocessor extends CountFixedPreprocessor {
+public class ELBMatchFeatureExtractor extends CountFixedFeatureExtractor {
 
   private final int blockNum;
   private final int blockWidth;
@@ -58,7 +58,7 @@ public class ELBMatchPreprocessor extends CountFixedPreprocessor {
    * A block contains {@code L/b} points. {@code b} blocks cover adjacent {@code L/b} sliding
    * windows.
    */
-  public ELBMatchPreprocessor(TSDataType tsDataType, int windowRange, int blockNum,
+  public ELBMatchFeatureExtractor(TSDataType tsDataType, int windowRange, int blockNum,
       ELBType elbType) {
     super(tsDataType, windowRange, 1, false, false);
     this.elbType = elbType;
@@ -96,7 +96,7 @@ public class ELBMatchPreprocessor extends CountFixedPreprocessor {
   }
 
   /**
-   * custom for {@linkplain ELBIndex}
+   * custom for {@linkplain ELBIndexNotGood}
    *
    * @param idx the idx-th identifiers
    * @param outputStream to output

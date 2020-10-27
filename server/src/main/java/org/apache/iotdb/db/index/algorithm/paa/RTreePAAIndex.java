@@ -29,7 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
-import org.apache.iotdb.db.index.algorithm.MBRIndex;
+import org.apache.iotdb.db.index.algorithm.RTreeIndex;
 import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.exception.index.IndexQueryException;
@@ -47,28 +47,28 @@ import org.slf4j.LoggerFactory;
  * <p>Use PAA as the feature of MBRIndex.</p>
  */
 
-public class PAAIndex extends MBRIndex {
+public class RTreePAAIndex extends RTreeIndex {
 
-  private static final Logger logger = LoggerFactory.getLogger(PAAIndex.class);
+  private static final Logger logger = LoggerFactory.getLogger(RTreePAAIndex.class);
 
-  private PAATimeFixedPreprocessor paaTimeFixedPreprocessor;
+  private PAATimeFixedFeatureExtractor paaTimeFixedPreprocessor;
 
   // Only for query
   private Map<Integer, Identifier> identifierMap = new HashMap<>();
 
-  public PAAIndex(String path, IndexInfo indexInfo) {
+  public RTreePAAIndex(String path, IndexInfo indexInfo) {
     super(path, indexInfo, true);
   }
 
   @Override
   public void initPreprocessor(ByteBuffer previous, boolean inQueryMode) {
-    if (this.indexPreprocessor != null) {
-      this.indexPreprocessor.clear();
+    if (this.indexFeatureExtractor != null) {
+      this.indexFeatureExtractor.clear();
     }
-    this.paaTimeFixedPreprocessor = new PAATimeFixedPreprocessor(tsDataType, windowRange, slideStep,
+    this.paaTimeFixedPreprocessor = new PAATimeFixedFeatureExtractor(tsDataType, windowRange, slideStep,
         featureDim, confIndexStartTime, true, false);
     paaTimeFixedPreprocessor.deserializePrevious(previous);
-    this.indexPreprocessor = paaTimeFixedPreprocessor;
+    this.indexFeatureExtractor = paaTimeFixedPreprocessor;
   }
 
   /**
@@ -171,8 +171,8 @@ public class PAAIndex extends MBRIndex {
 
   @Override
   public int postProcessNext(List<IndexFuncResult> funcResult) throws IndexQueryException {
-    Identifier identifier =  indexPreprocessor.getCurrent_L1_Identifier();
-    TVList srcList = indexPreprocessor
+    Identifier identifier =  indexFeatureExtractor.getCurrent_L1_Identifier();
+    TVList srcList = indexFeatureExtractor
         .get_L0_SourceData(identifier.getStartTime(), identifier.getEndTime());
     TVList aligned = IndexUtils.alignUniform(srcList, patterns.length);
     double ed = IndexFuncFactory.calcEuclidean(aligned, patterns);
@@ -184,7 +184,7 @@ public class PAAIndex extends MBRIndex {
         if (result.getIndexFunc() == IndexFunc.ED) {
           result.addScalar(ed);
         } else {
-          IndexFuncFactory.basicSimilarityCalc(result, indexPreprocessor, patterns);
+          IndexFuncFactory.basicSimilarityCalc(result, indexFeatureExtractor, patterns);
         }
       }
     }

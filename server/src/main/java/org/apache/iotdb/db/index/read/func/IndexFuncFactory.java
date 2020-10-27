@@ -21,7 +21,7 @@ import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.preprocess.Identifier;
-import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
+import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 
@@ -45,35 +45,35 @@ public class IndexFuncFactory {
   }
 
   public static void basicSimilarityCalc(IndexFuncResult funcResult,
-      IndexPreprocessor indexPreprocessor, double[] patterns)
+      IndexFeatureExtractor indexFeatureExtractor, double[] patterns)
       throws UnsupportedIndexFuncException {
     Identifier identifier;
     TVList aligned;
     switch (funcResult.getIndexFunc()) {
       case TIME_RANGE:
-        identifier = indexPreprocessor.getCurrent_L1_Identifier();
+        identifier = indexFeatureExtractor.getCurrent_L1_Identifier();
         funcResult.addScalar(identifier.getEndTime() - identifier.getStartTime());
         break;
       case SERIES_LEN:
-        identifier = indexPreprocessor.getCurrent_L1_Identifier();
+        identifier = indexFeatureExtractor.getCurrent_L1_Identifier();
         funcResult.addScalar(identifier.getSubsequenceLength());
         break;
       case SIM_ST:
-        identifier = indexPreprocessor.getCurrent_L1_Identifier();
+        identifier = indexFeatureExtractor.getCurrent_L1_Identifier();
         funcResult.addScalar(identifier.getStartTime());
         break;
       case SIM_ET:
-        identifier = indexPreprocessor.getCurrent_L1_Identifier();
+        identifier = indexFeatureExtractor.getCurrent_L1_Identifier();
         funcResult.addScalar(identifier.getEndTime());
         break;
       case ED:
-        aligned = (TVList) indexPreprocessor.getCurrent_L2_AlignedSequence();
+        aligned = (TVList) indexFeatureExtractor.getCurrent_L2_AlignedSequence();
         double ed = IndexFuncFactory.calcEuclidean(aligned, patterns);
         funcResult.addScalar(ed);
         TVListAllocator.getInstance().release(aligned);
         break;
       case DTW:
-        aligned = (TVList) indexPreprocessor.getCurrent_L2_AlignedSequence();
+        aligned = (TVList) indexFeatureExtractor.getCurrent_L2_AlignedSequence();
         double dtw = IndexFuncFactory.calcDTW(aligned, patterns);
         funcResult.addScalar(dtw);
         TVListAllocator.getInstance().release(aligned);

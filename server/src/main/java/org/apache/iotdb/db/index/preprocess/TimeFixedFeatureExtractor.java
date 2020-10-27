@@ -38,7 +38,7 @@ import org.apache.iotdb.tsfile.read.filter.basic.Filter;
  * TIME_FIXED preprocessor need set {@code baseTime}. For arbitrary window, the startTime is
  * divisible by {@code timeAnchor}
  */
-public class TimeFixedPreprocessor extends IndexPreprocessor {
+public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
 
   /**
    * To anchor the start time of sliding window. Any window start time should be congruence with
@@ -83,7 +83,7 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
    * @param storeIdentifier true if we need to store all identifiers. The cost will be counted.
    * @param storeAligned true if we need to store all aligned sequences. The cost will be counted.
    */
-  public TimeFixedPreprocessor(TSDataType tsDataType, int windowRange, int slideStep,
+  public TimeFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
       int alignedDim, long timeAnchor, boolean storeIdentifier, boolean storeAligned) {
     super(tsDataType, WindowType.COUNT_FIXED, windowRange, slideStep);
     this.storeIdentifier = storeIdentifier;
@@ -92,7 +92,7 @@ public class TimeFixedPreprocessor extends IndexPreprocessor {
     this.timeAnchor = timeAnchor;
   }
 
-  public TimeFixedPreprocessor(TSDataType tsDataType, int windowRange, int alignedDim,
+  public TimeFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int alignedDim,
       int slideStep, long timeAnchor) {
     this(tsDataType, windowRange, slideStep, alignedDim, timeAnchor, true, true);
   }

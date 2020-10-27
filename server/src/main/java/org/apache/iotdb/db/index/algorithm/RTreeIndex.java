@@ -48,9 +48,9 @@ import org.slf4j.LoggerFactory;
  * are required.
  */
 
-public abstract class MBRIndex extends IoTDBIndex {
+public abstract class RTreeIndex extends IoTDBIndex {
 
-  private static final Logger logger = LoggerFactory.getLogger(MBRIndex.class);
+  private static final Logger logger = LoggerFactory.getLogger(RTreeIndex.class);
 
   protected int featureDim;
   /**
@@ -71,7 +71,7 @@ public abstract class MBRIndex extends IoTDBIndex {
   protected double threshold;
   private int amortizedPerInputCost;
 
-  public MBRIndex(String path, IndexInfo indexInfo, boolean usePointType) {
+  public RTreeIndex(String path, IndexInfo indexInfo, boolean usePointType) {
     super(path, indexInfo);
     this.usePointType = usePointType;
     initRTree();
@@ -184,7 +184,7 @@ public abstract class MBRIndex extends IoTDBIndex {
 
   @Override
   public IndexFlushChunk flush() {
-    if (indexPreprocessor.getCurrentChunkSize() == 0) {
+    if (indexFeatureExtractor.getCurrentChunkSize() == 0) {
       logger.warn("Nothing to be flushed, directly return null");
       System.out.println("Nothing to be flushed, directly return null");
       return null;
@@ -198,8 +198,8 @@ public abstract class MBRIndex extends IoTDBIndex {
       logger.error("flush failed", e);
       return null;
     }
-    long st = indexPreprocessor.getChunkStartTime();
-    long end = indexPreprocessor.getChunkEndTime();
+    long st = indexFeatureExtractor.getChunkStartTime();
+    long end = indexFeatureExtractor.getChunkEndTime();
     return new IndexFlushChunk(path, indexType, outputStream, st, end);
   }
 
@@ -209,7 +209,7 @@ public abstract class MBRIndex extends IoTDBIndex {
   @Override
   @SuppressWarnings("squid:S1185")
   public long clear() {
-    int estimateSize = indexPreprocessor.getCurrentChunkSize() * amortizedPerInputCost;
+    int estimateSize = indexFeatureExtractor.getCurrentChunkSize() * amortizedPerInputCost;
     estimateSize += super.clear();
     initRTree();
     return estimateSize;

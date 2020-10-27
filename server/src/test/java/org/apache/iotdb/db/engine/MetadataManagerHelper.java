@@ -18,6 +18,9 @@
  */
 package org.apache.iotdb.db.engine;
 
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.PriorityQueue;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.service.IoTDB;
@@ -52,9 +55,10 @@ public class MetadataManagerHelper {
       mmanager.createTimeseries(new PartialPath("root.vehicle.d0.s3"), TSDataType.valueOf("DOUBLE"),
           TSEncoding.PLAIN, compressionType,
           Collections.emptyMap());
-      mmanager.createTimeseries(new PartialPath("root.vehicle.d0.s4"), TSDataType.valueOf("BOOLEAN"),
-          TSEncoding.PLAIN, compressionType,
-          Collections.emptyMap());
+      mmanager
+          .createTimeseries(new PartialPath("root.vehicle.d0.s4"), TSDataType.valueOf("BOOLEAN"),
+              TSEncoding.PLAIN, compressionType,
+              Collections.emptyMap());
       mmanager.createTimeseries(new PartialPath("root.vehicle.d0.s5"), TSDataType.valueOf("TEXT"),
           TSEncoding.PLAIN, compressionType,
           Collections.emptyMap());
@@ -67,8 +71,9 @@ public class MetadataManagerHelper {
           TSEncoding.PLAIN, compressionType, Collections.emptyMap());
       mmanager.createTimeseries(new PartialPath("root.vehicle.d1.s3"), TSDataType.valueOf("DOUBLE"),
           TSEncoding.PLAIN, compressionType, Collections.emptyMap());
-      mmanager.createTimeseries(new PartialPath("root.vehicle.d1.s4"), TSDataType.valueOf("BOOLEAN"),
-          TSEncoding.PLAIN, compressionType, Collections.emptyMap());
+      mmanager
+          .createTimeseries(new PartialPath("root.vehicle.d1.s4"), TSDataType.valueOf("BOOLEAN"),
+              TSEncoding.PLAIN, compressionType, Collections.emptyMap());
       mmanager.createTimeseries(new PartialPath("root.vehicle.d1.s5"), TSDataType.valueOf("TEXT"),
           TSEncoding.PLAIN, compressionType, Collections.emptyMap());
 
@@ -80,8 +85,9 @@ public class MetadataManagerHelper {
           TSEncoding.PLAIN, compressionType, Collections.emptyMap());
       mmanager.createTimeseries(new PartialPath("root.vehicle.d2.s3"), TSDataType.valueOf("DOUBLE"),
           TSEncoding.PLAIN, compressionType, Collections.emptyMap());
-      mmanager.createTimeseries(new PartialPath("root.vehicle.d2.s4"), TSDataType.valueOf("BOOLEAN"),
-          TSEncoding.PLAIN, compressionType, Collections.emptyMap());
+      mmanager
+          .createTimeseries(new PartialPath("root.vehicle.d2.s4"), TSDataType.valueOf("BOOLEAN"),
+              TSEncoding.PLAIN, compressionType, Collections.emptyMap());
       mmanager.createTimeseries(new PartialPath("root.vehicle.d2.s5"), TSDataType.valueOf("TEXT"),
           TSEncoding.PLAIN, compressionType, Collections.emptyMap());
 
@@ -90,4 +96,40 @@ public class MetadataManagerHelper {
     }
   }
 
+  public static class DistSeries {
+
+    public double dist;
+    public double[] series;
+    public int idx;
+
+    public DistSeries(int dist) {
+      this.dist = dist;
+      this.idx = dist;
+    }
+
+    public String toString() {
+      return "(" + idx + "," + dist + ")";
+    }
+  }
+
+  public static class DistSeriesComparator implements Comparator<DistSeries> {
+
+    public int compare(DistSeries item_1, DistSeries item_2) {
+      return Double.compare(item_2.dist, item_1.dist);
+    }
+  }
+
+  public static void main(String[] args) {
+    PriorityQueue<DistSeries> topKPQ = new PriorityQueue<>(3, new DistSeriesComparator());
+    topKPQ.add(new DistSeries(20));
+    topKPQ.add(new DistSeries(2));
+    topKPQ.add(new DistSeries(19));
+    topKPQ.add(new DistSeries(5));
+    topKPQ.add(new DistSeries(10));
+
+    while (!topKPQ.isEmpty()) {
+      DistSeries distSeries = topKPQ.poll();
+      System.out.println(String.format("%s:%f", String.valueOf(distSeries.idx), distSeries.dist));
+    }
+  }
 }

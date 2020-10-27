@@ -39,7 +39,7 @@ import org.apache.iotdb.db.index.indexrange.IndexRangeStrategy;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategyType;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
 import org.apache.iotdb.db.index.preprocess.Identifier;
-import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
+import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.PartialPath;
@@ -61,7 +61,7 @@ public abstract class IoTDBIndex {
   private IndexRangeStrategy strategy;
   protected int windowRange;
   protected int slideStep;
-  protected IndexPreprocessor indexPreprocessor;
+  protected IndexFeatureExtractor indexFeatureExtractor;
 
   public IoTDBIndex(String path, IndexInfo indexInfo) {
     try {
@@ -97,18 +97,18 @@ public abstract class IoTDBIndex {
    * @param tvList tvList in current FlushTask.
    * @return Preprocessor with new data.
    */
-  public IndexPreprocessor startFlushTask(TVList tvList) {
-    this.indexPreprocessor.appendNewSrcData(tvList);
-    return indexPreprocessor;
+  public IndexFeatureExtractor startFlushTask(TVList tvList) {
+    this.indexFeatureExtractor.appendNewSrcData(tvList);
+    return indexFeatureExtractor;
   }
 
 
   /**
    * Sorry but this method is ugly.
    */
-  public IndexPreprocessor startFlushTask(BatchData batchData) {
-    this.indexPreprocessor.appendNewSrcData(batchData);
-    return indexPreprocessor;
+  public IndexFeatureExtractor startFlushTask(BatchData batchData) {
+    this.indexFeatureExtractor.appendNewSrcData(batchData);
+    return indexFeatureExtractor;
   }
 
   /**
@@ -155,7 +155,7 @@ public abstract class IoTDBIndex {
    * @return how much memory was freed.
    */
   public long clear() {
-    return indexPreprocessor == null ? 0 : indexPreprocessor.clear();
+    return indexFeatureExtractor == null ? 0 : indexFeatureExtractor.clear();
   }
 
   /**
@@ -164,14 +164,14 @@ public abstract class IoTDBIndex {
    */
   public void closeAndRelease() {
     clear();
-    indexPreprocessor.closeAndRelease();
+    indexFeatureExtractor.closeAndRelease();
   }
 
   /**
    * This method is called when a flush task totally finished.
    */
   public void endFlushTask() {
-    indexPreprocessor.clearProcessedSrcData();
+    indexFeatureExtractor.clearProcessedSrcData();
   }
 
   /**
@@ -180,24 +180,23 @@ public abstract class IoTDBIndex {
    * ByteBuffer} when next creation.
    */
   public ByteBuffer serialize() throws IOException {
-    return indexPreprocessor.serializePrevious();
+    return indexFeatureExtractor.serializePrevious();
   }
 
   /**
    * return how much memory is increased for each point processed. It's an amortized estimation,
-   * which should consider both {@linkplain IndexPreprocessor#getAmortizedSize()} and the <b>index
-   * expansion rate</b>.
+   * which should consider both {@linkplain IndexFeatureExtractor#getAmortizedSize()} and the
+   * <b>index expansion rate</b>.
    */
   public int getAmortizedSize() {
-    return indexPreprocessor == null ? 0 : indexPreprocessor.getAmortizedSize();
+    return indexFeatureExtractor == null ? 0 : indexFeatureExtractor.getAmortizedSize();
   }
 
   /**
    * Initial parameters by query, check if all query conditions and function types are supported
    *
    * @param queryConditions query conditions
-   * @throws IllegalIndexParamException when conditions or funcs
-   * are not supported
+   * @throws IllegalIndexParamException when conditions or funcs are not supported
    */
   public abstract void initQuery(Map<String, String> queryConditions,
       List<IndexFuncResult> indexFuncResults) throws UnsupportedIndexFuncException;
@@ -236,4 +235,31 @@ public abstract class IoTDBIndex {
     return indexType;
   }
 
+  public boolean newTsFileCreated() {
+    return false;
+  }
+
+  public boolean storageGroupLoaded() {
+    return false;
+  }
+
+  public boolean newOrderedDataPoint() {
+    return false;
+  }
+
+  public boolean newOutofOrderedDataPoint() {
+    return false;
+  }
+
+  public boolean memDataFlushed() {
+    return false;
+  }
+
+  public boolean TsFileClosed() {
+    return false;
+  }
+
+  public boolean mergeFinished() {
+    return false;
+  }
 }

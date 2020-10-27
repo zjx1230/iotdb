@@ -54,13 +54,13 @@ public class TimeFixedPreprocessorTest {
     int windowRange = 20;
     int alignedSequenceLength = 4;
     int slideStep = 5;
-    TimeFixedPreprocessor timeFixed = new TimeFixedPreprocessor(INT32, windowRange,
+    TimeFixedFeatureExtractor timeFixed = new TimeFixedFeatureExtractor(INT32, windowRange,
         slideStep, alignedSequenceLength, 0, true, true);
     timeFixed.appendNewSrcData(srcData);
     assertL1AndL2(timeFixed, groundTruthL1, groundTruthL2);
     timeFixed.clear();
 
-    TimeFixedPreprocessor timeFixedWithoutStored = new TimeFixedPreprocessor(INT32,
+    TimeFixedFeatureExtractor timeFixedWithoutStored = new TimeFixedFeatureExtractor(INT32,
         windowRange, slideStep, alignedSequenceLength, 0, false, false);
     timeFixedWithoutStored.appendNewSrcData(srcData);
     assertL1AndL2(timeFixedWithoutStored, groundTruthL1, groundTruthL2);
@@ -86,13 +86,13 @@ public class TimeFixedPreprocessorTest {
     int windowRange = 20;
     int alignedSequenceLength = 4;
     int slideStep = 5;
-    TimeFixedPreprocessor timeFixed = new TimeFixedPreprocessor(INT32, windowRange,
+    TimeFixedFeatureExtractor timeFixed = new TimeFixedFeatureExtractor(INT32, windowRange,
         slideStep, alignedSequenceLength, 0, true, true);
     timeFixed.appendNewSrcData(srcData);
     assertL1AndL2(timeFixed, groundTruthL1, groundTruthL2,true);
     timeFixed.clear();
 
-    TimeFixedPreprocessor timeFixedWithoutStored = new TimeFixedPreprocessor(INT32, windowRange,
+    TimeFixedFeatureExtractor timeFixedWithoutStored = new TimeFixedFeatureExtractor(INT32, windowRange,
         slideStep, alignedSequenceLength, 0, false, false);
     timeFixedWithoutStored.appendNewSrcData(srcData);
     assertL1AndL2(timeFixedWithoutStored, groundTruthL1, groundTruthL2,true);
@@ -131,7 +131,7 @@ public class TimeFixedPreprocessorTest {
     int alignedSequenceLength = 4;
     int slideStep = 5;
     int timeAnchor = 2;
-    TimeFixedPreprocessor timeFixed = new TimeFixedPreprocessor(INT32, windowRange,
+    TimeFixedFeatureExtractor timeFixed = new TimeFixedFeatureExtractor(INT32, windowRange,
         slideStep, alignedSequenceLength, timeAnchor, true, true);
     timeFixed.appendNewSrcData(srcData);
     while (timeFixed.hasNext()) {
@@ -147,7 +147,7 @@ public class TimeFixedPreprocessorTest {
       srcData2.putInt(i * 3, i * 3);
     }
 
-    TimeFixedPreprocessor timeFixed2 = new TimeFixedPreprocessor(INT32, windowRange,
+    TimeFixedFeatureExtractor timeFixed2 = new TimeFixedFeatureExtractor(INT32, windowRange,
         slideStep, alignedSequenceLength, timeAnchor, true, true);
     timeFixed2.deserializePrevious(previous);
     timeFixed2.appendNewSrcData(srcData2);
@@ -173,7 +173,7 @@ public class TimeFixedPreprocessorTest {
     int alignedSequenceLength = 5;
     int slideStep = 10;
     int timeAnchor = 0;
-    TimeFixedPreprocessor timeFixed = new TimeFixedPreprocessor(INT32, windowRange,
+    TimeFixedFeatureExtractor timeFixed = new TimeFixedFeatureExtractor(INT32, windowRange,
         slideStep, alignedSequenceLength, timeAnchor, true, true);
     timeFixed.appendNewSrcData(srcData);
     while (timeFixed.hasNext()) {
@@ -189,7 +189,7 @@ public class TimeFixedPreprocessorTest {
       srcData2.putInt(i, i);
     }
 
-    TimeFixedPreprocessor timeFixed2 = new TimeFixedPreprocessor(INT32, windowRange,
+    TimeFixedFeatureExtractor timeFixed2 = new TimeFixedFeatureExtractor(INT32, windowRange,
         slideStep, alignedSequenceLength, timeAnchor, true, true);
     timeFixed2.deserializePrevious(previous);
     timeFixed2.appendNewSrcData(srcData2);
@@ -228,7 +228,7 @@ public class TimeFixedPreprocessorTest {
     int alignedSequenceLength = 4;
     int slideStep = 5;
     int timeAnchor = 2;
-    TimeFixedPreprocessor timeFixed = new TimeFixedPreprocessor(INT32, windowRange,
+    TimeFixedFeatureExtractor timeFixed = new TimeFixedFeatureExtractor(INT32, windowRange,
         slideStep, alignedSequenceLength, timeAnchor, true, true);
     timeFixed.appendNewSrcData(srcData);
     while (timeFixed.hasNext()) {
@@ -248,7 +248,7 @@ public class TimeFixedPreprocessorTest {
       srcData2.putInt(i * 3, i * 3);
     }
 
-    TimeFixedPreprocessor timeFixed2 = new TimeFixedPreprocessor(INT32, windowRange,
+    TimeFixedFeatureExtractor timeFixed2 = new TimeFixedFeatureExtractor(INT32, windowRange,
         slideStep, alignedSequenceLength, timeAnchor, true, true);
     timeFixed2.deserializePrevious(previous);
     timeFixed2.appendNewSrcData(srcData2);
@@ -256,12 +256,12 @@ public class TimeFixedPreprocessorTest {
     timeFixed2.closeAndRelease();
   }
 
-  private void assertL1AndL2(TimeFixedPreprocessor timeFixed, String[] groundTruthL1,
+  private void assertL1AndL2(TimeFixedFeatureExtractor timeFixed, String[] groundTruthL1,
       String[] groundTruthL2) throws IOException {
     assertL1AndL2(timeFixed, groundTruthL1, groundTruthL2, true);
   }
 
-  private void assertL1AndL2(TimeFixedPreprocessor timeFixed, String[] groundTruthL1,
+  private void assertL1AndL2(TimeFixedFeatureExtractor timeFixed, String[] groundTruthL1,
       String[] groundTruthL2, boolean toAssert) throws IOException {
     int idx = 0;
     while (timeFixed.hasNext()) {
@@ -326,7 +326,7 @@ public class TimeFixedPreprocessorTest {
     int windowRange = 20;
     int alignedSequenceLength = 4;
     int slideStep = 5;
-    TimeFixedPreprocessor timeFixed = new TimeFixedPreprocessor(INT32, windowRange,
+    TimeFixedFeatureExtractor timeFixed = new TimeFixedFeatureExtractor(INT32, windowRange,
         slideStep, alignedSequenceLength, 3, true, true);
     timeFixed.appendNewSrcData(srcData);
     timeFixed.hasNext();

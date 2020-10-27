@@ -39,6 +39,7 @@ import java.util.concurrent.ExecutionException;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.IndexFileProcessor;
+import org.apache.iotdb.db.index.IndexManager;
 import org.apache.iotdb.db.index.IndexTestUtils;
 import org.apache.iotdb.db.index.IndexTestUtils.Validation;
 import org.apache.iotdb.db.index.common.IndexInfo;
@@ -87,9 +88,15 @@ public class ELBAndPAAIndexTest {
     paaProps.put(INDEX_WINDOW_RANGE, "10");
     paaProps.put(INDEX_SLIDE_STEP, "10");
 
-    mManager.createIndex(Collections.singletonList(new PartialPath(p1)), new IndexInfo(ELB, 0, elbProps));
-    mManager.createIndex(Collections.singletonList(new PartialPath(p1)), new IndexInfo(PAA_INDEX, 0, paaProps));
-    mManager.createIndex(Collections.singletonList(new PartialPath(p2)), new IndexInfo(ELB, 0, elbProps));
+    IndexManager.getInstance().getIndexRegister()
+        .createIndex(Collections.singletonList(new PartialPath(p1)),
+            new IndexInfo(ELB, 0, elbProps));
+    IndexManager.getInstance().getIndexRegister()
+        .createIndex(Collections.singletonList(new PartialPath(p1)),
+            new IndexInfo(PAA_INDEX, 0, paaProps));
+    IndexManager.getInstance().getIndexRegister()
+        .createIndex(Collections.singletonList(new PartialPath(p2)),
+            new IndexInfo(ELB, 0, elbProps));
   }
 
   @Before

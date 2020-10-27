@@ -27,20 +27,20 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
-import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.IndexQueryException;
-import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
+import org.apache.iotdb.db.index.IndexUsability;
+import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
+import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
 import org.apache.iotdb.db.index.preprocess.Identifier;
-import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
+import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.index.read.optimize.IndexQueryOptimize;
 import org.apache.iotdb.db.index.read.optimize.NaiveOptimizer;
 import org.apache.iotdb.tsfile.read.common.BatchData;
 import org.apache.iotdb.tsfile.read.common.Path;
-import org.apache.iotdb.tsfile.read.filter.TimeFilter;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,7 +58,8 @@ public class IndexQueryReader {
   private Path seriesPath;
   private final IndexType indexType;
   private PriorityQueue<IndexChunkMeta> seqResources;
-
+  private IndexQueryOptimize indexQueryOptimize = new NaiveOptimizer();
+  private IndexUsability indexUsabilityRanger;
 
   /**
    * unused up to now
@@ -68,9 +69,6 @@ public class IndexQueryReader {
   /**
    * both-side closed range. The i-th index-usable range is {@code [range[i*2], range[i*2+1]]}
    */
-  private IndexTimeRange indexUsableRange;
-  //  private IndexTimeRange indexPrunedRange = new IndexTimeRange();
-  private IndexTimeRange allowedRange;
   private IoTDBIndex index;
   private IndexQueryOptimize optimizer;
 
@@ -84,11 +82,8 @@ public class IndexQueryReader {
     this.unseqResources = new PriorityQueue<>(
         Comparator.comparingLong(IndexChunkMeta::getStartTime));
     this.unseqResources.addAll(unseqResources);
-    this.indexUsableRange = new IndexTimeRange();
-    // If non filter, initial allowedRange is the universal set
-    this.allowedRange = new IndexTimeRange(
-        timeFilter == null ? TimeFilter.lt(Long.MAX_VALUE) : timeFilter);
     this.optimizer = new NaiveOptimizer();
+    this.indexUsabilityRanger = new IndexUsability(timeFilter);
   }
 
   /**
@@ -101,6 +96,7 @@ public class IndexQueryReader {
     String path = seriesPath.getFullPath();
     index = IndexType.constructQueryIndex(path, indexType, queryProps, indexFuncResults);
     index.initPreprocessor(null, true);
+    indexQueryOptimize.needUnpackIndexChunk(null, 0, 0);
   }
 
   /**
@@ -118,7 +114,7 @@ public class IndexQueryReader {
     if (start > end) {
       return;
     }
-    this.indexUsableRange.addRange(start, end);
+    this.indexUsabilityRanger.addUsableRange(start, end);
   }
 
   private boolean chunkOverlapData(IndexChunkMeta indexChunkMeta, long dataStartTime,
@@ -137,7 +133,8 @@ public class IndexQueryReader {
         break;
       } else if (chunkMeta.getEndTime() < dataStartTime) {
         seqResources.poll();
-      } else if (optimizer.needUnpackIndexChunk(indexUsableRange, chunkMeta.getStartTime(),
+      } else if (optimizer.needUnpackIndexChunk(indexUsabilityRanger.getIndexUsableRange(),
+          chunkMeta.getStartTime(),
           chunkMeta.getEndTime())) {
         chunkMeta = seqResources.poll();
         ByteBuffer chunkData;
@@ -176,16 +173,18 @@ public class IndexQueryReader {
       chunkPrunedRange = and(chunkPrunedRange,
           not(toFilter(identifier.getStartTime(), identifier.getEndTime())));
     }
-    Filter validPruned = and(chunkPrunedRange, indexUsableRange.getTimeFilter());
-    Filter newAllowRange = and(allowedRange.getTimeFilter(), not(validPruned));
-    this.allowedRange.setTimeFilter(newAllowRange);
+    Filter validPruned = and(chunkPrunedRange,
+        indexUsabilityRanger.getIndexUsableRange().getTimeFilter());
+    Filter newAllowRange = and(indexUsabilityRanger.getAllowedRange().getTimeFilter(),
+        not(validPruned));
+    indexUsabilityRanger.getAllowedRange().setTimeFilter(newAllowRange);
   }
 
 
   boolean canSkipDataRange(long dataStartTime, long dataEndTime) {
     updateIndexChunk(dataStartTime, dataEndTime);
 //    return indexPrunedRange.fullyContains(dataStartTime, dataEndTime);
-    return !allowedRange.intersect(dataStartTime, dataEndTime);
+    return !indexUsabilityRanger.getAllowedRange().intersect(dataStartTime, dataEndTime);
   }
 
   /**
@@ -194,8 +193,9 @@ public class IndexQueryReader {
   int appendDataAndPostProcess(BatchData nextOverlappedPageData,
       List<IndexFuncResult> aggregateResultList) throws IndexQueryException {
     int reminding = Integer.MAX_VALUE;
-    IndexPreprocessor preprocessor = index.startFlushTask(nextOverlappedPageData);
-    while (reminding > 0 && preprocessor.hasNext(allowedRange.getTimeFilter())) {
+    IndexFeatureExtractor preprocessor = index.startFlushTask(nextOverlappedPageData);
+    while (reminding > 0 && preprocessor
+        .hasNext(indexUsabilityRanger.getAllowedRange().getTimeFilter())) {
       preprocessor.processNext();
       reminding = index.postProcessNext(aggregateResultList);
     }

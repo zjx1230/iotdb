@@ -65,7 +65,9 @@ public class IndexManagerTest {
     props.put(INDEX_WINDOW_RANGE, "5");
     props.put(INDEX_SLIDE_STEP, "5");
 
-    mManager.createIndex(Collections.singletonList(new PartialPath(p1)), new IndexInfo(NO_INDEX, 0, props));
+    IndexManager.getInstance().getIndexRegister()
+        .createIndex(Collections.singletonList(new PartialPath(p1)),
+            new IndexInfo(NO_INDEX, 0, props));
   }
 
   private long defaultIndexBufferSize;

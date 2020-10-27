@@ -23,8 +23,8 @@ import java.nio.ByteBuffer;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 /**
- * Calling functions {@linkplain IndexPreprocessor#getCurrent_L1_Identifier()
- * getLatestN_L1_Identifiers} and {@linkplain IndexPreprocessor#getLatestN_L1_Identifiers(int)
+ * Calling functions {@linkplain IndexFeatureExtractor#getCurrent_L1_Identifier()
+ * getLatestN_L1_Identifiers} and {@linkplain IndexFeatureExtractor#getLatestN_L1_Identifiers(int)
  * getLatestN_L1_Identifiers} will create {@code Identifier} object, which will bring additional
  * cost. Currently we adopt this simple interface definition. If {@code L1_Identifier} is called
  * frequently in the future, we will optimize it with cache or other methods.

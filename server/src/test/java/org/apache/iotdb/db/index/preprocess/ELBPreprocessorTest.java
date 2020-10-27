@@ -22,7 +22,7 @@ import static org.apache.iotdb.db.index.IndexTestUtils.TwoDimDoubleArrayToString
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
-import org.apache.iotdb.db.index.algorithm.elb.ELBCountFixedPreprocessor;
+import org.apache.iotdb.db.index.algorithm.elb.ELBCountFixedFeatureExtractor;
 import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.CalcParam;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.SingleSegmentationParam;
@@ -54,7 +54,7 @@ public class ELBPreprocessorTest {
     int blockNum = 4;
     Distance distance = new LNormDouble(1);
     CalcParam calcParam = new SingleSegmentationParam(-1, 0.2, windowRange);
-    ELBCountFixedPreprocessor elbProcessor = new ELBCountFixedPreprocessor(TSDataType.INT32,
+    ELBCountFixedFeatureExtractor elbProcessor = new ELBCountFixedFeatureExtractor(TSDataType.INT32,
         windowRange, slideStep, blockNum, distance, calcParam, ELBType.SEQ);
     elbProcessor.appendNewSrcData(srcData);
     assertL3(elbProcessor, groundTruthL3, true);
@@ -78,13 +78,13 @@ public class ELBPreprocessorTest {
     int blockNum = 4;
     Distance distance = new LInfinityNormdouble();
     CalcParam calcParam = new SingleSegmentationParam(-1, 0.2, windowRange);
-    ELBCountFixedPreprocessor elbProcessor = new ELBCountFixedPreprocessor(TSDataType.INT32,
+    ELBCountFixedFeatureExtractor elbProcessor = new ELBCountFixedFeatureExtractor(TSDataType.INT32,
         windowRange, slideStep, blockNum, distance, calcParam, ELBType.ELE, false, false, true);
     elbProcessor.appendNewSrcData(srcData);
     assertL3(elbProcessor, groundTruthL3, true);
     elbProcessor.clear();
     //Not store
-    elbProcessor = new ELBCountFixedPreprocessor(TSDataType.INT32,
+    elbProcessor = new ELBCountFixedFeatureExtractor(TSDataType.INT32,
         windowRange, slideStep, blockNum, distance, calcParam, ELBType.ELE, false, false, false);
     elbProcessor.appendNewSrcData(srcData);
     assertL3(elbProcessor, groundTruthL3, false);
@@ -114,7 +114,7 @@ public class ELBPreprocessorTest {
     int blockNum = 4;
     Distance distance = new LInfinityNormdouble();
     CalcParam calcParam = new SingleSegmentationParam(-1, 0.2, windowRange);
-    ELBCountFixedPreprocessor elbProcessor = new ELBCountFixedPreprocessor(TSDataType.INT32,
+    ELBCountFixedFeatureExtractor elbProcessor = new ELBCountFixedFeatureExtractor(TSDataType.INT32,
         windowRange, slideStep, blockNum, distance, calcParam, ELBType.ELE, false, false, true);
     elbProcessor.appendNewSrcData(srcData);
 
@@ -129,7 +129,7 @@ public class ELBPreprocessorTest {
       srcData2.putInt(i * 3, i * 3);
     }
     boolean storeFeature = true;
-    ELBCountFixedPreprocessor elbProcessor2 = new ELBCountFixedPreprocessor(TSDataType.INT32,
+    ELBCountFixedFeatureExtractor elbProcessor2 = new ELBCountFixedFeatureExtractor(TSDataType.INT32,
         windowRange, slideStep, blockNum, distance, calcParam, ELBType.ELE, false, false,
         storeFeature);
 
@@ -139,7 +139,7 @@ public class ELBPreprocessorTest {
     elbProcessor2.closeAndRelease();
   }
 
-  private void assertL3(ELBCountFixedPreprocessor elbProcessor, String[] groundTruthL3,
+  private void assertL3(ELBCountFixedFeatureExtractor elbProcessor, String[] groundTruthL3,
       boolean storeL3) {
     int idx = 0;
     while (elbProcessor.hasNext()) {

@@ -31,7 +31,7 @@ import org.apache.iotdb.db.exception.index.IndexQueryException;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
-import org.apache.iotdb.db.index.preprocess.CountFixedPreprocessor;
+import org.apache.iotdb.db.index.preprocess.CountFixedFeatureExtractor;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.read.func.IndexFuncFactory;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
@@ -59,12 +59,12 @@ public class NoIndex extends IoTDBIndex {
 
   @Override
   public void initPreprocessor(ByteBuffer previous, boolean inQueryMode) {
-    if (this.indexPreprocessor != null) {
-      this.indexPreprocessor.clear();
+    if (this.indexFeatureExtractor != null) {
+      this.indexFeatureExtractor.clear();
     }
-    this.indexPreprocessor = new CountFixedPreprocessor(tsDataType, windowRange,
+    this.indexFeatureExtractor = new CountFixedFeatureExtractor(tsDataType, windowRange,
         slideStep, false, false);
-    indexPreprocessor.deserializePrevious(previous);
+    indexFeatureExtractor.deserializePrevious(previous);
   }
 
   @Override
@@ -77,11 +77,11 @@ public class NoIndex extends IoTDBIndex {
    */
   @Override
   public IndexFlushChunk flush() {
-    if (indexPreprocessor.getCurrentChunkSize() == 0) {
+    if (indexFeatureExtractor.getCurrentChunkSize() == 0) {
       System.out.println(String.format("%s-%s not input why flush? return", path, indexType));
       return null;
     }
-    List<Identifier> list = indexPreprocessor.getAll_L1_Identifiers();
+    List<Identifier> list = indexFeatureExtractor.getAll_L1_Identifiers();
     ByteArrayOutputStream baos = new ByteArrayOutputStream(list.size());
     try {
       ReadWriteIOUtils.write(list.size(), baos);
@@ -158,14 +158,14 @@ public class NoIndex extends IoTDBIndex {
 
   @Override
   public int postProcessNext(List<IndexFuncResult> funcResult) throws IndexQueryException {
-    TVList aligned = (TVList) indexPreprocessor.getCurrent_L2_AlignedSequence();
+    TVList aligned = (TVList) indexFeatureExtractor.getCurrent_L2_AlignedSequence();
     double ed = IndexFuncFactory.calcEuclidean(aligned, patterns);
     System.out.println(String.format(
         "NoIndex Process: ed:%.3f: %s", ed, IndexUtils.tvListToStr(aligned)));
     int reminding = funcResult.size();
     if (ed <= threshold) {
       for (IndexFuncResult result : funcResult) {
-        IndexFuncFactory.basicSimilarityCalc(result, indexPreprocessor, patterns);
+        IndexFuncFactory.basicSimilarityCalc(result, indexFeatureExtractor, patterns);
       }
     }
     TVListAllocator.getInstance().release(aligned);

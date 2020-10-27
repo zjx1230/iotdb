@@ -22,7 +22,7 @@ import java.io.OutputStream;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.preprocess.Identifier;
-import org.apache.iotdb.db.index.preprocess.TimeFixedPreprocessor;
+import org.apache.iotdb.db.index.preprocess.TimeFixedFeatureExtractor;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
@@ -34,14 +34,14 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
  * Refer to: Keogh Eamonn, et al. "Dimensionality reduction for fast similarity search in large time
  * series databases." Knowledge and information Systems 3.3 (2001): 263-286.
  */
-public class PAATimeFixedPreprocessor extends TimeFixedPreprocessor {
+public class PAATimeFixedFeatureExtractor extends TimeFixedFeatureExtractor {
 
-  public PAATimeFixedPreprocessor(TSDataType tsDataType, int windowRange, int slideStep, int paaDim,
+  public PAATimeFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep, int paaDim,
       long timeAnchor, boolean storeIdentifier, boolean storeAligned) {
     super(tsDataType, windowRange, slideStep, paaDim, timeAnchor, storeIdentifier, storeAligned);
   }
 
-  public PAATimeFixedPreprocessor(TSDataType tsDataType, int windowRange, int slideStep, int paaDim,
+  public PAATimeFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep, int paaDim,
       boolean storeIdentifier, boolean storeAligned, long timeAnchor) {
     super(tsDataType, windowRange, slideStep, paaDim, timeAnchor, storeIdentifier, storeAligned);
   }
@@ -113,7 +113,7 @@ public class PAATimeFixedPreprocessor extends TimeFixedPreprocessor {
   }
 
   /**
-   * custom for {@linkplain PAAIndex}
+   * custom for {@linkplain RTreePAAIndex}
    *
    * @param currentCoordinates current corners
    */
@@ -128,7 +128,7 @@ public class PAATimeFixedPreprocessor extends TimeFixedPreprocessor {
   }
 
   /**
-   * custom for {@linkplain PAAIndex}
+   * custom for {@linkplain RTreePAAIndex}
    *
    * @param idx the idx-th identifiers
    * @param outputStream to output

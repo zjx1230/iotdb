@@ -26,7 +26,7 @@ import org.apache.iotdb.db.index.algorithm.elb.pattern.CalcParam;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.index.distance.Distance;
-import org.apache.iotdb.db.index.preprocess.CountFixedPreprocessor;
+import org.apache.iotdb.db.index.preprocess.CountFixedFeatureExtractor;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -37,7 +37,7 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
  * Refer to: Kang R, et al. Matching Consecutive Subpatterns over Streaming Time Series[C]
  * APWeb-WAIM Joint International Conference. Springer, Cham, 2018: 90-105.
  */
-public class ELBCountFixedPreprocessor extends CountFixedPreprocessor {
+public class ELBCountFixedFeatureExtractor extends CountFixedFeatureExtractor {
 
   private final int blockNum;
   /**
@@ -58,7 +58,7 @@ public class ELBCountFixedPreprocessor extends CountFixedPreprocessor {
    * A block contains {@code windowRange/b} points. A list of blocks ({@code b} blocks) cover
    * adjacent {@code windowRange/b} sequence.
    */
-  public ELBCountFixedPreprocessor(TSDataType tsDataType, int windowRange, int slideStep,
+  public ELBCountFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
       int blockNum, Distance distance, CalcParam calcParam, ELBType elbType,
       boolean storeIdentifier, boolean storeAligned, boolean storeFeature) {
     super(tsDataType, windowRange, slideStep, storeIdentifier, storeAligned);
@@ -76,7 +76,7 @@ public class ELBCountFixedPreprocessor extends CountFixedPreprocessor {
         blockNum, elbType);
   }
 
-  public ELBCountFixedPreprocessor(TSDataType tsDataType, int windowRange, int slideStep,
+  public ELBCountFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
       int blockNum, Distance distance, CalcParam calcParam, ELBType elbType) {
     this(tsDataType, windowRange, slideStep, blockNum, distance, calcParam, elbType, false, false,
         true);
@@ -148,7 +148,7 @@ public class ELBCountFixedPreprocessor extends CountFixedPreprocessor {
 
 
   /**
-   * custom for {@linkplain ELBIndex}
+   * custom for {@linkplain ELBIndexNotGood}
    *
    * @param currentLowerBounds
    * @param currentUpperBounds
@@ -164,7 +164,7 @@ public class ELBCountFixedPreprocessor extends CountFixedPreprocessor {
   }
 
   /**
-   * custom for {@linkplain ELBIndex}
+   * custom for {@linkplain ELBIndexNotGood}
    *
    * @param idx the idx-th identifiers
    * @param outputStream to output

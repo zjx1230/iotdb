@@ -25,13 +25,13 @@ import java.util.Map;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexTypeException;
+import org.apache.iotdb.db.index.IndexManager;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.algorithm.NoIndex;
+import org.apache.iotdb.db.index.algorithm.elb.ELBIndexNotGood;
 import org.apache.iotdb.db.index.algorithm.elb.ELBIndex;
-import org.apache.iotdb.db.index.algorithm.elb.ELBMatch;
-import org.apache.iotdb.db.index.algorithm.paa.PAAIndex;
+import org.apache.iotdb.db.index.algorithm.paa.RTreePAAIndex;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
-import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 
 public enum IndexType {
@@ -105,13 +105,13 @@ public enum IndexType {
   private static IoTDBIndex newIndexByType(String path, IndexType indexType, IndexInfo indexInfo) {
     switch (indexType) {
       case ELB:
-        return new ELBIndex(path, indexInfo);
+        return new ELBIndexNotGood(path, indexInfo);
       case PAA_INDEX:
-        return new PAAIndex(path, indexInfo);
+        return new RTreePAAIndex(path, indexInfo);
       case NO_INDEX:
         return new NoIndex(path, indexInfo);
       case ELB_MATCH:
-        return new ELBMatch(path, indexInfo);
+        return new ELBIndex(path, indexInfo);
       case KV_INDEX:
       default:
         throw new NotImplementedException("unsupported index type:" + indexType);
@@ -133,7 +133,7 @@ public enum IndexType {
       Map<String, String> queryProps, List<IndexFuncResult> indexFuncs)
       throws UnsupportedIndexFuncException {
     queryProps = uppercaseProps(queryProps);
-    IndexInfo indexInfo = MManager.getInstance().getIndexInfoByPath(path, indexType);
+    IndexInfo indexInfo = IndexManager.getInstance().getIndexRegister().getIndexInfoByPath(path, indexType);
     if (indexInfo == null) {
       throw new IllegalIndexParamException(
           String.format("%s.%s not found, why it escapes the check?", path, indexType));

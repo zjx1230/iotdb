@@ -47,7 +47,7 @@ public class CountFixedPreprocessorTest {
     }
     int windowRange = 5;
     int slideStep = 2;
-    CountFixedPreprocessor countFixed = new CountFixedPreprocessor(TSDataType.INT32, windowRange,
+    CountFixedFeatureExtractor countFixed = new CountFixedFeatureExtractor(TSDataType.INT32, windowRange,
         slideStep, true, true);
     countFixed.appendNewSrcData(srcData);
     assertL1AndL2(countFixed, groundTruthL1, groundTruthL2);
@@ -78,7 +78,7 @@ public class CountFixedPreprocessorTest {
     }
     int windowRange = 5;
     int slideStep = 2;
-    CountFixedPreprocessor countFixed = new CountFixedPreprocessor(TSDataType.INT32, windowRange,
+    CountFixedFeatureExtractor countFixed = new CountFixedFeatureExtractor(TSDataType.INT32, windowRange,
         slideStep, true, true);
     countFixed.appendNewSrcData(srcData);
     assertL1AndL2(countFixed, groundTruthL1, groundTruthL2);
@@ -113,7 +113,7 @@ public class CountFixedPreprocessorTest {
     }
     int windowRange = 5;
     int slideStep = 2;
-    CountFixedPreprocessor countFixed = new CountFixedPreprocessor(TSDataType.INT32, windowRange,
+    CountFixedFeatureExtractor countFixed = new CountFixedFeatureExtractor(TSDataType.INT32, windowRange,
         slideStep, true, true);
     countFixed.appendNewSrcData(srcData);
     while (countFixed.hasNext()) {
@@ -126,7 +126,7 @@ public class CountFixedPreprocessorTest {
     for (int i = 10; i < 20; i++) {
       srcData2.putInt(i, i);
     }
-    CountFixedPreprocessor countFixed2 = new CountFixedPreprocessor(TSDataType.INT32, windowRange,
+    CountFixedFeatureExtractor countFixed2 = new CountFixedFeatureExtractor(TSDataType.INT32, windowRange,
         slideStep, true, true);
     countFixed2.deserializePrevious(previous);
     countFixed2.appendNewSrcData(srcData2);
@@ -136,7 +136,7 @@ public class CountFixedPreprocessorTest {
   }
 
 
-  private void assertL1AndL2(CountFixedPreprocessor countFixed, String[] groundTruthL1,
+  private void assertL1AndL2(CountFixedFeatureExtractor countFixed, String[] groundTruthL1,
       String[] groundTruthL2) throws IOException {
     int idx = 0;
     while (countFixed.hasNext()) {

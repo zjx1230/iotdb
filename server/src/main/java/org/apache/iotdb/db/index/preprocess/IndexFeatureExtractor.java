@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
+import org.apache.iotdb.db.index.algorithm.elb.ELBCountFixedFeatureExtractor;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.TestOnly;
@@ -38,7 +39,7 @@ import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
  * In general, index structure needn't maintain all of original data, but only pointers to the
  * original data (e.g. The start time and the end time can uniquely determine a time sequence).<p>
  *
- * {@linkplain IndexPreprocessor} makes a time window slide over the time series by some rules and
+ * {@linkplain IndexFeatureExtractor} makes a time window slide over the time series by some rules and
  * obtain a list of subsequences. The time windows may be time-fixed (Euclidean distance),
  * count-fixed (Time Warping). It scans the sequence with a certain overlap step (a.k.a. the update
  * size).
@@ -56,11 +57,11 @@ import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
  *   <li>L3: customized feature: {@code {C1, C2, ..., Cm}}</li>
  * </ul>
  */
-public abstract class IndexPreprocessor {
+public abstract class IndexFeatureExtractor {
 
   /**
    * In the BUILD and QUERY modes, the preprocessor works differently.  For example, {@linkplain
-   * org.apache.iotdb.db.index.algorithm.elb.ELBCountFixedPreprocessor ELBCountFixedPreprocessor}
+   * ELBCountFixedFeatureExtractor ELBCountFixedPreprocessor}
    * does not need to generate L3 feature in QUERY-Mode, and NoIndex does not need to generate L1
    * Identifier and L2 Aligned sequence in BUILD-Mode.
    *
@@ -91,7 +92,7 @@ public abstract class IndexPreprocessor {
   protected TVList srcData;
 
 
-  public IndexPreprocessor(TSDataType dataType, WindowType widthType, int windowRange,
+  public IndexFeatureExtractor(TSDataType dataType, WindowType widthType, int windowRange,
       int slideStep) {
     this.srcData = TVListAllocator.getInstance().allocate(dataType);
     if (slideStep > windowRange) {

@@ -34,7 +34,7 @@ import org.apache.iotdb.tsfile.read.filter.basic.Filter;
  * Note that, in real scenarios, the time series could be variable-frequency, traditional distance
  * metrics (e.g., Euclidean distance) may not make sense for COUNT_FIXED.
  */
-public class CountFixedPreprocessor extends IndexPreprocessor {
+public class CountFixedFeatureExtractor extends IndexFeatureExtractor {
 
   protected final boolean storeIdentifier;
   protected final boolean storeAligned;
@@ -76,7 +76,7 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
    * @param slideStep the update size
    * @param storeIdentifier true if we need to store all identifiers. The cost will be counted.
    */
-  public CountFixedPreprocessor(TSDataType tsDataType, int windowRange, int slideStep,
+  public CountFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
       boolean storeIdentifier, boolean storeAligned) {
     super(tsDataType, WindowType.COUNT_FIXED, windowRange, slideStep);
     this.storeIdentifier = storeIdentifier;
@@ -84,11 +84,11 @@ public class CountFixedPreprocessor extends IndexPreprocessor {
   }
 
 
-  public CountFixedPreprocessor(TSDataType tsDataType, int windowRange, int slideStep) {
+  public CountFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep) {
     this(tsDataType, windowRange, slideStep, true, true);
   }
 
-  public CountFixedPreprocessor(TSDataType tsDataType, int windowRange) {
+  public CountFixedFeatureExtractor(TSDataType tsDataType, int windowRange) {
     this(tsDataType, windowRange, 1, true, true);
   }
 

@@ -44,7 +44,7 @@ import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexBuildTaskPoolManager;
 import org.apache.iotdb.db.index.io.IndexIOWriter;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
-import org.apache.iotdb.db.index.preprocess.IndexPreprocessor;
+import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
 import org.apache.iotdb.db.index.read.IndexFileResource;
 import org.apache.iotdb.db.index.IndexStorageGroupProcessor.UpdateIndexFileResourcesCallBack;
 import org.apache.iotdb.db.metadata.MManager;
@@ -130,8 +130,8 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
   }
 
   private void refreshSeriesIndexMapFromMManager() {
-    Map<String, Map<IndexType, IndexInfo>> indexInfoMap = MManager
-        .getInstance().getAllIndexInfosInStorageGroup(storageGroupName);
+    Map<String, Map<IndexType, IndexInfo>> indexInfoMap = IndexManager.getInstance()
+        .getIndexRegister().getAllIndexInfosInStorageGroup(storageGroupName);
     if (this.allPathsIndexMap == null) {
       this.allPathsIndexMap = new HashMap<>(indexInfoMap.size() + INDEX_MAP_INIT_RESERVE_SIZE);
     }
@@ -233,7 +233,7 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
       pathMap.clear();
     });
     allPathsIndexMap.clear();
-    if (flushTaskQueue != null){
+    if (flushTaskQueue != null) {
       flushTaskQueue.clear();
       flushTaskQueue = null;
     }
@@ -360,7 +360,8 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
    *
    * @return true if allocate successfully.
    */
-  private boolean syncAllocateSize(int mem, IndexPreprocessor preprocessor, IoTDBIndex iotDBIndex,
+  private boolean syncAllocateSize(int mem, IndexFeatureExtractor preprocessor,
+      IoTDBIndex iotDBIndex,
       Path path) {
     long allowedMemBar = memoryThreshold - mem;
     if (allowedMemBar < 0) {
@@ -462,7 +463,7 @@ public class IndexFileProcessor implements Comparable<IndexFileProcessor> {
         Runnable buildTask = () -> {
           numIndexBuildTasks.incrementAndGet();
           try {
-            IndexPreprocessor preprocessor = index.startFlushTask(tvList);
+            IndexFeatureExtractor preprocessor = index.startFlushTask(tvList);
             int previousOffset = Integer.MIN_VALUE;
             while (preprocessor.hasNext()) {
               int currentOffset = preprocessor.getCurrentChunkOffset();
