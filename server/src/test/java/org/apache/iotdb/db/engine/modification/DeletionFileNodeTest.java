@@ -40,8 +40,6 @@ import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.db.metadata.mnode.MNode;
-import org.apache.iotdb.db.metadata.mnode.MeasurementMNode;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
 import org.apache.iotdb.db.query.control.QueryResourceManager;
 import org.apache.iotdb.db.service.IoTDB;
@@ -66,7 +64,6 @@ public class DeletionFileNodeTest {
   private static String[] measurements = new String[10];
   private TSDataType dataType = TSDataType.DOUBLE;
   private TSEncoding encoding = TSEncoding.PLAIN;
-  private MNode deviceMNode = null;
 
   static {
     for (int i = 0; i < 10; i++) {
@@ -78,10 +75,8 @@ public class DeletionFileNodeTest {
   public void setup() throws MetadataException {
     EnvironmentUtils.envSetUp();
 
-    deviceMNode = new MNode(null, processorName);
     IoTDB.metaManager.setStorageGroup(new PartialPath(processorName));
     for (int i = 0; i < 10; i++) {
-      deviceMNode.addChild(measurements[i], new MeasurementMNode(null, null, null, null));
       IoTDB.metaManager.createTimeseries(new PartialPath(processorName + TsFileConstant.PATH_SEPARATOR + measurements[i]), dataType,
           encoding, TSFileDescriptor.getInstance().getConfig().getCompressor(), Collections.emptyMap());
     }
@@ -95,7 +90,6 @@ public class DeletionFileNodeTest {
   private void insertToStorageEngine(TSRecord record)
       throws StorageEngineException, IllegalPathException {
     InsertRowPlan insertRowPlan = new InsertRowPlan(record);
-    insertRowPlan.setDeviceMNode(deviceMNode);
     StorageEngine.getInstance().insert(insertRowPlan);
   }
 
@@ -108,13 +102,13 @@ public class DeletionFileNodeTest {
       for (int j = 0; j < 10; j++) {
         record.addTuple(new DoubleDataPoint(measurements[j], i * 1.0));
       }
-      insertToStorageEngine(record);
+      StorageEngine.getInstance().insert(new InsertRowPlan(record));
     }
 
-    StorageEngine.getInstance().delete(new PartialPath(processorName), measurements[3], 0, 50);
-    StorageEngine.getInstance().delete(new PartialPath(processorName), measurements[4], 0, 50);
-    StorageEngine.getInstance().delete(new PartialPath(processorName), measurements[5], 0, 30);
-    StorageEngine.getInstance().delete(new PartialPath(processorName), measurements[5], 30, 50);
+    StorageEngine.getInstance().delete(new PartialPath(processorName, measurements[3]), 0, 50, -1);
+    StorageEngine.getInstance().delete(new PartialPath(processorName, measurements[4]), 0, 50, -1);
+    StorageEngine.getInstance().delete(new PartialPath(processorName, measurements[5]), 0, 30, -1);
+    StorageEngine.getInstance().delete(new PartialPath(processorName, measurements[5]), 30, 50, -1);
 
     SingleSeriesExpression expression = new SingleSeriesExpression(new PartialPath(processorName + TsFileConstant.PATH_SEPARATOR +
         measurements[5]), null);
@@ -143,13 +137,13 @@ public class DeletionFileNodeTest {
       for (int j = 0; j < 10; j++) {
         record.addTuple(new DoubleDataPoint(measurements[j], i * 1.0));
       }
-      insertToStorageEngine(record);
+      StorageEngine.getInstance().insert(new InsertRowPlan(record));
     }
     StorageEngine.getInstance().syncCloseAllProcessor();
 
-    StorageEngine.getInstance().delete(new PartialPath(processorName), measurements[5], 0, 50);
-    StorageEngine.getInstance().delete(new PartialPath(processorName), measurements[4], 0, 40);
-    StorageEngine.getInstance().delete(new PartialPath(processorName), measurements[3], 0, 30);
+    StorageEngine.getInstance().delete(new PartialPath(processorName, measurements[5]), 0, 50, -1);
+    StorageEngine.getInstance().delete(new PartialPath(processorName, measurements[4]), 0, 40, -1);
+    StorageEngine.getInstance().delete(new PartialPath(processorName, measurements[3]), 0, 30, -1);
 
     Modification[] realModifications = new Modification[]{
         new Deletion(new PartialPath(processorName + TsFileConstant.PATH_SEPARATOR + measurements[5]), 201, 50),
@@ -198,7 +192,7 @@ public class DeletionFileNodeTest {
       for (int j = 0; j < 10; j++) {
         record.addTuple(new DoubleDataPoint(measurements[j], i * 1.0));
       }
-      insertToStorageEngine(record);
+      StorageEngine.getInstance().insert(new InsertRowPlan(record));
     }
     StorageEngine.getInstance().syncCloseAllProcessor();
 
@@ -208,13 +202,13 @@ public class DeletionFileNodeTest {
       for (int j = 0; j < 10; j++) {
         record.addTuple(new DoubleDataPoint(measurements[j], i * 1.0));
       }
-      insertToStorageEngine(record);
+      StorageEngine.getInstance().insert(new InsertRowPlan(record));
     }
 
-    StorageEngine.getInstance().delete(new PartialPath(processorName), measurements[3], 0, 50);
-    StorageEngine.getInstance().delete(new PartialPath(processorName), measurements[4], 0, 50);
-    StorageEngine.getInstance().delete(new PartialPath(processorName), measurements[5], 0, 30);
-    StorageEngine.getInstance().delete(new PartialPath(processorName), measurements[5], 30, 50);
+    StorageEngine.getInstance().delete(new PartialPath(processorName, measurements[3]), 0, 50, -1);
+    StorageEngine.getInstance().delete(new PartialPath(processorName, measurements[4]), 0, 50, -1);
+    StorageEngine.getInstance().delete(new PartialPath(processorName, measurements[5]), 0, 30, -1);
+    StorageEngine.getInstance().delete(new PartialPath(processorName, measurements[5]), 30, 50, -1);
 
     SingleSeriesExpression expression = new SingleSeriesExpression(new PartialPath(processorName + TsFileConstant.PATH_SEPARATOR +
         measurements[5]), null);
@@ -246,7 +240,7 @@ public class DeletionFileNodeTest {
       for (int j = 0; j < 10; j++) {
         record.addTuple(new DoubleDataPoint(measurements[j], i * 1.0));
       }
-      insertToStorageEngine(record);
+      StorageEngine.getInstance().insert(new InsertRowPlan(record));
     }
     StorageEngine.getInstance().syncCloseAllProcessor();
 
@@ -256,13 +250,13 @@ public class DeletionFileNodeTest {
       for (int j = 0; j < 10; j++) {
         record.addTuple(new DoubleDataPoint(measurements[j], i * 1.0));
       }
-      insertToStorageEngine(record);
+      StorageEngine.getInstance().insert(new InsertRowPlan(record));
     }
     StorageEngine.getInstance().syncCloseAllProcessor();
 
-    StorageEngine.getInstance().delete(new PartialPath(processorName), measurements[5], 0, 50);
-    StorageEngine.getInstance().delete(new PartialPath(processorName), measurements[4], 0, 40);
-    StorageEngine.getInstance().delete(new PartialPath(processorName), measurements[3], 0, 30);
+    StorageEngine.getInstance().delete(new PartialPath(processorName, measurements[5]), 0, 50, -1);
+    StorageEngine.getInstance().delete(new PartialPath(processorName, measurements[4]), 0, 40, -1);
+    StorageEngine.getInstance().delete(new PartialPath(processorName, measurements[3]), 0, 30, -1);
 
     Modification[] realModifications = new Modification[]{
         new Deletion(new PartialPath(processorName + TsFileConstant.PATH_SEPARATOR + measurements[5]), 301, 50),

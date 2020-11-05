@@ -18,17 +18,12 @@
  */
 package org.apache.iotdb.db.engine.flush;
 
-import static org.apache.iotdb.tsfile.common.constant.TsFileConstant.FLUSH_SUFFIX;
-
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.conf.adapter.ActiveTimeSeriesCounter;
 import org.apache.iotdb.db.engine.flush.pool.FlushSubTaskPoolManager;
 import org.apache.iotdb.db.engine.memtable.IMemTable;
 import org.apache.iotdb.db.engine.memtable.IWritableMemChunk;
@@ -37,7 +32,6 @@ import org.apache.iotdb.db.index.IndexFileProcessor;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.common.Path;
-import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.write.chunk.ChunkWriterImpl;
 import org.apache.iotdb.tsfile.write.chunk.IChunkWriter;
@@ -54,7 +48,6 @@ public class MemTableFlushTask {
   private final Future<?> encodingTaskFuture;
   private final Future<?> ioTaskFuture;
   private RestorableTsFileIOWriter writer;
-  private RestorableTsFileIOWriter tsFileIOWriter;
 
   private final boolean enabledIndex;
   private IndexFileProcessor indexFileProcessor;
@@ -72,14 +65,12 @@ public class MemTableFlushTask {
    * @param memTable the memTable to flush
    * @param writer the writer where memTable will be flushed to (current tsfile writer or vm writer)
    * @param storageGroup current storage group
-   * @param tsFileIOWriter current tsfile writer (use it to create flushLog)
    */
 
   public MemTableFlushTask(IMemTable memTable, RestorableTsFileIOWriter writer, String storageGroup,
-      RestorableTsFileIOWriter tsFileIOWriter, IndexFileProcessor indexFileProcessor) {
+      IndexFileProcessor indexFileProcessor) {
     this.memTable = memTable;
     this.writer = writer;
-    this.tsFileIOWriter = tsFileIOWriter;
     this.storageGroup = storageGroup;
     this.encodingTaskFuture = subTaskPoolManager.submit(encodingTask);
     this.ioTaskFuture = subTaskPoolManager.submit(ioTask);
@@ -99,15 +90,14 @@ public class MemTableFlushTask {
    */
   public void syncFlushMemTable()
       throws ExecutionException, InterruptedException, IOException {
+    logger.info("The memTable size of SG {} is {}, the avg series points num in chunk is {} ",
+        storageGroup,
+        memTable.memSize(),
+        memTable.getTotalPointsNum() / memTable.getSeriesNumber());
     long start = System.currentTimeMillis();
     long sortTime = 0;
     if(enabledIndex) {
       indexFileProcessor.startFlushMemTable();
-    }
-
-    File flushLogFile = getFlushLogFile(tsFileIOWriter);
-    if (!flushLogFile.createNewFile()) {
-      logger.error("Failed to create file {}", flushLogFile);
     }
 
     for (String deviceId : memTable.getMemTableMap().keySet()) {
@@ -122,15 +112,8 @@ public class MemTableFlushTask {
         if (enabledIndex) {
           indexFileProcessor.buildIndexForOneSeries(new Path(deviceId, measurementId), tvList);
         }
-        // register active time series to the ActiveTimeSeriesCounter
-        if (IoTDBDescriptor.getInstance().getConfig().isEnableParameterAdapter()) {
-          ActiveTimeSeriesCounter.getInstance().offer(storageGroup, deviceId, measurementId);
-        }
       }
       encodingTaskQueue.add(new EndChunkGroupIoTask());
-    }
-    if (IoTDBDescriptor.getInstance().getConfig().isEnableParameterAdapter()) {
-      ActiveTimeSeriesCounter.getInstance().updateActiveRatio(storageGroup);
     }
     noMoreEncodingTask = true;
     logger.debug(
@@ -149,10 +132,6 @@ public class MemTableFlushTask {
     ioTaskFuture.get();
     if (enabledIndex){
       indexFileProcessor.endFlushMemTable();
-    }
-
-    if (flushLogFile.exists()) {
-      Files.delete(flushLogFile.toPath());
     }
 
     try {
@@ -247,12 +226,6 @@ public class MemTableFlushTask {
           storageGroup, memTable.getVersion(), memSerializeTime);
     }
   };
-
-  public static File getFlushLogFile(RestorableTsFileIOWriter writer) {
-    File parent = writer.getFile().getParentFile();
-    return FSFactoryProducer.getFSFactory()
-        .getFile(parent, writer.getFile().getName() + FLUSH_SUFFIX);
-  }
 
   @SuppressWarnings("squid:S135")
   private Runnable ioTask = () -> {

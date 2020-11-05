@@ -52,7 +52,8 @@ Note: FullPath can not include `*`
 DELETE STORAGE GROUP <FullPath> [COMMA <FullPath>]*
 Eg: IoTDB > DELETE STORAGE GROUP root.ln.wf01.wt01
 Eg: IoTDB > DELETE STORAGE GROUP root.ln.wf01.wt01, root.ln.wf01.wt02
-Note: FullPath can not include `*`
+Eg: IoTDB > DELETE STORAGE GROUP root.ln.wf01.*
+Eg: IoTDB > DELETE STORAGE GROUP root.*
 ```
 
 * 创建时间序列语句
@@ -182,6 +183,16 @@ Eg: IoTDB > SHOW STORAGE GROUP
 Note: This statement can be used in IoTDB Client and JDBC.
 ```
 
+* 显示特定存储组语句
+
+```
+SHOW STORAGE GROUP <PrefixPath>
+Eg: IoTDB > SHOW STORAGE GROUP root.*
+Eg: IoTDB > SHOW STORAGE GROUP root.ln
+Note: The path can be prefix path or star path.
+Note: This statement can be used in IoTDB Client and JDBC.
+```
+
 * 显示Merge状态语句
 
 ```
@@ -217,6 +228,7 @@ Note: This statement can be used in IoTDB Client and JDBC.
 COUNT NODES <Path> LEVEL=<INTEGER>
 Eg: IoTDB > COUNT NODES root LEVEL=2
 Eg: IoTDB > COUNT NODES root.ln LEVEL=2
+Eg: IoTDB > COUNT NODES root.ln.* LEVEL=3
 Eg: IoTDB > COUNT NODES root.ln.wf01 LEVEL=3
 Note: The path can be prefix path or timeseries path.
 Note: This statement can be used in IoTDB Client and JDBC.
@@ -279,20 +291,6 @@ Eg: IoTDB > INSERT INTO root.ln.wf01.wt01(timestamp,temperature) VALUES(2017-11-
 Eg: IoTDB > INSERT INTO root.ln.wf01.wt01(timestamp, status, temperature) VALUES (1509466680000, false, 20.060787);
 Note: the statement needs to satisfy this constraint: <PrefixPath> + <Path> = <Timeseries>
 Note: The order of Sensor and PointValue need one-to-one correspondence
-```
-
-* 更新记录语句
-
-```
-UPDATE <UpdateClause> SET <SetClause> WHERE <WhereClause>
-UpdateClause: <prefixPath>
-SetClause: <SetExpression> 
-SetExpression: <Path> EQUAL <PointValue>
-WhereClause : <Condition> [(AND | OR) <Condition>]*
-Condition  : <Expression> [(AND | OR) <Expression>]*
-Expression : [NOT | !]? TIME PrecedenceEqualOperator <TimeValue>
-Eg: IoTDB > UPDATE root.ln.wf01.wt01 SET temperature = 23 WHERE time < NOW() and time > 2017-11-1T00:15:00+08:00
-Note: the statement needs to satisfy this constraint: <PrefixPath> + <Path> = <Timeseries>
 ```
 
 * 删除记录语句
@@ -423,6 +421,19 @@ Eg: SELECT last_value(temperature), last_value(power) FROM root.ln.wf01.wt01 GRO
 Note: In group by fill, sliding step is not supported in group by clause
 Note: Now, only last_value aggregation function is supported in group by fill.
 Note: Linear fill is not supported in group by fill.
+```
+
+* Order by time 语句
+
+```
+SELECT <SelectClause> FROM <FromClause> WHERE  <WhereClause> GROUP BY <GroupByClause> (FILL <GROUPBYFillClause>)? orderByTimeClause?
+orderByTimeClause: order by time (asc | desc)?
+
+Eg: SELECT last_value(temperature) FROM root.ln.wf01.wt01 GROUP BY([20, 100), 5m) FILL (float[PREVIOUS]) order by time desc
+Eg: SELECT * from root order by time desc
+Eg: SELECT * from root order by time desc align by device 
+Eg: SELECT * from root order by time desc disable align
+Eg: SELECT last * from root order by time desc
 ```
 
 * Limit & SLimit 语句
@@ -576,18 +587,22 @@ root.sg1.d0.s0 is INT32 while root.sg2.d3.s0 is FLOAT.
 Last 语句返回所要查询时间序列的最近时间戳的一条数据
 
 ```
-SELECT LAST <SelectClause> FROM <FromClause>
+SELECT LAST <SelectClause> FROM <FromClause> WHERE <WhereClause>
 Select Clause : <Path> [COMMA <Path>]*
 FromClause : < PrefixPath > [COMMA < PrefixPath >]*
+WhereClause : <TimeExpr> [(AND | OR) <TimeExpr>]*
+TimeExpr : TIME PrecedenceEqualOperator (<TimeValue> | <RelativeTime>)
 
 Eg. SELECT LAST s1 FROM root.sg.d1
 Eg. SELECT LAST s1, s2 FROM root.sg.d1
 Eg. SELECT LAST s1 FROM root.sg.d1, root.sg.d2
+Eg. SELECT LAST s1 FROM root.sg.d1 where time > 100
+Eg. SELECT LAST s1, s2 FROM root.sg.d1 where time >= 500
 
 规则:
 1. 需要满足PrefixPath.Path 为一条完整的时间序列，即 <PrefixPath> + <Path> = <Timeseries>
 
-2. SELECT LAST 语句不支持过滤条件.
+2. 当前SELECT LAST 语句只支持包含'>'或'>='的时间过滤条件
 
 3. 结果集以三列的表格的固定形式返回。
 例如 "select last s1, s2 from root.sg.d1, root.sg.d2", 结果集返回如下：
@@ -608,7 +623,7 @@ Eg. SELECT LAST s1 FROM root.sg.d1, root.sg.d2
 As 语句为 SELECT 语句中出现的时间序列规定一个别名
 
 ```
-在每个查询中都可以使用 As 语句来规定时间序列的别名。
+在每个查询中都可以使用 As 语句来规定时间序列的别名，但是对于通配符的使用有一定限制。
 
 1. 原始数据查询：
 select s1 as speed, s2 as temperature from root.sg.d1
@@ -628,7 +643,7 @@ select s1 as speed, s2 as temperature from root.sg.d1 align by device
 
 select count(s1) as s1_num, count(s2), count(s3) as s3_num from root.sg.d2 align by device
 
-5. Last 查询
+5. 最新数据查询
 select last s1 as speed, s2 from root.sg.d1
 
 规则：
@@ -887,7 +902,6 @@ Note: the statement needs to satisfy this constraint: <PrefixPath> + <Path> = <T
 ```
 NOW()
 Eg. INSERT INTO root.ln.wf01.wt01(timestamp,status) VALUES(NOW(), false) 
-Eg. UPDATE root.ln.wf01.wt01 SET temperature = 23 WHERE time < NOW()
 Eg. DELETE FROM root.ln.wf01.wt01.status, root.ln.wf01.wt01.temperature WHERE time < NOW()
 Eg. SELECT * FROM root WHERE time < NOW()
 Eg. SELECT COUNT(temperature) FROM root.ln.wf01.wt01 WHERE time < NOW()
@@ -962,7 +976,7 @@ TRACING OFF   //关闭性能追踪
 
 ```
 Keywords for IoTDB (case insensitive):
-ADD, BY, COMPRESSOR, CREATE, DATATYPE, DELETE, DESCRIBE, DROP, ENCODING, EXIT, FOR, FROM, GRANT, GROUP, LABLE, LINK, INDEX, INSERT, INTO, LOAD, MAX_POINT_NUMBER, MERGE, METADATA, ON, ORDER, PASSWORD, PRIVILEGES, PROPERTY, QUIT, REVOKE, ROLE, ROOT, SCHEMA, SELECT, SET, SHOW, SNAPSHOT, STORAGE, TIME, TIMESERIES, TIMESTAMP, TO, UNLINK, UPDATE, USER, USING, VALUE, VALUES, WHERE, WITH
+ADD, BY, COMPRESSOR, CREATE, DATATYPE, DELETE, DESCRIBE, DROP, ENCODING, EXIT, FOR, FROM, GRANT, GROUP, LABLE, LINK, INDEX, INSERT, INTO, LOAD, MAX_POINT_NUMBER, MERGE, METADATA, ON, ORDER, PASSWORD, PRIVILEGES, PROPERTY, QUIT, REVOKE, ROLE, ROOT, SCHEMA, SELECT, SET, SHOW, SNAPSHOT, STORAGE, TIME, TIMESERIES, TIMESTAMP, TO, UNLINK, USER, USING, VALUE, VALUES, WHERE, WITH
 
 Keywords with special meanings (case insensitive):
 * Data Types: BOOLEAN, DOUBLE, FLOAT, INT32, INT64, TEXT 

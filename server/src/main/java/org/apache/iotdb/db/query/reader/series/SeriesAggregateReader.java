@@ -36,9 +36,13 @@ public class SeriesAggregateReader implements IAggregateReader {
 
   public SeriesAggregateReader(PartialPath seriesPath, Set<String> allSensors,  TSDataType dataType,
       QueryContext context, QueryDataSource dataSource, Filter timeFilter, Filter valueFilter,
-      TsFileFilter fileFilter) {
+      TsFileFilter fileFilter, boolean ascending) {
     this.seriesReader = new SeriesReader(seriesPath, allSensors, dataType, context, dataSource,
-        timeFilter, valueFilter, fileFilter);
+        timeFilter, valueFilter, fileFilter, ascending);
+  }
+
+  public boolean isAscending() {
+    return seriesReader.getOrderUtils().getAscending();
   }
 
   @Override
@@ -112,7 +116,7 @@ public class SeriesAggregateReader implements IAggregateReader {
 
   @Override
   public BatchData nextPage() throws IOException {
-    return seriesReader.nextPage();
+    return seriesReader.nextPage().flip();
   }
 
   private boolean containedByTimeFilter(Statistics statistics) {

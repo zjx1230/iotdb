@@ -110,9 +110,9 @@ public class IndexAggregationExecutor extends AggregationExecutor {
    * @return AggregateResult list
    */
   @Override
-  protected List<AggregateResult> aggregateOneSeries(
+  protected void aggregateOneSeries(
       Map.Entry<PartialPath, List<Integer>> pathToAggIndexes,
-      Set<String> measurements, Filter timeFilter, QueryContext context)
+      AggregateResult[] aggregateResultList, Set<String> measurements, Filter timeFilter, QueryContext context)
       throws IOException, QueryProcessException, StorageEngineException {
     List<IndexFuncResult> indexFuncResults = new ArrayList<>();
 
@@ -132,9 +132,10 @@ public class IndexAggregationExecutor extends AggregationExecutor {
       throw new QueryProcessException(e);
     }
 
-    List<AggregateResult> res = new ArrayList<>(indexFuncResults.size());
-    res.addAll(indexFuncResults);
-    return res;
+    //TODO not consider the new-coming asc/desc
+    for (int i = 0; i < aggregateResultList.length; i++) {
+      aggregateResultList[i] = indexFuncResults.get(i);
+    }
   }
 
   /**
@@ -155,9 +156,10 @@ public class IndexAggregationExecutor extends AggregationExecutor {
     // update filter by TTL
     timeFilter = queryDataSource.updateFilterUsingTTL(timeFilter);
 
+    //TODO set ascending as true temporarily
     SeriesAggregateReader seriesReader = new SeriesAggregateReader(seriesPath,
         measurements,
-        tsDataType, context, queryDataSource, timeFilter, null, null);
+        tsDataType, context, queryDataSource, timeFilter, null, null, true);
     aggregateFromIndexReader(seriesReader, indexQueryReader, indexFuncResults, timeFilter);
     indexQueryReader.release();
   }

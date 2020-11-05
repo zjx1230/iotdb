@@ -17,12 +17,11 @@
  * under the License.
  */
 package org.apache.iotdb.db.utils.datastructure.primitive;
-
-import static org.apache.iotdb.db.rescon.PrimitiveArrayPool.ARRAY_SIZE;
+import static org.apache.iotdb.db.rescon.PrimitiveArrayManager.ARRAY_SIZE;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.iotdb.db.rescon.PrimitiveArrayPool;
+import org.apache.iotdb.db.rescon.PrimitiveArrayManager;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 
 public class LongPrimitiveList extends PrimitiveList {
@@ -57,7 +56,7 @@ public class LongPrimitiveList extends PrimitiveList {
   void clearAndReleaseValues() {
     if (values != null) {
       for (long[] dataArray : values) {
-        PrimitiveArrayPool.getInstance().release(dataArray);
+        PrimitiveArrayManager.release(dataArray);
       }
       values.clear();
     }
@@ -65,8 +64,7 @@ public class LongPrimitiveList extends PrimitiveList {
 
   @Override
   protected void expandValues() {
-    values.add((long[]) PrimitiveArrayPool
-        .getInstance().getPrimitiveDataListByType(TSDataType.INT64));
+    values.add((long[]) PrimitiveArrayManager.getPrimitiveArraysByType(TSDataType.INT64));
     capacity += ARRAY_SIZE;
   }
 

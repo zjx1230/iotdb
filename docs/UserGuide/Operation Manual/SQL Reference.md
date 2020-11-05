@@ -62,7 +62,8 @@ Note: FullPath can not include `*`
 DELETE STORAGE GROUP <FullPath> [COMMA <FullPath>]*
 Eg: IoTDB > DELETE STORAGE GROUP root.ln.wf01.wt01
 Eg: IoTDB > DELETE STORAGE GROUP root.ln.wf01.wt01, root.ln.wf01.wt02
-Note: FullPath can not include `*`
+Eg: IoTDB > DELETE STORAGE GROUP root.ln.wf01.*
+Eg: IoTDB > DELETE STORAGE GROUP root.*
 ```
 
 * Create Timeseries Statement
@@ -193,6 +194,16 @@ Eg: IoTDB > SHOW STORAGE GROUP
 Note: This statement can be used in IoTDB Client and JDBC.
 ```
 
+* Show Specific Storage Group Statement
+
+```
+SHOW STORAGE GROUP <PrefixPath>
+Eg: IoTDB > SHOW STORAGE GROUP root.*
+Eg: IoTDB > SHOW STORAGE GROUP root.ln
+Note: The path can be prefix path or star path.
+Note: This statement can be used in IoTDB Client and JDBC.
+```
+
 * Show Merge Status Statement
 
 ```
@@ -228,6 +239,7 @@ Note: This statement can be used in IoTDB Client and JDBC.
 COUNT NODES <Path> LEVEL=<INTEGER>
 Eg: IoTDB > COUNT NODES root LEVEL=2
 Eg: IoTDB > COUNT NODES root.ln LEVEL=2
+Eg: IoTDB > COUNT NODES root.ln.* LEVEL=3
 Eg: IoTDB > COUNT NODES root.ln.wf01 LEVEL=3
 Note: The path can be prefix path or timeseries path.
 Note: This statement can be used in IoTDB Client and JDBC.
@@ -288,20 +300,6 @@ Eg: IoTDB > INSERT INTO root.ln.wf01.wt01(timestamp,temperature) VALUES(2017-11-
 Eg: IoTDB > INSERT INTO root.ln.wf01.wt01(timestamp, status, temperature) VALUES (1509466680000, false, 20.060787);
 Note: the statement needs to satisfy this constraint: <PrefixPath> + <Path> = <Timeseries>
 Note: The order of Sensor and PointValue need one-to-one correspondence
-```
-
-* Update Record Statement
-
-```
-UPDATE <UpdateClause> SET <SetClause> WHERE <WhereClause>
-UpdateClause: <prefixPath>
-SetClause: <SetExpression> 
-SetExpression: <Path> EQUAL <PointValue>
-WhereClause : <Condition> [(AND | OR) <Condition>]*
-Condition  : <Expression> [(AND | OR) <Expression>]*
-Expression : [NOT | !]? TIME PrecedenceEqualOperator <TimeValue>
-Eg: IoTDB > UPDATE root.ln.wf01.wt01 SET temperature = 23 WHERE time < NOW() and time > 2017-11-1T00:15:00+08:00
-Note: the statement needs to satisfy this constraint: <PrefixPath> + <Path> = <Timeseries>
 ```
 
 * Delete Record Statement
@@ -432,6 +430,19 @@ Eg: SELECT last_value(temperature), last_value(power) FROM root.ln.wf01.wt01 GRO
 Note: In group by fill, sliding step is not supported in group by clause
 Note: Now, only last_value aggregation function is supported in group by fill.
 Note: Linear fill is not supported in group by fill.
+```
+
+* Order by time Statement
+
+```
+SELECT <SelectClause> FROM <FromClause> WHERE  <WhereClause> GROUP BY <GroupByClause> (FILL <GROUPBYFillClause>)? orderByTimeClause?
+orderByTimeClause: order by time (asc | desc)?
+
+Eg: SELECT last_value(temperature) FROM root.ln.wf01.wt01 GROUP BY([20, 100), 5m) FILL (float[PREVIOUS]) order by time desc
+Eg: SELECT * from root order by time desc
+Eg: SELECT * from root order by time desc align by device 
+Eg: SELECT * from root order by time desc disable align
+Eg: SELECT last * from root order by time desc
 ```
 
 * Limit Statement
@@ -592,15 +603,21 @@ The LAST function returns the last time-value pair of the given timeseries. Curr
 SELECT LAST <SelectClause> FROM <FromClause>
 Select Clause : <Path> [COMMA <Path>]*
 FromClause : < PrefixPath > [COMMA < PrefixPath >]*
+WhereClause : <TimeExpr> [(AND | OR) <TimeExpr>]*
+TimeExpr : TIME PrecedenceEqualOperator (<TimeValue> | <RelativeTime>)
 
 Eg. SELECT LAST s1 FROM root.sg.d1
 Eg. SELECT LAST s1, s2 FROM root.sg.d1
 Eg. SELECT LAST s1 FROM root.sg.d1, root.sg.d2
+Eg. SELECT LAST s1 FROM root.sg.d1 where time > 100
+Eg. SELECT LAST s1, s2 FROM root.sg.d1 where time >= 500
 
 Rules:
 1. the statement needs to satisfy this constraint: <PrefixPath> + <Path> = <Timeseries>
 
-2. The result set of last query will always be displayed in a fixed three column table format.
+2. SELECT LAST only supports time filter that contains '>' or '>=' currently.
+
+3. The result set of last query will always be displayed in a fixed three column table format.
 For example, "select last s1, s2 from root.sg.d1, root.sg.d2", the query result would be:
 
 | Time | Path         | Value |
@@ -610,7 +627,7 @@ For example, "select last s1, s2 from root.sg.d1, root.sg.d2", the query result 
 |  4   | root.sg.d2.s1| 250   |
 |  9   | root.sg.d2.s2| 600   |
 
-3. It is not supported to use "diable align" in LAST query. 
+4. It is not supported to use "diable align" in LAST query. 
 
 ```
 
@@ -619,7 +636,7 @@ For example, "select last s1, s2 from root.sg.d1, root.sg.d2", the query result 
 As statement assigns an alias to time seires queried in SELECT statement
 
 ```
-You can use as statement in all query type.
+You can use as statement in all queries, but some rules are restricted about wildcard.
 
 1. Raw data query
 select s1 as speed, s2 as temperature from root.sg.d1
@@ -639,7 +656,7 @@ select s1 as speed, s2 as temperature from root.sg.d1 align by device
 
 select count(s1) as s1_num, count(s2), count(s3) as s3_num from root.sg.d2 align by device
 
-5. Last query
+5. Last Record query
 select last s1 as speed, s2 from root.sg.d1
 
 Rules：
@@ -915,8 +932,7 @@ The NOW function returns the current timestamp. This function can be used in the
 
 ```
 NOW()
-Eg. INSERT INTO root.ln.wf01.wt01(timestamp,status) VALUES(NOW(), false) 
-Eg. UPDATE root.ln.wf01.wt01 SET temperature = 23 WHERE time < NOW()
+Eg. INSERT INTO root.ln.wf01.wt01(timestamp,status) VALUES(NOW(), false)
 Eg. DELETE FROM root.ln.wf01.wt01.status, root.ln.wf01.wt01.temperature WHERE time < NOW()
 Eg. SELECT * FROM root WHERE time < NOW()
 Eg. SELECT COUNT(temperature) FROM root.ln.wf01.wt01 WHERE time < NOW()
@@ -1001,7 +1017,7 @@ TRACING OFF   // Close performance tracing
 
 ```
 Keywords for IoTDB (case insensitive):
-ADD, BY, COMPRESSOR, CREATE, DATATYPE, DELETE, DESCRIBE, DROP, ENCODING, EXIT, FOR, FROM, GRANT, GROUP, LABLE, LINK, INDEX, INSERT, INTO, LOAD, MAX_POINT_NUMBER, MERGE, METADATA, ON, ORDER, PASSWORD, PRIVILEGES, PROPERTY, QUIT, REVOKE, ROLE, ROOT, SCHEMA, SELECT, SET, SHOW, SNAPSHOT, STORAGE, TIME, TIMESERIES, TIMESTAMP, TO, UNLINK, UPDATE, USER, USING, VALUE, VALUES, WHERE, WITH
+ADD, BY, COMPRESSOR, CREATE, DATATYPE, DELETE, DESCRIBE, DROP, ENCODING, EXIT, FOR, FROM, GRANT, GROUP, LABLE, LINK, INDEX, INSERT, INTO, LOAD, MAX_POINT_NUMBER, MERGE, METADATA, ON, ORDER, PASSWORD, PRIVILEGES, PROPERTY, QUIT, REVOKE, ROLE, ROOT, SCHEMA, SELECT, SET, SHOW, SNAPSHOT, STORAGE, TIME, TIMESERIES, TIMESTAMP, TO, UNLINK, USER, USING, VALUE, VALUES, WHERE, WITH
 
 Keywords with special meanings (case insensitive):
 * Data Types: BOOLEAN, DOUBLE, FLOAT, INT32, INT64, TEXT 

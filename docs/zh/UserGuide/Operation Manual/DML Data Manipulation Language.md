@@ -156,6 +156,14 @@ select wf01.wt01.status,wf02.wt02.hardware from root.ln where (time > 2017-11-01
 该SQL语句的执行结果如下：
 <center><img style="width:100%; max-width:800px; max-height:600px; margin-left:auto; margin-right:auto; display:block;" src="https://user-images.githubusercontent.com/13203019/51577450-dcfe0800-1ef4-11e9-9399-4ba2b2b7fb73.jpg"></center>
 
+#### 根据时间降序返回
+IoTDB 在 0.11 版本开始支持 'order by time' 语句, 用于对结果按照时间进行降序展示。例如，SQL语句为：
+```sql
+select * from root.ln where time > 1 order by time desc limit 10;
+```
+
+更多语法请参照 [SQL REFERENCE](../Operation%20Manual/SQL%20Reference.md).
+
 #### 其他结果返回形式
 
 IoTDB支持另外两种结果返回形式: 按设备时间对齐 'align by device' 和 时序不对齐 'disable align'.
@@ -410,10 +418,12 @@ SELECT last_value(temperature) FROM root.ln.wf01.wt01 GROUP BY([8, 39), 5m) FILL
 SQL语法：
 
 ```
-select last <Path> [COMMA <Path>]* from < PrefixPath > [COMMA < PrefixPath >]* <DISABLE ALIGN>
+select last <Path> [COMMA <Path>]* from < PrefixPath > [COMMA < PrefixPath >]* <WhereClause>
 ```
 
 其含义是：查询时间序列prefixPath.path中最近时间戳的数据
+
+\<WhereClause\>中当前只支持含有'>'或'>='的时间过滤条件，任何其他过滤条件都将会返回异常。
 
 结果集为三列的结构
 
@@ -431,10 +441,10 @@ select last <Path> [COMMA <Path>]* from < PrefixPath > [COMMA < PrefixPath >]* <
 |  5   | root.ln.wf01.wt01.speed | 100   |
 ```
 
-示例 2：查询 root.ln.wf01.wt01 下 speed，status，temperature 的最新数据点
+示例 2：查询 root.ln.wf01.wt01 下 speed，status，temperature 时间戳大于等于5的最新数据点。
 
 ```
-> select last speed, status, temperature from root.ln.wf01
+> select last speed, status, temperature from root.ln.wf01  where time >= 5
 
 | Time | Path                         | Value |
 | ---  | ---------------------------- | ----- |

@@ -48,9 +48,6 @@ import org.apache.iotdb.tsfile.utils.Pair;
  */
 public class IndexFuncResult extends AggregateResult {
 
-  private boolean isCalculatedArray;
-
-
   private boolean isTensor;
   private final IndexFunc indexFunc;
   private TSDataType indexFuncDataType;
@@ -65,7 +62,7 @@ public class IndexFuncResult extends AggregateResult {
     this.indexFunc = indexFunc;
     this.tensorList = new ArrayList<>();
     this.scalarList = new ArrayList<>();
-    isCalculatedArray = false;
+
   }
 
   public void addToNewestTensor(Object subTensor) {
@@ -90,10 +87,6 @@ public class IndexFuncResult extends AggregateResult {
   public void setIndexFuncDataType(
       TSDataType indexFuncDataType) {
     this.indexFuncDataType = indexFuncDataType;
-  }
-
-  public void setCalculatedArray(boolean calculatedArray) {
-    isCalculatedArray = calculatedArray;
   }
 
   public boolean isTensor() {
@@ -167,7 +160,7 @@ public class IndexFuncResult extends AggregateResult {
   }
 
   @Override
-  public void updateResultFromPageData(BatchData dataInThisPage, long bound) throws IOException {
+  public void updateResultFromPageData(BatchData dataInThisPage, long minBound, long maxBound) throws IOException {
     throw new UnsupportedOperationException();
   }
 
@@ -178,8 +171,9 @@ public class IndexFuncResult extends AggregateResult {
   }
 
   @Override
-  public boolean isCalculatedAggregationResult() {
-    return isCalculatedArray;
+  public boolean hasFinalResult() {
+    // TODO throw new UnsupportedOperationException();
+    return false;
   }
 
   @Override

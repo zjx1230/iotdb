@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.conf.adapter.ActiveTimeSeriesCounter;
 import org.apache.iotdb.db.constant.TestConstant;
 import org.apache.iotdb.db.engine.MetadataManagerHelper;
 import org.apache.iotdb.db.engine.flush.TsFileFlushPolicy.DirectFlushPolicy;
@@ -34,9 +33,6 @@ import org.apache.iotdb.db.exception.WriteProcessException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.db.metadata.mnode.MNode;
-import org.apache.iotdb.db.metadata.mnode.MeasurementMNode;
-import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.FileReaderManager;
@@ -64,14 +60,14 @@ public class ChunkMetadataCacheTest {
   private String measurementId5 = "s5";
   private StorageGroupProcessor storageGroupProcessor;
   private String systemDir = TestConstant.BASE_OUTPUT_PATH.concat("data")
-          .concat(File.separator).concat("info");
+      .concat(File.separator).concat("info");
 
   @Before
   public void setUp() throws Exception {
     EnvironmentUtils.envSetUp();
     MetadataManagerHelper.initMetadata();
-    ActiveTimeSeriesCounter.getInstance().init(storageGroup);
-    storageGroupProcessor = new StorageGroupProcessor(systemDir, storageGroup, new DirectFlushPolicy());
+    storageGroupProcessor = new StorageGroupProcessor(systemDir, storageGroup,
+        new DirectFlushPolicy());
     insertData();
   }
 
@@ -92,13 +88,6 @@ public class ChunkMetadataCacheTest {
     record.addTuple(DataPoint.getDataPoint(TSDataType.DOUBLE, measurementId3, String.valueOf(num)));
     record.addTuple(DataPoint.getDataPoint(TSDataType.BOOLEAN, measurementId4, "True"));
     InsertRowPlan insertRowPlan = new InsertRowPlan(record);
-    MNode mNode = new MNode(null, storageGroup);
-    mNode.addChild(measurementId0, new MeasurementMNode(null, null, null, null));
-    mNode.addChild(measurementId1, new MeasurementMNode(null, null, null, null));
-    mNode.addChild(measurementId2, new MeasurementMNode(null, null, null, null));
-    mNode.addChild(measurementId3, new MeasurementMNode(null, null, null, null));
-    mNode.addChild(measurementId4, new MeasurementMNode(null, null, null, null));
-    insertRowPlan.setDeviceMNode(mNode);
     storageGroupProcessor.insert(insertRowPlan);
   }
 
@@ -106,7 +95,8 @@ public class ChunkMetadataCacheTest {
     for (int j = 1; j <= 100; j++) {
       insertOneRecord(j, j);
     }
-    for(TsFileProcessor tsFileProcessor : storageGroupProcessor.getWorkSequenceTsFileProcessors()){
+    for (TsFileProcessor tsFileProcessor : storageGroupProcessor
+        .getWorkSequenceTsFileProcessors()) {
       tsFileProcessor.syncFlush();
     }
 
@@ -148,7 +138,7 @@ public class ChunkMetadataCacheTest {
     Assert.assertTrue(unseqResources.get(2).isClosed());
 
     List<ChunkMetadata> metaDataList = ChunkMetadataCache.getInstance()
-        .get(seqResources.get(0).getTsFilePath(), new Path(storageGroup, measurementId5));
+        .get(seqResources.get(0).getTsFilePath(), new Path(storageGroup, measurementId5), null);
     Assert.assertEquals(0, metaDataList.size());
   }
 
@@ -169,7 +159,7 @@ public class ChunkMetadataCacheTest {
     Assert.assertTrue(unseqResources.get(2).isClosed());
 
     List<ChunkMetadata> metaDataList = ChunkMetadataCache.getInstance()
-        .get(seqResources.get(0).getTsFilePath(), new Path(storageGroup, measurementId5));
+        .get(seqResources.get(0).getTsFilePath(), new Path(storageGroup, measurementId5), null);
     Assert.assertEquals(0, metaDataList.size());
   }
 

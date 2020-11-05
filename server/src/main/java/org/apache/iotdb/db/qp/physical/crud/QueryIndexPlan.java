@@ -23,9 +23,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.index.common.IndexConstant;
 import org.apache.iotdb.db.index.common.IndexType;
-import org.apache.iotdb.db.qp.logical.Operator;
 import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
 
 public class QueryIndexPlan extends AggregationPlan {
@@ -38,7 +38,8 @@ public class QueryIndexPlan extends AggregationPlan {
     setOperatorType(OperatorType.QUERY_INDEX);
   }
 
-  public static QueryIndexPlan initFromAggregationPlan(AggregationPlan aggregationPlan){
+  public static QueryIndexPlan initFromAggregationPlan(AggregationPlan aggregationPlan)
+      throws QueryProcessException {
     QueryIndexPlan indexQueryPlan = new QueryIndexPlan();
     indexQueryPlan.setPaths(aggregationPlan.getPaths());
     indexQueryPlan.setDeduplicatedPaths(aggregationPlan.getDeduplicatedPaths());

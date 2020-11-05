@@ -25,6 +25,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.jdbc.Config;
 import org.junit.After;
@@ -35,22 +36,25 @@ import org.junit.Test;
 public class IoTDBDeleteTimeseriesIT {
 
   private long memtableSizeThreshold;
-  private boolean enableVm;
+  private CompactionStrategy tsFileManagementStrategy;
 
   @Before
   public void setUp() throws Exception {
     EnvironmentUtils.closeStatMonitor();
     EnvironmentUtils.envSetUp();
     memtableSizeThreshold = IoTDBDescriptor.getInstance().getConfig().getMemtableSizeThreshold();
-    enableVm = IoTDBDescriptor.getInstance().getConfig().isEnableVm();
     IoTDBDescriptor.getInstance().getConfig().setMemtableSizeThreshold(16);
-    IoTDBDescriptor.getInstance().getConfig().setEnableVm(false);
+    tsFileManagementStrategy = IoTDBDescriptor.getInstance().getConfig()
+        .getCompactionStrategy();
+    IoTDBDescriptor.getInstance().getConfig()
+        .setCompactionStrategy(CompactionStrategy.NO_COMPACTION);
   }
 
   @After
   public void tearDown() throws Exception {
     IoTDBDescriptor.getInstance().getConfig().setMemtableSizeThreshold(memtableSizeThreshold);
-    IoTDBDescriptor.getInstance().getConfig().setEnableVm(enableVm);
+    IoTDBDescriptor.getInstance().getConfig()
+        .setCompactionStrategy(tsFileManagementStrategy);
     EnvironmentUtils.cleanEnv();
   }
 
@@ -107,10 +111,10 @@ public class IoTDBDeleteTimeseriesIT {
 
     EnvironmentUtils.restartDaemon();
 
-    try(Connection connection = DriverManager
+    try (Connection connection = DriverManager
         .getConnection(Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root",
             "root");
-        Statement statement = connection.createStatement()){
+        Statement statement = connection.createStatement()) {
       boolean hasResult = statement.execute("SELECT * FROM root");
       Assert.assertTrue(hasResult);
     }

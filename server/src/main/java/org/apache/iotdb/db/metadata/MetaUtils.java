@@ -37,7 +37,7 @@ public class MetaUtils {
   }
 
   /**
-   * @param path the path will split. ex, root.ln. note: doesn't support escape character
+   * @param path the path will split. ex, root.ln.
    * @return string array. ex, [root, ln]
    * @throws IllegalPathException if path isn't correct, the exception will throw
    */
@@ -50,6 +50,10 @@ public class MetaUtils {
         startIndex = i + 1;
       } else if (path.charAt(i) == '"') {
         int endIndex = path.indexOf('"', i + 1);
+        // if a double quotes with escape character
+        while (endIndex != -1 && path.charAt(endIndex - 1) == '\\') {
+          endIndex = path.indexOf('"', endIndex + 1);
+        }
         if (endIndex != -1 && (endIndex == path.length() - 1 || path.charAt(endIndex + 1) == '.')) {
           nodes.add(path.substring(startIndex, endIndex + 1));
           i = endIndex + 1;
@@ -75,7 +79,7 @@ public class MetaUtils {
    * @param path path
    * @param level level
    */
-  static PartialPath getStorageGroupPathByLevel(PartialPath path, int level) throws MetadataException {
+  public static PartialPath getStorageGroupPathByLevel(PartialPath path, int level) throws MetadataException {
     String[] nodeNames = path.getNodes();
     if (nodeNames.length <= level || !nodeNames[0].equals(IoTDBConstant.PATH_ROOT)) {
       throw new IllegalPathException(path.getFullPath());

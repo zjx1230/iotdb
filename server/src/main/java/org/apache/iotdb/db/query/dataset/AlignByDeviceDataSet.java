@@ -94,18 +94,22 @@ public class AlignByDeviceDataSet extends QueryDataSet {
       case GROUPBYTIME:
         this.dataSetType = DataSetType.GROUPBYTIME;
         this.groupByTimePlan = alignByDevicePlan.getGroupByTimePlan();
+        this.groupByTimePlan.setAscending(alignByDevicePlan.isAscending());
         break;
       case AGGREGATION:
         this.dataSetType = DataSetType.AGGREGATE;
         this.aggregationPlan = alignByDevicePlan.getAggregationPlan();
+        this.aggregationPlan.setAscending(alignByDevicePlan.isAscending());
         break;
       case FILL:
         this.dataSetType = DataSetType.FILL;
         this.fillQueryPlan = alignByDevicePlan.getFillQueryPlan();
+        this.fillQueryPlan.setAscending(alignByDevicePlan.isAscending());
         break;
       default:
         this.dataSetType = DataSetType.QUERY;
         this.rawDataQueryPlan = new RawDataQueryPlan();
+        this.rawDataQueryPlan.setAscending(alignByDevicePlan.isAscending());
     }
 
     this.curDataSetInitialized = false;
@@ -165,6 +169,7 @@ public class AlignByDeviceDataSet extends QueryDataSet {
             groupByTimePlan.setDeduplicatedPaths(executePaths);
             groupByTimePlan.setDeduplicatedDataTypes(tsDataTypes);
             groupByTimePlan.setDeduplicatedAggregations(executeAggregations);
+            groupByTimePlan.setExpression(expression);
             currentDataSet = queryRouter.groupBy(groupByTimePlan, context);
             break;
           case AGGREGATE:
@@ -200,7 +205,7 @@ public class AlignByDeviceDataSet extends QueryDataSet {
     return false;
   }
 
-  private Set<String> getDeviceMeasurements(PartialPath device) throws IOException {
+  protected Set<String> getDeviceMeasurements(PartialPath device) throws IOException {
     try {
       MNode deviceNode = IoTDB.metaManager.getNodeByPath(device);
       return deviceNode.getChildren().keySet();

@@ -28,6 +28,7 @@ import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.logical.Operator;
 import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
 import org.apache.iotdb.db.qp.physical.crud.DeletePlan;
+import org.apache.iotdb.db.qp.physical.sys.AlterTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
 import org.apache.iotdb.db.qp.physical.sys.AuthorPlan;
@@ -35,6 +36,7 @@ import org.apache.iotdb.db.qp.physical.sys.CreateTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.DataAuthPlan;
 import org.apache.iotdb.db.qp.physical.sys.DeleteStorageGroupPlan;
 import org.apache.iotdb.db.qp.physical.sys.DeleteTimeSeriesPlan;
+import org.apache.iotdb.db.qp.physical.sys.FlushPlan;
 import org.apache.iotdb.db.qp.physical.sys.LoadConfigurationPlan;
 import org.apache.iotdb.db.qp.physical.sys.SetStorageGroupPlan;
 import org.apache.iotdb.db.qp.physical.sys.SetTTLPlan;
@@ -54,6 +56,12 @@ public abstract class PhysicalPlan {
 
   //for cluster mode, whether the plan may be splitted into several sub plans
   protected boolean canBeSplit = true;
+
+  //login username, corresponding to cli/session login user info
+  private String loginUserName;
+
+  // a bridge from a cluster raft log to a physical plan
+  protected long index;
 
   /**
    * whether the plan can be split into more than one Plans. Only used in the cluster mode.
@@ -76,6 +84,10 @@ public abstract class PhysicalPlan {
   }
 
   public abstract List<PartialPath> getPaths();
+
+  public void setPaths(List<PartialPath> paths) {
+
+  }
 
   public boolean isQuery() {
     return isQuery;
@@ -149,6 +161,14 @@ public abstract class PhysicalPlan {
       return null;
     }
     return ReadWriteIOUtils.readStringWithLength(buffer, valueLen);
+  }
+
+  public String getLoginUserName() {
+    return loginUserName;
+  }
+
+  public void setLoginUserName(String loginUserName) {
+    this.loginUserName = loginUserName;
   }
 
   public static class Factory {
@@ -258,6 +278,14 @@ public abstract class PhysicalPlan {
           plan = new LoadConfigurationPlan();
           plan.deserialize(buffer);
           break;
+        case ALTER_TIMESERIES:
+          plan = new AlterTimeSeriesPlan();
+          plan.deserialize(buffer);
+          break;
+        case FLUSH:
+          plan = new FlushPlan();
+          plan.deserialize(buffer);
+          break;
         default:
           throw new IOException("unrecognized log type " + type);
       }
@@ -266,11 +294,19 @@ public abstract class PhysicalPlan {
   }
 
   public enum PhysicalPlanType {
-    INSERT, DELETE, BATCHINSERT, SET_STORAGE_GROUP, CREATE_TIMESERIES, TTL, GRANT_WATERMARK_EMBEDDING, REVOKE_WATERMARK_EMBEDDING,
-    CREATE_ROLE, DELETE_ROLE, CREATE_USER, REVOKE_USER_ROLE, REVOKE_ROLE_PRIVILEGE, REVOKE_USER_PRIVILEGE, GRANT_ROLE_PRIVILEGE, GRANT_USER_PRIVILEGE, GRANT_USER_ROLE, MODIFY_PASSWORD, DELETE_USER,
-    DELETE_STORAGE_GROUP, SHOW_TIMESERIES, DELETE_TIMESERIES, LOAD_CONFIGURATION,
-    CREATE_INDEX, DROP_INDEX,
+    INSERT, DELETE, BATCHINSERT, SET_STORAGE_GROUP, CREATE_TIMESERIES, TTL, GRANT_WATERMARK_EMBEDDING,
+    REVOKE_WATERMARK_EMBEDDING, CREATE_ROLE, DELETE_ROLE, CREATE_USER, REVOKE_USER_ROLE, REVOKE_ROLE_PRIVILEGE,
+    REVOKE_USER_PRIVILEGE, GRANT_ROLE_PRIVILEGE, GRANT_USER_PRIVILEGE, GRANT_USER_ROLE, MODIFY_PASSWORD, DELETE_USER,
+    DELETE_STORAGE_GROUP, SHOW_TIMESERIES, DELETE_TIMESERIES, LOAD_CONFIGURATION, MULTI_CREATE_TIMESERIES,
+    ALTER_TIMESERIES, FLUSH
+    ,CREATE_INDEX, DROP_INDEX,
   }
 
+  public long getIndex() {
+    return index;
+  }
 
+  public void setIndex(long index) {
+    this.index = index;
+  }
 }

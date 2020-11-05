@@ -18,9 +18,6 @@
  */
 
 package org.apache.iotdb.db.utils.datastructure.primitive;
-
-import static org.apache.iotdb.db.rescon.PrimitiveArrayPool.ARRAY_SIZE;
-
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 

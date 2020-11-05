@@ -20,6 +20,7 @@ package org.apache.iotdb.db.qp.plan;
 
 import static org.junit.Assert.assertEquals;
 
+import java.time.ZoneId;
 import java.util.Arrays;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
@@ -50,7 +51,7 @@ public class IndexLogicalPlanTest {
   @Test
   public void testParseCreateIndex() {
     String sqlStr = "CREATE INDEX ON root.vehicle.d1.s1 WHERE time > 50 WITH INDEX=PAA_INDEX, WINDOW_LENGTH=100, merge_threshold= 0.5";
-    Operator op = parseDriver.parse(sqlStr, IoTDBDescriptor.getInstance().getConfig().getZoneID());
+    Operator op = parseDriver.parse(sqlStr, ZoneId.systemDefault());
     Assert.assertEquals(CreateIndexOperator.class, op.getClass());
     CreateIndexOperator createOperator = (CreateIndexOperator) op;
     Assert.assertEquals(OperatorType.CREATE_INDEX, createOperator.getType());
@@ -68,7 +69,7 @@ public class IndexLogicalPlanTest {
   @Test
   public void testParseDropIndex() {
     String sqlStr = "DROP INDEX PAA_INDEX ON root.vehicle.d1.s1";
-    Operator op = parseDriver.parse(sqlStr, IoTDBDescriptor.getInstance().getConfig().getZoneID());
+    Operator op = parseDriver.parse(sqlStr, ZoneId.systemDefault());
     Assert.assertEquals(DropIndexOperator.class, op.getClass());
     DropIndexOperator dropIndexOperator = (DropIndexOperator) op;
     Assert.assertEquals(OperatorType.DROP_INDEX, dropIndexOperator.getType());
@@ -82,7 +83,7 @@ public class IndexLogicalPlanTest {
   public void testParseQueryIndex() throws IllegalPathException {
     String sqlStr = "select index whole_st_time(s1), dist(s2) from root.vehicle.d1 "
         + "where time <= 51 or !(time != 100 and time < 460) WITH INDEX=PAA_INDEX, threshold=5, distance=DTW";
-    Operator op = parseDriver.parse(sqlStr, IoTDBDescriptor.getInstance().getConfig().getZoneID());
+    Operator op = parseDriver.parse(sqlStr, ZoneId.systemDefault());
     Assert.assertEquals(QueryIndexOperator.class, op.getClass());
     QueryIndexOperator queryOperator = (QueryIndexOperator) op;
     Assert.assertEquals(OperatorType.QUERY_INDEX, queryOperator.getType());

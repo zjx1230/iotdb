@@ -89,6 +89,9 @@ public class FileLoaderUtils {
       QueryContext context, Filter filter, Set<String> allSensors) throws IOException {
     TimeseriesMetadata timeSeriesMetadata;
     if (resource.isClosed()) {
+      if (!resource.getTsFile().exists()) {
+        return null;
+      }
       timeSeriesMetadata = TimeSeriesMetadataCache.getInstance()
           .get(new TimeSeriesMetadataCache.TimeSeriesMetadataCacheKey(resource.getTsFilePath(),
               seriesPath.getDevice(), seriesPath.getMeasurement()), allSensors);
@@ -106,7 +109,7 @@ public class FileLoaderUtils {
 
     if (timeSeriesMetadata != null) {
       List<Modification> pathModifications =
-          context.getPathModifications(resource.getModFile(), seriesPath.getFullPath());
+          context.getPathModifications(resource.getModFile(), seriesPath);
       timeSeriesMetadata.setModified(!pathModifications.isEmpty());
       if (timeSeriesMetadata.getStatistics().getStartTime() > timeSeriesMetadata.getStatistics()
           .getEndTime()) {
