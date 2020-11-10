@@ -203,8 +203,11 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
 
     ScheduledExecutorService timedQuerySqlCountThread = Executors
         .newSingleThreadScheduledExecutor(r -> new Thread(r, "timedQuerySqlCountThread"));
-    timedQuerySqlCountThread.scheduleAtFixedRate(() -> QUERY_FREQUENCY_LOGGER
-            .info("Query count in current 1 minute: " + queryCount.getAndSet(0)),
+    timedQuerySqlCountThread.scheduleAtFixedRate(() -> {
+          if (queryCount.get() != 0) {
+            QUERY_FREQUENCY_LOGGER.info("Query count in current 1 minute: " + queryCount.getAndSet(0));
+          }
+        },
         config.getFrequencyIntervalInMinute(), config.getFrequencyIntervalInMinute(),
         TimeUnit.MINUTES);
   }
@@ -239,8 +242,7 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
       if (!compatible) {
         tsStatus = RpcUtils.getStatus(TSStatusCode.INCOMPATIBLE_VERSION,
             "The version is incompatible, please upgrade to " + IoTDBConstant.VERSION);
-        TSOpenSessionResp resp = new TSOpenSessionResp(tsStatus,
-            CURRENT_RPC_VERSION);
+        TSOpenSessionResp resp = new TSOpenSessionResp(tsStatus, CURRENT_RPC_VERSION);
         resp.setSessionId(sessionId);
         return resp;
       }
@@ -250,18 +252,19 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
       sessionIdUsernameMap.put(sessionId, req.getUsername());
       sessionIdZoneIdMap.put(sessionId, ZoneId.of(req.getZoneId()));
       currSessionId.set(sessionId);
+      auditLogger.info("User {} opens Session-{}", req.getUsername(), sessionId);
+      logger.info(
+          "{}: Login status: {}. User : {}", IoTDBConstant.GLOBAL_DB_NAME, tsStatus.message,
+          req.getUsername());
     } else {
-      tsStatus = RpcUtils.getStatus(TSStatusCode.WRONG_LOGIN_PASSWORD_ERROR);
-      tsStatus.setMessage(loginMessage);
+      tsStatus = RpcUtils.getStatus(TSStatusCode.WRONG_LOGIN_PASSWORD_ERROR,
+          loginMessage != null ? loginMessage : "Authentication failed.");
+      auditLogger
+          .info("User {} opens Session failed with an incorrect password", req.getUsername());
     }
-    auditLogger.info("User {} opens Session-{}", req.getUsername(), sessionId);
     TSOpenSessionResp resp = new TSOpenSessionResp(tsStatus,
         CURRENT_RPC_VERSION);
     resp.setSessionId(sessionId);
-    logger.info(
-        "{}: Login status: {}. User : {}", IoTDBConstant.GLOBAL_DB_NAME, tsStatus.message,
-        req.getUsername());
-
     return resp;
   }
 
@@ -1764,6 +1767,7 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
   protected TSStatus executeNonQueryPlan(PhysicalPlan plan) {
     boolean execRet;
     try {
+      plan.checkIntegrity();
       execRet = executeNonQuery(plan);
     } catch (BatchInsertionException e) {
       return RpcUtils.getStatus(Arrays.asList(e.getFailingStatus()));
