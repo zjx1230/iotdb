@@ -40,6 +40,9 @@ statement
     | DELETE STORAGE GROUP prefixPath (COMMA prefixPath)* #deleteStorageGroup
     | SHOW METADATA #showMetadata // not support yet
     | DESCRIBE prefixPath #describePath // not support yet
+    | CREATE INDEX ON prefixPath whereClause? indexWithClause #createIndex //not support yet
+    | DROP INDEX indexName=ID ON prefixPath #dropIndex //not support yet
+
     | MERGE #merge
     | FLUSH prefixPath? (COMMA prefixPath)* (booleanClause)?#flush
     | FULL MERGE #fullMerge
@@ -89,15 +92,10 @@ statement
     | MOVE stringLiteral stringLiteral #moveFile
     | DELETE PARTITION prefixPath INT(COMMA INT)* #deletePartition
     | CREATE SNAPSHOT FOR SCHEMA #createSnapshot
-    | SELECT selectElements
+    | SELECT topClause? selectElements
     fromClause
     whereClause?
     specialClause? #selectStatement
-    | CREATE INDEX ON fullPath whereClause? indexWithClause #createIndex //not support yet
-    | DROP INDEX indexName=ID ON fullPath #dropIndex //not support yet
-    | SELECT INDEX indexSelectElements fromClause (whereClause)? indexWithClause #selectIndexStatement //not support yet
-    //    whereClause?
-    //    specialClause?
     ;
 
 selectElements
@@ -116,15 +114,6 @@ suffixPathOrConstant
 functionCall
     : functionName LR_BRACKET suffixPath RR_BRACKET
     ;
-
-indexSelectElements
-    :  selfDefinedFunction (COMMA selfDefinedFunction)* #selfDefinedFunctionElement
-    ;
-
-selfDefinedFunction
-    : selfDefinedFunc=ID LR_BRACKET suffixPath RR_BRACKET
-    ;
-
 
 functionName
     : MIN_TIME
@@ -221,6 +210,7 @@ andExpression
 predicate
     : (TIME | TIMESTAMP | suffixPath | fullPath) comparisonOperator constant
     | (TIME | TIMESTAMP | suffixPath | fullPath) inClause
+    | (TIME | TIMESTAMP | suffixPath | fullPath) indexPredicateClause
     | OPERATOR_NOT? LR_BRACKET orExpression RR_BRACKET
     ;
 
@@ -337,6 +327,20 @@ indexWithClause
     : WITH INDEX OPERATOR_EQ indexName=ID (COMMA property)*
     ;
 
+topClause
+    : TOP INT
+    ;
+
+indexPredicateClause
+    : LIKE sequenceClause
+    | CONTAIN sequenceClause WITH TOLERANCE constant
+    (CONCAT sequenceClause WITH TOLERANCE constant)*
+    ;
+
+
+sequenceClause
+    : LR_BRACKET constant (COMMA constant)* RR_BRACKET
+    ;
 
 comparisonOperator
     : type = OPERATOR_GT
@@ -1184,6 +1188,26 @@ DESC
     ;
 ASC
     : A S C
+    ;
+
+TOP
+    : T O P
+    ;
+
+CONTAIN
+    : C O N T A I N
+    ;
+
+CONCAT
+    : C O N C A T
+    ;
+
+LIKE
+    : L I K E
+    ;
+
+TOLERANCE
+    : T O L E R A N C E
     ;
 //============================
 // End of the keywords list
