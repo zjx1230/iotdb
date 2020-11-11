@@ -40,7 +40,6 @@ import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBWindowBlockFeature;
 import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.distance.Distance;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
 import org.apache.iotdb.db.index.preprocess.Identifier;
@@ -149,7 +148,7 @@ public class ELBIndex extends IoTDBIndex {
   }
 
   @Override
-  public void initQuery(Map<String, String> queryConditions, List<IndexFuncResult> indexFuncResults)
+  public void initQuery(Map<String, Object> queryConditions, List<IndexFuncResult> indexFuncResults)
       throws UnsupportedIndexFuncException {
     for (IndexFuncResult result : indexFuncResults) {
       switch (result.getIndexFunc()) {
@@ -167,14 +166,14 @@ public class ELBIndex extends IoTDBIndex {
       result.setIndexFuncDataType(result.getIndexFunc().getType());
     }
     if (queryConditions.containsKey(PATTERN)) {
-      this.pattern = IndexUtils.parseStringToDoubleArray(queryConditions.get(PATTERN));
+      this.pattern = (double[]) queryConditions.get(PATTERN);
     } else {
       throw new UnsupportedIndexFuncException(String.format(MISSING_PARAM_ERROR_MESSAGE, PATTERN));
     }
     // calculate ELB upper/lower bounds of the given pattern according to given segmentation and threshold.
     double[] thresholds;
     if (queryConditions.containsKey(THRESHOLD)) {
-      thresholds = IndexUtils.parseStringToDoubleArray(queryConditions.get(THRESHOLD));
+      thresholds = (double[]) queryConditions.get(THRESHOLD);
     } else {
       throw new UnsupportedIndexFuncException(
           String.format(MISSING_PARAM_ERROR_MESSAGE, THRESHOLD));
@@ -182,7 +181,7 @@ public class ELBIndex extends IoTDBIndex {
 
     int[] borders;
     if (queryConditions.containsKey(BORDER)) {
-      borders = IndexUtils.parseStringToIntArray(queryConditions.get(BORDER));
+      borders = (int[]) queryConditions.get(BORDER);
     } else {
       throw new UnsupportedIndexFuncException(String.format(MISSING_PARAM_ERROR_MESSAGE, BORDER));
     }

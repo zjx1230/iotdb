@@ -134,7 +134,7 @@ public class ELBIndexNotGood extends RTreeIndex {
   }
 
   @Override
-  public void initQuery(Map<String, String> queryConditions, List<IndexFuncResult> indexFuncResults)
+  public void initQuery(Map<String, Object> queryConditions, List<IndexFuncResult> indexFuncResults)
       throws UnsupportedIndexFuncException {
     for (IndexFuncResult result : indexFuncResults) {
       switch (result.getIndexFunc()) {
@@ -152,12 +152,12 @@ public class ELBIndexNotGood extends RTreeIndex {
       result.setIndexFuncDataType(result.getIndexFunc().getType());
     }
     if (queryConditions.containsKey(THRESHOLD)) {
-      this.threshold = Double.parseDouble(queryConditions.get(THRESHOLD));
+      this.threshold = (double) queryConditions.get(THRESHOLD);
     } else {
       this.threshold = Double.MAX_VALUE;
     }
     if (queryConditions.containsKey(PATTERN)) {
-      this.patterns = IndexUtils.parseStringToDoubleArray(queryConditions.get(PATTERN));
+      this.patterns = (double[]) queryConditions.get(PATTERN);
     } else {
       throw new UnsupportedIndexFuncException("missing parameter: " + PATTERN);
     }

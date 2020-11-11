@@ -118,7 +118,7 @@ public class QueryRouter implements IQueryRouter {
 
     AggregationExecutor engineExecutor = getAggregationExecutor(aggregationPlan);
 
-    QueryDataSet dataSet = null;
+    QueryDataSet dataSet;
 
     if (optimizedExpression != null
         && optimizedExpression.getType() != ExpressionType.GLOBAL_TIME) {
@@ -131,9 +131,9 @@ public class QueryRouter implements IQueryRouter {
   }
 
   protected AggregationExecutor getAggregationExecutor(AggregationPlan aggregationPlan) {
-    return aggregationPlan instanceof QueryIndexPlan ?
-        new IndexAggregationExecutor((QueryIndexPlan) aggregationPlan) :
-        new AggregationExecutor(aggregationPlan);
+//    return aggregationPlan instanceof QueryIndexPlan ?
+//        new IndexAggregationExecutor((QueryIndexPlan) aggregationPlan) :
+      return new AggregationExecutor(aggregationPlan);
   }
 
   @Override

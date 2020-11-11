@@ -79,7 +79,7 @@ public class IndexFeatureExtractorOverlapTest {
               ELB_TYPE, ELB_TYPE_ELE));
       statement.execute(String
           .format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d",
-              p1, IndexType.PAA_INDEX, INDEX_WINDOW_RANGE, 5, INDEX_SLIDE_STEP, 2));
+              p1, IndexType.RTREE_PAA, INDEX_WINDOW_RANGE, 5, INDEX_SLIDE_STEP, 2));
 
       long i;
       long timeInterval = 0;
@@ -117,7 +117,7 @@ public class IndexFeatureExtractorOverlapTest {
       Assert.assertEquals(gtp1ELB, p1ELB.toString());
 
       List<IndexChunkMeta> p1PAAChunkMetas = indexManager
-          .getIndexSGMetadata(storageGroup, true, p1, IndexType.PAA_INDEX);
+          .getIndexSGMetadata(storageGroup, true, p1, IndexType.RTREE_PAA);
       StringBuilder p1PAA = new StringBuilder();
       p1PAAChunkMetas.forEach(p -> p1PAA.append(p.toStringStable()));
       System.out.println(p1PAA);
@@ -129,7 +129,7 @@ public class IndexFeatureExtractorOverlapTest {
       TVListAllocator.getInstance().allocate(TSDataType.INT32);
       PAATimeFixedFeatureExtractor preprocessor = new PAATimeFixedFeatureExtractor(TSDataType.INT32, 10, 3,
           4, 0, true, true);
-      preprocessor.deserializePrevious(processor.getPreviousMeta().get(p1).get(IndexType.PAA_INDEX));
+      preprocessor.deserializePrevious(processor.getPreviousMeta().get(p1).get(IndexType.RTREE_PAA));
       System.out.println(IndexTestUtils.tvListToString(preprocessor.getSrcData()));
       Assert.assertEquals(gtp1PAAOverlap, IndexTestUtils.tvListToString(preprocessor.getSrcData()));
 

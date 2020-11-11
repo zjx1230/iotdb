@@ -21,25 +21,22 @@ import static org.apache.iotdb.db.index.IndexTestUtils.funcForm;
 import static org.apache.iotdb.db.index.common.IndexConstant.BORDER;
 import static org.apache.iotdb.db.index.common.IndexConstant.DISTANCE;
 import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE;
-import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE_ELE;
 import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE_SEQ;
 import static org.apache.iotdb.db.index.common.IndexConstant.FEATURE_DIM;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_SLIDE_STEP;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
-import static org.apache.iotdb.db.index.common.IndexConstant.L_INFINITY;
 import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
 import static org.apache.iotdb.db.index.common.IndexConstant.THRESHOLD;
 import static org.apache.iotdb.db.index.common.IndexFunc.ED;
 import static org.apache.iotdb.db.index.common.IndexFunc.SIM_ET;
 import static org.apache.iotdb.db.index.common.IndexFunc.SIM_ST;
-import static org.apache.iotdb.db.index.common.IndexType.ELB_MATCH;
+import static org.apache.iotdb.db.index.common.IndexType.ELB_INDEX;
 import static org.junit.Assert.fail;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
-import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.jdbc.Config;
 import org.junit.After;
@@ -82,7 +79,7 @@ public class IoTDBIndexELBMatchIT {
 //              p1, IndexType.NO_INDEX, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 5));
       statement.execute(String
           .format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d, %s=%s, %s=%s, %s=%s",
-              p1, ELB_MATCH, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 1, DISTANCE, 2,
+              p1, ELB_INDEX, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 1, DISTANCE, 2,
               ELB_TYPE, ELB_TYPE_SEQ, FEATURE_DIM, 5));
 
       long i;
@@ -183,7 +180,7 @@ public class IoTDBIndexELBMatchIT {
       String querySQL = String.format(
           "SELECT INDEX sim_st(%s),sim_et(%s),ed(%s) FROM %s WHERE time >= 50 WITH INDEX=%s, %s=%s, "
               + "%s=%s, %s=%s",
-          p1s, p1s, p1s, device, ELB_MATCH, PATTERN, pattern, BORDER, "\'0,2,5,10\'", THRESHOLD, "\'0,1,3\'");
+          p1s, p1s, p1s, device, ELB_INDEX, PATTERN, pattern, BORDER, "\'0,2,5,10\'", THRESHOLD, "\'0,1,3\'");
       boolean hasIndex = statement.execute(querySQL);
 
       Assert.assertTrue(hasIndex);

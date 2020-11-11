@@ -51,14 +51,16 @@ import org.apache.iotdb.tsfile.utils.Pair;
 
 public class IndexAggregationExecutor extends AggregationExecutor {
 
-  private final Map<String, String> queryProps;
+  private final Map<String, Object> queryProps;
   private final IndexType indexType;
 
   public IndexAggregationExecutor(
       QueryIndexPlan queryIndexPlan) {
-    super(queryIndexPlan);
+    super(null);
+    //    super(queryIndexPlan);
     indexType = queryIndexPlan.getIndexType();
     queryProps = queryIndexPlan.getProps();
+    throw new Error("to be changed");
   }
 
   /**

@@ -217,11 +217,7 @@ public class PhysicalGenerator {
         return transformQuery(query, fetchSize);
       case QUERY_INDEX:
         QueryIndexOperator queryIndexOp = (QueryIndexOperator) operator;
-        AggregationPlan aggregationPlan = (AggregationPlan) transformQuery(queryIndexOp, fetchSize);
-        QueryIndexPlan queryIndexPlan = QueryIndexPlan.initFromAggregationPlan(aggregationPlan);
-        queryIndexPlan.setIndexType(queryIndexOp.getIndexType());
-        queryIndexPlan.setProps(queryIndexOp.getProps());
-        return queryIndexPlan;
+        return (QueryIndexPlan) transformQuery(queryIndexOp, fetchSize);
       case TTL:
         switch (operator.getTokenIntType()) {
           case SQLConstant.TOK_SET:
@@ -402,6 +398,8 @@ public class PhysicalGenerator {
       ((FillQueryPlan) queryPlan).setFillType(queryOperator.getFillTypes());
     } else if (queryOperator.isLastQuery()) {
       queryPlan = new LastQueryPlan();
+    } else if (queryOperator instanceof QueryIndexOperator) {
+      queryPlan = new QueryIndexPlan();
     } else {
       queryPlan = new RawDataQueryPlan();
     }
@@ -609,6 +607,11 @@ public class PhysicalGenerator {
           throw new LogicalOptimizeException(e);
         }
       }
+    }
+    if(queryOperator instanceof QueryIndexOperator) {
+      ((QueryIndexPlan) queryPlan).setIndexType(((QueryIndexOperator) queryOperator).getIndexType());
+      ((QueryIndexPlan) queryPlan).setProps(((QueryIndexOperator) queryOperator).getProps());
+      return queryPlan;
     }
     try {
       deduplicate(queryPlan, fetchSize);

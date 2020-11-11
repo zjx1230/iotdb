@@ -89,7 +89,7 @@ public class IndexQueryReader {
   /**
    * Invoke after having chunkMeta, tell reader about all condition
    */
-  void initQueryCondition(Map<String, String> queryProps,
+  void initQueryCondition(Map<String, Object> queryProps,
       List<IndexFuncResult> indexFuncResults) throws UnsupportedIndexFuncException {
 //    List<IndexFunc> indexFuncs = new ArrayList<>();
 //    indexFuncResults.forEach(p -> indexFuncs.add(p.getIndexFunc()));

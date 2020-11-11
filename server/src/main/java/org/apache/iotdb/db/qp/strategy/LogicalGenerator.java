@@ -18,6 +18,11 @@
  */
 package org.apache.iotdb.db.qp.strategy;
 
+import static org.apache.iotdb.db.index.common.IndexConstant.NON_SET_TOP_K;
+import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
+import static org.apache.iotdb.db.index.common.IndexConstant.THRESHOLD;
+import static org.apache.iotdb.db.index.common.IndexConstant.TOP_K;
+import static org.apache.iotdb.db.qp.constant.SQLConstant.RESERVED_TIME;
 import static org.apache.iotdb.db.qp.constant.SQLConstant.TIME_PATH;
 
 import java.io.File;
@@ -120,6 +125,7 @@ import org.apache.iotdb.db.qp.strategy.SqlBaseParser.GrantUserContext;
 import org.apache.iotdb.db.qp.strategy.SqlBaseParser.GrantWatermarkEmbeddingContext;
 import org.apache.iotdb.db.qp.strategy.SqlBaseParser.GroupByTimeClauseContext;
 import org.apache.iotdb.db.qp.strategy.SqlBaseParser.InClauseContext;
+import org.apache.iotdb.db.qp.strategy.SqlBaseParser.IndexPredicateClauseContext;
 import org.apache.iotdb.db.qp.strategy.SqlBaseParser.InsertColumnSpecContext;
 import org.apache.iotdb.db.qp.strategy.SqlBaseParser.InsertStatementContext;
 import org.apache.iotdb.db.qp.strategy.SqlBaseParser.InsertValuesSpecContext;
@@ -156,7 +162,7 @@ import org.apache.iotdb.db.qp.strategy.SqlBaseParser.RevokeWatermarkEmbeddingCon
 import org.apache.iotdb.db.qp.strategy.SqlBaseParser.RootOrIdContext;
 import org.apache.iotdb.db.qp.strategy.SqlBaseParser.SelectElementContext;
 import org.apache.iotdb.db.qp.strategy.SqlBaseParser.SelectStatementContext;
-import org.apache.iotdb.db.qp.strategy.SqlBaseParser.SelfDefinedFunctionContext;
+import org.apache.iotdb.db.qp.strategy.SqlBaseParser.SequenceClauseContext;
 import org.apache.iotdb.db.qp.strategy.SqlBaseParser.SetColContext;
 import org.apache.iotdb.db.qp.strategy.SqlBaseParser.SetStorageGroupContext;
 import org.apache.iotdb.db.qp.strategy.SqlBaseParser.SetTTLStatementContext;
@@ -175,6 +181,7 @@ import org.apache.iotdb.db.qp.strategy.SqlBaseParser.StringLiteralContext;
 import org.apache.iotdb.db.qp.strategy.SqlBaseParser.SuffixPathContext;
 import org.apache.iotdb.db.qp.strategy.SqlBaseParser.TagClauseContext;
 import org.apache.iotdb.db.qp.strategy.SqlBaseParser.TimeIntervalContext;
+import org.apache.iotdb.db.qp.strategy.SqlBaseParser.TopClauseContext;
 import org.apache.iotdb.db.qp.strategy.SqlBaseParser.TracingOffContext;
 import org.apache.iotdb.db.qp.strategy.SqlBaseParser.TracingOnContext;
 import org.apache.iotdb.db.qp.strategy.SqlBaseParser.TypeClauseContext;
@@ -189,7 +196,6 @@ import org.apache.iotdb.tsfile.common.constant.TsFileConstant;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.utils.StringContainer;
 import org.apache.iotdb.db.index.common.IndexType;
@@ -212,9 +218,10 @@ public class LogicalGenerator extends SqlBaseBaseListener {
   private DeleteDataOperator deleteDataOp;
   private CreateIndexOperator createIndexOp;
   private QueryIndexOperator queryIndexOp;
+  private int indexTopK = NON_SET_TOP_K;
   private static final String DELETE_RANGE_ERROR_MSG =
-    "For delete statement, where clause can only contain atomic expressions like : " +
-      "time > XXX, time <= XXX, or two atomic expressions connected by 'AND'";
+      "For delete statement, where clause can only contain atomic expressions like : " +
+          "time > XXX, time <= XXX, or two atomic expressions connected by 'AND'";
 
 
   LogicalGenerator(ZoneId zoneId) {
@@ -229,7 +236,8 @@ public class LogicalGenerator extends SqlBaseBaseListener {
   public void enterCountTimeseries(CountTimeseriesContext ctx) {
     super.enterCountTimeseries(ctx);
     PrefixPathContext pathContext = ctx.prefixPath();
-    PartialPath path = (pathContext != null ? parsePrefixPath(pathContext) : new PartialPath(SQLConstant.getSingleRootArray()));
+    PartialPath path = (pathContext != null ? parsePrefixPath(pathContext)
+        : new PartialPath(SQLConstant.getSingleRootArray()));
     if (ctx.INT() != null) {
       initializedOperator = new CountOperator(SQLConstant.TOK_COUNT_NODE_TIMESERIES,
           path, Integer.parseInt(ctx.INT().getText()));
@@ -243,7 +251,8 @@ public class LogicalGenerator extends SqlBaseBaseListener {
   public void enterCountDevices(CountDevicesContext ctx) {
     super.enterCountDevices(ctx);
     PrefixPathContext pathContext = ctx.prefixPath();
-    PartialPath path = (pathContext != null ? parsePrefixPath(pathContext) : new PartialPath(SQLConstant.getSingleRootArray()));
+    PartialPath path = (pathContext != null ? parsePrefixPath(pathContext)
+        : new PartialPath(SQLConstant.getSingleRootArray()));
     initializedOperator = new CountOperator(SQLConstant.TOK_COUNT_DEVICES, path);
   }
 
@@ -251,7 +260,8 @@ public class LogicalGenerator extends SqlBaseBaseListener {
   public void enterCountStorageGroup(CountStorageGroupContext ctx) {
     super.enterCountStorageGroup(ctx);
     PrefixPathContext pathContext = ctx.prefixPath();
-    PartialPath path = (pathContext != null ? parsePrefixPath(pathContext) : new PartialPath(SQLConstant.getSingleRootArray()));
+    PartialPath path = (pathContext != null ? parsePrefixPath(pathContext)
+        : new PartialPath(SQLConstant.getSingleRootArray()));
     initializedOperator = new CountOperator(SQLConstant.TOK_COUNT_STORAGE_GROUP, path);
   }
 
@@ -418,7 +428,8 @@ public class LogicalGenerator extends SqlBaseBaseListener {
       initializedOperator = new ShowTimeSeriesOperator(SQLConstant.TOK_TIMESERIES,
           parsePrefixPath(ctx.prefixPath()), orderByHeat);
     } else {
-      initializedOperator = new ShowTimeSeriesOperator(SQLConstant.TOK_TIMESERIES, new PartialPath(SQLConstant.getSingleRootArray()),
+      initializedOperator = new ShowTimeSeriesOperator(SQLConstant.TOK_TIMESERIES,
+          new PartialPath(SQLConstant.getSingleRootArray()),
           orderByHeat);
     }
   }
@@ -1210,13 +1221,15 @@ public class LogicalGenerator extends SqlBaseBaseListener {
     initializedOperator = createTimeSeriesOperator;
   }
 
-  @Override public void enterIndexWithClause(SqlBaseParser.IndexWithClauseContext ctx) {
+  @Override
+  public void enterIndexWithClause(SqlBaseParser.IndexWithClauseContext ctx) {
     super.enterIndexWithClause(ctx);
     IndexType indexType;
     try {
       indexType = IndexType.getIndexType(ctx.indexName.getText());
     } catch (UnsupportedIndexTypeException e) {
-      throw new SQLParserException(String.format("index type %s is not supported.", ctx.indexName.getText()));
+      throw new SQLParserException(
+          String.format("index type %s is not supported.", ctx.indexName.getText()));
     }
 
     List<PropertyContext> properties = ctx.property();
@@ -1226,21 +1239,15 @@ public class LogicalGenerator extends SqlBaseBaseListener {
         String k = property.ID().getText().toUpperCase();
         String v = property.propertyValue().getText().toUpperCase();
         v = IndexUtils.removeQuotation(v);
-        props.put(k,v);
+        props.put(k, v);
       }
     }
 
-    switch (operatorType){
-      case SQLConstant.TOK_CREATE_INDEX:
-        createIndexOp.setIndexType(indexType);
-        createIndexOp.setProps(props);
-        break;
-      case SQLConstant.TOK_QUERY_INDEX:
-        queryIndexOp.setIndexType(indexType);
-        queryIndexOp.setProps(props);
-        break;
-      default:
-        throw new SQLParserException("WITH clause only supports CREATE INDEX or SELECT INDEX");
+    if (operatorType == SQLConstant.TOK_CREATE_INDEX) {
+      createIndexOp.setIndexType(indexType);
+      createIndexOp.setProps(props);
+    } else {
+      throw new SQLParserException("WITH clause only supports CREATE INDEX");
     }
   }
 
@@ -1321,6 +1328,7 @@ public class LogicalGenerator extends SqlBaseBaseListener {
     initializedOperator = queryOp;
   }
 
+
   @Override
   public void enterFromClause(FromClauseContext ctx) {
     super.enterFromClause(ctx);
@@ -1330,7 +1338,7 @@ public class LogicalGenerator extends SqlBaseBaseListener {
       PartialPath path = parsePrefixPath(prefixFromPath);
       fromOp.addPrefixTablePath(path);
     }
-    switch (operatorType){
+    switch (operatorType) {
       case SQLConstant.TOK_QUERY:
         queryOp.setFromOperator(fromOp);
         break;
@@ -1358,76 +1366,19 @@ public class LogicalGenerator extends SqlBaseBaseListener {
   public void enterSelectElement(SelectElementContext ctx) {
     super.enterSelectElement(ctx);
     selectOp = new SelectOperator(SQLConstant.TOK_SELECT);
-    List<SqlBaseParser.SuffixPathOrConstantContext> suffixPathOrConstants = ctx.suffixPathOrConstant();
+    List<SqlBaseParser.SuffixPathOrConstantContext> suffixPathOrConstants = ctx
+        .suffixPathOrConstant();
     for (SqlBaseParser.SuffixPathOrConstantContext suffixPathOrConstant : suffixPathOrConstants) {
       if (suffixPathOrConstant.suffixPath() != null) {
         PartialPath path = parseSuffixPath(suffixPathOrConstant.suffixPath());
         selectOp.addSelectPath(path);
       } else {
-        PartialPath path = new PartialPath(new String[]{suffixPathOrConstant.SINGLE_QUOTE_STRING_LITERAL().getText()});
+        PartialPath path = new PartialPath(
+            new String[]{suffixPathOrConstant.SINGLE_QUOTE_STRING_LITERAL().getText()});
         selectOp.addSelectPath(path);
       }
     }
     queryOp.setSelectOperator(selectOp);
-  }
-
-  /**
-   * For parsing CreateIndex
-   *
-   * <p>The default implementation does nothing.</p>
-   */
-  @Override public void enterCreateIndex(SqlBaseParser.CreateIndexContext ctx) {
-    super.enterCreateIndex(ctx);
-    createIndexOp = new CreateIndexOperator(SQLConstant.TOK_CREATE_INDEX);
-    selectOp = new SelectOperator(SQLConstant.TOK_SELECT);
-    List<FullPathContext> fullPaths = Collections.singletonList(ctx.fullPath());
-    for (FullPathContext fullPathContext : fullPaths) {
-      PartialPath path = parseFullPath(fullPathContext);
-      selectOp.addSelectPath(path);
-    }
-    createIndexOp.setSelectOperator(selectOp);
-    initializedOperator = createIndexOp;
-    operatorType = SQLConstant.TOK_CREATE_INDEX;
-  }
-
-  @Override
-  public void enterDropIndex(SqlBaseParser.DropIndexContext ctx) {
-    super.enterDropIndex(ctx);
-    DropIndexOperator dropIndexOperator = new DropIndexOperator(SQLConstant.TOK_DROP_INDEX);
-    selectOp = new SelectOperator(SQLConstant.TOK_SELECT);
-    List<FullPathContext> fullPathContexts = Collections.singletonList(ctx.fullPath());
-    for (FullPathContext fullPathContext : fullPathContexts) {
-      PartialPath path = parseFullPath(fullPathContext);
-      selectOp.addSelectPath(path);
-    }
-    dropIndexOperator.setSelectOperator(selectOp);
-    try {
-      dropIndexOperator.setIndexType(IndexType.getIndexType(ctx.indexName.getText()));
-    } catch (UnsupportedIndexTypeException e) {
-      throw new SQLParserException(String.format("index type %s is not supported.", ctx.indexName.getText()));
-    }
-    initializedOperator = dropIndexOperator;
-    operatorType = SQLConstant.TOK_DROP_INDEX;
-  }
-
-  @Override
-  public void enterSelectIndexStatement(SqlBaseParser.SelectIndexStatementContext ctx) {
-    super.enterSelectIndexStatement(ctx);
-    queryIndexOp = new QueryIndexOperator(SQLConstant.TOK_QUERY_INDEX);
-    initializedOperator = queryIndexOp;
-    operatorType = SQLConstant.TOK_QUERY_INDEX;
-  }
-
-  @Override
-  public void enterSelfDefinedFunctionElement(SqlBaseParser.SelfDefinedFunctionElementContext ctx) {
-    super.enterSelfDefinedFunctionElement(ctx);
-    selectOp = new SelectOperator(SQLConstant.TOK_SELECT);
-    List<SelfDefinedFunctionContext> selfDefinedFunctionCallContextList = ctx.selfDefinedFunction();
-    for (SelfDefinedFunctionContext selfDefinedFunctionContext : selfDefinedFunctionCallContextList) {
-      PartialPath path = parseSuffixPath(selfDefinedFunctionContext.suffixPath());
-      selectOp.addClusterPath(path, selfDefinedFunctionContext.selfDefinedFunc.getText());
-    }
-    queryIndexOp.setSelectOperator(selectOp);
   }
 
   @Override
@@ -1559,10 +1510,7 @@ public class LogicalGenerator extends SqlBaseBaseListener {
         createIndexOp.setTime(indexTime);
         break;
       case SQLConstant.TOK_QUERY_INDEX:
-        FilterOperator filter = whereOp.getChildren().get(0);
-        queryIndexOp.setFilterOperator(whereOp.getChildren().get(0));
-        checkQueryIndexFilter(filter);
-//        queryIndexOp.setTimeRanges(indexTimeRanges);
+        checkQueryIndex(ctx);
         break;
       default:
         throw new SQLParserException("Where only support select, delete, update, create index.");
@@ -1662,6 +1610,8 @@ public class LogicalGenerator extends SqlBaseBaseListener {
       }
       if (ctx.inClause() != null) {
         return parseInOperator(ctx.inClause(), path);
+      } else if (ctx.indexPredicateClause() != null) {
+        return parseIndexPredicate(ctx.indexPredicateClause(), path);
       } else {
         return parseBasicFunctionOperator(ctx, path);
       }
@@ -1857,17 +1807,142 @@ public class LogicalGenerator extends SqlBaseBaseListener {
   }
 
   /**
-   * for query index command, the filter should only involve time filter.
+   * For parsing CreateIndex
    *
-   * @param filterOperator input filter operator   *
+   * <p>The default implementation does nothing.</p>
    */
-  private void checkQueryIndexFilter(FilterOperator filterOperator) {
-    if (filterOperator.isLeaf() && !SQLConstant.RESERVED_TIME.equals(
-        filterOperator.getSinglePath().getFullPath())){
-      throw new SQLParserException("for query index, the filter should only involve time filter");
+  @Override
+  public void enterCreateIndex(SqlBaseParser.CreateIndexContext ctx) {
+    super.enterCreateIndex(ctx);
+    createIndexOp = new CreateIndexOperator(SQLConstant.TOK_CREATE_INDEX);
+    selectOp = new SelectOperator(SQLConstant.TOK_SELECT);
+    List<PrefixPathContext> prefixPaths = Collections.singletonList(ctx.prefixPath());
+    for (PrefixPathContext prefixPath : prefixPaths) {
+      PartialPath path = parsePrefixPath(prefixPath);
+      selectOp.addSelectPath(path);
     }
-    else{
-      filterOperator.getChildren().forEach(this::checkQueryIndexFilter);
+    createIndexOp.setSelectOperator(selectOp);
+    initializedOperator = createIndexOp;
+    operatorType = SQLConstant.TOK_CREATE_INDEX;
+  }
+
+  @Override
+  public void enterDropIndex(SqlBaseParser.DropIndexContext ctx) {
+    super.enterDropIndex(ctx);
+    DropIndexOperator dropIndexOperator = new DropIndexOperator(SQLConstant.TOK_DROP_INDEX);
+    selectOp = new SelectOperator(SQLConstant.TOK_SELECT);
+    List<PrefixPathContext> prefixPaths = Collections.singletonList(ctx.prefixPath());
+    for (PrefixPathContext prefixPath : prefixPaths) {
+      PartialPath path = parsePrefixPath(prefixPath);
+      selectOp.addSelectPath(path);
+    }
+    dropIndexOperator.setSelectOperator(selectOp);
+    try {
+      dropIndexOperator.setIndexType(IndexType.getIndexType(ctx.indexName.getText()));
+    } catch (UnsupportedIndexTypeException e) {
+      throw new SQLParserException(
+          String.format("index type %s is not supported.", ctx.indexName.getText()));
+    }
+    initializedOperator = dropIndexOperator;
+    operatorType = SQLConstant.TOK_DROP_INDEX;
+  }
+
+  private FilterOperator parseIndexPredicate(IndexPredicateClauseContext ctx, PartialPath path) {
+    if (queryIndexOp != null) {
+      throw new SQLParserException("Index query statement allows only one index predicate");
+    }
+    if (RESERVED_TIME.equals(path.getFullPath())) {
+      throw new SQLParserException("In the index predicate, left path cannot be TIME");
+    }
+    queryIndexOp = new QueryIndexOperator(SQLConstant.TOK_QUERY_INDEX);
+    initializedOperator = queryIndexOp;
+    operatorType = SQLConstant.TOK_QUERY_INDEX;
+
+    Map<String, Object> props = new HashMap<>();
+    if (ctx.LIKE() != null) {
+      // whole matching case
+      if (indexTopK == NON_SET_TOP_K) {
+        throw new SQLParserException(
+            "TopK hasn't been set in the whole matching of similarity search");
+      }
+      if (queryOp.getSelectedPaths().size() != 1) {
+        throw new SQLParserException("Index query statement allows only one select path");
+      }
+      if (!path.equals(queryOp.getSelectedPaths().get(0))) {
+        throw new SQLParserException("In the index query statement, "
+            + "the path in select element and the index predicate should be same");
+      }
+      props.put(TOP_K, indexTopK);
+      props.put(PATTERN, parseSequence(ctx.sequenceClause(0)));
+      queryIndexOp.setIndexType(IndexType.RTREE_PAA);
+    } else if (ctx.CONTAIN() != null) {
+      // subsequence matching case
+      List<double[]> compositePattern = new ArrayList<>();
+      List<Double> thresholds = new ArrayList<>();
+      for (int i = 0; i < ctx.sequenceClause().size(); i++) {
+        compositePattern.add(parseSequence(ctx.sequenceClause(i)));
+        thresholds.add(Double.parseDouble(ctx.constant(i).getText()));
+      }
+      props.put(PATTERN, compositePattern);
+      props.put(THRESHOLD, thresholds);
+      queryIndexOp.setIndexType(IndexType.ELB_INDEX);
+    } else {
+      throw new SQLParserException("Unknown index predicate: " + ctx);
+    }
+    queryIndexOp.setFromOperator(queryOp.getFromOperator());
+    selectOp = new SelectOperator(SQLConstant.TOK_SELECT);
+    selectOp.addSelectPath(path);
+    queryIndexOp.setSelectOperator(selectOp);
+    queryOp = null;
+    queryIndexOp.setProps(props);
+    return null;
+  }
+
+  private double[] parseSequence(SequenceClauseContext ctx) {
+    int seqLen = ctx.constant().size();
+    double[] sequence = new double[seqLen];
+    for (int i = 0; i < seqLen; i++) {
+      sequence[i] = Double.parseDouble(ctx.constant(i).getText());
+    }
+    return sequence;
+  }
+
+  /**
+   * In query index statement, the where clause should have only one index predicate.
+   */
+  private void checkQueryIndex(WhereClauseContext ctx) {
+    boolean queryValid = true;
+    OrExpressionContext or = ctx.orExpression();
+    if (or.andExpression() == null || or.andExpression().size() != 1) {
+      queryValid = false;
+    } else {
+      AndExpressionContext and = or.andExpression(0);
+      if (and.predicate() == null || and.predicate(0).indexPredicateClause() == null)
+        queryValid = false;
+    }
+    if (!queryValid) {
+      throw new SQLParserException(
+          "In query index statement, the where clause should have and only have one index predicate.");
     }
   }
+
+  /**
+   * @param ctx Top ClauseContext
+   */
+  @Override
+  public void enterTopClause(TopClauseContext ctx) {
+    super.enterTopClause(ctx);
+    int top;
+    try {
+      top = Integer.parseInt(ctx.INT().getText());
+    } catch (NumberFormatException e) {
+      throw new SQLParserException("Out of range. TOP <N>: N should be Int32.");
+    }
+    if (top <= 0) {
+      throw new SQLParserException("TOP <N>: N should be greater than 0.");
+    }
+    indexTopK = top;
+  }
+
+
 }

@@ -18,19 +18,16 @@
  */
 package org.apache.iotdb.db.qp.logical.crud;
 
-import java.util.List;
 import java.util.Map;
 import org.apache.iotdb.db.index.common.IndexType;
-import org.apache.iotdb.tsfile.utils.Pair;
 
 /**
- * this operator is to create a certain index on some time series.
+ * this operator is to conduct similarity search based on a certain index.
  */
 public class QueryIndexOperator extends QueryOperator {
 
-  private Map<String, String> props;
+  private Map<String, Object> props;
 
-//  private List<Pair<Long, Long>> timeRanges;
   private IndexType indexType;
 
   public QueryIndexOperator(int tokenIntType) {
@@ -38,21 +35,11 @@ public class QueryIndexOperator extends QueryOperator {
     operatorType = OperatorType.QUERY_INDEX;
   }
 
-//  public List<Pair<Long, Long>> getTimeRanges() {
-//    return timeRanges;
-//  }
-//
-//  public void setTimeRanges(
-//      List<Pair<Long, Long>> timeRanges) {
-//    this.timeRanges = timeRanges;
-//  }
-
-
-  public Map<String, String> getProps() {
+  public Map<String, Object> getProps() {
     return props;
   }
 
-  public void setProps(Map<String, String> props) {
+  public void setProps(Map<String, Object> props) {
     this.props = props;
   }
 

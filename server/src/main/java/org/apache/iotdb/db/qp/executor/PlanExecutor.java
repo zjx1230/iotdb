@@ -279,9 +279,11 @@ public class PlanExecutor implements IPlanExecutor {
         operateCreateSnapshot();
         return true;
       case CREATE_INDEX:
-        return createIndex((CreateIndexPlan) plan);
+        throw new QueryProcessException("Create index hasn't been supported yet");
+//        return createIndex((CreateIndexPlan) plan);
       case DROP_INDEX:
-        return dropIndex((DropIndexPlan) plan);
+        throw new QueryProcessException("Drop index hasn't been supported yet");
+//        return dropIndex((DropIndexPlan) plan);
       default:
         throw new UnsupportedOperationException(
             String.format("operation %s is not supported", plan.getOperatorType()));
@@ -371,8 +373,9 @@ public class PlanExecutor implements IPlanExecutor {
         GroupByTimePlan groupByTimePlan = (GroupByTimePlan) queryPlan;
         queryDataSet = queryRouter.groupBy(groupByTimePlan, context);
       } else if (queryPlan instanceof QueryIndexPlan) {
-        QueryIndexPlan queryIndexPlan = (QueryIndexPlan) queryPlan;
-        queryDataSet = queryRouter.aggregate(queryIndexPlan, context);
+        throw new QueryProcessException("Query index hasn't been supported yet");
+//        QueryIndexPlan queryIndexPlan = (QueryIndexPlan) queryPlan;
+//        queryDataSet = queryRouter.aggregate(queryIndexPlan, context);
       } else if (queryPlan instanceof AggregationPlan) {
         AggregationPlan aggregationPlan = (AggregationPlan) queryPlan;
         queryDataSet = queryRouter.aggregate(aggregationPlan, context);

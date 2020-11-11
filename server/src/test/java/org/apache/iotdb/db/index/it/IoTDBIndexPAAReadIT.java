@@ -23,14 +23,13 @@ import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
 import static org.apache.iotdb.db.index.common.IndexFunc.ED;
 import static org.apache.iotdb.db.index.common.IndexFunc.SIM_ET;
 import static org.apache.iotdb.db.index.common.IndexFunc.SIM_ST;
-import static org.apache.iotdb.db.index.common.IndexType.PAA_INDEX;
+import static org.apache.iotdb.db.index.common.IndexType.RTREE_PAA;
 import static org.junit.Assert.fail;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
-import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.jdbc.Config;
 import org.junit.After;
@@ -71,7 +70,7 @@ public class IoTDBIndexPAAReadIT {
 
       statement.execute(String
           .format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d",
-              p1, PAA_INDEX, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 5));
+              p1, RTREE_PAA, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 5));
 
 
       long i;
@@ -172,7 +171,7 @@ public class IoTDBIndexPAAReadIT {
       double threshold = 5;
       String querySQL = String.format(
           "SELECT INDEX sim_st(%s),sim_et(%s),ed(%s) FROM %s WHERE time >= 50 WITH INDEX=%s, threshold=%s, pattern=%s",
-          p1s, p1s, p1s, device, PAA_INDEX, threshold, pattern);
+          p1s, p1s, p1s, device, RTREE_PAA, threshold, pattern);
       boolean hasIndex = statement.execute(querySQL);
 
       Assert.assertTrue(hasIndex);
@@ -214,7 +213,7 @@ public class IoTDBIndexPAAReadIT {
       double threshold = 5;
       boolean hasIndex = statement.execute(String.format(
           "SELECT INDEX sim_st(%s),sim_et(%s),ed(%s) FROM %s WITH INDEX=%s, threshold=%s, pattern=%s",
-          p1s, p1s, p1s, device, PAA_INDEX, threshold, pattern));
+          p1s, p1s, p1s, device, RTREE_PAA, threshold, pattern));
 
       Assert.assertTrue(hasIndex);
       String[] gt = {

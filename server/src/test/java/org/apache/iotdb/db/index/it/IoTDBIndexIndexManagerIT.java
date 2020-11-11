@@ -81,7 +81,7 @@ public class IoTDBIndexIndexManagerIT {
               ELB_TYPE, ELB_TYPE_ELE));
       statement.execute(String
           .format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d",
-              p1, IndexType.PAA_INDEX, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 10));
+              p1, IndexType.RTREE_PAA, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 10));
       statement.execute(String
           .format("CREATE INDEX ON %s WHERE time > 0 WITH INDEX=%s, %s=%d, %s=%d, %s=%s, %s=%s",
               p2, IndexType.ELB, INDEX_WINDOW_RANGE, 10, INDEX_SLIDE_STEP, 10, DISTANCE, L_INFINITY,
@@ -172,7 +172,7 @@ public class IoTDBIndexIndexManagerIT {
       Assert.assertEquals(gtp1ELB, p1ELB.toString());
 
       List<IndexChunkMeta> p1PAAChunkMetas = indexManager
-          .getIndexSGMetadata(storageGroup, true, p1, IndexType.PAA_INDEX);
+          .getIndexSGMetadata(storageGroup, true, p1, IndexType.RTREE_PAA);
       StringBuilder p1PAA = new StringBuilder();
       p1PAAChunkMetas.forEach(p -> p1PAA.append(p.toStringStable()));
       System.out.println(p1PAA);

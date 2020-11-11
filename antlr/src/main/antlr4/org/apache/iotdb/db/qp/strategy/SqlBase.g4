@@ -210,7 +210,7 @@ andExpression
 predicate
     : (TIME | TIMESTAMP | suffixPath | fullPath) comparisonOperator constant
     | (TIME | TIMESTAMP | suffixPath | fullPath) inClause
-    | (TIME | TIMESTAMP | suffixPath | fullPath) indexPredicateClause
+    | (suffixPath | fullPath) indexPredicateClause
     | OPERATOR_NOT? LR_BRACKET orExpression RR_BRACKET
     ;
 

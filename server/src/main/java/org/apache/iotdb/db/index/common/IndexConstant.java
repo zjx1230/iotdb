@@ -22,6 +22,9 @@ public class IndexConstant {
   // SQL show
   public static final String ID = "ID";
 
+  // whole matching
+  public static final int NON_SET_TOP_K = -1;
+  public static final String TOP_K = "TOP_K";
 
   public static final String META_DIR_NAME = "meta";
   public static final String STORAGE_GROUP_INDEXING_SUFFIX = ".sg_indexing";
@@ -49,6 +52,9 @@ public class IndexConstant {
   public static final String MAX_ENTRIES = "MAX_ENTRIES";
   public static final String MIN_ENTRIES = "MIN_ENTRIES";
 
+  // RTree PAA parameters
+  public static final String PAA_DIM = "PAA_DIM";
+
   // Distance
   public static final String DISTANCE = "DISTANCE";
   public static final String L_INFINITY = "L_INFINITY";
@@ -61,6 +67,7 @@ public class IndexConstant {
   public static final String DEFAULT_ELB_TYPE = "SEQ";
 
   //ELB: calc param
+  public static final String BLOCK_SIZE = "BLOCK_SIZE";
   public static final String ELB_CALC_PARAM = "ELB_CALC_PARAM";
   public static final String DEFAULT_ELB_CALC_PARAM = "SINGLE";
   public static final String ELB_CALC_PARAM_SINGLE = "SINGLE";
@@ -69,21 +76,4 @@ public class IndexConstant {
   public static final double ELB_DEFAULT_THRESHOLD_RATIO = 0.1;
 
   public static final String MISSING_PARAM_ERROR_MESSAGE = "missing parameter: %s";
-  // index function mapping
-//  private static Map<IndexType, Set<IndexFunc>> indexSupportFunction = new EnumMap<>(
-//      IndexType.class);
-
-//  static {
-//    indexSupportFunction.put(NO_INDEX, NO_INDEX.getSupportedFunc());
-//    indexSupportFunction.put(ELB, ELB.getSupportedFunc());
-//    indexSupportFunction.put(PAA, PAA.getSupportedFunc());
-//    indexSupportFunction.put(KV_INDEX, KV_INDEX.getSupportedFunc());
-//  }
-
-//  public static boolean checkIndexQueryValidity(String func, IndexType indexType) {
-//    IndexFunc indexFunc = IndexFunc.getIndexFunc(func);
-//    return indexSupportFunction.containsKey(indexType) && indexSupportFunction.get(indexType)
-//        .contains(indexFunc);
-//  }
-
 }

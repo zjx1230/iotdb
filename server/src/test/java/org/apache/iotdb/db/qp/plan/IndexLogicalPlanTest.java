@@ -18,14 +18,17 @@
  */
 package org.apache.iotdb.db.qp.plan;
 
-import static org.junit.Assert.assertEquals;
+import static org.apache.iotdb.db.index.common.IndexConstant.BLOCK_SIZE;
+import static org.apache.iotdb.db.index.common.IndexConstant.PAA_DIM;
+import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
+import static org.apache.iotdb.db.index.common.IndexConstant.THRESHOLD;
+import static org.apache.iotdb.db.index.common.IndexConstant.TOP_K;
 
 import java.time.ZoneId;
 import java.util.Arrays;
-import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import java.util.List;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.index.common.IndexType;
-import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.Planner;
 import org.apache.iotdb.db.qp.logical.Operator;
 import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
@@ -33,7 +36,6 @@ import org.apache.iotdb.db.qp.logical.crud.QueryIndexOperator;
 import org.apache.iotdb.db.qp.logical.sys.CreateIndexOperator;
 import org.apache.iotdb.db.qp.logical.sys.DropIndexOperator;
 import org.apache.iotdb.db.qp.strategy.ParseDriver;
-import org.apache.iotdb.tsfile.read.common.Path;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -49,58 +51,107 @@ public class IndexLogicalPlanTest {
   }
 
   @Test
-  public void testParseCreateIndex() {
-    String sqlStr = "CREATE INDEX ON root.vehicle.d1.s1 WHERE time > 50 WITH INDEX=PAA_INDEX, WINDOW_LENGTH=100, merge_threshold= 0.5";
+  public void testParseCreateIndexWholeMatching() {
+    String sqlStr = "CREATE INDEX ON root.Ery.*.Glu WHERE time > 50 WITH INDEX=RTREE_PAA, PAA_dim=8";
     Operator op = parseDriver.parse(sqlStr, ZoneId.systemDefault());
     Assert.assertEquals(CreateIndexOperator.class, op.getClass());
     CreateIndexOperator createOperator = (CreateIndexOperator) op;
     Assert.assertEquals(OperatorType.CREATE_INDEX, createOperator.getType());
     Assert.assertNotNull(createOperator.getSelectedPaths());
-    Assert.assertEquals("root.vehicle.d1.s1", createOperator.getSelectedPaths().get(0).toString());
+    Assert.assertEquals("root.Ery.*.Glu", createOperator.getSelectedPaths().get(0).toString());
     Assert.assertNull(createOperator.getFromOperator());
-    Assert.assertEquals(IndexType.PAA_INDEX, createOperator.getIndexType());
+    Assert.assertEquals(IndexType.RTREE_PAA, createOperator.getIndexType());
     Assert.assertEquals(50, createOperator.getTime());
-    Assert.assertEquals(2, createOperator.getProps().size());
-    Assert.assertEquals("100", createOperator.getProps().get("WINDOW_LENGTH"));
-    Assert.assertEquals("0.5", createOperator.getProps().get("MERGE_THRESHOLD"));
-
+    Assert.assertEquals(1, createOperator.getProps().size());
+    Assert.assertEquals("8", createOperator.getProps().get(PAA_DIM));
   }
 
   @Test
-  public void testParseDropIndex() {
-    String sqlStr = "DROP INDEX PAA_INDEX ON root.vehicle.d1.s1";
+  public void testParseCreateIndexSubMatching() {
+    String sqlStr = "CREATE INDEX ON root.Wind.AZQ02.Speed WITH INDEX=ELB_INDEX, BLOCK_SIZE=5";
+    Operator op = parseDriver.parse(sqlStr, ZoneId.systemDefault());
+    Assert.assertEquals(CreateIndexOperator.class, op.getClass());
+    CreateIndexOperator createOperator = (CreateIndexOperator) op;
+    Assert.assertEquals(OperatorType.CREATE_INDEX, createOperator.getType());
+    Assert.assertNotNull(createOperator.getSelectedPaths());
+    Assert
+        .assertEquals("root.Wind.AZQ02.Speed", createOperator.getSelectedPaths().get(0).toString());
+    Assert.assertNull(createOperator.getFromOperator());
+    Assert.assertEquals(IndexType.ELB_INDEX, createOperator.getIndexType());
+    Assert.assertEquals(1, createOperator.getProps().size());
+    Assert.assertEquals("5", createOperator.getProps().get(BLOCK_SIZE));
+  }
+
+  @Test
+  public void testParseDropIndexWholeMatching() {
+    String sqlStr = "DROP INDEX RTREE_PAA ON root.Ery.*.Glu";
     Operator op = parseDriver.parse(sqlStr, ZoneId.systemDefault());
     Assert.assertEquals(DropIndexOperator.class, op.getClass());
     DropIndexOperator dropIndexOperator = (DropIndexOperator) op;
     Assert.assertEquals(OperatorType.DROP_INDEX, dropIndexOperator.getType());
     Assert.assertNotNull(dropIndexOperator.getSelectedPaths());
-    Assert.assertEquals("root.vehicle.d1.s1", dropIndexOperator.getSelectedPaths().get(0).toString());
+    Assert.assertEquals("root.Ery.*.Glu", dropIndexOperator.getSelectedPaths().get(0).toString());
     Assert.assertNull(dropIndexOperator.getFromOperator());
-    Assert.assertEquals(IndexType.PAA_INDEX, dropIndexOperator.getIndexType());
+    Assert.assertEquals(IndexType.RTREE_PAA, dropIndexOperator.getIndexType());
   }
 
   @Test
-  public void testParseQueryIndex() throws IllegalPathException {
-    String sqlStr = "select index whole_st_time(s1), dist(s2) from root.vehicle.d1 "
-        + "where time <= 51 or !(time != 100 and time < 460) WITH INDEX=PAA_INDEX, threshold=5, distance=DTW";
+  public void testParseDropIndexSubMatching() {
+    String sqlStr = "DROP INDEX ELB_INDEX ON root.Wind.AZQ02.Speed";
+    Operator op = parseDriver.parse(sqlStr, ZoneId.systemDefault());
+    Assert.assertEquals(DropIndexOperator.class, op.getClass());
+    DropIndexOperator dropIndexOperator = (DropIndexOperator) op;
+    Assert.assertEquals(OperatorType.DROP_INDEX, dropIndexOperator.getType());
+    Assert.assertNotNull(dropIndexOperator.getSelectedPaths());
+    Assert.assertEquals("root.Wind.AZQ02.Speed",
+        dropIndexOperator.getSelectedPaths().get(0).toString());
+    Assert.assertNull(dropIndexOperator.getFromOperator());
+    Assert.assertEquals(IndexType.ELB_INDEX, dropIndexOperator.getIndexType());
+  }
+
+  @Test
+  public void testParseQueryIndexWholeMatching() throws IllegalPathException {
+    String sqlStr = "SELECT TOP 2 Glu FROM root.Ery.* WHERE Glu LIKE (0, 120, 20, 80, 120, 100, 80, 0)";
     Operator op = parseDriver.parse(sqlStr, ZoneId.systemDefault());
     Assert.assertEquals(QueryIndexOperator.class, op.getClass());
     QueryIndexOperator queryOperator = (QueryIndexOperator) op;
     Assert.assertEquals(OperatorType.QUERY_INDEX, queryOperator.getType());
-    Assert.assertTrue(queryOperator.hasAggregation());
-    Assert.assertEquals(Arrays.asList("whole_st_time", "dist"),
-        queryOperator.getSelectOperator().getAggregations());
-    Assert.assertEquals("[or [time<=51][not [and [time<=>100][time<460]]]]",
-        queryOperator.getFilterOperator().toString());
-    Assert.assertEquals(Arrays.asList(new PartialPath("s1"), new PartialPath("s2")),
-        queryOperator.getSelectedPaths());
-    Assert.assertEquals("root.vehicle.d1",
+    Assert.assertEquals("Glu",
+        queryOperator.getSelectedPaths().get(0).getFullPath());
+    Assert.assertEquals("root.Ery.*",
         queryOperator.getFromOperator().getPrefixPaths().get(0).getFullPath());
-
-    Assert.assertEquals(IndexType.PAA_INDEX, queryOperator.getIndexType());
+    Assert.assertEquals(IndexType.RTREE_PAA, queryOperator.getIndexType());
     Assert.assertEquals(2, queryOperator.getProps().size());
-    Assert.assertEquals("5", queryOperator.getProps().get("threshold".toUpperCase()));
-    Assert.assertEquals("dtw".toUpperCase(), queryOperator.getProps().get("distance".toUpperCase()));
+    Assert.assertEquals(2, (int) queryOperator.getProps().get(TOP_K));
+    Assert.assertEquals("[0.0, 120.0, 20.0, 80.0, 120.0, 100.0, 80.0, 0.0]",
+        Arrays.toString((double[]) queryOperator.getProps().get(PATTERN)));
+  }
+
+  @Test
+  public void testParseQueryIndexSubMatching() throws IllegalPathException {
+    String sqlStr = "SELECT Speed.* FROM root.Wind.AZQ02 WHERE Speed "
+        + "CONTAIN (15, 14, 12, 12, 12, 11) WITH TOLERANCE 1 "
+        + "CONCAT (10, 20, 25, 24, 14, 8) WITH TOLERANCE 2 "
+        + "CONCAT  (8, 9, 10, 14, 15, 15) WITH TOLERANCE 1";
+    Operator op = parseDriver.parse(sqlStr, ZoneId.systemDefault());
+    Assert.assertEquals(QueryIndexOperator.class, op.getClass());
+    QueryIndexOperator queryOperator = (QueryIndexOperator) op;
+    Assert.assertEquals(OperatorType.QUERY_INDEX, queryOperator.getType());
+    Assert.assertEquals("Speed",
+        queryOperator.getSelectedPaths().get(0).getFullPath());
+    Assert.assertEquals("root.Wind.AZQ02",
+        queryOperator.getFromOperator().getPrefixPaths().get(0).getFullPath());
+    Assert.assertEquals(IndexType.ELB_INDEX, queryOperator.getIndexType());
+    Assert.assertEquals(2, queryOperator.getProps().size());
+    Assert.assertEquals("[1.0, 2.0, 1.0]", queryOperator.getProps().get(THRESHOLD).toString());
+    Assert.assertTrue(queryOperator.getProps().get(PATTERN) instanceof List);
+    List pattern = (List) queryOperator.getProps().get(PATTERN);
+    Assert.assertEquals("[15.0, 14.0, 12.0, 12.0, 12.0, 11.0]",
+        Arrays.toString((double[]) pattern.get(0)));
+    Assert.assertEquals("[10.0, 20.0, 25.0, 24.0, 14.0, 8.0]",
+        Arrays.toString((double[]) pattern.get(1)));
+    Assert.assertEquals("[8.0, 9.0, 10.0, 14.0, 15.0, 15.0]",
+        Arrays.toString((double[]) pattern.get(2)));
   }
 
 

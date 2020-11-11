@@ -198,7 +198,7 @@ public abstract class IoTDBIndex {
    * @param queryConditions query conditions
    * @throws IllegalIndexParamException when conditions or funcs are not supported
    */
-  public abstract void initQuery(Map<String, String> queryConditions,
+  public abstract void initQuery(Map<String, Object> queryConditions,
       List<IndexFuncResult> indexFuncResults) throws UnsupportedIndexFuncException;
 
 
