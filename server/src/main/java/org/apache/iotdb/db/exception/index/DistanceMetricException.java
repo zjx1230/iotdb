@@ -16,26 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.iotdb.db.index.distance;
+package org.apache.iotdb.db.exception.index;
 
-public class DistanceMetricException extends RuntimeException {
-
+public class DistanceMetricException extends IndexRuntimeException {
 
   private static final long serialVersionUID = -2772568110478978387L;
-
-  public DistanceMetricException() {
-    super();
-  }
-
-  public DistanceMetricException(String message, Throwable cause) {
-    super(message, cause);
-  }
 
   public DistanceMetricException(String message) {
     super(message);
   }
 
-  public DistanceMetricException(Throwable cause) {
-    super(cause);
-  }
 }

@@ -40,6 +40,7 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexTypeException;
 import org.apache.iotdb.db.exception.runtime.SQLParserException;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.constant.DatetimeUtils;
 import org.apache.iotdb.db.qp.constant.SQLConstant;
@@ -199,7 +200,6 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.utils.StringContainer;
 import org.apache.iotdb.db.index.common.IndexType;
-import org.apache.iotdb.db.index.common.IndexUtils;
 
 /**
  * This class is a listener and you can get an operator which is a logical plan.
@@ -220,8 +220,8 @@ public class LogicalGenerator extends SqlBaseBaseListener {
   private QueryIndexOperator queryIndexOp;
   private int indexTopK = NON_SET_TOP_K;
   private static final String DELETE_RANGE_ERROR_MSG =
-      "For delete statement, where clause can only contain atomic expressions like : " +
-          "time > XXX, time <= XXX, or two atomic expressions connected by 'AND'";
+    "For delete statement, where clause can only contain atomic expressions like : " +
+      "time > XXX, time <= XXX, or two atomic expressions connected by 'AND'";
 
 
   LogicalGenerator(ZoneId zoneId) {
@@ -236,8 +236,7 @@ public class LogicalGenerator extends SqlBaseBaseListener {
   public void enterCountTimeseries(CountTimeseriesContext ctx) {
     super.enterCountTimeseries(ctx);
     PrefixPathContext pathContext = ctx.prefixPath();
-    PartialPath path = (pathContext != null ? parsePrefixPath(pathContext)
-        : new PartialPath(SQLConstant.getSingleRootArray()));
+    PartialPath path = (pathContext != null ? parsePrefixPath(pathContext) : new PartialPath(SQLConstant.getSingleRootArray()));
     if (ctx.INT() != null) {
       initializedOperator = new CountOperator(SQLConstant.TOK_COUNT_NODE_TIMESERIES,
           path, Integer.parseInt(ctx.INT().getText()));
@@ -251,8 +250,7 @@ public class LogicalGenerator extends SqlBaseBaseListener {
   public void enterCountDevices(CountDevicesContext ctx) {
     super.enterCountDevices(ctx);
     PrefixPathContext pathContext = ctx.prefixPath();
-    PartialPath path = (pathContext != null ? parsePrefixPath(pathContext)
-        : new PartialPath(SQLConstant.getSingleRootArray()));
+    PartialPath path = (pathContext != null ? parsePrefixPath(pathContext) : new PartialPath(SQLConstant.getSingleRootArray()));
     initializedOperator = new CountOperator(SQLConstant.TOK_COUNT_DEVICES, path);
   }
 
@@ -260,8 +258,7 @@ public class LogicalGenerator extends SqlBaseBaseListener {
   public void enterCountStorageGroup(CountStorageGroupContext ctx) {
     super.enterCountStorageGroup(ctx);
     PrefixPathContext pathContext = ctx.prefixPath();
-    PartialPath path = (pathContext != null ? parsePrefixPath(pathContext)
-        : new PartialPath(SQLConstant.getSingleRootArray()));
+    PartialPath path = (pathContext != null ? parsePrefixPath(pathContext) : new PartialPath(SQLConstant.getSingleRootArray()));
     initializedOperator = new CountOperator(SQLConstant.TOK_COUNT_STORAGE_GROUP, path);
   }
 
@@ -428,8 +425,7 @@ public class LogicalGenerator extends SqlBaseBaseListener {
       initializedOperator = new ShowTimeSeriesOperator(SQLConstant.TOK_TIMESERIES,
           parsePrefixPath(ctx.prefixPath()), orderByHeat);
     } else {
-      initializedOperator = new ShowTimeSeriesOperator(SQLConstant.TOK_TIMESERIES,
-          new PartialPath(SQLConstant.getSingleRootArray()),
+      initializedOperator = new ShowTimeSeriesOperator(SQLConstant.TOK_TIMESERIES, new PartialPath(SQLConstant.getSingleRootArray()),
           orderByHeat);
     }
   }
@@ -1328,7 +1324,6 @@ public class LogicalGenerator extends SqlBaseBaseListener {
     initializedOperator = queryOp;
   }
 
-
   @Override
   public void enterFromClause(FromClauseContext ctx) {
     super.enterFromClause(ctx);
@@ -1346,7 +1341,7 @@ public class LogicalGenerator extends SqlBaseBaseListener {
         queryIndexOp.setFromOperator(fromOp);
         break;
       default:
-        throw new SQLParserException("From clause only support select and select index.");
+        throw new SQLParserException("From clause only support query and index query.");
     }
   }
 
@@ -1366,15 +1361,13 @@ public class LogicalGenerator extends SqlBaseBaseListener {
   public void enterSelectElement(SelectElementContext ctx) {
     super.enterSelectElement(ctx);
     selectOp = new SelectOperator(SQLConstant.TOK_SELECT);
-    List<SqlBaseParser.SuffixPathOrConstantContext> suffixPathOrConstants = ctx
-        .suffixPathOrConstant();
+    List<SqlBaseParser.SuffixPathOrConstantContext> suffixPathOrConstants = ctx.suffixPathOrConstant();
     for (SqlBaseParser.SuffixPathOrConstantContext suffixPathOrConstant : suffixPathOrConstants) {
       if (suffixPathOrConstant.suffixPath() != null) {
         PartialPath path = parseSuffixPath(suffixPathOrConstant.suffixPath());
         selectOp.addSelectPath(path);
       } else {
-        PartialPath path = new PartialPath(
-            new String[]{suffixPathOrConstant.SINGLE_QUOTE_STRING_LITERAL().getText()});
+        PartialPath path = new PartialPath(new String[]{suffixPathOrConstant.SINGLE_QUOTE_STRING_LITERAL().getText()});
         selectOp.addSelectPath(path);
       }
     }
@@ -1943,6 +1936,5 @@ public class LogicalGenerator extends SqlBaseBaseListener {
     }
     indexTopK = top;
   }
-
 
 }

@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
-import org.apache.iotdb.db.exception.index.IndexQueryException;
+import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
@@ -234,7 +234,7 @@ public class ELBIndex extends IoTDBIndex {
   }
 
   @Override
-  public int postProcessNext(List<IndexFuncResult> funcResult) throws IndexQueryException {
+  public int postProcessNext(List<IndexFuncResult> funcResult) throws QueryIndexException {
     TVList aligned = (TVList) indexFeatureExtractor.getCurrent_L2_AlignedSequence();
     int reminding = funcResult.size();
     if ( elbFeatureExtractor.exactDistanceCalc(aligned)){

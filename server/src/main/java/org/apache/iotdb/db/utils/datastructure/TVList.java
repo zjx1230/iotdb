@@ -39,7 +39,6 @@ public abstract class TVList {
   private static final String ERR_DATATYPE_NOT_CONSISTENT = "DataType not consistent";
 
   protected static final int SMALL_ARRAY_LENGTH = 32;
-  private final TSDataType dataType;
 
   protected List<long[]> timestamps;
   protected int size;
@@ -58,8 +57,7 @@ public abstract class TVList {
   protected long minTime;
 
 
-  public TVList(TSDataType dataType) {
-    this.dataType = dataType;
+  public TVList() {
     timestamps = new ArrayList<>();
     size = 0;
     minTime = Long.MAX_VALUE;
@@ -154,10 +152,6 @@ public abstract class TVList {
 
   public long getMinTime() {
     return minTime;
-  }
-
-  public long getLastTime() {
-    return getTime(size - 1);
   }
 
   public long getVersion() {
@@ -484,7 +478,6 @@ public abstract class TVList {
     return new Ite(floatPrecision, encoding);
   }
 
-  public TSDataType getDataType(){return this.dataType;};
 
   public static long tvListArrayMemSize(TSDataType type) {
     long size = 0;
@@ -568,11 +561,17 @@ public abstract class TVList {
     }
   }
 
+  public abstract TSDataType getDataType();
+
+  public long getLastTime() {
+    return getTime(size - 1);
+  }
+
   public static void append(TVList dest, TVList src, int srcPos, int length) {
     assert srcPos + length <= src.size;
     for (int i = srcPos; i < srcPos + length; i++) {
       long time = src.getTime(i);
-      switch (src.dataType) {
+      switch (src.getDataType()) {
         case BOOLEAN:
           dest.putBoolean(time, src.getBoolean(i));
           break;
@@ -599,7 +598,7 @@ public abstract class TVList {
     while (newData.hasCurrent()) {
       long time = newData.currentTime();
       Object value = newData.currentValue();
-      switch (dest.dataType) {
+      switch (dest.getDataType()) {
         case BOOLEAN:
           dest.putBoolean(time, (boolean) value);
           break;

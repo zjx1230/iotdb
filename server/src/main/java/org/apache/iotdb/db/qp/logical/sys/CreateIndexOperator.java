@@ -20,12 +20,7 @@ package org.apache.iotdb.db.qp.logical.sys;
 
 import java.util.Map;
 import org.apache.iotdb.db.index.common.IndexType;
-import org.apache.iotdb.db.qp.logical.RootOperator;
 import org.apache.iotdb.db.qp.logical.crud.SFWOperator;
-import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.read.common.Path;
 
 /**
  * this operator is to create a certain index on some time series.

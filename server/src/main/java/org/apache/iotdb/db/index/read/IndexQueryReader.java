@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
-import org.apache.iotdb.db.exception.index.IndexQueryException;
+import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.index.IndexUsability;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
@@ -191,7 +191,7 @@ public class IndexQueryReader {
    * A new batch of data, process them and written out.
    */
   int appendDataAndPostProcess(BatchData nextOverlappedPageData,
-      List<IndexFuncResult> aggregateResultList) throws IndexQueryException {
+      List<IndexFuncResult> aggregateResultList) throws QueryIndexException {
     int reminding = Integer.MAX_VALUE;
     IndexFeatureExtractor preprocessor = index.startFlushTask(nextOverlappedPageData);
     while (reminding > 0 && preprocessor

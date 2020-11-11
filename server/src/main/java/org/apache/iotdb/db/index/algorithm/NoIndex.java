@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
-import org.apache.iotdb.db.exception.index.IndexQueryException;
+import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
@@ -157,7 +157,7 @@ public class NoIndex extends IoTDBIndex {
   }
 
   @Override
-  public int postProcessNext(List<IndexFuncResult> funcResult) throws IndexQueryException {
+  public int postProcessNext(List<IndexFuncResult> funcResult) throws QueryIndexException {
     TVList aligned = (TVList) indexFeatureExtractor.getCurrent_L2_AlignedSequence();
     double ed = IndexFuncFactory.calcEuclidean(aligned, patterns);
     System.out.println(String.format(

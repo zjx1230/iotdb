@@ -19,6 +19,7 @@ package org.apache.iotdb.db.index.distance;
 
 import static org.apache.iotdb.db.index.common.IndexUtils.getDoubleFromAnyType;
 
+import org.apache.iotdb.db.exception.index.DistanceMetricException;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 
 /**

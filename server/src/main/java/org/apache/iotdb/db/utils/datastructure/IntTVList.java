@@ -37,7 +37,7 @@ public class IntTVList extends TVList {
   private int pivotValue;
 
   IntTVList() {
-    super(TSDataType.INT32);
+    super();
     values = new ArrayList<>();
   }
 
@@ -213,5 +213,10 @@ public class IntTVList extends TVList {
         checkExpansion();
       }
     }
+  }
+
+  @Override
+  public TSDataType getDataType() {
+    return TSDataType.INT32;
   }
 }

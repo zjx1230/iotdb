@@ -39,7 +39,7 @@ public class FloatTVList extends TVList {
   private float pivotValue;
 
   FloatTVList() {
-    super(TSDataType.FLOAT);
+    super();
     values = new ArrayList<>();
   }
 
@@ -217,5 +217,10 @@ public class FloatTVList extends TVList {
         checkExpansion();
       }
     }
+  }
+
+  @Override
+  public TSDataType getDataType() {
+    return TSDataType.FLOAT;
   }
 }

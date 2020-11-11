@@ -44,8 +44,7 @@ import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.CalcParam;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.SingleSegmentationParam;
 import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.exception.index.IndexQueryException;
-import org.apache.iotdb.db.index.common.IndexUtils;
+import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.index.distance.Distance;
 import org.apache.iotdb.db.index.preprocess.Identifier;
@@ -203,7 +202,7 @@ public class ELBIndexNotGood extends RTreeIndex {
   }
 
   @Override
-  public int postProcessNext(List<IndexFuncResult> funcResult) throws IndexQueryException {
+  public int postProcessNext(List<IndexFuncResult> funcResult) throws QueryIndexException {
     TVList aligned = (TVList) indexFeatureExtractor.getCurrent_L2_AlignedSequence();
     double ed = IndexFuncFactory.calcEuclidean(aligned, patterns);
 //    System.out.println(String.format(

@@ -29,7 +29,7 @@ import java.util.Map;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
-import org.apache.iotdb.db.exception.index.IndexQueryException;
+import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
@@ -222,7 +222,7 @@ public abstract class IoTDBIndex {
    * @throws UnsupportedOperationException If you meet an unsupported AggregateResult
    */
   public abstract int postProcessNext(List<IndexFuncResult> indexFuncResults)
-      throws IndexQueryException;
+      throws QueryIndexException;
 
   /**
    * the file is no more needed. Stop ongoing construction and flush operations, clear memory

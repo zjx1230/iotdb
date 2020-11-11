@@ -24,7 +24,6 @@ import java.io.File;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
-import org.apache.iotdb.db.engine.memtable.IWritableMemChunk;
 import org.apache.iotdb.db.engine.merge.selector.MergeFileStrategy;
 import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
 import org.apache.iotdb.db.exception.LoadConfigurationException;
@@ -283,19 +282,19 @@ public class IoTDBConfig {
   private int concurrentIndexBuildThread = Runtime.getRuntime().availableProcessors();
 
   /**
-   * byte-size of memory buffer threshold in each index file processor. For each index processor,
-   * all indexes in one {@linkplain org.apache.iotdb.db.index.IndexFileProcessor IndexFileProcessor}
-   * share a total common buffer size. All input data lists will be preprocessed and the occupied
-   * memory will be counted. If the memory buffer size of one processor reaches this threshold,
-   * existing data will be built into indexes and flushed to the index file.<p>
-   *
-   * As a result, data in a {@linkplain IWritableMemChunk} may be divided into more than one part
-   * and indexed separately. The results of each partial index should be mergeable.
+   * If we enable the memory-control mechanism during index building , {@code indexBufferSize}
+   * refers to the byte-size of memory buffer threshold. For each index processor, all indexes in
+   * one {@linkplain org.apache.iotdb.db.index.IndexFileProcessor IndexFileProcessor} share a total
+   * common buffer size. With the memory-control mechanism, the occupied memory of all raw data and
+   * index structures will be counted. If the memory buffer size reaches this threshold, the indexes
+   * will be flushed to the disk file. As a result, data in one series may be divided into more than
+   * one part and indexed separately.
    */
   private long indexBufferSize = 128 * 1024 * 1024L;
 
   /**
-   * the index framework adopts sliding window model to preprocess the original tv list.
+   * the index framework adopts sliding window model to preprocess the original tv list in the
+   * subsequence matching task.
    */
   private int defaultIndexWindowRange = 10;
 
@@ -864,11 +863,9 @@ public class IoTDBConfig {
     systemDir = addHomeDir(systemDir);
     schemaDir = addHomeDir(schemaDir);
     syncDir = addHomeDir(syncDir);
-
     tracingDir = addHomeDir(tracingDir);
     walDir = addHomeDir(walDir);
     indexRootFolder = addHomeDir(indexRootFolder);
-
 
     if (TSFileDescriptor.getInstance().getConfig().getTSFileStorageFs().equals(FSType.HDFS)) {
       String hdfsDir = getHdfsDir();
@@ -1099,14 +1096,6 @@ public class IoTDBConfig {
 
   public int getConcurrentQueryThread() {
     return concurrentQueryThread;
-  }
-
-  void setConcurrentIndexBuildThread(int concurrentIndexBuildThread) {
-    this.concurrentIndexBuildThread = concurrentIndexBuildThread;
-  }
-
-  public int getConcurrentIndexBuildThread() {
-    return concurrentIndexBuildThread;
   }
 
   void setConcurrentQueryThread(int concurrentQueryThread) {
@@ -2096,6 +2085,14 @@ public class IoTDBConfig {
 
   public void setEnableIndex(boolean enableIndex) {
     this.enableIndex = enableIndex;
+  }
+
+  void setConcurrentIndexBuildThread(int concurrentIndexBuildThread) {
+    this.concurrentIndexBuildThread = concurrentIndexBuildThread;
+  }
+
+  public int getConcurrentIndexBuildThread() {
+    return concurrentIndexBuildThread;
   }
 
   public long getIndexBufferSize() {

@@ -38,7 +38,7 @@ public class DoubleTVList extends TVList {
   private double pivotValue;
 
   DoubleTVList() {
-    super(TSDataType.DOUBLE);
+    super();
     values = new ArrayList<>();
   }
 
@@ -218,5 +218,10 @@ public class DoubleTVList extends TVList {
         checkExpansion();
       }
     }
+  }
+
+  @Override
+  public TSDataType getDataType() {
+    return TSDataType.DOUBLE;
   }
 }

@@ -22,9 +22,6 @@ public class IndexConstant {
   // SQL show
   public static final String ID = "ID";
 
-  // whole matching
-  public static final int NON_SET_TOP_K = -1;
-  public static final String TOP_K = "TOP_K";
 
   public static final String META_DIR_NAME = "meta";
   public static final String STORAGE_GROUP_INDEXING_SUFFIX = ".sg_indexing";
@@ -33,6 +30,11 @@ public class IndexConstant {
   public static final String INDEXING_SUFFIX = ".indexing";
   public static final String INDEXED_SUFFIX = ".index";
 
+  // whole matching
+  public static final int NON_SET_TOP_K = -1;
+  public static final String TOP_K = "TOP_K";
+
+  // subsequence matching: sliding window
   public static final String INDEX_WINDOW_RANGE = "INDEX_WINDOW_RANGE";
   public static final String INDEX_RANGE_STRATEGY = "INDEX_RANGE_STRATEGY";
   public static final String INDEX_SLIDE_STEP = "INDEX_SLIDE_STEP";

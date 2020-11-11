@@ -37,7 +37,7 @@ public class LongTVList extends TVList {
   private long pivotValue;
 
   LongTVList() {
-    super(TSDataType.INT64);
+    super();
     values = new ArrayList<>();
   }
 
@@ -177,6 +177,11 @@ public class LongTVList extends TVList {
   protected TimeValuePair getTimeValuePair(int index, long time, Integer floatPrecision,
       TSEncoding encoding) {
     return new TimeValuePair(time, TsPrimitiveType.getByType(TSDataType.INT64, getLong(index)));
+  }
+
+  @Override
+  public TSDataType getDataType() {
+    return TSDataType.INT64;
   }
 
   @Override

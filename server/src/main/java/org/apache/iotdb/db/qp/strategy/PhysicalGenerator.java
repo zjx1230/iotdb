@@ -217,7 +217,7 @@ public class PhysicalGenerator {
         return transformQuery(query, fetchSize);
       case QUERY_INDEX:
         QueryIndexOperator queryIndexOp = (QueryIndexOperator) operator;
-        return (QueryIndexPlan) transformQuery(queryIndexOp, fetchSize);
+        return transformQuery(queryIndexOp, fetchSize);
       case TTL:
         switch (operator.getTokenIntType()) {
           case SQLConstant.TOK_SET:

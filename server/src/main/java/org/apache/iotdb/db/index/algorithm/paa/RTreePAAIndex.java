@@ -32,7 +32,7 @@ import java.util.function.BiConsumer;
 import org.apache.iotdb.db.index.algorithm.RTreeIndex;
 import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.exception.index.IndexQueryException;
+import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.index.preprocess.Identifier;
@@ -170,7 +170,7 @@ public class RTreePAAIndex extends RTreeIndex {
   }
 
   @Override
-  public int postProcessNext(List<IndexFuncResult> funcResult) throws IndexQueryException {
+  public int postProcessNext(List<IndexFuncResult> funcResult) throws QueryIndexException {
     Identifier identifier =  indexFeatureExtractor.getCurrent_L1_Identifier();
     TVList srcList = indexFeatureExtractor
         .get_L0_SourceData(identifier.getStartTime(), identifier.getEndTime());

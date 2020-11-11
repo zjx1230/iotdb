@@ -20,12 +20,15 @@ package org.apache.iotdb.db.qp.plan;
 
 import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
 import static org.apache.iotdb.db.index.common.IndexConstant.THRESHOLD;
-import static org.apache.iotdb.db.index.common.IndexConstant.TOP_K;
 import static org.junit.Assert.assertEquals;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.index.common.IndexType;
@@ -112,6 +115,46 @@ public class IndexSubMatchingPhysicalPlanTest {
         Arrays.toString((double[]) pattern.get(1)));
     Assert.assertEquals("[8.0, 9.0, 10.0, 14.0, 15.0, 15.0]",
         Arrays.toString((double[]) pattern.get(2)));
+  }
+
+  @Test
+  public void testCreateIndexSerialize()
+      throws QueryProcessException, IOException, IllegalPathException {
+    String sqlStr = "CREATE INDEX ON root.Wind.AZQ02.Speed WITH INDEX=ELB_INDEX, BLOCK_SIZE=5";
+    PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
+    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+    try (DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream)) {
+      plan.serialize(dataOutputStream);
+      ByteBuffer buffer = ByteBuffer.wrap(byteArrayOutputStream.toByteArray());
+      PhysicalPlan planB = PhysicalPlan.Factory.create(buffer);
+      assertEquals(plan, planB);
+    }
+
+    ByteBuffer buffer = ByteBuffer.allocate(4096);
+    plan.serialize(buffer);
+    buffer.flip();
+    PhysicalPlan planB = PhysicalPlan.Factory.create(buffer);
+    assertEquals(plan, planB);
+  }
+
+  @Test
+  public void testDropIndexSerialize()
+      throws QueryProcessException, IOException, IllegalPathException {
+    String sqlStr = "DROP INDEX ELB_INDEX ON root.Wind.AZQ02.Speed";
+    PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
+    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+    try (DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream)) {
+      plan.serialize(dataOutputStream);
+      ByteBuffer buffer = ByteBuffer.wrap(byteArrayOutputStream.toByteArray());
+      PhysicalPlan planB = PhysicalPlan.Factory.create(buffer);
+      assertEquals(plan, planB);
+    }
+
+    ByteBuffer buffer = ByteBuffer.allocate(4096);
+    plan.serialize(buffer);
+    buffer.flip();
+    PhysicalPlan planB = PhysicalPlan.Factory.create(buffer);
+    assertEquals(plan, planB);
   }
 
 }

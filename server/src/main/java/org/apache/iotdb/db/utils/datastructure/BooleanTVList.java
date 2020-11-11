@@ -37,7 +37,7 @@ public class BooleanTVList extends TVList {
   private boolean pivotValue;
 
   BooleanTVList() {
-    super(TSDataType.BOOLEAN);
+    super();
     values = new ArrayList<>();
   }
 
@@ -214,5 +214,10 @@ public class BooleanTVList extends TVList {
         checkExpansion();
       }
     }
+  }
+
+  @Override
+  public TSDataType getDataType() {
+    return TSDataType.BOOLEAN;
   }
 }

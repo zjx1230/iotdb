@@ -21,19 +21,24 @@ package org.apache.iotdb.db.qp.physical.sys;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.qp.logical.Operator;
 import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
 import org.apache.iotdb.db.qp.physical.PhysicalPlan;
-import org.apache.iotdb.tsfile.read.common.Path;
 
 public class DropIndexPlan extends PhysicalPlan {
 
   protected List<PartialPath> paths;
   private IndexType indexType;
+
+  public DropIndexPlan() {
+    super(false, Operator.OperatorType.DELETE_TIMESERIES);
+  }
 
   public DropIndexPlan(List<PartialPath> paths, IndexType indexType) {
     super(false, OperatorType.DROP_INDEX);
@@ -59,28 +64,45 @@ public class DropIndexPlan extends PhysicalPlan {
     this.indexType = indexType;
   }
 
+
   @Override
   public void serialize(DataOutputStream stream) throws IOException {
-    throw new IOException("when do we need serializeTo?");
-//    stream.writeByte((byte) PhysicalPlanType.CREATE_TIMESERIES.ordinal());
-//    byte[] pathBytes = path.getFullPath().getBytes();
-//    stream.writeInt(pathBytes.length);
-//    stream.write(pathBytes);
-//    stream.write(dataType.ordinal());
-//    stream.write(encoding.ordinal());
-//    stream.write(compressor.ordinal());
+    stream.writeByte((byte) PhysicalPlanType.DROP_INDEX.ordinal());
+    stream.write((byte) indexType.serialize());
+
+    stream.writeInt(paths.size());
+    for (PartialPath path : paths) {
+      putString(stream, path.getFullPath());
+    }
+
+    stream.writeLong(index);
   }
 
   @Override
-  public void deserialize(ByteBuffer buffer) {
-    throw new RuntimeException("when do we need deserializeFrom?");
-//    int length = buffer.getInt();
-//    byte[] pathBytes = new byte[length];
-//    buffer.get(pathBytes);
-//    path = new Path(new String(pathBytes));
-//    dataType = TSDataType.values()[buffer.get()];
-//    encoding = TSEncoding.values()[buffer.get()];
-//    compressor = CompressionType.values()[buffer.get()];
+  public void serialize(ByteBuffer buffer) {
+    int type = PhysicalPlanType.DROP_INDEX.ordinal();
+    buffer.put((byte) type);
+    buffer.put((byte) indexType.serialize());
+
+    buffer.putInt(paths.size());
+    for (PartialPath path : paths) {
+      putString(buffer, path.getFullPath());
+    }
+
+    buffer.putLong(index);
+  }
+
+  @Override
+  public void deserialize(ByteBuffer buffer) throws IllegalPathException {
+    indexType = IndexType.deserialize(buffer.get());
+
+    int pathNum = buffer.getInt();
+    paths = new ArrayList<>();
+    for (int i = 0; i < pathNum; i++) {
+      paths.add(new PartialPath(readString(buffer)));
+    }
+
+    this.index = buffer.getLong();
   }
 
   @Override

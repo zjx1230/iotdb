@@ -20,7 +20,7 @@ package org.apache.iotdb.db.exception.index;
 
 import org.apache.iotdb.rpc.TSStatusCode;
 
-public class UnsupportedIndexFuncException extends IndexQueryException {
+public class UnsupportedIndexFuncException extends QueryIndexException {
 
   private static final long serialVersionUID = 4185676677334759039L;
 

@@ -22,8 +22,12 @@ import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
 import static org.apache.iotdb.db.index.common.IndexConstant.TOP_K;
 import static org.junit.Assert.assertEquals;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.index.common.IndexType;
@@ -105,6 +109,46 @@ public class IndexWholeMatchingPhysicalPlanTest {
     Assert.assertEquals(2, (int) queryIndexPlan.getProps().get(TOP_K));
     Assert.assertEquals("[0.0, 120.0, 20.0, 80.0, 120.0, 100.0, 80.0, 0.0]",
         Arrays.toString((double[]) queryIndexPlan.getProps().get(PATTERN)));
+  }
+
+  @Test
+  public void testCreateIndexSerialize()
+      throws QueryProcessException, IOException, IllegalPathException {
+    String sqlStr = "CREATE INDEX ON root.Ery.*.Glu WHERE time > 50 WITH INDEX=RTREE_PAA, PAA_DIM=8";
+    PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
+    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+    try (DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream)) {
+      plan.serialize(dataOutputStream);
+      ByteBuffer buffer = ByteBuffer.wrap(byteArrayOutputStream.toByteArray());
+      PhysicalPlan planB = PhysicalPlan.Factory.create(buffer);
+      assertEquals(plan, planB);
+    }
+
+    ByteBuffer buffer = ByteBuffer.allocate(4096);
+    plan.serialize(buffer);
+    buffer.flip();
+    PhysicalPlan planB = PhysicalPlan.Factory.create(buffer);
+    assertEquals(plan, planB);
+  }
+
+  @Test
+  public void testDropIndexSerialize()
+      throws QueryProcessException, IOException, IllegalPathException {
+    String sqlStr = "DROP INDEX RTREE_PAA ON root.Ery.*.Glu";
+    PhysicalPlan plan = processor.parseSQLToPhysicalPlan(sqlStr);
+    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+    try (DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream)) {
+      plan.serialize(dataOutputStream);
+      ByteBuffer buffer = ByteBuffer.wrap(byteArrayOutputStream.toByteArray());
+      PhysicalPlan planB = PhysicalPlan.Factory.create(buffer);
+      assertEquals(plan, planB);
+    }
+
+    ByteBuffer buffer = ByteBuffer.allocate(4096);
+    plan.serialize(buffer);
+    buffer.flip();
+    PhysicalPlan planB = PhysicalPlan.Factory.create(buffer);
+    assertEquals(plan, planB);
   }
 
 }

@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
 import org.apache.iotdb.db.exception.StorageEngineException;
-import org.apache.iotdb.db.exception.index.IndexQueryException;
+import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.index.IndexManager;
@@ -213,7 +213,7 @@ public class IndexAggregationExecutor extends AggregationExecutor {
    */
   private int aggregateIndexOverlappedPages(SeriesAggregateReader seriesReader,
       IndexQueryReader indexQueryReader, List<IndexFuncResult> aggregateResultList)
-      throws IOException, IndexQueryException {
+      throws IOException, QueryIndexException {
     // cal by page data
     int remainingToCalculate = Integer.MAX_VALUE;
     while (remainingToCalculate > 0 && seriesReader.hasNextPage()) {
