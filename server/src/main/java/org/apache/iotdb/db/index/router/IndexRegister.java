@@ -1,4 +1,4 @@
-package org.apache.iotdb.db.index;
+package org.apache.iotdb.db.index.router;
 
 import java.util.List;
 import java.util.Map;
