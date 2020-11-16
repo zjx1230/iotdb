@@ -34,7 +34,6 @@ import java.util.Map;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
@@ -107,7 +106,7 @@ public class IndexManagerTest {
     fsFactory
         .getFile(metaDirPath + File.separator + p2 + STORAGE_GROUP_INDEXING_SUFFIX)
         .createNewFile();
-    IndexManager.getInstance().cleanIndexData();
+    IndexManager.getInstance().recoverIndexData();
     Assert.assertTrue(fsFactory.getFile(indexDataSeqDir + File.separator + p1).exists());
     Assert.assertTrue(fsFactory.getFile(indexDataUnSeqDir + File.separator + p1).exists());
     Assert.assertTrue(fsFactory

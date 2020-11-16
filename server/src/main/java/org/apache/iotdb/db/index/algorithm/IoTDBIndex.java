@@ -33,6 +33,7 @@ import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
+import org.apache.iotdb.db.index.IndexProcessor;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategy;
@@ -91,7 +92,7 @@ public abstract class IoTDBIndex {
 
   /**
    * Each index has its own preprocessor. Through the preprocessor provided by this index,
-   * {@linkplain org.apache.iotdb.db.index.IndexFileProcessor IndexFileProcessor} can control the
+   * {@linkplain IndexProcessor IndexFileProcessor} can control the
    * its data process, memory occupation and triggers forceFlush.
    *
    * @param tvList tvList in current FlushTask.
@@ -176,11 +177,12 @@ public abstract class IoTDBIndex {
 
   /**
    * This method serialize information of index and preprocessor into an {@code OutputStream}. It's
-   * called when the index file will be cloase. The information will be back in type of {@code
+   * called when the index file will be closed. The information will be back in type of {@code
    * ByteBuffer} when next creation.
    */
-  public ByteBuffer serialize() throws IOException {
-    return indexFeatureExtractor.serializePrevious();
+  public void serialize() throws IOException {
+    // TODO not return, do youself
+    indexFeatureExtractor.serializePrevious();
   }
 
   /**
@@ -247,7 +249,7 @@ public abstract class IoTDBIndex {
     return false;
   }
 
-  public boolean newOutofOrderedDataPoint() {
+  public boolean newOutOfOrderedDataPoint() {
     return false;
   }
 

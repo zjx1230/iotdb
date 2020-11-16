@@ -17,6 +17,7 @@
  */
 package org.apache.iotdb.db.index.common;
 
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.db.utils.datastructure.TVList;
@@ -26,6 +27,28 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.TimeValuePair;
 
 public class IndexUtils {
+
+  /**
+   * justify whether the fullPath matches the pathWithStar. The two paths must have the same node
+   * lengths. Refer to {@code org.apache.iotdb.db.metadata.MManager#match}
+   *
+   * @param pathWithStar a path with wildcard characters.
+   * @param fullPath a full path without wildcard characters.
+   * @return true if fullPath matches pathWithStar.
+   */
+  public static boolean match(PartialPath pathWithStar, PartialPath fullPath) {
+    String[] fullNodes = fullPath.getNodes();
+    String[] starNodes = pathWithStar.getNodes();
+    if (starNodes.length != fullNodes.length) {
+      return false;
+    }
+    for (int i = 0; i < fullNodes.length; i++) {
+      if (!"*".equals(starNodes[i]) && !fullNodes[i].equals(starNodes[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   public static int getDataTypeSize(TVList srcData) {
     return getDataTypeSize(srcData.getDataType());
@@ -231,5 +254,13 @@ public class IndexUtils {
         target.putBinary(time, src.getBinary(srcIdx));
         break;
     }
+  }
+
+  public static void breakDown() {
+    breakDown("for reconstruction");
+  }
+
+  public static void breakDown(String message) {
+    throw new Error(message);
   }
 }

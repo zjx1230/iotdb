@@ -18,22 +18,15 @@
  */
 package org.apache.iotdb.db.index;
 
-import static org.apache.iotdb.db.conf.IoTDBConstant.SEQUENCE_FLODER_NAME;
-import static org.apache.iotdb.db.conf.IoTDBConstant.UNSEQUENCE_FLODER_NAME;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_DATA_DIR_NAME;
 import static org.apache.iotdb.db.index.common.IndexConstant.META_DIR_NAME;
-import static org.apache.iotdb.db.index.common.IndexConstant.STORAGE_GROUP_INDEXED_SUFFIX;
-import static org.apache.iotdb.db.index.common.IndexConstant.STORAGE_GROUP_INDEXING_SUFFIX;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.NoSuchFileException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
@@ -41,23 +34,17 @@ import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.exception.StartupException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexMessageType;
 import org.apache.iotdb.db.index.common.IndexType;
-import org.apache.iotdb.db.index.io.IndexBuildTaskPoolManager;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
-import org.apache.iotdb.db.index.read.IndexQueryReader;
 import org.apache.iotdb.db.index.router.IIndexRouter;
-import org.apache.iotdb.db.index.router.IndexRegister;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
-import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.db.metadata.mnode.StorageGroupMNode;
 import org.apache.iotdb.db.service.IService;
 import org.apache.iotdb.db.service.JMXService;
 import org.apache.iotdb.db.service.ServiceType;
 import org.apache.iotdb.db.utils.FileUtils;
-import org.apache.iotdb.db.utils.TestOnly;
-import org.apache.iotdb.tsfile.read.common.Path;
-import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,8 +55,11 @@ public class IndexManager implements IService {
   private final String indexMetaDirPath;
   private final String indexDataDirPath;
 
-  private final IIndexRouter indexRouter;
+  private final IIndexRouter router;
   private final IIndexUsable indexUsability;
+
+  private IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
+
   /**
    * Tell the index where the feature should be stored.
    *
@@ -94,43 +84,72 @@ public class IndexManager implements IService {
 
   public void createIndex(List<PartialPath> prefixPaths, IndexInfo indexInfo)
       throws MetadataException {
-    indexRouter.createIndex(prefixPaths, indexInfo);
+    if (!prefixPaths.isEmpty()) {
+      router.addIndexIntoRouter(prefixPaths.get(0), indexInfo);
+    }
+    // TODO not implemented: maintaining a daemon to build index for unusable index range of some series.
   }
 
   public void dropIndex(List<PartialPath> prefixPaths, IndexType indexType)
       throws MetadataException {
-    indexRouter.dropIndex(prefixPaths, indexType);
-  }
-
-
-  public IndexFileProcessor getNewIndexFileProcessor(String storageGroup, boolean sequence,
-      long partitionId, String tsFileName) {
-    IndexStorageGroupProcessor sgProcessor = createStorageGroupProcessor(storageGroup);
-    return sgProcessor.createIndexFileProcessor(sequence, partitionId, tsFileName);
-  }
-
-  private IndexStorageGroupProcessor createStorageGroupProcessor(String storageGroup) {
-    checkIndexSGMetaDataDir();
-    IndexStorageGroupProcessor processor = processorMap.get(storageGroup);
-    if (processor == null) {
-      processor = new IndexStorageGroupProcessor(storageGroup, indexMetaDirPath);
-      IndexStorageGroupProcessor oldProcessor = processorMap.putIfAbsent(storageGroup, processor);
-      if (oldProcessor != null) {
-        return oldProcessor;
-      }
+    if (!prefixPaths.isEmpty()) {
+      router.removeIndexFromRouter(prefixPaths.get(0), indexType);
     }
-    return processor;
+  }
+
+  public List<IndexProcessor> getNewIndexFileProcessor(String storageGroup, boolean sequence) {
+    if (sequence) {
+      return router.getIndexProcessorByStorageGroup(storageGroup);
+    } else {
+      // In current version, we only build index for the sequence data.
+      return new ArrayList<>();
+    }
+  }
+
+  public void removeIndexProcessor(String storageGroupName, boolean sequence)
+      throws IOException {
+    if (!sequence) {
+      router.removeIndexProcessorByStorageGroup(storageGroupName);
+    }
   }
 
   /**
-   * storage group name -> index storage group processor
+   * TODO This function will hack into required places in other modules.
+   *
+   * For index techniques which are deeply optimized for IoTDB, the index framework provides a
+   * finer-grained interface to inform the index when some IoTDB events occur. Other modules can
+   * call this function to pass the specified index message type and other parameters. Indexes can
+   * selectively implement these interfaces and register with the index manager for listening. When
+   * these events occur, the index manager passes the messages to corresponding indexes.
+   *
+   * @param path where events occur
+   * @param indexMsgType the type of index message
+   * @param params variable length of parameters
    */
-  private final Map<String, IndexStorageGroupProcessor> processorMap;
+  public void tellIndexMessage(PartialPath path, IndexMessageType indexMsgType, Object... params) {
+    throw new UnsupportedOperationException("Not support the advanced Index Messages");
+  }
 
-  private IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
+//  private IndexStorageGroupProcessor createStorageGroupProcessor(String storageGroup) {
+//    checkIndexSGMetaDataDir();
+//    IndexStorageGroupProcessor processor = processorMap.get(storageGroup);
+//    if (processor == null) {
+//      processor = new IndexStorageGroupProcessor(storageGroup, indexMetaDirPath);
+//      IndexStorageGroupProcessor oldProcessor = processorMap.putIfAbsent(storageGroup, processor);
+//      if (oldProcessor != null) {
+//        return oldProcessor;
+//      }
+//    }
+//    return processor;
+//  }
 
+//  /**
+//   * storage group name -> index storage group processor
+//   */
+//  private final Map<String, IndexStorageGroupProcessor> processorMap;
 
   private void checkIndexSGMetaDataDir() {
+    IndexUtils.breakDown();
     File metaDir = fsFactory.getFile(this.indexMetaDirPath);
     if (!metaDir.exists()) {
       boolean mk = fsFactory.getFile(this.indexMetaDirPath).mkdirs();
@@ -141,32 +160,24 @@ public class IndexManager implements IService {
     }
   }
 
-  public void removeIndexProcessor(String storageGroupName, boolean sequence, String identifier)
-      throws IOException {
-    IndexStorageGroupProcessor sgProcessor = processorMap.get(storageGroupName);
-    if (sgProcessor == null) {
-      return;
-    }
-    sgProcessor.removeIndexProcessor(identifier, sequence);
-  }
 
   private synchronized void close() throws IOException {
-    for (Entry<String, IndexStorageGroupProcessor> entry : processorMap.entrySet()) {
-      IndexStorageGroupProcessor processor = entry.getValue();
-      processor.close();
+    Iterable<IndexProcessor> iterator = router.getAllIndexProcessors();
+    for (IndexProcessor indexProcessor : iterator) {
+      indexProcessor.close();
     }
-  }
-
-  private synchronized void clear() {
-    this.processorMap.clear();
   }
 
   @Override
   public void start() throws StartupException {
-    IndexBuildTaskPoolManager.getInstance().start();
+    if (!config.isEnableIndex()) {
+      return;
+    }
+//    IndexBuildTaskPoolManager.getInstance().start();
     try {
+      // TODO it's not implemented fully.
       JMXService.registerMBean(this, ServiceType.INDEX_SERVICE.getJmxName());
-      cleanIndexData();
+      recoverIndexData();
     } catch (Exception e) {
       throw new StartupException(this.getID().getName(), e.getMessage());
     }
@@ -182,7 +193,7 @@ public class IndexManager implements IService {
     } catch (IOException e) {
       logger.error("Close IndexManager failed.", e);
     }
-    IndexBuildTaskPoolManager.getInstance().stop();
+//    IndexBuildTaskPoolManager.getInstance().stop();
     JMXService.deregisterMBean(ServiceType.INDEX_SERVICE.getJmxName());
   }
 
@@ -193,12 +204,11 @@ public class IndexManager implements IService {
 
 
   private IndexManager() {
-    processorMap = new ConcurrentHashMap<>();
     indexMetaDirPath =
         DirectoryManager.getInstance().getIndexRootFolder() + File.separator + META_DIR_NAME;
     indexDataDirPath = DirectoryManager.getInstance().getIndexRootFolder() + File.separator +
         INDEX_DATA_DIR_NAME;
-    indexRouter = IIndexRouter.Factory.getIndexRouter();
+    router = IIndexRouter.Factory.getIndexRouter();
     indexUsability = IIndexUsable.Factory.getIndexUsability();
   }
 
@@ -209,63 +219,32 @@ public class IndexManager implements IService {
   public synchronized void deleteAll() throws IOException {
     logger.info("Start deleting all storage groups' timeseries");
     close();
-    // delete all index files
-    for (Entry<String, IndexStorageGroupProcessor> entry : processorMap.entrySet()) {
-      IndexStorageGroupProcessor processor = entry.getValue();
-      processor.deleteAll();
-    }
+
     File indexMetaDir = fsFactory.getFile(this.indexMetaDirPath);
     if (indexMetaDir.exists()) {
       FileUtils.deleteDirectory(indexMetaDir);
+    }
+
+    File indexDataDir = fsFactory.getFile(this.indexDataDirPath);
+    if (indexDataDir.exists()) {
+      FileUtils.deleteDirectory(indexDataDir);
     }
     File indexRootDir = fsFactory.getFile(DirectoryManager.getInstance().getIndexRootFolder());
     if (indexRootDir.exists()) {
       FileUtils.deleteDirectory(indexRootDir);
     }
-    clear();
+//    clear();
   }
 
-  /**
-   * When IoTDB restarts, check all index storage groups and delete index data and sg_metadata files
-   * for deleted tsfile storage groups.
-   */
-  public synchronized void cleanIndexData() throws IOException {
-    String indexDataSeqDir =
-        DirectoryManager.getInstance().getIndexRootFolder() + File.separator + SEQUENCE_FLODER_NAME;
-    String indexDataUnSeqDir =
-        DirectoryManager.getInstance().getIndexRootFolder() + File.separator
-            + UNSEQUENCE_FLODER_NAME;
-    //collection all storage group names appearing in the index root dir.
-    List<String> storageGroupList = new ArrayList<>();
-    for (File sgDir : Objects.requireNonNull(fsFactory.getFile(indexDataSeqDir).listFiles())) {
-      storageGroupList.add(sgDir.getName());
-    }
-    for (String storageGroupName : storageGroupList) {
-      if (true) {
-        throw new Error();
-      }
-//      Map<String, Map<IndexType, IndexInfo>> indexInfoMap = indexRegister
-//          .getAllIndexInfosInStorageGroup(storageGroupName);
-      Map<String, Map<IndexType, IndexInfo>> indexInfoMap = (new IndexRegister())
-          .getAllIndexInfosInStorageGroup(storageGroupName);
-      if (indexInfoMap.isEmpty()) {
-        //delete seq files
-        try {
-          FileUtils.deleteDirectory(
-              fsFactory.getFile(indexDataSeqDir + File.separator + storageGroupName));
-          //delete unseq files
-          FileUtils.deleteDirectory(
-              fsFactory.getFile(indexDataUnSeqDir + File.separator + storageGroupName));
-        } catch (NoSuchFileException ignored) {
-        }
-
-        //delete metadata
-        String indexSGMetaFileName = indexMetaDirPath + File.separator + storageGroupName;
-        fsFactory.getFile(indexSGMetaFileName + STORAGE_GROUP_INDEXING_SUFFIX).delete();
-        fsFactory.getFile(indexSGMetaFileName + STORAGE_GROUP_INDEXED_SUFFIX).delete();
-      }
-    }
+  public IndexMemTableFlushTask getIndexMemFlushTask(String storageGroupPath) {
+    Map<String, IndexProcessor> processorMap = router.getProcessorsByStorageGroup(storageGroupPath);
+    return new IndexMemTableFlushTask(processorMap);
   }
+
+  public IndexManager getIndexRegister() {
+    return null;
+  }
+
 
   private static class InstanceHolder {
 
@@ -276,41 +255,80 @@ public class IndexManager implements IService {
   }
 
   ////////////////////////////////////////////////////////////////////////////
-  // TODO to be changed in the next step
   ////////////////////////////////////////////////////////////////////////////
 
-  public IndexQueryReader getQuerySource(Path seriesPath, IndexType indexType,
-      Filter timeFilter) throws IOException, MetadataException {
-    // TODO it's about the reader
-    String series = seriesPath.getFullPath();
-    StorageGroupMNode storageGroup = MManager.getInstance()
-        .getStorageGroupNodeByPath(new PartialPath(series));
-    String storageGroupName = storageGroup.getName();
-    IndexStorageGroupProcessor sgProcessor = createStorageGroupProcessor(storageGroupName);
-    List<IndexChunkMeta> seq = sgProcessor.getIndexSGMetadata(true, series, indexType);
-    List<IndexChunkMeta> unseq = sgProcessor.getIndexSGMetadata(false, series, indexType);
-    return new IndexQueryReader(seriesPath, indexType, timeFilter, seq, unseq);
-  }
-
-  @TestOnly
-  public List<IndexChunkMeta> getIndexSGMetadata(String storageGroup, boolean sequence,
-      String seriesPath, IndexType indexType) throws IOException {
-    IndexStorageGroupProcessor sgProcessor = createStorageGroupProcessor(storageGroup);
-    return sgProcessor.getIndexSGMetadata(sequence, seriesPath, indexType);
-  }
-
   /**
-   * Close all opened IndexFileProcessors and clear all data in memory. It's used to simulate the
-   * case that IndexManager re-inits from the scratch after index files have been generated and
-   * sealed. only for test now.
+   * When IoTDB restarts, check all index processors and let them reorganize their dirty data.
    */
-  @TestOnly
-  public synchronized void closeAndClear() throws IOException {
-    for (Entry<String, IndexStorageGroupProcessor> entry : processorMap.entrySet()) {
-      IndexStorageGroupProcessor processor = entry.getValue();
-      processor.close();
+  synchronized void recoverIndexData() throws IOException {
+    IndexUtils.breakDown();
+    // Remove files not in the routers
+    for (File processorDataDir : Objects
+        .requireNonNull(fsFactory.getFile(indexDataDirPath).listFiles())) {
+      String processorName = processorDataDir.getName();
+      if (!router.hasIndexProcessor(processorName)) {
+        FileUtils.deleteDirectory(processorDataDir);
+      }
+
+      // check and remove index not recorded in the routers.
+//      Map<IndexType, IndexInfo> indexInfoMap = indexRouter.getAllIndexInfos(processorName);
+//      if (indexInfoMap.isEmpty()) {
+//        //delete seq files
+//        try {
+//          FileUtils.deleteDirectory(
+//              fsFactory.getFile(indexDataSeqDir + File.separator + processorDataDir));
+//          //delete unseq files
+//          FileUtils.deleteDirectory(
+//              fsFactory.getFile(indexDataUnSeqDir + File.separator + processorDataDir));
+//        } catch (NoSuchFileException ignored) {
+//        }
+//      }
+      // delete metadata of processor
+
+//        String indexSGMetaFileName = indexMetaDirPath + File.separator + processorPathName;
+//        fsFactory.getFile(indexSGMetaFileName + STORAGE_GROUP_INDEXING_SUFFIX).delete();
+//        fsFactory.getFile(indexSGMetaFileName + STORAGE_GROUP_INDEXED_SUFFIX).delete();
     }
-    clear();
+  }
+
+//  public IndexQueryReader getQuerySource(Path seriesPath, IndexType indexType,
+//      Filter timeFilter) throws IOException, MetadataException {
+//    // TODO it's about the reader
+//    String series = seriesPath.getFullPath();
+//    StorageGroupMNode storageGroup = MManager.getInstance()
+//        .getStorageGroupNodeByPath(new PartialPath(series));
+//    String storageGroupName = storageGroup.getName();
+//    IndexStorageGroupProcessor sgProcessor = createStorageGroupProcessor(storageGroupName);
+//    List<IndexChunkMeta> seq = sgProcessor.getIndexSGMetadata(true, series, indexType);
+//    List<IndexChunkMeta> unseq = sgProcessor.getIndexSGMetadata(false, series, indexType);
+//    return new IndexQueryReader(seriesPath, indexType, timeFilter, seq, unseq);
+//  }
+//
+//  @TestOnly
+//  public List<IndexChunkMeta> getIndexSGMetadata(String storageGroup, boolean sequence,
+//      String seriesPath, IndexType indexType) throws IOException {
+//    IndexStorageGroupProcessor sgProcessor = createStorageGroupProcessor(storageGroup);
+//    return sgProcessor.getIndexSGMetadata(sequence, seriesPath, indexType);
+//  }
+//
+//  /**
+//   * Close all opened IndexFileProcessors and clear all data in memory. It's used to simulate the
+//   * case that IndexManager re-inits from the scratch after index files have been generated and
+//   * sealed. only for test now.
+//   */
+//  @TestOnly
+//  public synchronized void closeAndClear() throws IOException {
+//    for (Entry<String, IndexStorageGroupProcessor> entry : processorMap.entrySet()) {
+//      IndexStorageGroupProcessor processor = entry.getValue();
+//      processor.close();
+//    }
+//    clear();
+//  }
+public void closeAndClear() {
+
+}
+  public List<IndexChunkMeta> getIndexSGMetadata(String storageGroup, boolean b, String p1, IndexType elb) {
+    return null;
   }
 
 }

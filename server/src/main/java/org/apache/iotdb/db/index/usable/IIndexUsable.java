@@ -1,22 +1,30 @@
 package org.apache.iotdb.db.index.usable;
 
-import java.util.List;
-import java.util.Map;
-import org.apache.iotdb.db.index.IndexFileProcessor;
-import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexType;
-import org.apache.iotdb.db.index.read.IndexTimeRange;
-import org.apache.iotdb.db.index.router.BasicIndexRouter;
-import org.apache.iotdb.db.index.router.IIndexRouter;
 import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.utils.datastructure.TVList;
 
 public interface IIndexUsable {
 
-  void addUsableRange(PartialPath partialPath, long startTime, long endTime);
+  void addUsableRange(PartialPath fullPath,  TVList tvList);
 
-  void addUnusableRange(PartialPath partialPath, long startTime, long endTime);
+  void addUnusableRange(PartialPath fullPath, TVList tvList);
 
-  public static class Factory {
+  /**
+   * 获取下面的所有不可用；
+   *
+   * @param indexSeries contains wildcard characters.
+   * @return a list of full paths
+   */
+  PartialPath[] getAllUnusableSeriesForWholeMatching(PartialPath indexSeries);
+
+  /**
+   * 获取一段序列的可用区间
+   * @param indexSeries a full path
+   * @return a time range
+   */
+  long[] getUnusableRangeForSeriesMatching(PartialPath indexSeries);
+
+  class Factory {
 
     private Factory() {
       // hidden initializer

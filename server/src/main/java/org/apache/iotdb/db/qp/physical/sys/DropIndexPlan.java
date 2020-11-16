@@ -37,7 +37,7 @@ public class DropIndexPlan extends PhysicalPlan {
   private IndexType indexType;
 
   public DropIndexPlan() {
-    super(false, Operator.OperatorType.DELETE_TIMESERIES);
+    super(false, OperatorType.DROP_INDEX);
   }
 
   public DropIndexPlan(List<PartialPath> paths, IndexType indexType) {

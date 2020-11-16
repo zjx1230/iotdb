@@ -17,16 +17,14 @@
  */
 package org.apache.iotdb.db.index.performance;
 
-import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.iotdb.db.index.IndexFileProcessor;
-import org.junit.Test;
+import org.apache.iotdb.db.index.IndexProcessor;
 
 /**
- * check the correctness of flushRunTask in {@linkplain IndexFileProcessor} in parallel
+ * check the correctness of flushRunTask in {@linkplain IndexProcessor} in parallel
  *
  */
 public class AtomicCheckAndIncreaseTest {

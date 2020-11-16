@@ -52,7 +52,7 @@ public class NoIndex extends IoTDBIndex {
   private double[] patterns;
   private double threshold;
 
-  public NoIndex(String path, IndexInfo indexInfo) {
+  public NoIndex(String path, String indexDir, IndexInfo indexInfo) {
     super(path, indexInfo);
   }
 

@@ -27,6 +27,7 @@ import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.engine.merge.selector.MergeFileStrategy;
 import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
 import org.apache.iotdb.db.exception.LoadConfigurationException;
+import org.apache.iotdb.db.index.IndexProcessor;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.service.TSServiceImpl;
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
@@ -284,7 +285,7 @@ public class IoTDBConfig {
   /**
    * If we enable the memory-control mechanism during index building , {@code indexBufferSize}
    * refers to the byte-size of memory buffer threshold. For each index processor, all indexes in
-   * one {@linkplain org.apache.iotdb.db.index.IndexFileProcessor IndexFileProcessor} share a total
+   * one {@linkplain IndexProcessor IndexFileProcessor} share a total
    * common buffer size. With the memory-control mechanism, the occupied memory of all raw data and
    * index structures will be counted. If the memory buffer size reaches this threshold, the indexes
    * will be flushed to the disk file. As a result, data in one series may be divided into more than

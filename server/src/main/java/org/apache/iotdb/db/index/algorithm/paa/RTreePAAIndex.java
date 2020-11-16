@@ -56,8 +56,9 @@ public class RTreePAAIndex extends RTreeIndex {
   // Only for query
   private Map<Integer, Identifier> identifierMap = new HashMap<>();
 
-  public RTreePAAIndex(String path, IndexInfo indexInfo) {
+  public RTreePAAIndex(String path, String indexDir, IndexInfo indexInfo) {
     super(path, indexInfo, true);
+    throw new Error("indexDir没用起来，记得初始化");
   }
 
   @Override

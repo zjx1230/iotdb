@@ -41,6 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
 import org.apache.iotdb.db.index.io.IndexIOReader;
 import org.apache.iotdb.db.index.read.IndexFileResource;
@@ -69,8 +70,8 @@ public class IndexStorageGroupProcessor {
    * IndexFileName -> IndexFileProcessor. Each IndexFileProcessor corresponds to an open
    * TSFileProcessor, and different processors belong to different partition ranges.
    */
-  private final Map<String, IndexFileProcessor> seqIndexProcessorMap = new ConcurrentHashMap<>();
-  private final Map<String, IndexFileProcessor> unseqIndexProcessorMap = new ConcurrentHashMap<>();
+  private final Map<String, IndexProcessor> seqIndexProcessorMap = new ConcurrentHashMap<>();
+  private final Map<String, IndexProcessor> unseqIndexProcessorMap = new ConcurrentHashMap<>();
 
   /**
    * After IndexFileProcessor is closed, it will generate a {@linkplain IndexFileResource} and add
@@ -208,10 +209,10 @@ public class IndexStorageGroupProcessor {
     return tsfileNameWithSuffix.substring(0, tsfileLen);
   }
 
-  public IndexFileProcessor createIndexFileProcessor(boolean sequence, long partitionId,
+  public IndexProcessor createIndexFileProcessor(boolean sequence, long partitionId,
       String tsFileName) {
 
-    Map<String, IndexFileProcessor> processorMap = getSeqOrUnseqProcessorMap(sequence);
+    Map<String, IndexProcessor> processorMap = getSeqOrUnseqProcessorMap(sequence);
     String indexParentDir = sequence ? seqDir : unseqDir;
     indexParentDir += File.separator + partitionId;
 
@@ -220,14 +221,15 @@ public class IndexStorageGroupProcessor {
     }
     String fullFilePath = indexParentDir + File.separator + getIndexFileName(tsFileName);
 
-    IndexFileProcessor fileProcessor = processorMap.get(fullFilePath);
+    IndexProcessor fileProcessor = processorMap.get(fullFilePath);
     if (fileProcessor == null) {
       Map<String, Map<IndexType, ByteBuffer>> previousMeta = sequence ?
           indexSGSeqMetadata.computeIfAbsent(partitionId, p -> new HashMap<>()) :
           indexSGUnseqMetadata.computeIfAbsent(partitionId, p -> new HashMap<>());
-      fileProcessor = new IndexFileProcessor(storageGroupName, fullFilePath,
-          sequence, partitionId, previousMeta, this::updateIndexFileResources);
-      IndexFileProcessor oldProcessor = processorMap.putIfAbsent(fullFilePath, fileProcessor);
+//      fileProcessor = new IndexProcessor(storageGroupName, fullFilePath,
+//          sequence, partitionId, previousMeta, this::updateIndexFileResources);
+      IndexUtils.breakDown();
+      IndexProcessor oldProcessor = processorMap.putIfAbsent(fullFilePath, fileProcessor);
       if (oldProcessor != null) {
         return oldProcessor;
       }
@@ -257,7 +259,7 @@ public class IndexStorageGroupProcessor {
   }
 
 
-  private Map<String, IndexFileProcessor> getSeqOrUnseqProcessorMap(boolean sequence) {
+  private Map<String, IndexProcessor> getSeqOrUnseqProcessorMap(boolean sequence) {
     return sequence ? seqIndexProcessorMap : unseqIndexProcessorMap;
   }
 
@@ -266,21 +268,21 @@ public class IndexStorageGroupProcessor {
   }
 
   public void removeIndexProcessor(String identifier, boolean sequence) throws IOException {
-    Map<String, IndexFileProcessor> processorMap = getSeqOrUnseqProcessorMap(sequence);
-    IndexFileProcessor processor = processorMap.remove(identifier);
+    Map<String, IndexProcessor> processorMap = getSeqOrUnseqProcessorMap(sequence);
+    IndexProcessor processor = processorMap.remove(identifier);
     if (processor != null) {
       processor.close();
     }
   }
 
   public synchronized void close() throws IOException {
-    for (Entry<String, IndexFileProcessor> entry : seqIndexProcessorMap.entrySet()) {
-      IndexFileProcessor processor = entry.getValue();
+    for (Entry<String, IndexProcessor> entry : seqIndexProcessorMap.entrySet()) {
+      IndexProcessor processor = entry.getValue();
       processor.close();
     }
 
-    for (Entry<String, IndexFileProcessor> entry : unseqIndexProcessorMap.entrySet()) {
-      IndexFileProcessor processor = entry.getValue();
+    for (Entry<String, IndexProcessor> entry : unseqIndexProcessorMap.entrySet()) {
+      IndexProcessor processor = entry.getValue();
       processor.close();
     }
     serialize();
@@ -290,16 +292,16 @@ public class IndexStorageGroupProcessor {
     logger.info("Start deleting all storage groups' timeseries");
     close();
     // delete all index files
-    for (Entry<String, IndexFileProcessor> entry : seqIndexProcessorMap.entrySet()) {
-      IndexFileProcessor processor = entry.getValue();
-      File file = new File(processor.getIndexFilePath());
+    for (Entry<String, IndexProcessor> entry : seqIndexProcessorMap.entrySet()) {
+      IndexProcessor processor = entry.getValue();
+      File file = new File(processor.getIndexSeries());
       if (file.exists()) {
         file.delete();
       }
     }
-    for (Entry<String, IndexFileProcessor> entry : unseqIndexProcessorMap.entrySet()) {
-      IndexFileProcessor processor = entry.getValue();
-      File file = new File(processor.getIndexFilePath());
+    for (Entry<String, IndexProcessor> entry : unseqIndexProcessorMap.entrySet()) {
+      IndexProcessor processor = entry.getValue();
+      File file = new File(processor.getIndexSeries());
       if (file.exists()) {
         file.delete();
       }

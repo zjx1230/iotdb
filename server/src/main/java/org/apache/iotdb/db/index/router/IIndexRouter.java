@@ -3,35 +3,49 @@ package org.apache.iotdb.db.index.router;
 import java.util.List;
 import java.util.Map;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
-import org.apache.iotdb.db.index.IndexFileProcessor;
+import org.apache.iotdb.db.index.IndexProcessor;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.metadata.PartialPath;
 
 public interface IIndexRouter {
 
-  IndexFileProcessor getIndexProcessor(PartialPath path);
+//  IndexProcessor getIndexProcessor(PartialPath path);
 
-  void setIndexProcessor(PartialPath path, IndexFileProcessor indexFileProcessor);
+  /**
+   * given a index processor path, justify whether it has been registered in router.
+   */
+  boolean hasIndexProcessor(String path);
 
-  boolean createIndex(List<PartialPath> prefixPaths, IndexInfo indexInfo) throws MetadataException;
 
-  boolean dropIndex(List<PartialPath> prefixPaths, IndexType indexType) throws MetadataException;
+  List<IndexProcessor> getIndexProcessorByStorageGroup(String storageGroupPath);
 
-  Map<IndexType, IndexInfo> getAllIndexInfos(PartialPath prefixPath);
+  void removeIndexProcessorByStorageGroup(String storageGroupPath);
 
-  IndexInfo getIndexInfoByPath(PartialPath prefixPath, IndexType indexType);
+  boolean addIndexIntoRouter(PartialPath prefixPath, IndexInfo indexInfo) throws MetadataException;
 
-  void close();
 
-  public static class Factory {
+  boolean removeIndexFromRouter(PartialPath prefixPath, IndexType indexType)
+      throws MetadataException;
+
+  Map<String, IndexProcessor> getProcessorsByStorageGroup(String storageGroup);
+//
+//  Map<IndexType, IndexInfo> getAllIndexInfos(String prefixPath);
+
+//  IndexInfo getIndexInfoByPath(PartialPath prefixPath, IndexType indexType);
+
+  Iterable<IndexProcessor> getAllIndexProcessors();
+
+  IndexProcessor getIndexProcessorByPath();
+
+  class Factory {
 
     private Factory() {
       // hidden initializer
     }
 
     public static IIndexRouter getIndexRouter() {
-      return new BasicIndexRouter(null);
+      return new ProtoIndexRouter(null);
     }
   }
 

@@ -94,9 +94,10 @@ public class ELBIndex extends IoTDBIndex {
   private Pair<double[], double[]> patternFeatures;
   private ELBFeatureExtractor elbFeatureExtractor;
 
-  public ELBIndex(String path, IndexInfo indexInfo) {
+  public ELBIndex(String path, String indexDir, IndexInfo indexInfo) {
     super(path, indexInfo);
     initELBParam();
+    throw new Error("indexDir没用起来，记得初始化");
   }
 
   private void initELBParam() {

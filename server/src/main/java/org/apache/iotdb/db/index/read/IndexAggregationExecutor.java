@@ -152,8 +152,9 @@ public class IndexAggregationExecutor extends AggregationExecutor {
     // construct series reader without value filter
     QueryDataSource queryDataSource = QueryResourceManager.getInstance()
         .getQueryDataSource(seriesPath, context, timeFilter);
-    IndexQueryReader indexQueryReader = IndexManager.getInstance()
-        .getQuerySource(seriesPath, indexType, timeFilter);
+//    IndexQueryReader indexQueryReader = IndexManager.getInstance()
+//        .getQuerySource(seriesPath, indexType, timeFilter);
+    IndexQueryReader indexQueryReader = null;
     indexQueryReader.initQueryCondition(queryProps, indexFuncResults);
     // update filter by TTL
     timeFilter = queryDataSource.updateFilterUsingTTL(timeFilter);

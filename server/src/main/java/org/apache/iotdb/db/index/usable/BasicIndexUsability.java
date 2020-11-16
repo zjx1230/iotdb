@@ -4,7 +4,7 @@ import java.io.File;
 import java.util.List;
 import java.util.Map;
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
-import org.apache.iotdb.db.index.IndexFileProcessor;
+import org.apache.iotdb.db.index.IndexProcessor;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.metadata.PartialPath;
@@ -30,37 +30,12 @@ public class BasicIndexUsability implements IIndexUsable {
   }
 
   @Override
-  public IndexFileProcessor getIndexProcessor(PartialPath path) {
-    return null;
-  }
-
-  @Override
-  public void setIndexProcessor(PartialPath path, IndexFileProcessor indexFileProcessor) {
+  public void addUsableRange(PartialPath partialPath, long startTime, long endTime) {
 
   }
 
   @Override
-  public boolean createIndex(List<PartialPath> prefixPaths, IndexInfo indexInfo) {
-    return false;
-  }
-
-  @Override
-  public boolean dropIndex(List<PartialPath> prefixPaths, IndexType indexType) {
-    return false;
-  }
-
-  @Override
-  public Map<IndexType, IndexInfo> getAllIndexInfos(PartialPath prefixPath) {
-    return null;
-  }
-
-  @Override
-  public IndexInfo getIndexInfoByPath(PartialPath prefixPath, IndexType indexType) {
-    return null;
-  }
-
-  @Override
-  public void close() {
+  public void addUnusableRange(PartialPath partialPath, long startTime, long endTime) {
 
   }
 }

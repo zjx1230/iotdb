@@ -18,7 +18,6 @@
  */
 package org.apache.iotdb.db.index.common;
 
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,11 +25,10 @@ import java.util.Map.Entry;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexTypeException;
-import org.apache.iotdb.db.index.IndexManager;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.algorithm.NoIndex;
-import org.apache.iotdb.db.index.algorithm.elb.ELBIndexNotGood;
 import org.apache.iotdb.db.index.algorithm.elb.ELBIndex;
+import org.apache.iotdb.db.index.algorithm.elb.ELBIndexNotGood;
 import org.apache.iotdb.db.index.algorithm.paa.RTreePAAIndex;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
@@ -98,27 +96,28 @@ public enum IndexType {
     }
   }
 
-  private static IoTDBIndex newIndexByType(String path, IndexType indexType, IndexInfo indexInfo) {
+  private static IoTDBIndex newIndexByType(String path, String indexDir, IndexType indexType,
+      IndexInfo indexInfo) {
     switch (indexType) {
+      case NO_INDEX:
+        return new NoIndex(path, indexDir, indexInfo);
+      case ELB_INDEX:
+        return new ELBIndex(path, indexDir, indexInfo);
+      case RTREE_PAA:
+        return new RTreePAAIndex(path, indexDir, indexInfo);
       case ELB:
         return new ELBIndexNotGood(path, indexInfo);
-      case NO_INDEX:
-        return new NoIndex(path, indexInfo);
-      case RTREE_PAA:
-        return new RTreePAAIndex(path, indexInfo);
-      case ELB_INDEX:
-        return new ELBIndex(path, indexInfo);
       case KV_INDEX:
       default:
         throw new NotImplementedException("unsupported index type:" + indexType);
     }
   }
 
-  public static IoTDBIndex constructIndex(String path, IndexType indexType, IndexInfo indexInfo,
-      ByteBuffer previous) {
+  public static IoTDBIndex constructIndex(String indexSeries, String indexDir, IndexType indexType,
+      IndexInfo indexInfo) {
     indexInfo.setProps(uppercaseStringProps(indexInfo.getProps()));
-    IoTDBIndex index = newIndexByType(path, indexType, indexInfo);
-    index.initPreprocessor(previous, false);
+    IoTDBIndex index = newIndexByType(indexSeries, indexDir, indexType, indexInfo);
+    index.initPreprocessor(null, false);
     return index;
   }
 
@@ -129,13 +128,17 @@ public enum IndexType {
       Map<String, Object> queryProps, List<IndexFuncResult> indexFuncs)
       throws UnsupportedIndexFuncException {
     queryProps = uppercaseProps(queryProps);
-    IndexInfo indexInfo = IndexManager.getInstance().getIndexRegister()
-        .getIndexInfoByPath(path, indexType);
+    IndexUtils.breakDown();
+//    IndexInfo indexInfo = IndexManager.getInstance().getIndexRegister()
+//        .getIndexInfoByPath(path, indexType);
+    IndexInfo indexInfo = null;
     if (indexInfo == null) {
       throw new IllegalIndexParamException(
           String.format("%s.%s not found, why it escapes the check?", path, indexType));
     }
-    IoTDBIndex index = newIndexByType(path, indexType, indexInfo);
+    IoTDBIndex index = newIndexByType(path, null, indexType, indexInfo);
+    IndexUtils.breakDown("temp set index Dir is NULL!");
+
     index.initQuery(queryProps, indexFuncs);
 
     return index;
@@ -143,7 +146,7 @@ public enum IndexType {
 
   private static Map<String, String> uppercaseStringProps(Map<String, String> props) {
     Map<String, String> uppercase = new HashMap<>(props.size());
-    props.forEach((k,v)->uppercase.put(k.toUpperCase(),v.toUpperCase()));
+    props.forEach((k, v) -> uppercase.put(k.toUpperCase(), v.toUpperCase()));
     return uppercase;
   }
 
@@ -152,10 +155,11 @@ public enum IndexType {
     for (Entry<String, Object> entry : props.entrySet()) {
       String k = entry.getKey();
       Object v = entry.getValue();
-      if (v instanceof String)
-        uppercase.put(k.toUpperCase(), ((String)v).toUpperCase());
-      else
+      if (v instanceof String) {
+        uppercase.put(k.toUpperCase(), ((String) v).toUpperCase());
+      } else {
         uppercase.put(k.toUpperCase(), v);
+      }
     }
     return uppercase;
   }

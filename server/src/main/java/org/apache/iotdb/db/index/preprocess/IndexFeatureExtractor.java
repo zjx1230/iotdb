@@ -39,8 +39,8 @@ import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
  * In general, index structure needn't maintain all of original data, but only pointers to the
  * original data (e.g. The start time and the end time can uniquely determine a time sequence).<p>
  *
- * {@linkplain IndexFeatureExtractor} makes a time window slide over the time series by some rules and
- * obtain a list of subsequences. The time windows may be time-fixed (Euclidean distance),
+ * {@linkplain IndexFeatureExtractor} makes a time window slide over the time series by some rules
+ * and obtain a list of subsequences. The time windows may be time-fixed (Euclidean distance),
  * count-fixed (Time Warping). It scans the sequence with a certain overlap step (a.k.a. the update
  * size).
  *
@@ -61,9 +61,9 @@ public abstract class IndexFeatureExtractor {
 
   /**
    * In the BUILD and QUERY modes, the preprocessor works differently.  For example, {@linkplain
-   * ELBCountFixedFeatureExtractor ELBCountFixedPreprocessor}
-   * does not need to generate L3 feature in QUERY-Mode, and NoIndex does not need to generate L1
-   * Identifier and L2 Aligned sequence in BUILD-Mode.
+   * ELBCountFixedFeatureExtractor ELBCountFixedPreprocessor} does not need to generate L3 feature
+   * in QUERY-Mode, and NoIndex does not need to generate L1 Identifier and L2 Aligned sequence in
+   * BUILD-Mode.
    *
    * The Default is BUILD-mode, i.e., inQueryMode=false
    */
@@ -265,12 +265,12 @@ public abstract class IndexFeatureExtractor {
    * The time window type: time-fixed or count-fixed. It determines the meanings of following
    * fields: {@code windowRange}, {@code windowRange}, {@code slideStep}.<p>
    *
-   * COUNT_FIXED: TIME_FIXED:
+   * COUNT_FIXED: TIME_FIXED: WHOLE_MATCH:
    *
    * <p>See also: Kanat et. al. General Incremental Sliding-Window Aggregation. VLDB 2015.
    */
   public enum WindowType {
-    TIME_FIXED, COUNT_FIXED;
+    TIME_FIXED, COUNT_FIXED, WHOLE_MATCH;
 
     public static WindowType getIndexType(String windowType) {
       String normalized = windowType.toUpperCase();
@@ -279,6 +279,8 @@ public abstract class IndexFeatureExtractor {
           return TIME_FIXED;
         case "COUNT_FIXED":
           return COUNT_FIXED;
+        case "WHOLE_MATCH":
+          return WHOLE_MATCH;
         default:
           throw new NotImplementedException("unsupported window type:" + windowType);
       }

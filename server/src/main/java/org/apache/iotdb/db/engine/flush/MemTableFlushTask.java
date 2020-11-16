@@ -28,7 +28,8 @@ import org.apache.iotdb.db.engine.flush.pool.FlushSubTaskPoolManager;
 import org.apache.iotdb.db.engine.memtable.IMemTable;
 import org.apache.iotdb.db.engine.memtable.IWritableMemChunk;
 import org.apache.iotdb.db.exception.runtime.FlushRunTimeException;
-import org.apache.iotdb.db.index.IndexFileProcessor;
+import org.apache.iotdb.db.index.IndexProcessor;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.common.Path;
@@ -50,7 +51,7 @@ public class MemTableFlushTask {
   private RestorableTsFileIOWriter writer;
 
   private final boolean enabledIndex;
-  private IndexFileProcessor indexFileProcessor;
+  private IndexProcessor indexProcessor;
 
   private final ConcurrentLinkedQueue<Object> ioTaskQueue = new ConcurrentLinkedQueue<>();
   private final ConcurrentLinkedQueue<Object> encodingTaskQueue = new ConcurrentLinkedQueue<>();
@@ -68,17 +69,17 @@ public class MemTableFlushTask {
    */
 
   public MemTableFlushTask(IMemTable memTable, RestorableTsFileIOWriter writer, String storageGroup,
-      IndexFileProcessor indexFileProcessor) {
+      IndexProcessor indexProcessor) {
     this.memTable = memTable;
     this.writer = writer;
     this.storageGroup = storageGroup;
     this.encodingTaskFuture = subTaskPoolManager.submit(encodingTask);
     this.ioTaskFuture = subTaskPoolManager.submit(ioTask);
-    if (indexFileProcessor == null){
+    if (indexProcessor == null){
       this.enabledIndex = false;
     }else{
       this.enabledIndex = IoTDBDescriptor.getInstance().getConfig().isEnableIndex();
-      this.indexFileProcessor = indexFileProcessor;
+      this.indexProcessor = indexProcessor;
     }
 
     logger.debug("flush task of Storage group {} memtable {} is created ",
@@ -97,7 +98,7 @@ public class MemTableFlushTask {
     long start = System.currentTimeMillis();
     long sortTime = 0;
     if(enabledIndex) {
-      indexFileProcessor.startFlushMemTable();
+      indexProcessor.startFlushMemTable();
     }
 
     for (String deviceId : memTable.getMemTableMap().keySet()) {
@@ -110,7 +111,8 @@ public class MemTableFlushTask {
         sortTime += System.currentTimeMillis() - startTime;
         encodingTaskQueue.add(new Pair<>(tvList, desc));
         if (enabledIndex) {
-          indexFileProcessor.buildIndexForOneSeries(new Path(deviceId, measurementId), tvList);
+//          indexProcessor.buildIndexForOneSeries(new Path(deviceId, measurementId), tvList);
+          IndexUtils.breakDown();
         }
       }
       encodingTaskQueue.add(new EndChunkGroupIoTask());
@@ -131,7 +133,7 @@ public class MemTableFlushTask {
 
     ioTaskFuture.get();
     if (enabledIndex){
-      indexFileProcessor.endFlushMemTable();
+      indexProcessor.endFlushMemTable();
     }
 
     try {

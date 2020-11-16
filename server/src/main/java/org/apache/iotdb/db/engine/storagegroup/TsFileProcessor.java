@@ -51,9 +51,10 @@ import org.apache.iotdb.db.engine.version.VersionController;
 import org.apache.iotdb.db.exception.TsFileProcessorException;
 import org.apache.iotdb.db.exception.WriteProcessException;
 import org.apache.iotdb.db.index.IndexManager;
-import org.apache.iotdb.db.index.IndexFileProcessor;
+import org.apache.iotdb.db.index.IndexProcessor;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
@@ -121,7 +122,7 @@ public class TsFileProcessor {
   private long totalMemTableSize;
   private boolean shouldFlush = false;
 
-  private IndexFileProcessor indexFileProcessor;
+  private IndexProcessor indexProcessor;
 
   private static final String FLUSH_QUERY_WRITE_LOCKED = "{}: {} get flushQueryLock write lock";
   private static final String FLUSH_QUERY_WRITE_RELEASE = "{}: {} get flushQueryLock write lock released";
@@ -721,7 +722,7 @@ public class TsFileProcessor {
       try {
         MemTableFlushTask flushTask;
         writer.mark();
-        flushTask = new MemTableFlushTask(memTableToFlush, writer, storageGroupName, getIndexFileProcessor());
+        flushTask = new MemTableFlushTask(memTableToFlush, writer, storageGroupName, getIndexProcessor());
         flushTask.syncFlushMemTable();
       } catch (Exception e) {
         logger.error("{}: {} meet error when flushing a memtable, change system mode to read-only",
@@ -787,7 +788,7 @@ public class TsFileProcessor {
         }
         endFile();
       if (IoTDBDescriptor.getInstance().getConfig().isEnableIndex()) {
-        getIndexFileProcessor().close();
+        getIndexProcessor().close();
       }
         if (logger.isDebugEnabled()) {
           logger.debug("{} flushingMemtables is clear", storageGroupName);
@@ -861,14 +862,15 @@ public class TsFileProcessor {
   }
 
 
-  private IndexFileProcessor getIndexFileProcessor() {
-    if (indexFileProcessor == null && IoTDBDescriptor.getInstance().getConfig().isEnableIndex()) {
-      indexFileProcessor = IndexManager.getInstance()
-          .getNewIndexFileProcessor(storageGroupName, sequence, timeRangeId,
-              tsFileResource.getTsFile().getName());
-      logger.info("init a new index file processor {}", indexFileProcessor.getIndexFilePath());
+  private IndexProcessor getIndexProcessor() {
+    if (indexProcessor == null && IoTDBDescriptor.getInstance().getConfig().isEnableIndex()) {
+      IndexUtils.breakDown();
+//      indexProcessor = IndexManager.getInstance()
+//          .getNewIndexFileProcessor(storageGroupName, sequence, timeRangeId,
+//              tsFileResource.getTsFile().getName());
+      logger.info("init a new index file processor {}", indexProcessor.getIndexSeries());
     }
-    return indexFileProcessor;
+    return indexProcessor;
 
   }
 
@@ -879,8 +881,9 @@ public class TsFileProcessor {
       MultiFileLogNodeManager.getInstance()
           .deleteNode(storageGroupName + "-" + tsFileResource.getTsFile().getName());
       if (IoTDBDescriptor.getInstance().getConfig().isEnableIndex()) {
-        IndexManager.getInstance().removeIndexProcessor(storageGroupName, sequence,
-            getIndexFileProcessor().getIndexFilePath());
+        IndexUtils.breakDown();
+//        IndexManager.getInstance().removeIndexProcessor(storageGroupName, sequence,
+//            getIndexProcessor().getIndexSeries());
       }
     } catch (IOException e) {
       throw new TsFileProcessorException(e);
