@@ -30,8 +30,10 @@ import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.io.IndexBuildTaskPoolManager;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
+import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.FileUtils;
 import org.apache.iotdb.db.utils.TestOnly;
@@ -89,7 +91,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   private AtomicInteger numIndexBuildTasks;
   private volatile boolean closed;
   private Map<IndexType, IoTDBIndex> allPathsIndexMap;
-
+  private final IIndexUsable indexUsable;
 
   public IndexProcessor(String indexSeries, String indexSeriesDirPath) {
 //    this.storageGroupName = storageGroupName;
@@ -107,6 +109,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     this.indexSeries = indexSeries;
     this.indexSeriesDirPath = indexSeriesDirPath;
     this.closed = false;
+    this.indexUsable = deserialize();
 //    if (previousMetaPointer == null) {
 //      throw new IndexRuntimeException("previousMeta, maybe potential error");
 //    }
@@ -114,7 +117,15 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     this.allPathsIndexMap = new HashMap<>();
   }
 
+  private IIndexUsable deserialize() {
+    // TODO 把可用区间读进来
+    throw new UnsupportedOperationException();
+  }
 
+  private void serialize() {
+    // TODO 把可用区间信息刷出去
+    IndexUtils.breakDown();
+  }
 
   /**
    * seal the index file, move "indexing" to "index"
@@ -175,6 +186,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   private void closeAndRelease() {
     allPathsIndexMap.forEach((indexType, index) -> index.closeAndRelease());
     allPathsIndexMap.clear();
+    serialize();
   }
 
   public synchronized void deleteAllFiles() throws IOException {
@@ -284,6 +296,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
               index.flush();
             }
             index.endFlushTask();
+            this.indexUsable.addUsableRange(path, tvList);
           } catch (IndexManagerException e) {
             //Give up the following data, but the previously serialized chunk will not be affected.
             logger.error("build index failed", e);
@@ -320,6 +333,10 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   @TestOnly
   public AtomicInteger getNumIndexBuildTasks() {
     return numIndexBuildTasks;
+  }
+
+  public void updateUnsequenceData(PartialPath path, TVList tvList) {
+    this.indexUsable.minusUsableRange(path, tvList);
   }
 
 //  @TestOnly

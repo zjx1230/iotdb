@@ -32,6 +32,7 @@ import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.exception.StartupException;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexMessageType;
@@ -56,7 +57,7 @@ public class IndexManager implements IService {
   private final String indexDataDirPath;
 
   private final IIndexRouter router;
-  private final IIndexUsable indexUsability;
+//  private final IIndexUsable indexUsability;
 
   private IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
 
@@ -209,7 +210,7 @@ public class IndexManager implements IService {
     indexDataDirPath = DirectoryManager.getInstance().getIndexRootFolder() + File.separator +
         INDEX_DATA_DIR_NAME;
     router = IIndexRouter.Factory.getIndexRouter();
-    indexUsability = IIndexUsable.Factory.getIndexUsability();
+//    indexUsability = IIndexUsable.Factory.getIndexUsability();
   }
 
   public static IndexManager getInstance() {
@@ -236,10 +237,10 @@ public class IndexManager implements IService {
 //    clear();
   }
 
-  public IndexMemTableFlushTask getIndexMemFlushTask(String storageGroupPath) {
-    Map<String, IndexProcessor> processorMap = router.getProcessorsByStorageGroup(storageGroupPath);
-    return new IndexMemTableFlushTask(processorMap);
-  }
+//  public IndexMemTableFlushTask getIndexMemFlushTask(String storageGroupPath) {
+//    Map<String, IndexProcessor> processorMap = router.getProcessorsByStorageGroup(storageGroupPath);
+//    return new IndexMemTableFlushTask(processorMap);
+//  }
 
   public IndexManager getIndexRegister() {
     return null;
@@ -260,13 +261,13 @@ public class IndexManager implements IService {
   /**
    * When IoTDB restarts, check all index processors and let them reorganize their dirty data.
    */
-  synchronized void recoverIndexData() throws IOException {
+  synchronized void recoverIndexData() throws IOException, IllegalPathException {
     IndexUtils.breakDown();
     // Remove files not in the routers
     for (File processorDataDir : Objects
         .requireNonNull(fsFactory.getFile(indexDataDirPath).listFiles())) {
       String processorName = processorDataDir.getName();
-      if (!router.hasIndexProcessor(processorName)) {
+      if (!router.hasIndexProcessor(new PartialPath(processorName))) {
         FileUtils.deleteDirectory(processorDataDir);
       }
 

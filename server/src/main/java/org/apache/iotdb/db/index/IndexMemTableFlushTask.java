@@ -26,20 +26,20 @@ public class IndexMemTableFlushTask {
 
   private static final Logger logger = LoggerFactory.getLogger(IndexMemTableFlushTask.class);
   private final IIndexRouter router;
-  private final IIndexUsable usability;
+//  private final IIndexUsable usability;
   private final boolean sequence;
 
   /**
    * it should be immutable.
    */
 //  private final Map<String, IndexProcessor> processorMap;
-  public IndexMemTableFlushTask(IIndexRouter router, IIndexUsable usability, boolean sequence
+  public IndexMemTableFlushTask(IIndexRouter router, boolean sequence
 //      ,UpdateIndexFileResourcesCallBack addResourcesCallBack
   ) {
 //    this.processorMap = processorMap;
     // check all processors
     this.router = router;
-    this.usability = usability;
+//    this.usability = usability;
     this.sequence = sequence;
     // in current version, we don't build index for unsequence block
     if (sequence) {
@@ -50,10 +50,9 @@ public class IndexMemTableFlushTask {
   public void buildIndexForOneSeries(PartialPath path, TVList tvList) {
     // in current version, we don't build index for unsequence block
     if (sequence) {
-      router.getIndexProcessorByPath().buildIndexForOneSeries(path, tvList);
-      usability.addUnusableRange(path, tvList);
+      router.getIndexProcessorByPath(path).forEach(p->p.buildIndexForOneSeries(path, tvList));
     } else {
-      usability.addUnusableRange(path, tvList);
+      router.getIndexProcessorByPath(path).forEach(p->p.updateUnsequenceData(path, tvList));
     }
   }
 

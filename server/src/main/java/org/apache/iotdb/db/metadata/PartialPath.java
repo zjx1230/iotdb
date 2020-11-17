@@ -150,6 +150,15 @@ public class PartialPath extends Path implements Comparable<Path> {
     return true;
   }
 
+  public boolean isFullPath() {
+    for (String node : nodes) {
+      if (node.equals(IoTDBConstant.PATH_WILDCARD)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   @Override
   public String getFullPath() {
     if (fullPath != null) {

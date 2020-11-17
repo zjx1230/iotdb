@@ -10,13 +10,10 @@ import org.apache.iotdb.db.metadata.PartialPath;
 
 public interface IIndexRouter {
 
-//  IndexProcessor getIndexProcessor(PartialPath path);
-
   /**
    * given a index processor path, justify whether it has been registered in router.
    */
-  boolean hasIndexProcessor(String path);
-
+  boolean hasIndexProcessor(PartialPath path);
 
   List<IndexProcessor> getIndexProcessorByStorageGroup(String storageGroupPath);
 
@@ -29,14 +26,10 @@ public interface IIndexRouter {
       throws MetadataException;
 
   Map<String, IndexProcessor> getProcessorsByStorageGroup(String storageGroup);
-//
-//  Map<IndexType, IndexInfo> getAllIndexInfos(String prefixPath);
-
-//  IndexInfo getIndexInfoByPath(PartialPath prefixPath, IndexType indexType);
 
   Iterable<IndexProcessor> getAllIndexProcessors();
 
-  IndexProcessor getIndexProcessorByPath();
+  Iterable<IndexProcessor> getIndexProcessorByPath(PartialPath path);
 
   class Factory {
 
