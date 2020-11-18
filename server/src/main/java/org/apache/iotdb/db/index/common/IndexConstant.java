@@ -23,6 +23,7 @@ public class IndexConstant {
   public static final String ID = "ID";
 
 
+  public static final String ROUTER_DIR = "router";
   public static final String META_DIR_NAME = "meta";
   public static final String INDEX_DATA_DIR_NAME = "index_data";
   public static final String STORAGE_GROUP_INDEXING_SUFFIX = ".sg_indexing";

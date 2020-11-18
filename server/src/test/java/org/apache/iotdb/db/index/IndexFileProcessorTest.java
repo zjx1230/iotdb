@@ -100,7 +100,6 @@
 //    IndexTestUtils.clearIndexFile(tempIndexFileName);
 //    IoTDBDescriptor.getInstance().getConfig().setIndexBufferSize(defaultIndexBufferSize);
 //    EnvironmentUtils.cleanEnv();
-//
 //  }
 //
 //

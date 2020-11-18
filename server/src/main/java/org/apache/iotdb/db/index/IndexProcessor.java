@@ -20,7 +20,8 @@ package org.apache.iotdb.db.index;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -29,6 +30,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
+import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.func.IndexNaiveFunc;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.io.IndexBuildTaskPoolManager;
@@ -62,27 +65,9 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
    */
 //  private final Map<IndexType, ByteBuffer> previousMetaPointer;
   private final String indexSeriesDirPath;
-  private String indexSeries;
+  private PartialPath indexSeries;
   private final IndexBuildTaskPoolManager indexBuildPoolManager;
   private ReadWriteLock lock = new ReentrantReadWriteLock();
-
-  /**
-   * path -> {Map<IndexType, IoTDBIndex>}
-   */
-
-//  private IndexIOWriter writer;
-//  private final boolean sequence;
-//  private final UpdateIndexFileResourcesCallBack addResourcesCallBack;
-
-//  private static final long LONGEST_FLUSH_IO_WAIT_MS = 60000;
-
-//  private boolean noMoreIndexFlushTask = false;
-//  private final Object waitingSymbol = new Object();
-//  private final long memoryThreshold;
-
-//  private final AtomicLong memoryUsed;
-  //  private volatile boolean isFlushing;
-//  private final long partitionId;
 
   /**
    * we use numIndexBuildTasks to record how many indexes are building. If it's 0, there is no
@@ -91,33 +76,24 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   private AtomicInteger numIndexBuildTasks;
   private volatile boolean closed;
   private Map<IndexType, IoTDBIndex> allPathsIndexMap;
-  private final IIndexUsable indexUsable;
+  private Map<IndexType, IIndexUsable> usableMap;
 
-  public IndexProcessor(String indexSeries, String indexSeriesDirPath) {
-//    this.storageGroupName = storageGroupName;
-
-//    this.sequence = sequence;
-//    this.partitionId = partitionId;
-//    this.addResourcesCallBack = addResourcesCallBack;
+  public IndexProcessor(PartialPath indexSeries, String indexSeriesDirPath) {
     this.indexBuildPoolManager = IndexBuildTaskPoolManager.getInstance();
-//    this.writer = new IndexIOWriter(indexFilePath);
-//    memoryUsed = new AtomicLong(0);
-//    memoryThreshold = IoTDBDescriptor.getInstance().getConfig().getIndexBufferSize();
-//    isFlushing = false;
 
     this.numIndexBuildTasks = new AtomicInteger(0);
     this.indexSeries = indexSeries;
     this.indexSeriesDirPath = indexSeriesDirPath;
     this.closed = false;
-    this.indexUsable = deserialize();
-//    if (previousMetaPointer == null) {
-//      throw new IndexRuntimeException("previousMeta, maybe potential error");
-//    }
-//    this.previousMetaPointer = previousMetaPointer;
-    this.allPathsIndexMap = new HashMap<>();
+    this.usableMap = deserialize();
+    this.allPathsIndexMap = new EnumMap<>(IndexType.class);
   }
 
-  private IIndexUsable deserialize() {
+  private String getIndexDir(IndexType indexType) {
+    return indexSeriesDirPath + File.separator + indexType;
+  }
+
+  private Map<IndexType, IIndexUsable> deserialize() {
     // TODO 把可用区间读进来
     throw new UnsupportedOperationException();
   }
@@ -151,7 +127,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     });
   }
 
-  private void waitingFlushEndAndDo(DoSomething doSomething) throws IOException {
+  private void waitingFlushEndAndDo(IndexNaiveFunc indexNaiveAction) throws IOException {
     //wait the flushing end.
     long waitingTime;
     long waitingInterval = 100;
@@ -177,7 +153,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
           }
         }
       } else {
-        doSomething.act();
+        indexNaiveAction.act();
         break;
       }
     }
@@ -200,7 +176,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     closeAndRelease();
   }
 
-  public String getIndexSeries() {
+  public PartialPath getIndexSeries() {
     return indexSeries;
   }
 
@@ -226,7 +202,8 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
 
   @Override
   public String toString() {
-    return "Index File: " + indexSeries;
+    return indexSeries + ": " + allPathsIndexMap;
+
   }
 
   @Override
@@ -238,7 +215,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     return numIndexBuildTasks.get() > 0;
   }
 
-  public void startFlushMemTable() {
+  public void startFlushMemTable(Map<IndexType, IndexInfo> indexInfoMap) {
     lock.writeLock().lock();
     try {
       if (closed) {
@@ -259,7 +236,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
        * For the IndexProcessor loaded in memory, we need to refresh the newest index information in the
        * start phase.
        */
-//      refreshSeriesIndexMapFromMManager();
+      refreshSeriesIndexMapFromMManager(indexInfoMap);
     } finally {
       lock.writeLock().unlock();
     }
@@ -296,7 +273,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
               index.flush();
             }
             index.endFlushTask();
-            this.indexUsable.addUsableRange(path, tvList);
+            this.usableMap.get(indexType).addUsableRange(path, tvList);
           } catch (IndexManagerException e) {
             //Give up the following data, but the previously serialized chunk will not be affected.
             logger.error("build index failed", e);
@@ -325,10 +302,31 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     }
   }
 
-//  @TestOnly
-//  public AtomicLong getMemoryUsed() {
-//    return memoryUsed;
-//  }
+  private synchronized void refreshSeriesIndexMapFromMManager(
+      Map<IndexType, IndexInfo> indexInfoMap) {
+    // Add indexes that are not in the previous map
+
+    for (Entry<IndexType, IndexInfo> entry : indexInfoMap.entrySet()) {
+      IndexType indexType = entry.getKey();
+      IndexInfo indexInfo = entry.getValue();
+      if (!allPathsIndexMap.containsKey(indexType)) {
+        IoTDBIndex index = IndexType
+            .constructIndex(indexSeries.getFullPath(), getIndexDir(indexType), indexType,
+                indexInfo);
+        allPathsIndexMap.putIfAbsent(indexType, index);
+        usableMap.putIfAbsent(indexType, IIndexUsable.Factory.getIndexUsability(indexSeries));
+      }
+    }
+
+    // remove indexes that are removed from the previous map
+    for (IndexType indexType : new ArrayList<>(allPathsIndexMap.keySet())) {
+      if (!indexInfoMap.containsKey(indexType)) {
+        allPathsIndexMap.get(indexType).delete();
+        allPathsIndexMap.remove(indexType);
+        usableMap.remove(indexType);
+      }
+    }
+  }
 
   @TestOnly
   public AtomicInteger getNumIndexBuildTasks() {
@@ -336,27 +334,13 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   }
 
   public void updateUnsequenceData(PartialPath path, TVList tvList) {
-    this.indexUsable.minusUsableRange(path, tvList);
+//    this.indexUsable.minusUsableRange(path, tvList);
+    throw new UnsupportedOperationException("which type?");
   }
 
 //  @TestOnly
 //  public Map<String, Map<IndexType, ByteBuffer>> getPreviousMeta() {
 //    return previousMetaPointer;
 //  }
-
-  /**
-   * Do something without input and output.
-   *
-   * <p>This is a <a href="package-summary.html">functional interface</a>
-   * whose functional method is {@link #act()}.
-   */
-  @FunctionalInterface
-  private interface DoSomething {
-
-    /**
-     * Do something.
-     */
-    void act() throws IOException;
-  }
 
 }

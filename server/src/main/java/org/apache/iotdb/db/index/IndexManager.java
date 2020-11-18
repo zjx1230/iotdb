@@ -20,12 +20,11 @@ package org.apache.iotdb.db.index;
 
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_DATA_DIR_NAME;
 import static org.apache.iotdb.db.index.common.IndexConstant.META_DIR_NAME;
+import static org.apache.iotdb.db.index.common.IndexConstant.ROUTER_DIR;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
@@ -38,9 +37,10 @@ import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexMessageType;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.common.IndexUtils;
+import org.apache.iotdb.db.index.common.func.CreateIndexProcessorFunc;
+import org.apache.iotdb.db.index.io.IndexBuildTaskPoolManager;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
 import org.apache.iotdb.db.index.router.IIndexRouter;
-import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.service.IService;
 import org.apache.iotdb.db.service.JMXService;
@@ -55,9 +55,8 @@ public class IndexManager implements IService {
   private SystemFileFactory fsFactory = SystemFileFactory.INSTANCE;
   private final String indexMetaDirPath;
   private final String indexDataDirPath;
-
+  private CreateIndexProcessorFunc createIndexProcessorFunc;
   private final IIndexRouter router;
-//  private final IIndexUsable indexUsability;
 
   private IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
 
@@ -86,9 +85,8 @@ public class IndexManager implements IService {
   public void createIndex(List<PartialPath> prefixPaths, IndexInfo indexInfo)
       throws MetadataException {
     if (!prefixPaths.isEmpty()) {
-      router.addIndexIntoRouter(prefixPaths.get(0), indexInfo);
+      router.addIndexIntoRouter(prefixPaths.get(0), indexInfo, createIndexProcessorFunc);
     }
-    // TODO not implemented: maintaining a daemon to build index for unusable index range of some series.
   }
 
   public void dropIndex(List<PartialPath> prefixPaths, IndexType indexType)
@@ -98,24 +96,24 @@ public class IndexManager implements IService {
     }
   }
 
-  public List<IndexProcessor> getNewIndexFileProcessor(String storageGroup, boolean sequence) {
-    if (sequence) {
-      return router.getIndexProcessorByStorageGroup(storageGroup);
-    } else {
-      // In current version, we only build index for the sequence data.
-      return new ArrayList<>();
-    }
-  }
-
-  public void removeIndexProcessor(String storageGroupName, boolean sequence)
-      throws IOException {
-    if (!sequence) {
-      router.removeIndexProcessorByStorageGroup(storageGroupName);
-    }
-  }
+//  public List<IndexProcessor> getNewIndexFileProcessor(String storageGroup, boolean sequence) {
+//    if (sequence) {
+//      return router.getIndexProcessorByStorageGroup(storageGroup);
+//    } else {
+//      // In current version, we only build index for the sequence data.
+//      return new ArrayList<>();
+//    }
+//  }
+//
+//  public void removeIndexProcessor(String storageGroupName, boolean sequence)
+//      throws IOException {
+//    if (!sequence) {
+//      router.removeIndexProcessorByStorageGroup(storageGroupName);
+//    }
+//  }
 
   /**
-   * TODO This function will hack into required places in other modules.
+   * TODO This function will hack into other modules.
    *
    * For index techniques which are deeply optimized for IoTDB, the index framework provides a
    * finer-grained interface to inform the index when some IoTDB events occur. Other modules can
@@ -163,10 +161,11 @@ public class IndexManager implements IService {
 
 
   private synchronized void close() throws IOException {
-    Iterable<IndexProcessor> iterator = router.getAllIndexProcessors();
-    for (IndexProcessor indexProcessor : iterator) {
-      indexProcessor.close();
-    }
+//    Iterable<IndexProcessor> iterator = router.getAllIndexProcessors();
+//    for (IndexProcessor indexProcessor : iterator) {
+//      indexProcessor.close();
+//    }
+    router.serialize();
   }
 
   @Override
@@ -174,10 +173,11 @@ public class IndexManager implements IService {
     if (!config.isEnableIndex()) {
       return;
     }
-//    IndexBuildTaskPoolManager.getInstance().start();
+    IndexBuildTaskPoolManager.getInstance().start();
     try {
       // TODO it's not implemented fully.
       JMXService.registerMBean(this, ServiceType.INDEX_SERVICE.getJmxName());
+      router.deserialize(createIndexProcessorFunc);
       recoverIndexData();
     } catch (Exception e) {
       throw new StartupException(this.getID().getName(), e.getMessage());
@@ -209,7 +209,9 @@ public class IndexManager implements IService {
         DirectoryManager.getInstance().getIndexRootFolder() + File.separator + META_DIR_NAME;
     indexDataDirPath = DirectoryManager.getInstance().getIndexRootFolder() + File.separator +
         INDEX_DATA_DIR_NAME;
-    router = IIndexRouter.Factory.getIndexRouter();
+    router = IIndexRouter.Factory.getIndexRouter(indexMetaDirPath + File.separator + ROUTER_DIR);
+    createIndexProcessorFunc = indexSeries -> new IndexProcessor(
+        indexSeries, indexDataDirPath + File.separator + indexSeries);
 //    indexUsability = IIndexUsable.Factory.getIndexUsability();
   }
 
@@ -237,10 +239,11 @@ public class IndexManager implements IService {
 //    clear();
   }
 
-//  public IndexMemTableFlushTask getIndexMemFlushTask(String storageGroupPath) {
-//    Map<String, IndexProcessor> processorMap = router.getProcessorsByStorageGroup(storageGroupPath);
-//    return new IndexMemTableFlushTask(processorMap);
-//  }
+  public IndexMemTableFlushTask getIndexMemFlushTask(String storageGroupPath, boolean sequence) {
+    IIndexRouter sgRouter = router.getRouterByStorageGroup(storageGroupPath);
+    return new IndexMemTableFlushTask(sgRouter, sequence);
+  }
+
 
   public IndexManager getIndexRegister() {
     return null;
@@ -292,7 +295,7 @@ public class IndexManager implements IService {
     }
   }
 
-//  public IndexQueryReader getQuerySource(Path seriesPath, IndexType indexType,
+  //  public IndexQueryReader getQuerySource(Path seriesPath, IndexType indexType,
 //      Filter timeFilter) throws IOException, MetadataException {
 //    // TODO it's about the reader
 //    String series = seriesPath.getFullPath();
@@ -325,10 +328,12 @@ public class IndexManager implements IService {
 //    }
 //    clear();
 //  }
-public void closeAndClear() {
+  public void closeAndClear() {
 
-}
-  public List<IndexChunkMeta> getIndexSGMetadata(String storageGroup, boolean b, String p1, IndexType elb) {
+  }
+
+  public List<IndexChunkMeta> getIndexSGMetadata(String storageGroup, boolean b, String p1,
+      IndexType elb) {
     return null;
   }
 

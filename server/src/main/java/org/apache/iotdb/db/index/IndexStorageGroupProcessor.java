@@ -294,14 +294,15 @@ public class IndexStorageGroupProcessor {
     // delete all index files
     for (Entry<String, IndexProcessor> entry : seqIndexProcessorMap.entrySet()) {
       IndexProcessor processor = entry.getValue();
-      File file = new File(processor.getIndexSeries());
+      File file = new File(processor.getIndexSeries().getFullPath());
+      IndexUtils.breakDown("File file = new File(processor.getIndexSeries());");
       if (file.exists()) {
         file.delete();
       }
     }
     for (Entry<String, IndexProcessor> entry : unseqIndexProcessorMap.entrySet()) {
       IndexProcessor processor = entry.getValue();
-      File file = new File(processor.getIndexSeries());
+      File file = new File(processor.getIndexSeries().getFullPath());
       if (file.exists()) {
         file.delete();
       }
