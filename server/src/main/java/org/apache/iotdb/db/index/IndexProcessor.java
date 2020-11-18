@@ -243,6 +243,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   }
 
   public void buildIndexForOneSeries(PartialPath path, TVList tvList) {
+
     // for every index of this path, submit a task to pool.
     lock.writeLock().lock();
     numIndexBuildTasks.incrementAndGet();
@@ -334,8 +335,9 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   }
 
   public void updateUnsequenceData(PartialPath path, TVList tvList) {
-//    this.indexUsable.minusUsableRange(path, tvList);
-    throw new UnsupportedOperationException("which type?");
+    this.usableMap.forEach((indexType, usable) -> {
+      usable.minusUsableRange(path, tvList);
+    });
   }
 
 //  @TestOnly

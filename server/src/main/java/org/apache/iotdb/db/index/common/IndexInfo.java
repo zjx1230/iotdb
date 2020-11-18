@@ -18,9 +18,13 @@
  */
 package org.apache.iotdb.db.index.common;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.iotdb.db.metadata.MetadataOperationType;
+import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 public class IndexInfo implements Cloneable{
 
@@ -58,6 +62,7 @@ public class IndexInfo implements Cloneable{
     return indexType;
   }
 
+  @Deprecated
   public String serializeCreateIndex(String path) {
     StringBuilder res = new StringBuilder();
     res.append(String.format("%s,%s,%s,%s", MetadataOperationType.CREATE_INDEX,
@@ -74,6 +79,7 @@ public class IndexInfo implements Cloneable{
    * @param args [0] is the MetadataType, [1] is the path, the rest is to be parsed.
    * @return parsed IndexInfo
    */
+  @Deprecated
   public static IndexInfo deserializeCreateIndex(String[] args) {
     IndexType indexType = IndexType.deserialize(Short.parseShort(args[2]));
     long time = Long.parseLong(args[3]);
@@ -89,6 +95,7 @@ public class IndexInfo implements Cloneable{
     return new IndexInfo(indexType, time, indexProps);
   }
 
+  @Deprecated
   public static String serializeDropIndex(String path, IndexType indexType) {
     return String.format("%s,%s,%s", MetadataOperationType.DROP_INDEX, path, indexType.serialize());
   }
@@ -97,8 +104,23 @@ public class IndexInfo implements Cloneable{
    * @param args [0] is the MetadataType, [1] is the path, the rest is to be parsed.
    * @return parsed IndexInfo
    */
+  @Deprecated
   public static IndexType deserializeDropIndex(String[] args) {
     return IndexType.deserialize(Short.parseShort(args[2]));
+  }
+
+  public void serialize(OutputStream outputStream) throws IOException {
+    ReadWriteIOUtils.write(indexType.serialize(), outputStream);
+    ReadWriteIOUtils.write(time, outputStream);
+    ReadWriteIOUtils.write(props, outputStream);
+  }
+
+  public static IndexInfo deserialize(InputStream inputStream) throws IOException {
+    short indexTypeShort = ReadWriteIOUtils.readShort(inputStream);
+    IndexType indexType = IndexType.deserialize(indexTypeShort);
+    long time = ReadWriteIOUtils.readLong(inputStream);
+    Map<String, String> indexProps = ReadWriteIOUtils.readMap(inputStream);
+    return new IndexInfo(indexType, time, indexProps);
   }
 
   @Override

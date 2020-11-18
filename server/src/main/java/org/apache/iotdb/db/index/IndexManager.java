@@ -52,6 +52,7 @@ import org.slf4j.LoggerFactory;
 public class IndexManager implements IService {
 
   private static final Logger logger = LoggerFactory.getLogger(IndexManager.class);
+  private final String indexRouterDir;
   private SystemFileFactory fsFactory = SystemFileFactory.INSTANCE;
   private final String indexMetaDirPath;
   private final String indexDataDirPath;
@@ -82,7 +83,7 @@ public class IndexManager implements IService {
     return getFeatureFileDirectory(path, indexType);
   }
 
-  public void createIndex(List<PartialPath> prefixPaths, IndexInfo indexInfo)
+    public void createIndex(List<PartialPath> prefixPaths, IndexInfo indexInfo)
       throws MetadataException {
     if (!prefixPaths.isEmpty()) {
       router.addIndexIntoRouter(prefixPaths.get(0), indexInfo, createIndexProcessorFunc);
@@ -165,7 +166,7 @@ public class IndexManager implements IService {
 //    for (IndexProcessor indexProcessor : iterator) {
 //      indexProcessor.close();
 //    }
-    router.serialize();
+    router.serializeAndClose();
   }
 
   @Override
@@ -177,7 +178,7 @@ public class IndexManager implements IService {
     try {
       // TODO it's not implemented fully.
       JMXService.registerMBean(this, ServiceType.INDEX_SERVICE.getJmxName());
-      router.deserialize(createIndexProcessorFunc);
+      router.deserializeAndReload(createIndexProcessorFunc);
       recoverIndexData();
     } catch (Exception e) {
       throw new StartupException(this.getID().getName(), e.getMessage());
@@ -209,10 +210,16 @@ public class IndexManager implements IService {
         DirectoryManager.getInstance().getIndexRootFolder() + File.separator + META_DIR_NAME;
     indexDataDirPath = DirectoryManager.getInstance().getIndexRootFolder() + File.separator +
         INDEX_DATA_DIR_NAME;
-    router = IIndexRouter.Factory.getIndexRouter(indexMetaDirPath + File.separator + ROUTER_DIR);
+    indexRouterDir = getIndexRouterDir();
+    router = IIndexRouter.Factory.getIndexRouter(indexRouterDir);
     createIndexProcessorFunc = indexSeries -> new IndexProcessor(
         indexSeries, indexDataDirPath + File.separator + indexSeries);
 //    indexUsability = IIndexUsable.Factory.getIndexUsability();
+
+  }
+
+  private String getIndexRouterDir() {
+    return indexMetaDirPath + File.separator + ROUTER_DIR;
   }
 
   public static IndexManager getInstance() {

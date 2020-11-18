@@ -143,6 +143,30 @@ public class ReadWriteIOUtils {
     return length;
   }
 
+  public static int write(Map<String, String> map, OutputStream stream) throws IOException {
+    int length = 0;
+    write(map.size(), stream);
+    length += 4;
+    for (Entry<String, String> entry : map.entrySet()) {
+      length += write(entry.getKey(), stream);
+      length += write(entry.getValue(), stream);
+    }
+    return length;
+  }
+
+  public static Map<String, String> readMap(InputStream inputStream) throws IOException {
+    int length = readInt(inputStream);
+    Map<String, String> map = new HashMap<>(length);
+    for (int i = 0; i < length; i++) {
+      // key
+      String key = readString(inputStream);
+      // value
+      String value = readString(inputStream);
+      map.put(key, value);
+    }
+    return map;
+  }
+
   public static int write(Map<String, String> map, ByteBuffer buffer) {
     int length = 0;
     byte[] bytes;

@@ -98,7 +98,8 @@ public class MemTableFlushTask {
     long start = System.currentTimeMillis();
     long sortTime = 0;
     if(enabledIndex) {
-      indexProcessor.startFlushMemTable();
+      indexProcessor.startFlushMemTable(null);
+      IndexUtils.breakDown("input: null");
     }
 
     for (String deviceId : memTable.getMemTableMap().keySet()) {

@@ -1,5 +1,6 @@
 package org.apache.iotdb.db.index.router;
 
+import java.util.Map;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.common.func.CreateIndexProcessorFunc;
 import org.apache.iotdb.db.index.common.func.IndexNaiveFunc;
@@ -7,6 +8,7 @@ import org.apache.iotdb.db.index.IndexProcessor;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.tsfile.utils.Pair;
 
 public interface IIndexRouter {
 
@@ -22,13 +24,17 @@ public interface IIndexRouter {
       throws MetadataException;
 
 
-  Iterable<IndexProcessor> getAllIndexProcessors();
+  Iterable<Pair<Map<IndexType, IndexInfo>, IndexProcessor>> getAllIndexProcessorsAndInfo();
 
   Iterable<IndexProcessor> getIndexProcessorByPath(PartialPath path);
 
-  void serialize();
+  void serializeAndClose();
 
-  void deserialize(CreateIndexProcessorFunc func);
+  /**
+   * deserialize all index information and processors into the memory
+   * @param func
+   */
+  void deserializeAndReload(CreateIndexProcessorFunc func);
 
   IIndexRouter getRouterByStorageGroup(String storageGroupPath);
 

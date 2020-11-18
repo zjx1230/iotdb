@@ -1,14 +1,12 @@
 package org.apache.iotdb.db.index;
 
-import java.io.IOException;
 import java.util.Map;
-import java.util.Map.Entry;
-import org.apache.iotdb.db.exception.metadata.IllegalPathException;
+import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.router.IIndexRouter;
-import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.tsfile.read.common.Path;
+import org.apache.iotdb.tsfile.utils.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,9 +22,9 @@ import org.slf4j.LoggerFactory;
  */
 public class IndexMemTableFlushTask {
 
-  private static final Logger logger = LoggerFactory.getLogger(IndexMemTableFlushTask.class);
+//  private static final Logger logger = LoggerFactory.getLogger(IndexMemTableFlushTask.class);
   private final IIndexRouter router;
-//  private final IIndexUsable usability;
+  //  private final IIndexUsable usability;
   private final boolean sequence;
 
   /**
@@ -36,29 +34,30 @@ public class IndexMemTableFlushTask {
   public IndexMemTableFlushTask(IIndexRouter router, boolean sequence
 //      ,UpdateIndexFileResourcesCallBack addResourcesCallBack
   ) {
-//    this.processorMap = processorMap;
     // check all processors
     this.router = router;
-//    this.usability = usability;
     this.sequence = sequence;
     // in current version, we don't build index for unsequence block
     if (sequence) {
-      router.getAllIndexProcessors().forEach(IndexProcessor::startFlushMemTable);
+      for (Pair<Map<IndexType, IndexInfo>, IndexProcessor> p : router
+          .getAllIndexProcessorsAndInfo()) {
+        p.right.startFlushMemTable(p.left);
+      }
     }
   }
 
   public void buildIndexForOneSeries(PartialPath path, TVList tvList) {
     // in current version, we don't build index for unsequence block
     if (sequence) {
-      router.getIndexProcessorByPath(path).forEach(p->p.buildIndexForOneSeries(path, tvList));
+      router.getIndexProcessorByPath(path).forEach(p -> p.buildIndexForOneSeries(path, tvList));
     } else {
-      router.getIndexProcessorByPath(path).forEach(p->p.updateUnsequenceData(path, tvList));
+      router.getIndexProcessorByPath(path).forEach(p -> p.updateUnsequenceData(path, tvList));
     }
   }
 
   public void endFlush() {
     if (sequence) {
-      router.getAllIndexProcessors().forEach(IndexProcessor::endFlushMemTable);
+      router.getAllIndexProcessorsAndInfo().forEach(p->p.right.endFlushMemTable());
     }
   }
 }
