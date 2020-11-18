@@ -263,4 +263,8 @@ public class IndexUtils {
   public static void breakDown(String message) {
     throw new Error(message);
   }
+
+  private IndexUtils() {
+  }
+
 }

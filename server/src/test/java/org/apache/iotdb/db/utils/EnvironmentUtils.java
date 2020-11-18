@@ -77,7 +77,8 @@ public class EnvironmentUtils {
 
   private static IoTDB daemon;
 
-  public static boolean examinePorts = Boolean.valueOf(System.getProperty("test.port.closed", "false"));
+  public static boolean examinePorts = Boolean
+      .parseBoolean(System.getProperty("test.port.closed", "false"));
 
   public static void cleanEnv() throws IOException, StorageEngineException {
     logger.warn("EnvironmentUtil cleanEnv...");
@@ -155,6 +156,7 @@ public class EnvironmentUtils {
         transport.close();
         return false;
       } catch (TTransportException e) {
+        //do nothing
       }
     }
     //try sync service
@@ -166,6 +168,7 @@ public class EnvironmentUtils {
         transport.close();
         return false;
       } catch (TTransportException e) {
+        //do nothing
       }
     }
     //try jmx connection
@@ -180,20 +183,14 @@ public class EnvironmentUtils {
       //do nothing
     }
     //try MetricService
-    Socket socket = new Socket();
-    try {
+    try (Socket socket = new Socket()) {
       socket.connect(new InetSocketAddress("127.0.0.1", 8181), 100);
       logger.error("stop MetricService failed. 8181 can be connected now.");
       return false;
     } catch (Exception e) {
       //do nothing
-    } finally {
-      try {
-        socket.close();
-      } catch (IOException e) {
-        //do nothing
-      }
     }
+    //do nothing
     return true;
   }
 
@@ -266,7 +263,7 @@ public class EnvironmentUtils {
   }
 
   public static void shutdownDaemon() throws Exception {
-    if(daemon != null) {
+    if (daemon != null) {
       daemon.shutdown();
     }
   }
@@ -288,6 +285,7 @@ public class EnvironmentUtils {
 
   public static void restartDaemon() throws Exception {
     shutdownDaemon();
+    stopDaemon();
     reactiveDaemon();
   }
 

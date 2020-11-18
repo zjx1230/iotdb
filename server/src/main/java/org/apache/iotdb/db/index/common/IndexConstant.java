@@ -79,4 +79,7 @@ public class IndexConstant {
   public static final double ELB_DEFAULT_THRESHOLD_RATIO = 0.1;
 
   public static final String MISSING_PARAM_ERROR_MESSAGE = "missing parameter: %s";
+
+  private IndexConstant() {
+  }
 }

@@ -37,7 +37,7 @@ public class DropIndexPlan extends PhysicalPlan {
   private IndexType indexType;
 
   public DropIndexPlan() {
-    super(false, OperatorType.DROP_INDEX);
+    super(false, Operator.OperatorType.DROP_INDEX);
   }
 
   public DropIndexPlan(List<PartialPath> paths, IndexType indexType) {
@@ -47,6 +47,7 @@ public class DropIndexPlan extends PhysicalPlan {
 
   }
 
+  @Override
   public void setPaths(List<PartialPath> paths) {
     this.paths = paths;
   }
