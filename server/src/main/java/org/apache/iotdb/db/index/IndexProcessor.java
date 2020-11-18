@@ -19,21 +19,28 @@
 package org.apache.iotdb.db.index;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.common.func.IndexNaiveFunc;
 import org.apache.iotdb.db.index.common.IndexType;
-import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.io.IndexBuildTaskPoolManager;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
@@ -41,13 +48,13 @@ import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.FileUtils;
 import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.db.utils.datastructure.TVList;
+import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class IndexProcessor implements Comparable<IndexProcessor> {
 
   private static final Logger logger = LoggerFactory.getLogger(IndexProcessor.class);
-//  private final String storageGroupName;
 
 
   /**
@@ -65,6 +72,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
    */
 //  private final Map<IndexType, ByteBuffer> previousMetaPointer;
   private final String indexSeriesDirPath;
+  private final String usableDir;
   private PartialPath indexSeries;
   private final IndexBuildTaskPoolManager indexBuildPoolManager;
   private ReadWriteLock lock = new ReentrantReadWriteLock();
@@ -78,30 +86,58 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   private Map<IndexType, IoTDBIndex> allPathsIndexMap;
   private Map<IndexType, IIndexUsable> usableMap;
 
-  public IndexProcessor(PartialPath indexSeries, String indexSeriesDirPath) {
+  public IndexProcessor(PartialPath indexSeries, String indexSeriesDirPath,
+      Map<IndexType, IndexInfo> indexInfoMap) {
     this.indexBuildPoolManager = IndexBuildTaskPoolManager.getInstance();
 
     this.numIndexBuildTasks = new AtomicInteger(0);
     this.indexSeries = indexSeries;
     this.indexSeriesDirPath = indexSeriesDirPath;
     this.closed = false;
-    this.usableMap = deserialize();
+    usableMap = new HashMap<>();
+    deserializeUsable(indexSeries);
+    refreshSeriesIndexMapFromMManager(indexInfoMap);
     this.allPathsIndexMap = new EnumMap<>(IndexType.class);
+    this.usableDir = indexSeriesDirPath + File.separator + "usableMap";
   }
 
   private String getIndexDir(IndexType indexType) {
     return indexSeriesDirPath + File.separator + indexType;
   }
 
-  private Map<IndexType, IIndexUsable> deserialize() {
-    // TODO 把可用区间读进来
-    throw new UnsupportedOperationException();
+  private void serializeUsable() {
+    File file = SystemFileFactory.INSTANCE.getFile(usableDir);
+    try (OutputStream outputStream = new FileOutputStream(file)) {
+      ReadWriteIOUtils.write(usableMap.size(), outputStream);
+      for (Entry<IndexType, IIndexUsable> entry : usableMap.entrySet()) {
+        IndexType indexType = entry.getKey();
+        ReadWriteIOUtils.write(indexType.serialize(), outputStream);
+        IIndexUsable v = entry.getValue();
+        v.serialize(outputStream);
+      }
+    } catch (IOException e) {
+      logger.error("Error when serialize usability. Given up.", e);
+    }
   }
 
-  private void serialize() {
-    // TODO 把可用区间信息刷出去
-    IndexUtils.breakDown();
+  private void deserializeUsable(PartialPath indexSeries) {
+    File file = SystemFileFactory.INSTANCE.getFile(usableDir);
+    if (!file.exists()) {
+      return;
+    }
+    try (InputStream inputStream = new FileInputStream(file)) {
+      int size = ReadWriteIOUtils.readInt(inputStream);
+      for (int i = 0; i < size; i++) {
+        short indexTypeShort = ReadWriteIOUtils.readShort(inputStream);
+        IndexType indexType = IndexType.deserialize(indexTypeShort);
+        IIndexUsable usable = IIndexUsable.Factory.getIndexUsability(indexSeries, inputStream);
+        usableMap.put(indexType, usable);
+      }
+    } catch (IOException | IllegalPathException e) {
+      logger.error("Error when deserialize usability. Given up.", e);
+    }
   }
+
 
   /**
    * seal the index file, move "indexing" to "index"
@@ -162,7 +198,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   private void closeAndRelease() {
     allPathsIndexMap.forEach((indexType, index) -> index.closeAndRelease());
     allPathsIndexMap.clear();
-    serialize();
+    serializeUsable();
   }
 
   public synchronized void deleteAllFiles() throws IOException {
@@ -219,16 +255,11 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     lock.writeLock().lock();
     try {
       if (closed) {
-//        System.out.println("closed index file !!!!!");
         throw new IndexRuntimeException("closed index file !!!!!");
       }
       if (isFlushing()) {
         throw new IndexRuntimeException("There has been a flushing, do you want to wait?");
       }
-//      this.isFlushing = true;
-//      this.flushTaskQueue = new ConcurrentLinkedQueue<>();
-//      this.flushTaskFuture = indexBuildPoolManager.submit(flushRunTask);
-//      this.noMoreIndexFlushTask = false;
       /*
        * If the IndexProcessor of the corresponding storage group is not in indexMap, it means that the
        * current storage group does not build any index in memory yet and we needn't update anything.
@@ -243,7 +274,6 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   }
 
   public void buildIndexForOneSeries(PartialPath path, TVList tvList) {
-
     // for every index of this path, submit a task to pool.
     lock.writeLock().lock();
     numIndexBuildTasks.incrementAndGet();
@@ -262,9 +292,6 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
                 }
                 previousOffset = currentOffset;
               }
-//              if (!syncAllocateSize(index.getAmortizedSize(), extractor, index, path)) {
-//                return;
-//              }
               extractor.processNext();
               index.buildNext();
             }
@@ -334,7 +361,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     return numIndexBuildTasks;
   }
 
-  public void updateUnsequenceData(PartialPath path, TVList tvList) {
+  void updateUnsequenceData(PartialPath path, TVList tvList) {
     this.usableMap.forEach((indexType, usable) -> {
       usable.minusUsableRange(path, tvList);
     });

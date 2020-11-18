@@ -1,6 +1,12 @@
 package org.apache.iotdb.db.index.usable;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.List;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
+import org.apache.iotdb.db.index.common.func.CreateIndexProcessorFunc;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.utils.Pair;
@@ -43,6 +49,10 @@ public interface IIndexUsable {
    */
   List<Pair<Long, Long>> getUnusableRangeForSeriesMatching(PartialPath indexSeries);
 
+  void serialize(OutputStream outputStream) throws IOException;
+
+  void deserialize(InputStream inputStream) throws IllegalPathException, IOException;
+
   class Factory {
 
     private Factory() {
@@ -55,6 +65,19 @@ public interface IIndexUsable {
       } else {
         return new MultiShortIndexUsability(path);
       }
+    }
+
+    public static IIndexUsable getIndexUsability(PartialPath path, InputStream inputStream)
+        throws IOException, IllegalPathException {
+      IIndexUsable res;
+      if (path.isFullPath()) {
+        res = new SingleLongIndexUsability(path);
+        res.deserialize(inputStream);
+      } else {
+        res = new MultiShortIndexUsability(path);
+        res.deserialize(inputStream);
+      }
+      return res;
     }
   }
 }

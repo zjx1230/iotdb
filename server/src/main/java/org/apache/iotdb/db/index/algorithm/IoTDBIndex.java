@@ -36,6 +36,7 @@ import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.IndexProcessor;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategy;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategyType;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
@@ -181,7 +182,8 @@ public abstract class IoTDBIndex {
    * ByteBuffer} when next creation.
    */
   public void serialize() throws IOException {
-    // TODO not return, do youself
+    // TODO not return, do yourself
+    IndexUtils.breakDown();
     indexFeatureExtractor.serializePrevious();
   }
 

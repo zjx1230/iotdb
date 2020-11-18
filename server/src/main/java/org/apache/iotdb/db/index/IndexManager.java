@@ -52,8 +52,9 @@ import org.slf4j.LoggerFactory;
 public class IndexManager implements IService {
 
   private static final Logger logger = LoggerFactory.getLogger(IndexManager.class);
-  private final String indexRouterDir;
   private SystemFileFactory fsFactory = SystemFileFactory.INSTANCE;
+  private final String indexRootDirPath;
+  private final String indexRouterDir;
   private final String indexMetaDirPath;
   private final String indexDataDirPath;
   private CreateIndexProcessorFunc createIndexProcessorFunc;
@@ -83,7 +84,7 @@ public class IndexManager implements IService {
     return getFeatureFileDirectory(path, indexType);
   }
 
-    public void createIndex(List<PartialPath> prefixPaths, IndexInfo indexInfo)
+  public void createIndex(List<PartialPath> prefixPaths, IndexInfo indexInfo)
       throws MetadataException {
     if (!prefixPaths.isEmpty()) {
       router.addIndexIntoRouter(prefixPaths.get(0), indexInfo, createIndexProcessorFunc);
@@ -178,6 +179,7 @@ public class IndexManager implements IService {
     try {
       // TODO it's not implemented fully.
       JMXService.registerMBean(this, ServiceType.INDEX_SERVICE.getJmxName());
+      prepareDirectory();
       router.deserializeAndReload(createIndexProcessorFunc);
       recoverIndexData();
     } catch (Exception e) {
@@ -206,14 +208,15 @@ public class IndexManager implements IService {
 
 
   private IndexManager() {
+    indexRootDirPath = DirectoryManager.getInstance().getIndexRootFolder();
     indexMetaDirPath =
         DirectoryManager.getInstance().getIndexRootFolder() + File.separator + META_DIR_NAME;
     indexDataDirPath = DirectoryManager.getInstance().getIndexRootFolder() + File.separator +
         INDEX_DATA_DIR_NAME;
     indexRouterDir = getIndexRouterDir();
     router = IIndexRouter.Factory.getIndexRouter(indexRouterDir);
-    createIndexProcessorFunc = indexSeries -> new IndexProcessor(
-        indexSeries, indexDataDirPath + File.separator + indexSeries);
+    createIndexProcessorFunc = (indexSeries, indexInfoMap) -> new IndexProcessor(
+        indexSeries, indexDataDirPath + File.separator + indexSeries, indexInfoMap);
 //    indexUsability = IIndexUsable.Factory.getIndexUsability();
 
   }
@@ -267,11 +270,29 @@ public class IndexManager implements IService {
 
   ////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////
+  private void prepareDirectory() {
+    File rootDir = fsFactory.getFile(indexRootDirPath);
+    if (!rootDir.exists()) {
+      rootDir.mkdirs();
+    }
+    File routerDir = fsFactory.getFile(indexRouterDir);
+    if (!routerDir.exists()) {
+      routerDir.mkdirs();
+    }
+    File metaDir = fsFactory.getFile(indexMetaDirPath);
+    if (!metaDir.exists()) {
+      metaDir.mkdirs();
+    }
+    File dataDir = fsFactory.getFile(indexDataDirPath);
+    if (!dataDir.exists()) {
+      dataDir.mkdirs();
+    }
+  }
 
   /**
    * When IoTDB restarts, check all index processors and let them reorganize their dirty data.
    */
-  synchronized void recoverIndexData() throws IOException, IllegalPathException {
+  private void recoverIndexData() throws IOException, IllegalPathException {
     IndexUtils.breakDown();
     // Remove files not in the routers
     for (File processorDataDir : Objects

@@ -257,7 +257,7 @@ public class IndexUtils {
   }
 
   public static void breakDown() {
-    breakDown("for reconstruction");
+    breakDown("?*===?*===?*===?*===?*===?*===?*===?*===?*===?*===?*===");
   }
 
   public static void breakDown(String message) {

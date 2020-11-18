@@ -64,11 +64,11 @@ public class MemTableFlushTaskTest {
     MemTableTestUtils.produceData(memTable, startTime, endTime, MemTableTestUtils.deviceId0,
         MemTableTestUtils.measurementId0,
         MemTableTestUtils.dataType0);
-    MemTableFlushTask memTableFlushTask = new MemTableFlushTask(memTable, writer, storageGroup, null);
+    MemTableFlushTask memTableFlushTask = new MemTableFlushTask(memTable, writer, storageGroup, true);
     assertTrue(writer
         .getVisibleMetadataList(MemTableTestUtils.deviceId0, MemTableTestUtils.measurementId0,
             MemTableTestUtils.dataType0).isEmpty());
-    memTableFlushTask.syncFlushMemTable();
+    memTableFlushTask.syncFlushMemTable ();
     writer.makeMetadataVisible();
     assertEquals(1, writer
         .getVisibleMetadataList(MemTableTestUtils.deviceId0, MemTableTestUtils.measurementId0,

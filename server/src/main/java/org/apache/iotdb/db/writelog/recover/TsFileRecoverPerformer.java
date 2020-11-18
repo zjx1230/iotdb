@@ -217,7 +217,7 @@ public class TsFileRecoverPerformer {
         // flush logs
         MemTableFlushTask tableFlushTask = new MemTableFlushTask(recoverMemTable,
             restorableTsFileIOWriter,
-            tsFileResource.getTsFile().getParentFile().getParentFile().getName(),  null);
+            tsFileResource.getTsFile().getParentFile().getParentFile().getName(), sequence);
         tableFlushTask.syncFlushMemTable();
       }
 

@@ -201,7 +201,7 @@ public class ProtoIndexRouter implements IIndexRouter {
         String fullPath = partialPath.getFullPath();
         if (!fullPathProcessorMap.containsKey(fullPath)) {
           Map<IndexType, IndexInfo> infoMap = new EnumMap<>(IndexType.class);
-          IndexProcessor processor = func.act(partialPath);
+          IndexProcessor processor = func.act(partialPath, infoMap);
           fullPathProcessorMap.put(fullPath, new Pair<>(infoMap, processor));
         }
         Pair<Map<IndexType, IndexInfo>, IndexProcessor> pair = fullPathProcessorMap.get(fullPath);
@@ -216,7 +216,7 @@ public class ProtoIndexRouter implements IIndexRouter {
       } else {
         if (!wildCardProcessorMap.containsKey(partialPath)) {
           Map<IndexType, IndexInfo> infoMap = new EnumMap<>(IndexType.class);
-          IndexProcessor processor = func.act(partialPath);
+          IndexProcessor processor = func.act(partialPath, infoMap);
           wildCardProcessorMap.put(partialPath, new Pair<>(infoMap, processor));
         }
         Pair<Map<IndexType, IndexInfo>, IndexProcessor> pair = wildCardProcessorMap

@@ -37,9 +37,11 @@ import java.nio.charset.CharacterCodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -166,6 +168,25 @@ public class ReadWriteIOUtils {
     }
     return map;
   }
+
+//  public static int write(Set<String> set, OutputStream stream) throws IOException {
+//    int length = 0;
+//    write(set.size(), stream);
+//    length += 4;
+//    for (String s : set) {
+//      length += write(s, stream);
+//    }
+//    return length;
+//  }
+//
+//  public static Set<String> readSet(InputStream inputStream) throws IOException {
+//    int length = readInt(inputStream);
+//    Set<String> set = new HashSet<>(length);
+//    for (int i = 0; i < length; i++) {
+//      set.add(readString(inputStream));
+//    }
+//    return set;
+//  }
 
   public static int write(Map<String, String> map, ByteBuffer buffer) {
     int length = 0;

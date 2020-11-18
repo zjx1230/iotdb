@@ -32,6 +32,7 @@ public class FileUtils {
   private static Logger logger = LoggerFactory.getLogger(FileUtils.class);
 
   private FileUtils() { }
+
   public static void deleteDirectory(File folder) throws IOException {
     if (folder.isDirectory()) {
       for (File file : folder.listFiles()) {

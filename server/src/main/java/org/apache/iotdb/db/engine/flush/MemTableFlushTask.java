@@ -27,12 +27,13 @@ import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.flush.pool.FlushSubTaskPoolManager;
 import org.apache.iotdb.db.engine.memtable.IMemTable;
 import org.apache.iotdb.db.engine.memtable.IWritableMemChunk;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.runtime.FlushRunTimeException;
-import org.apache.iotdb.db.index.IndexProcessor;
-import org.apache.iotdb.db.index.common.IndexUtils;
+import org.apache.iotdb.db.index.IndexManager;
+import org.apache.iotdb.db.index.IndexMemTableFlushTask;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.write.chunk.ChunkWriterImpl;
 import org.apache.iotdb.tsfile.write.chunk.IChunkWriter;
@@ -51,11 +52,11 @@ public class MemTableFlushTask {
   private RestorableTsFileIOWriter writer;
 
   private final boolean enabledIndex;
-  private IndexProcessor indexProcessor;
 
   private final ConcurrentLinkedQueue<Object> ioTaskQueue = new ConcurrentLinkedQueue<>();
   private final ConcurrentLinkedQueue<Object> encodingTaskQueue = new ConcurrentLinkedQueue<>();
   private String storageGroup;
+  private final boolean sequence;
 
   private IMemTable memTable;
 
@@ -64,23 +65,20 @@ public class MemTableFlushTask {
 
   /**
    * @param memTable the memTable to flush
-   * @param writer the writer where memTable will be flushed to (current tsfile writer or vm writer)
+   * @param writer the writer where memTable will be flushed to (current tsfile writer or vm
+   * writer)
    * @param storageGroup current storage group
    */
 
   public MemTableFlushTask(IMemTable memTable, RestorableTsFileIOWriter writer, String storageGroup,
-      IndexProcessor indexProcessor) {
+      boolean sequence) {
     this.memTable = memTable;
     this.writer = writer;
     this.storageGroup = storageGroup;
+    this.sequence = sequence;
     this.encodingTaskFuture = subTaskPoolManager.submit(encodingTask);
     this.ioTaskFuture = subTaskPoolManager.submit(ioTask);
-    if (indexProcessor == null){
-      this.enabledIndex = false;
-    }else{
-      this.enabledIndex = IoTDBDescriptor.getInstance().getConfig().isEnableIndex();
-      this.indexProcessor = indexProcessor;
-    }
+    this.enabledIndex = IoTDBDescriptor.getInstance().getConfig().isEnableIndex();
 
     logger.debug("flush task of Storage group {} memtable {} is created ",
         storageGroup, memTable.getVersion());
@@ -90,16 +88,17 @@ public class MemTableFlushTask {
    * the function for flushing memtable.
    */
   public void syncFlushMemTable()
-      throws ExecutionException, InterruptedException, IOException {
+      throws ExecutionException, InterruptedException {
     logger.info("The memTable size of SG {} is {}, the avg series points num in chunk is {} ",
         storageGroup,
         memTable.memSize(),
         memTable.getTotalPointsNum() / memTable.getSeriesNumber());
     long start = System.currentTimeMillis();
     long sortTime = 0;
-    if(enabledIndex) {
-      indexProcessor.startFlushMemTable(null);
-      IndexUtils.breakDown("input: null");
+    IndexMemTableFlushTask indexFlushTask = null;
+    if (enabledIndex) {
+      indexFlushTask = IndexManager.getInstance()
+          .getIndexMemFlushTask(storageGroup, sequence);
     }
 
     for (String deviceId : memTable.getMemTableMap().keySet()) {
@@ -112,8 +111,11 @@ public class MemTableFlushTask {
         sortTime += System.currentTimeMillis() - startTime;
         encodingTaskQueue.add(new Pair<>(tvList, desc));
         if (enabledIndex) {
-//          indexProcessor.buildIndexForOneSeries(new Path(deviceId, measurementId), tvList);
-          IndexUtils.breakDown();
+          try {
+            indexFlushTask.buildIndexForOneSeries(new PartialPath(deviceId, measurementId), tvList);
+          } catch (IllegalPathException e) {
+            logger.warn("parsing path meets errors, give up to build the index");
+          }
         }
       }
       encodingTaskQueue.add(new EndChunkGroupIoTask());
@@ -133,8 +135,8 @@ public class MemTableFlushTask {
     }
 
     ioTaskFuture.get();
-    if (enabledIndex){
-      indexProcessor.endFlushMemTable();
+    if (enabledIndex) {
+      indexFlushTask.endFlush();
     }
 
     try {

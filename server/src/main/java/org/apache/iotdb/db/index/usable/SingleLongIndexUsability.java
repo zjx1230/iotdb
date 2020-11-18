@@ -1,10 +1,23 @@
 package org.apache.iotdb.db.index.usable;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import org.apache.iotdb.db.exception.metadata.MetadataException;
+import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.utils.Pair;
+import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is to record the index usable range for a single long series, which corresponds to the
@@ -18,13 +31,14 @@ import org.apache.iotdb.tsfile.utils.Pair;
  */
 public class SingleLongIndexUsability implements IIndexUsable {
 
+  private static final Logger logger = LoggerFactory.getLogger(SingleLongIndexUsability.class);
   /**
    * it will be moved to configuration.
    */
   private static final int defaultSizeOfUsableSegments = 10;
 
   private int maxSizeOfUsableSegments;
-  private final RangeNode unusableRanges;
+  private RangeNode unusableRanges;
   private int size;
 
   SingleLongIndexUsability(PartialPath indexSeries) {
@@ -167,6 +181,35 @@ public class SingleLongIndexUsability implements IIndexUsable {
       return "[" + (start == Long.MIN_VALUE ? "MIN" : start) + "," +
           (end == Long.MAX_VALUE ? "MAX" : end) + "],";
     }
+
+    public static void serialize(RangeNode head, OutputStream outputStream) throws IOException {
+      int listLength = 0;
+      RangeNode tmp = head;
+      while (tmp != null) {
+        listLength++;
+        tmp = tmp.next;
+      }
+      ReadWriteIOUtils.write(listLength, outputStream);
+      while (head != null) {
+        ReadWriteIOUtils.write(head.start, outputStream);
+        ReadWriteIOUtils.write(head.end, outputStream);
+        head = head.next;
+      }
+    }
+
+    public static RangeNode deserialize(InputStream inputStream) throws IOException {
+      int listLength = ReadWriteIOUtils.readInt(inputStream);
+      RangeNode fakeHead = new RangeNode(-1, -1, null);
+      RangeNode node = fakeHead;
+      for (int i = 0; i < listLength; i++) {
+        long start = ReadWriteIOUtils.readLong(inputStream);
+        long end = ReadWriteIOUtils.readLong(inputStream);
+        RangeNode nextNode = new RangeNode(start, end, null);
+        node.next = nextNode;
+        node = nextNode;
+      }
+      return fakeHead.next;
+    }
   }
 
   @Override
@@ -176,7 +219,18 @@ public class SingleLongIndexUsability implements IIndexUsable {
 
   @Override
   public List<Pair<Long, Long>> getUnusableRangeForSeriesMatching(PartialPath indexSeries) {
-    return new ArrayList<>();
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void serialize(OutputStream outputStream) throws IOException {
+    RangeNode.serialize(unusableRanges, outputStream);
+
+  }
+
+  @Override
+  public void deserialize(InputStream inputStream) throws IOException {
+    unusableRanges = RangeNode.deserialize(inputStream);
   }
 
   @Override

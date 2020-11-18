@@ -68,7 +68,7 @@ public class ProtoIndexRouterTest {
     this.infoSub = new IndexInfo(NO_INDEX, 0, props_sub);
     this.infoFull = new IndexInfo(RTREE_PAA, 5, props_full);
     this.infoFull2 = new IndexInfo(NO_INDEX, 10, props_full2);
-    this.fakeCreateFunc = s -> null;
+    this.fakeCreateFunc = (s, map) -> null;
   }
 
   private static final String testRouterDir = "test_protoIndexRouter";
