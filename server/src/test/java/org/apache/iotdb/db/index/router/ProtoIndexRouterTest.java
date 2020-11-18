@@ -78,7 +78,7 @@ public class ProtoIndexRouterTest {
   @Before
   public void setUp() throws Exception {
     EnvironmentUtils.envSetUp();
-    if (!new File(testRouterDir).exists()){
+    if (!new File(testRouterDir).exists()) {
       new File(testRouterDir).mkdirs();
     }
   }
@@ -86,7 +86,7 @@ public class ProtoIndexRouterTest {
   @After
   public void tearDown() throws Exception {
     EnvironmentUtils.cleanEnv();
-    if (new File(testRouterDir).exists()){
+    if (new File(testRouterDir).exists()) {
       FileUtils.deleteDirectory(new File(testRouterDir));
     }
   }
@@ -99,43 +99,44 @@ public class ProtoIndexRouterTest {
     router.addIndexIntoRouter(new PartialPath(index_sub), infoSub, fakeCreateFunc);
     router.addIndexIntoRouter(new PartialPath(index_full), infoFull, fakeCreateFunc);
     router.addIndexIntoRouter(new PartialPath(index_full), infoFull2, fakeCreateFunc);
-    Iterable<Pair<Map<IndexType, IndexInfo>, IndexProcessor>> all = router
-        .getAllIndexProcessorsAndInfo();
-    String[] gts = new String[]{
-        "<{NO_INDEX=[type: NO_INDEX, time: 10, props: {PAA_DIM=10}], RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]},null>",
-        "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {INDEX_WINDOW_RANGE=5, INDEX_SLIDE_STEP=5}]},null>"
-    };
-    int idx = 0;
-    for (Pair<Map<IndexType, IndexInfo>, IndexProcessor> pair : all) {
-      Assert.assertEquals(gts[idx++], pair.toString());
-    }
+    Assert.assertEquals(
+        "<{NO_INDEX=[type: NO_INDEX, time: 10, props: {PAA_DIM=10}], RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]},null>;"
+            + "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {INDEX_WINDOW_RANGE=5, INDEX_SLIDE_STEP=5}]},null>;",
+        router.toString());
 
     // select by storage group
     IIndexRouter sgRouters = router.getRouterByStorageGroup(storageGroupFull);
-    Iterable<Pair<Map<IndexType, IndexInfo>, IndexProcessor>> sgAll = sgRouters
-        .getAllIndexProcessorsAndInfo();
-    String[] gtsSgAll = new String[]{
-        "<{NO_INDEX=[type: NO_INDEX, time: 10, props: {PAA_DIM=10}], RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]},null>"
-    };
-    idx = 0;
-    for (Pair<Map<IndexType, IndexInfo>, IndexProcessor> pair : sgAll) {
-      Assert.assertEquals(gtsSgAll[idx++], pair.toString());
-    }
+    Assert.assertEquals(
+        "<{NO_INDEX=[type: NO_INDEX, time: 10, props: {PAA_DIM=10}], RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]},null>;",
+        sgRouters.toString());
 
     // serialize
     router.serializeAndClose();
     IIndexRouter newRouter = new ProtoIndexRouter(testRouterDir);
     newRouter.deserializeAndReload(fakeCreateFunc);
-    Iterable<Pair<Map<IndexType, IndexInfo>, IndexProcessor>> newAll = newRouter
-        .getAllIndexProcessorsAndInfo();
-    String[] gtsNew = new String[]{
-        "<{NO_INDEX=[type: NO_INDEX, time: 10, props: {PAA_DIM=10}], RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]},null>",
-        "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {INDEX_SLIDE_STEP=5, INDEX_WINDOW_RANGE=5}]},null>",
-    };
-    idx = 0;
-    for (Pair<Map<IndexType, IndexInfo>, IndexProcessor> pair : newAll) {
-      Assert.assertEquals(gtsNew[idx++], pair.toString());
-    }
+    Assert.assertEquals(
+        "<{NO_INDEX=[type: NO_INDEX, time: 10, props: {PAA_DIM=10}], RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]},null>;"
+            + "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {INDEX_SLIDE_STEP=5, INDEX_WINDOW_RANGE=5}]},null>;",
+        newRouter.toString());
+    // delete index
+    newRouter.removeIndexFromRouter(new PartialPath(index_full), NO_INDEX);
+    Assert.assertEquals(
+        "<{RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]},null>;"
+            + "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {INDEX_SLIDE_STEP=5, INDEX_WINDOW_RANGE=5}]},null>;",
+        newRouter.toString()
+    );
+    newRouter.removeIndexFromRouter(new PartialPath(index_full), RTREE_PAA);
+    System.out.println(newRouter);
+    Assert.assertEquals(
+        "<{},null>;<{NO_INDEX=[type: NO_INDEX, time: 0, props: {INDEX_SLIDE_STEP=5, INDEX_WINDOW_RANGE=5}]},null>;",
+        newRouter.toString());
+    newRouter.removeIndexFromRouter(new PartialPath(index_sub), NO_INDEX);
+//    System.out.println(router);
+    Assert.assertEquals(
+        "<{},null>;<{},null>;",
+        newRouter.toString());
+
+
   }
 
 

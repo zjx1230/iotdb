@@ -299,4 +299,14 @@ public class ProtoIndexRouter implements IIndexRouter {
     }
     return res;
   }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    Iterable<Pair<Map<IndexType, IndexInfo>, IndexProcessor>> all = getAllIndexProcessorsAndInfo();
+    for (Pair<Map<IndexType, IndexInfo>, IndexProcessor> pair : all) {
+      sb.append(pair.toString()).append(";");
+    }
+    return sb.toString();
+  }
 }
