@@ -18,6 +18,7 @@
  */
 package org.apache.iotdb.db.index.common;
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -115,10 +116,10 @@ public enum IndexType {
   }
 
   public static IoTDBIndex constructIndex(String indexSeries, String indexDir, IndexType indexType,
-      IndexInfo indexInfo) {
+      IndexInfo indexInfo, ByteBuffer previous) {
     indexInfo.setProps(uppercaseStringProps(indexInfo.getProps()));
     IoTDBIndex index = newIndexByType(indexSeries, indexDir, indexType, indexInfo);
-    index.initPreprocessor(null, false);
+    index.initPreprocessor(previous, false);
     return index;
   }
 

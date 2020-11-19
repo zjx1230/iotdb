@@ -208,9 +208,9 @@ public abstract class RTreeIndex extends IoTDBIndex {
    */
   @Override
   @SuppressWarnings("squid:S1185")
-  public long clear() {
+  public long clearFeatureExtractor() {
     int estimateSize = indexFeatureExtractor.getCurrentChunkSize() * amortizedPerInputCost;
-    estimateSize += super.clear();
+    estimateSize += super.clearFeatureExtractor();
     initRTree();
     return estimateSize;
   }
@@ -237,4 +237,8 @@ public abstract class RTreeIndex extends IoTDBIndex {
 
   protected abstract double calcLowerBoundThreshold(double queryThreshold);
 
+  @Override
+  protected void serializeIndexAndFlush() {
+    throw new UnsupportedOperationException();
+  }
 }

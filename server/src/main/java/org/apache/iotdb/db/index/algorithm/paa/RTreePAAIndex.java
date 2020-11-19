@@ -72,6 +72,7 @@ public class RTreePAAIndex extends RTreeIndex {
     this.indexFeatureExtractor = paaTimeFixedPreprocessor;
   }
 
+
   /**
    * Fill {@code currentCorners} and the optional {@code currentRanges}, and return the current idx
    *

@@ -36,7 +36,6 @@ import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.IndexProcessor;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
-import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategy;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategyType;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
@@ -154,9 +153,12 @@ public abstract class IoTDBIndex {
    * This method is called when completing a sub-flush.  Note that one flush task will trigger
    * multiple sub-brush tasks due to the memory control.
    *
+   * clear和其他的区别：哦，上一个版本中，索引会定时刷出去，所以还可以理解，现在似乎没有这个必要了，
+   * TODO 删掉这个？不用，因为现在他不会在被调用了，仅在flush的时候才会被调用
+   *
    * @return how much memory was freed.
    */
-  public long clear() {
+  protected long clearFeatureExtractor() {
     return indexFeatureExtractor == null ? 0 : indexFeatureExtractor.clear();
   }
 
@@ -165,8 +167,23 @@ public abstract class IoTDBIndex {
    * methods will be invalid.
    */
   public void closeAndRelease() {
-    clear();
+    clearFeatureExtractor();
     indexFeatureExtractor.closeAndRelease();
+    serializeIndexAndFlush();
+  }
+
+  /**
+   * 索引将自己的东西刷出去
+   */
+  protected abstract void serializeIndexAndFlush();
+
+  /**
+   * This method serialize information of index and preprocessor into an {@code OutputStream}. It's
+   * called when the index file will be close. The information will be back in type of {@code
+   * ByteBuffer} when next creation.
+   */
+  public ByteBuffer serializeFeatureExtractor() throws IOException {
+    return indexFeatureExtractor.serializePrevious();
   }
 
   /**
@@ -174,17 +191,6 @@ public abstract class IoTDBIndex {
    */
   public void endFlushTask() {
     indexFeatureExtractor.clearProcessedSrcData();
-  }
-
-  /**
-   * This method serialize information of index and preprocessor into an {@code OutputStream}. It's
-   * called when the index file will be closed. The information will be back in type of {@code
-   * ByteBuffer} when next creation.
-   */
-  public void serialize() throws IOException {
-    // TODO not return, do yourself
-    IndexUtils.breakDown();
-    indexFeatureExtractor.serializePrevious();
   }
 
   /**

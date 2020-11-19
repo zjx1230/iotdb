@@ -144,6 +144,11 @@ public class ELBIndex extends IoTDBIndex {
   }
 
   @Override
+  protected void serializeIndexAndFlush() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public void delete() {
     throw new UnsupportedOperationException();
   }

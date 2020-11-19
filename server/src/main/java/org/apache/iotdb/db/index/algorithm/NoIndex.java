@@ -106,8 +106,13 @@ public class NoIndex extends IoTDBIndex {
    */
   @Override
   @SuppressWarnings("squid:S1185")
-  public long clear() {
-    return super.clear();
+  public long clearFeatureExtractor() {
+    return super.clearFeatureExtractor();
+  }
+
+  @Override
+  protected void serializeIndexAndFlush() {
+    throw new UnsupportedOperationException();
   }
 
 

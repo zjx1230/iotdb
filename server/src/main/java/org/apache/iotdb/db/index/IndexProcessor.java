@@ -24,6 +24,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -38,7 +39,6 @@ import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.common.func.IndexNaiveFunc;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexBuildTaskPoolManager;
@@ -72,7 +72,8 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
    */
 //  private final Map<IndexType, ByteBuffer> previousMetaPointer;
   private final String indexSeriesDirPath;
-  private final String usableDir;
+  private final String usableFile;
+  private final String previousBufferFile;
   private PartialPath indexSeries;
   private final IndexBuildTaskPoolManager indexBuildPoolManager;
   private ReadWriteLock lock = new ReentrantReadWriteLock();
@@ -86,6 +87,21 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   private Map<IndexType, IoTDBIndex> allPathsIndexMap;
   private Map<IndexType, IIndexUsable> usableMap;
 
+  /**
+   * previousMetaPointer is just a point of StorageGroup, thus it can be initialized by null. In
+   * general, it won't be updated until the file is closed. when the file is closed, the newly
+   * generated map in {@code serializeForNextOpen} will directly update the supper
+   * StorageGroupProcessor (not directly replace, but insert layer by layer).  At this time, this
+   * map will be updated naturally, but this indexFileProcessor will also be closed at once, so this
+   * update will not affect anything.
+   *
+   * However, it is necessary to consider potentially very complicated and special situations, such
+   * as: deleting the index, removing the index and then adding the index exactly same as the
+   * previous one, without closing current index file. Will this bring about inconsistency between
+   * StorageGroupProcessor and IndexFileProcessor?  We must be very cautious.
+   */
+  private final Map<IndexType, ByteBuffer> previousBufferMap;
+
   public IndexProcessor(PartialPath indexSeries, String indexSeriesDirPath,
       Map<IndexType, IndexInfo> indexInfoMap) {
     this.indexBuildPoolManager = IndexBuildTaskPoolManager.getInstance();
@@ -94,11 +110,17 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     this.indexSeries = indexSeries;
     this.indexSeriesDirPath = indexSeriesDirPath;
     this.closed = false;
-    usableMap = new HashMap<>();
+
+    this.allPathsIndexMap = new EnumMap<>(IndexType.class);
+    this.previousBufferMap = new EnumMap<>(IndexType.class);
+    this.usableMap = new HashMap<>();
+    this.previousBufferFile = indexSeriesDirPath + File.separator + "previousBuffer";
+    this.usableFile = indexSeriesDirPath + File.separator + "usableMap";
+
+    deserializePreviousBuffer(indexSeries);
     deserializeUsable(indexSeries);
     refreshSeriesIndexMapFromMManager(indexInfoMap);
-    this.allPathsIndexMap = new EnumMap<>(IndexType.class);
-    this.usableDir = indexSeriesDirPath + File.separator + "usableMap";
+
   }
 
   private String getIndexDir(IndexType indexType) {
@@ -106,7 +128,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   }
 
   private void serializeUsable() {
-    File file = SystemFileFactory.INSTANCE.getFile(usableDir);
+    File file = SystemFileFactory.INSTANCE.getFile(usableFile);
     try (OutputStream outputStream = new FileOutputStream(file)) {
       ReadWriteIOUtils.write(usableMap.size(), outputStream);
       for (Entry<IndexType, IIndexUsable> entry : usableMap.entrySet()) {
@@ -120,8 +142,42 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     }
   }
 
+  private void serializePreviousBuffer() {
+    File file = SystemFileFactory.INSTANCE.getFile(previousBufferFile);
+    try (OutputStream outputStream = new FileOutputStream(file)) {
+      ReadWriteIOUtils.write(previousBufferMap.size(), outputStream);
+      for (Entry<IndexType, ByteBuffer> entry : previousBufferMap.entrySet()) {
+        IndexType indexType = entry.getKey();
+        ByteBuffer buffer = entry.getValue();
+        ReadWriteIOUtils.write(indexType.serialize(), outputStream);
+        ReadWriteIOUtils.write(buffer, outputStream);
+      }
+    } catch (IOException e) {
+      logger.error("Error when serialize previous buffer. Given up.", e);
+    }
+  }
+
+  private void deserializePreviousBuffer(PartialPath indexSeries) {
+    File file = SystemFileFactory.INSTANCE.getFile(previousBufferFile);
+    if (!file.exists()) {
+      return;
+    }
+    try (InputStream inputStream = new FileInputStream(file)) {
+      int size = ReadWriteIOUtils.readInt(inputStream);
+      for (int i = 0; i < size; i++) {
+        IndexType indexType = IndexType.deserialize(ReadWriteIOUtils.readShort(inputStream));
+        ByteBuffer byteBuffer = ReadWriteIOUtils
+            .readByteBufferWithSelfDescriptionLength(inputStream);
+        previousBufferMap.put(indexType, byteBuffer);
+      }
+    } catch (IOException e) {
+      logger.error("Error when deserialize previous buffer. Given up.", e);
+    }
+  }
+
+
   private void deserializeUsable(PartialPath indexSeries) {
-    File file = SystemFileFactory.INSTANCE.getFile(usableDir);
+    File file = SystemFileFactory.INSTANCE.getFile(usableFile);
     if (!file.exists()) {
       return;
     }
@@ -153,7 +209,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
         // store Preprocessor
         for (Entry<IndexType, IoTDBIndex> entry : allPathsIndexMap.entrySet()) {
           IoTDBIndex index = entry.getValue();
-          index.serialize();
+          previousBufferMap.put(entry.getKey(), index.serializeFeatureExtractor());
         }
         closeAndRelease();
         closed = true;
@@ -161,6 +217,14 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
         lock.writeLock().unlock();
       }
     });
+  }
+
+
+  private void closeAndRelease() {
+    allPathsIndexMap.forEach((indexType, index) -> index.closeAndRelease());
+    allPathsIndexMap.clear();
+    serializeUsable();
+    serializePreviousBuffer();
   }
 
   private void waitingFlushEndAndDo(IndexNaiveFunc indexNaiveAction) throws IOException {
@@ -193,12 +257,6 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
         break;
       }
     }
-  }
-
-  private void closeAndRelease() {
-    allPathsIndexMap.forEach((indexType, index) -> index.closeAndRelease());
-    allPathsIndexMap.clear();
-    serializeUsable();
   }
 
   public synchronized void deleteAllFiles() throws IOException {
@@ -340,7 +398,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
       if (!allPathsIndexMap.containsKey(indexType)) {
         IoTDBIndex index = IndexType
             .constructIndex(indexSeries.getFullPath(), getIndexDir(indexType), indexType,
-                indexInfo);
+                indexInfo, previousBufferMap.get(indexType));
         allPathsIndexMap.putIfAbsent(indexType, index);
         usableMap.putIfAbsent(indexType, IIndexUsable.Factory.getIndexUsability(indexSeries));
       }
