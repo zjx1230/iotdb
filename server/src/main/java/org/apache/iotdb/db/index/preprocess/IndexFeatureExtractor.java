@@ -364,10 +364,11 @@ public abstract class IndexFeatureExtractor {
    * serialize the previous overlapped data and output
    */
   public ByteBuffer serializePrevious() throws IOException {
-    int idx = nextUnprocessedWindowStartIdx();
-    if (idx > srcData.size()) {
-      throw new IOException(String.format("idx %d > srcData.size %d", idx, srcData.size()));
-    }
+//    int idx = nextUnprocessedWindowStartIdx();
+//    if (idx > srcData.size()) {
+//      throw new IOException(String.format("idx %d > srcData.size %d", idx, srcData.size()));
+//    }
+    int idx = 0;
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     ReadWriteIOUtils.write(srcData.getDataType().serialize(), baos);
     ReadWriteIOUtils.write(srcData.size() - idx, baos);

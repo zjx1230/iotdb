@@ -109,12 +109,16 @@ public class _ELBIndexReadIT {
             speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
       }
       statement.execute("flush");
+      System.out.println("==========================");
+      System.out.println(IndexManager.getInstance().getRouter());
 
       for (int i = 20; i < 40; i++) {
         statement.execute(String.format(insertPattern,
             speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
       }
       statement.execute("flush");
+      System.out.println("==========================");
+      System.out.println(IndexManager.getInstance().getRouter());
 
       IndexManager.getInstance().stop();
       IndexManager.getInstance().start();
@@ -124,6 +128,7 @@ public class _ELBIndexReadIT {
             speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
       }
       statement.execute("flush");
+      System.out.println("==========================");
       System.out.println(IndexManager.getInstance().getRouter());
 
     } catch (Exception e) {

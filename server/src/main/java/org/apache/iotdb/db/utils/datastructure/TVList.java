@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.iotdb.db.rescon.PrimitiveArrayManager;
+import org.apache.iotdb.db.utils.TestOnly;
+import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.read.TimeValuePair;
@@ -622,4 +624,30 @@ public abstract class TVList {
     }
   }
 
+  @TestOnly
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("{");
+    for (int i = 0; i < size; i++) {
+      TimeValuePair pair = getTimeValuePair(i);
+      switch (getDataType()) {
+        case INT32:
+          sb.append(String.format("[%d,%d],", pair.getTimestamp(), pair.getValue().getInt()));
+          break;
+        case INT64:
+          sb.append(String.format("[%d,%d],", pair.getTimestamp(), pair.getValue().getLong()));
+          break;
+        case FLOAT:
+          sb.append(String.format("[%d,%.2f],", pair.getTimestamp(), pair.getValue().getFloat()));
+          break;
+        case DOUBLE:
+          sb.append(String.format("[%d,%.2f],", pair.getTimestamp(), pair.getValue().getDouble()));
+          break;
+        default:
+          throw new NotImplementedException(getDataType().toString());
+      }
+    }
+    sb.append("}");
+    return sb.toString();
+  }
 }
