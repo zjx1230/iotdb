@@ -291,7 +291,8 @@ public class CountFixedFeatureExtractor extends IndexFeatureExtractor {
   public int nextUnprocessedWindowStartIdx() {
     int next = processedStartTimeIdx + slideStep;
     if (next >= srcData.size()) {
-      next = srcData.size();
+//      next = srcData.size();
+      next = processedStartTimeIdx;
     }
     return next;
   }

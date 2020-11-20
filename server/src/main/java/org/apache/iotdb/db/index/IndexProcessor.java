@@ -27,7 +27,6 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -78,7 +77,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   private PartialPath indexSeries;
   private final IndexBuildTaskPoolManager indexBuildPoolManager;
   private ReadWriteLock lock = new ReentrantReadWriteLock();
-  private Map<IndexType, ReadWriteLock> indexLockMap = new HashMap<>();
+  private Map<IndexType, ReadWriteLock> indexLockMap;
 
   /**
    * we use numIndexBuildTasks to record how many indexes are building. If it's 0, there is no
@@ -215,8 +214,9 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
         // store Preprocessor
         for (Entry<IndexType, IoTDBIndex> entry : allPathsIndexMap.entrySet()) {
           IndexType indexType = entry.getKey();
-          if(indexType == IndexType.NO_INDEX)
+          if (indexType == IndexType.NO_INDEX) {
             continue;
+          }
           IoTDBIndex index = entry.getValue();
           previousBufferMap.put(entry.getKey(), index.serializeFeatureExtractor());
         }
@@ -230,6 +230,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
 
 
   private void closeAndRelease() {
+    logger.info("close and release index processor: " + indexSeries);
     allPathsIndexMap.forEach((indexType, index) -> index.closeAndRelease());
     allPathsIndexMap.clear();
     serializeUsable();
@@ -338,6 +339,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     } finally {
       lock.writeLock().unlock();
     }
+    System.out.println("dklajxklcj");
   }
 
   public void buildIndexForOneSeries(PartialPath path, TVList tvList) {
@@ -346,7 +348,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     numIndexBuildTasks.incrementAndGet();
     try {
       allPathsIndexMap.forEach((indexType, index) -> {
-        if(indexType == IndexType.NO_INDEX) {
+        if (indexType == IndexType.NO_INDEX) {
           numIndexBuildTasks.decrementAndGet();
           return;
         }
@@ -405,6 +407,8 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
 
   private synchronized void refreshSeriesIndexMapFromMManager(
       Map<IndexType, IndexInfo> indexInfoMap) {
+    System.out.println(
+        "refreshSeriesIndexMapFromMManager--refreshSeriesIndexMapFromMManager: " + indexInfoMap);
     // Add indexes that are not in the previous map
 
     for (Entry<IndexType, IndexInfo> entry : indexInfoMap.entrySet()) {
@@ -442,8 +446,13 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   }
 
 //  @TestOnly
-//  public Map<String, Map<IndexType, ByteBuffer>> getPreviousMeta() {
-//    return previousMetaPointer;
+//  public Map<IndexType, ByteBuffer> getPreviousMeta() {
+//    return previousBufferMap;
+//  }
+//
+//  @TestOnly
+//  public Map<IndexType, ByteBuffer> getPreviousMeta() {
+//    return previousBufferMap;
 //  }
 
 }

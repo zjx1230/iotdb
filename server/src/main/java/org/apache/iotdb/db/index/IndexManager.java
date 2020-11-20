@@ -215,9 +215,10 @@ public class IndexManager implements IndexManagerMBean, IService {
     indexDataDirPath = DirectoryManager.getInstance().getIndexRootFolder() + File.separator +
         INDEX_DATA_DIR_NAME;
     indexRouterDir = getIndexRouterDir();
-    router = IIndexRouter.Factory.getIndexRouter(indexRouterDir);
     createIndexProcessorFunc = (indexSeries, indexInfoMap) -> new IndexProcessor(
         indexSeries, indexDataDirPath + File.separator + indexSeries, indexInfoMap);
+    router = IIndexRouter.Factory.getIndexRouter(indexRouterDir);
+
 //    indexUsability = IIndexUsable.Factory.getIndexUsability();
 
   }
@@ -362,9 +363,9 @@ public class IndexManager implements IndexManagerMBean, IService {
 //    }
 //    clear();
 //  }
-  public void closeAndClear() {
-
-  }
+//  public void closeAndClear() {
+//
+//  }
 
   public List<IndexChunkMeta> getIndexSGMetadata(String storageGroup, boolean b, String p1,
       IndexType elb) {

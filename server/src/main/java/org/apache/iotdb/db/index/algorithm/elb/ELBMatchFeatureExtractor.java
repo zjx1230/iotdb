@@ -47,7 +47,8 @@ public class ELBMatchFeatureExtractor extends CountFixedFeatureExtractor {
   //  private final int blockNum;
   private final int blockWidth;
 
-  private final List<ELBWindowBlockFeature> windowBlockFeatures;
+
+  private final ELBWindowBlockFeature currentBlockFeature;
 
   private final ELBType elbType;
 
@@ -64,7 +65,7 @@ public class ELBMatchFeatureExtractor extends CountFixedFeatureExtractor {
     super(tsDataType, -1, -1, false, false, inQueryMode);
     this.elbType = elbType;
     this.blockWidth = blockWidth;
-    this.windowBlockFeatures = new ArrayList<>();
+    this.currentBlockFeature = new ELBWindowBlockFeature(-1,-1,-1);
     if (inQueryMode) {
       this.windowRange = windowRange; // in query, it's query length.
       this.slideStep = 1; // in query, we need scan every windows
@@ -102,50 +103,35 @@ public class ELBMatchFeatureExtractor extends CountFixedFeatureExtractor {
         throw new IndexRuntimeException("why the block exceeds?");
       }
       long endCoverTime = srcData.getTime(endIdx);
-      windowBlockFeatures.add(new ELBWindowBlockFeature(startCoverTime, endCoverTime, f));
+      currentBlockFeature.startTime = startCoverTime;
+      currentBlockFeature.endTime = endCoverTime;
+      currentBlockFeature.feature = f;
     }
   }
 
-  /**
-   * custom for {@linkplain ELBIndexNotGood}
-   *
-   * @param idx the idx-th identifiers
-   * @param outputStream to output
-   */
-  void serializeIdentifier(Integer idx, OutputStream outputStream) throws IOException {
-    int actualIdx = idx - flushedOffset;
-    if (actualIdx * 3 + 2 >= identifierList.size()) {
-      throw new IOException(String.format("ELB serialize: idx %d*3+2 > identifiers size %d", idx,
-          identifierList.size()));
-    }
-    if (!storeIdentifier) {
-      throw new IOException("In ELB index, must store the identifier list");
-    }
-    Identifier identifier = new Identifier(identifierList.getLong(actualIdx * 3),
-        identifierList.getLong(actualIdx * 3 + 1),
-        (int) identifierList.getLong(actualIdx * 3 + 2));
-    identifier.serialize(outputStream);
+  @Override
+  public Object getCurrent_L3_Feature() {
+    return new ELBWindowBlockFeature(currentBlockFeature);
   }
-
-  public void serializeFeatures(ByteArrayOutputStream outputStream) throws IOException {
-    ReadWriteIOUtils.write(windowBlockFeatures.size(), outputStream);
-    for (ELBWindowBlockFeature features : windowBlockFeatures) {
-      ReadWriteIOUtils.write(features.startTime, outputStream);
-      ReadWriteIOUtils.write(features.endTime, outputStream);
-      ReadWriteIOUtils.write(features.feature, outputStream);
-    }
-  }
-
-  static List<ELBWindowBlockFeature> deserializeFeatures(ByteBuffer indexChunkData) {
-    List<ELBWindowBlockFeature> res = new ArrayList<>();
-    int size = ReadWriteIOUtils.readInt(indexChunkData);
-
-    for (int i = 0; i < size; i++) {
-      long startTime = ReadWriteIOUtils.readLong(indexChunkData);
-      long endTime = ReadWriteIOUtils.readLong(indexChunkData);
-      double feature = ReadWriteIOUtils.readDouble(indexChunkData);
-      res.add(new ELBWindowBlockFeature(startTime, endTime, feature));
-    }
-    return res;
-  }
+//  /**
+//   * custom for {@linkplain ELBIndexNotGood}
+//   *
+//   * @param idx the idx-th identifiers
+//   * @param outputStream to output
+//   */
+//  void serializeIdentifier(Integer idx, OutputStream outputStream) throws IOException {
+//    int actualIdx = idx - flushedOffset;
+//    if (actualIdx * 3 + 2 >= identifierList.size()) {
+//      throw new IOException(String.format("ELB serialize: idx %d*3+2 > identifiers size %d", idx,
+//          identifierList.size()));
+//    }
+//    if (!storeIdentifier) {
+//      throw new IOException("In ELB index, must store the identifier list");
+//    }
+//    Identifier identifier = new Identifier(identifierList.getLong(actualIdx * 3),
+//        identifierList.getLong(actualIdx * 3 + 1),
+//        (int) identifierList.getLong(actualIdx * 3 + 2));
+//    identifier.serialize(outputStream);
+//  }
+//
 }

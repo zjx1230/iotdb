@@ -117,7 +117,7 @@ public class ELBFeatureExtractor {
     return elbFeature.calcPatternFeature(pattern, blockNum, envelope);
   }
 
-  public boolean exactDistanceCalc(TVList slidingWindow){
+  public boolean exactDistanceCalc(TVList slidingWindow) {
     return pattern.exactDistanceCalc(slidingWindow);
   }
 
@@ -135,6 +135,17 @@ public class ELBFeatureExtractor {
       this.startTime = startTime;
       this.endTime = endTime;
       this.feature = feature;
+    }
+
+    public ELBWindowBlockFeature(ELBWindowBlockFeature block) {
+      this.startTime = block.startTime;
+      this.endTime = block.endTime;
+      this.feature = block.feature;
+    }
+
+    @Override
+    public String toString() {
+      return String.format("%d-%d:%.2f", startTime, endTime, feature);
     }
   }
 

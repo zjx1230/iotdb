@@ -66,11 +66,11 @@ public abstract class IoTDBIndex {
   protected IndexFeatureExtractor indexFeatureExtractor;
 
   public IoTDBIndex(String path, IndexInfo indexInfo) {
-    tsDataType = getSeriesType();
     this.path = path;
     this.indexType = indexInfo.getIndexType();
     this.confIndexStartTime = indexInfo.getTime();
     this.props = indexInfo.getProps();
+    this.tsDataType = getSeriesType();
     parsePropsAndInit(this.props);
   }
 
@@ -182,7 +182,6 @@ public abstract class IoTDBIndex {
    * methods will be invalid.
    */
   public void closeAndRelease() {
-    clearFeatureExtractor();
     if(indexFeatureExtractor != null)
       indexFeatureExtractor.closeAndRelease();
     serializeIndexAndFlush();

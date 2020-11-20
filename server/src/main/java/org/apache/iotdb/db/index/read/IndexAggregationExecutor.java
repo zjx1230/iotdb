@@ -30,6 +30,7 @@ import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.index.IndexManager;
 import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.physical.crud.QueryIndexPlan;
@@ -60,7 +61,7 @@ public class IndexAggregationExecutor extends AggregationExecutor {
     //    super(queryIndexPlan);
     indexType = queryIndexPlan.getIndexType();
     queryProps = queryIndexPlan.getProps();
-    throw new Error("to be changed");
+    IndexUtils.breakDown("to be changed asdasdasdasxx");
   }
 
   /**

@@ -18,25 +18,31 @@
  */
 package org.apache.iotdb.db.index.it;
 
+import static org.apache.iotdb.db.index.IndexTestUtils.funcForm;
+import static org.apache.iotdb.db.index.IndexTestUtils.getArrayRange;
+import static org.apache.iotdb.db.index.common.IndexFunc.ED;
+import static org.apache.iotdb.db.index.common.IndexFunc.SIM_ET;
+import static org.apache.iotdb.db.index.common.IndexFunc.SIM_ST;
 import static org.apache.iotdb.db.index.common.IndexType.ELB_INDEX;
-import static org.apache.iotdb.db.index.common.IndexType.NO_INDEX;
 import static org.junit.Assert.fail;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.Statement;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.index.IndexManager;
-import org.apache.iotdb.db.index.math.Randomwalk;
+import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.jdbc.Config;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class _ELBIndexWriteIT {
+public class _ELBIndexReadIT {
 
   private static final String insertPattern = "INSERT INTO %s(timestamp, %s) VALUES (%d, %.3f)";
 
@@ -55,13 +61,14 @@ public class _ELBIndexWriteIT {
   private static final String indexWhole = "root.wind2.*.direction";
   private static final int wholeSize = 5;
   private static final int wholeDim = 100;
-  private static final int subLength = 10_000;
+  private static final int subLength = 50;
 
   @Before
   public void setUp() throws Exception {
     IoTDBDescriptor.getInstance().getConfig().setEnableIndex(true);
     EnvironmentUtils.closeStatMonitor();
     EnvironmentUtils.envSetUp();
+    insertSQL();
   }
 
 
@@ -71,20 +78,16 @@ public class _ELBIndexWriteIT {
     IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
   }
 
+  private static void insertSQL() throws ClassNotFoundException {
 
-  @Test
-  public void checkWrite() throws ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
 //    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
     try (Connection connection = DriverManager.getConnection
         (Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement();) {
-      long start = System.currentTimeMillis();
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupSub));
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
 
-      System.out.println(
-          String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", speed1));
       statement.execute(
           String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", speed1));
 
@@ -94,42 +97,73 @@ public class _ELBIndexWriteIT {
         statement.execute(
             String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
       }
-      long startCreateIndex = System.currentTimeMillis();
       statement.execute(
-          String.format("CREATE INDEX ON %s WITH INDEX=%s, BLOCK_SIZE=20", indexSub, ELB_INDEX));
+          String.format("CREATE INDEX ON %s WITH INDEX=%s, BLOCK_SIZE=%d", indexSub, ELB_INDEX, 5));
 
-      System.out.println(IndexManager.getInstance().getRouter());
-//      Assert.assertEquals(
-//          "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind2.*.direction: {}>;"
-//              + "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind1.azq01.speed: {}>;",
-//          IndexManager.getInstance().getRouter().toString());
-
-      TVList subInput = Randomwalk.generateRanWalkTVList(subLength);
-      long startInsertSub = System.currentTimeMillis();
-      for (int i = 0; i < subInput.size(); i++) {
+      TVList subInput = TVListAllocator.getInstance().allocate(TSDataType.DOUBLE);
+      for (int i = 0; i < subLength; i++) {
+        subInput.putDouble(i, i * 10);
+      }
+      for (int i = 0; i < 20; i++) {
         statement.execute(String.format(insertPattern,
             speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
       }
       statement.execute("flush");
-      System.out.println("insert finish for subsequence case");
+
+      for (int i = 20; i < 40; i++) {
+        statement.execute(String.format(insertPattern,
+            speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
+      }
+      statement.execute("flush");
+
+      IndexManager.getInstance().stop();
+      IndexManager.getInstance().start();
+
+      for (int i = 37; i < subLength; i++) {
+        statement.execute(String.format(insertPattern,
+            speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
+      }
+      statement.execute("flush");
       System.out.println(IndexManager.getInstance().getRouter());
-//      Assert.assertEquals(
-//          "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind2.*.direction: {}>;<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind1.azq01.speed: {NO_INDEX=NO_INDEX}>;",
-//          IndexManager.getInstance().getRouter().toString());
 
-      long end = System.currentTimeMillis();
-      System.out.println(IndexManager.getInstance().getRouter());
-//      Assert.assertEquals(
-//          "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind2.*.direction: {NO_INDEX=NO_INDEX}>;<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind1.azq01.speed: {NO_INDEX=NO_INDEX}>;",
-//          IndexManager.getInstance().getRouter().toString());
+    } catch (Exception e) {
+      e.printStackTrace();
+      fail(e.getMessage());
+    }
+  }
 
-      System.out.println("insert finish for subsequence case");
-      System.out.println(String.format("create series use %d ms", (startCreateIndex - start)));
-      System.out
-          .println(String.format("create index  use %d ms", (startInsertSub - startCreateIndex)));
-      System.out
-          .println(String.format("insert sub    use %d ms", (end - startInsertSub)));
+  @Test
+  public void checkRead() throws ClassNotFoundException {
+    Class.forName(Config.JDBC_DRIVER_NAME);
+    try (Connection connection = DriverManager.
+        getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
+        Statement statement = connection.createStatement()) {
 
+      String querySQL = "SELECT speed.* FROM root.wind1.azq01 WHERE Speed "
+          + String.format("CONTAIN (%s) WITH TOLERANCE 0 ", getArrayRange(17, 19))
+          + String.format("CONTAIN (%s) WITH TOLERANCE 0 ", getArrayRange(20, 23))
+          + String.format("CONTAIN (%s) WITH TOLERANCE 0 ", getArrayRange(24, 26));
+      boolean hasIndex = statement.execute(querySQL);
+
+      Assert.assertTrue(hasIndex);
+//      String[] gt = {"0,0,50210,0,50219,0,0.0"};
+      try (ResultSet resultSet = statement.getResultSet()) {
+        int cnt = 0;
+        while (resultSet.next()) {
+//          String ans = resultSet.getString(TIMESTAMP_STR) + ","
+//              + resultSet.getString("ID0") + ","
+//              + resultSet.getString(funcForm(SIM_ST, p1)) + ","
+//              + resultSet.getString("ID1") + ","
+//              + resultSet.getString(funcForm(SIM_ET, p1)) + ","
+//              + resultSet.getString("ID2") + ","
+//              + resultSet.getString(funcForm(ED, p1));
+          String ans = resultSet.toString();
+          System.out.println("============" + ans);
+//          Assert.assertEquals(gt[cnt], ans);
+          cnt++;
+        }
+//        Assert.assertEquals(gt.length, cnt);
+      }
     } catch (Exception e) {
       e.printStackTrace();
       fail(e.getMessage());

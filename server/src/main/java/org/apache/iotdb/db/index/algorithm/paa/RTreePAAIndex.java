@@ -58,7 +58,7 @@ public class RTreePAAIndex extends RTreeIndex {
 
   public RTreePAAIndex(String path, String indexDir, IndexInfo indexInfo) {
     super(path, indexInfo, true);
-    throw new Error("indexDir没用起来，记得初始化");
+    IndexUtils.breakDown("indexDir没用起来，记得初始化");
   }
 
   @Override

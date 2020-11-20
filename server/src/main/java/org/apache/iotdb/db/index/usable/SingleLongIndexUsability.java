@@ -68,9 +68,20 @@ public class SingleLongIndexUsability implements IIndexUsable {
         prevNode.next = node.next;
         node = node.next;
         size--;
-      } else if (node.start < startTime && endTime < node.end) {
+      } else if (node.start <= startTime && endTime <= node.end) {
+        if (node.start == startTime) {
+          // left aligned
+          node.start = endTime + 1;
+          prevNode = node;
+          node = node.next;
+        } else if (node.end == endTime) {
+          // right aligned
+          node.end = startTime - 1;
+          prevNode = node;
+          node = node.next;
+        }
         // the unusable range is split. If it reaches the upper bound, not split it
-        if (size < maxSizeOfUsableSegments) {
+        else if (size < maxSizeOfUsableSegments) {
           RangeNode newNode = new RangeNode(endTime + 1, node.end, node.next);
           node.end = startTime - 1;
           newNode.next = node.next;
@@ -83,11 +94,11 @@ public class SingleLongIndexUsability implements IIndexUsable {
           prevNode = node;
           node = node.next;
         }
-      } else if (startTime < node.start && endTime < node.end) {
+      } else if (startTime < node.start) {
         node.start = endTime + 1;
         prevNode = node;
         node = node.next;
-      } else if (node.start < startTime && node.end < endTime) {
+      } else {
         node.end = startTime - 1;
         prevNode = node;
         node = node.next;

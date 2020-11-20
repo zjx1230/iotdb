@@ -112,6 +112,10 @@ public class ProtoIndexRouter implements IIndexRouter {
     } catch (IOException e) {
       logger.error("Error when serialize router. Given up.", e);
     }
+    fullPathProcessorMap.clear();
+    sgToFullPathMap.clear();
+    sgToWildCardPathMap.clear();
+    wildCardProcessorMap.clear();
   }
 
   @Override

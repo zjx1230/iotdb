@@ -59,6 +59,18 @@ public class IndexTestUtils {
     FSFactoryProducer.getFSFactory().getFile(index_name + INDEXING_SUFFIX).delete();
   }
 
+  public static String getArrayRange(int start, int end) {
+    return getArrayRange(start, end, 1);
+  }
+
+  public static String getArrayRange(int start, int end, int interval) {
+    StringBuilder array = new StringBuilder();
+    for (int i = start; i <= end; i += interval) {
+      array.append(i).append(',');
+    }
+    return array.toString();
+  }
+
   public static String tvListToString(TVList tvList) {
     StringBuilder sb = new StringBuilder();
     sb.append("{");

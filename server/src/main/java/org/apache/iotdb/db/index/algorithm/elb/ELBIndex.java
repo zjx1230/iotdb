@@ -24,34 +24,44 @@ import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_DISTANCE;
 import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_ELB_TYPE;
 import static org.apache.iotdb.db.index.common.IndexConstant.DISTANCE;
 import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE;
-import static org.apache.iotdb.db.index.common.IndexConstant.FEATURE_DIM;
 import static org.apache.iotdb.db.index.common.IndexConstant.MISSING_PARAM_ERROR_MESSAGE;
 import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
 import static org.apache.iotdb.db.index.common.IndexConstant.THRESHOLD;
+import static org.apache.iotdb.db.index.common.IndexType.ELB_INDEX;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
+import org.apache.iotdb.db.exception.metadata.MetadataException;
+import org.apache.iotdb.db.index.IndexProcessor;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBWindowBlockFeature;
 import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.distance.Distance;
-import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.read.func.IndexFuncFactory;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.utils.Pair;
+import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,12 +94,12 @@ import org.slf4j.LoggerFactory;
 
 public class ELBIndex extends IoTDBIndex {
 
-  private static final Logger logger = LoggerFactory.getLogger(ELBIndex.class);
+  private final Logger logger = LoggerFactory.getLogger(ELBIndex.class);
   private Distance distance;
   private ELBType elbType;
 
   private ELBMatchFeatureExtractor elbMatchPreprocessor;
-
+  private List<ELBWindowBlockFeature> windowBlockFeatures;
   // Only for query
   private int queryTimeRange;
   private double[] pattern;
@@ -97,13 +107,24 @@ public class ELBIndex extends IoTDBIndex {
   private Pair<double[], double[]> patternFeatures;
   private ELBFeatureExtractor elbFeatureExtractor;
   private int blockWidth;
+  private File featureFile;
 
   public ELBIndex(String path, String indexDir, IndexInfo indexInfo) {
     super(path, indexInfo);
+    windowBlockFeatures = new ArrayList<>();
+    featureFile = IndexUtils.getIndexFile(indexDir + File.separator + "feature");
+    File indexDirFile = IndexUtils.getIndexFile(indexDir);
+    if (indexDirFile.exists()) {
+      System.out.println(String.format("reload index %s from %s", ELB_INDEX, indexDir));
+      deserializeFeatures();
+    } else {
+      indexDirFile.mkdirs();
+    }
+//    logger.debug("");
     // ELB always variable query length, so it's needed windowRange
     windowRange = -1;
     initELBParam();
-    throw new Error("indexDir没用起来，记得初始化");
+//    throw new IndexRuntimeException("indexDir没用起来，记得初始化");
   }
 
   private void initELBParam() {
@@ -126,32 +147,66 @@ public class ELBIndex extends IoTDBIndex {
 
   @Override
   public boolean buildNext() {
+    ELBWindowBlockFeature block = (ELBWindowBlockFeature) elbMatchPreprocessor
+        .getCurrent_L3_Feature();
+    windowBlockFeatures.add(block);
     return true;
   }
 
   @Override
   public void flush() {
-    if (indexFeatureExtractor.getCurrentChunkSize() == 0) {
-      logger.warn("Nothing to be flushed, directly return null");
-      System.out.println("Nothing to be flushed, directly return null");
-      return;
-    }
-    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    // serialize window block features
-    try {
-      elbMatchPreprocessor.serializeFeatures(outputStream);
-    } catch (IOException e) {
-      logger.error("flush failed", e);
-      return;
-    }
-    long st = indexFeatureExtractor.getChunkStartTime();
-    long end = indexFeatureExtractor.getChunkEndTime();
+    // we need to do nothing when a batch of memtable flush out.
+//    if (indexFeatureExtractor.getCurrentChunkSize() == 0) {
+//      logger.warn("Nothing to be flushed, directly return null");
+//      System.out.println("Nothing to be flushed, directly return null");
+//      return;
+//    }
+//    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+//    // serialize window block features
+//    try {
+//      elbMatchPreprocessor.serializeFeatures(outputStream);
+//    } catch (IOException e) {
+//      logger.error("flush failed", e);
+//      return;
+//    }
+//    long st = indexFeatureExtractor.getChunkStartTime();
+//    long end = indexFeatureExtractor.getChunkEndTime();
 //    return new IndexFlushChunk(path, indexType, outputStream, st, end);
+//    elbMatchPreprocessor.serializeFeatures(outputStream);
+  }
+
+
+  private void deserializeFeatures() {
+    if (!featureFile.exists()) {
+      return;
+    }
+    try (InputStream inputStream = new FileInputStream(featureFile)) {
+      int size = ReadWriteIOUtils.readInt(inputStream);
+
+      for (int i = 0; i < size; i++) {
+        long startTime = ReadWriteIOUtils.readLong(inputStream);
+        long endTime = ReadWriteIOUtils.readLong(inputStream);
+        double feature = ReadWriteIOUtils.readDouble(inputStream);
+        windowBlockFeatures.add(new ELBWindowBlockFeature(startTime, endTime, feature));
+      }
+    } catch (IOException e) {
+      logger.error("Error when deserialize ELB features. Given up.", e);
+    }
+
   }
 
   @Override
   protected void serializeIndexAndFlush() {
-    throw new UnsupportedOperationException();
+    try (OutputStream outputStream = new FileOutputStream(featureFile)) {
+      ReadWriteIOUtils.write(windowBlockFeatures.size(), outputStream);
+      for (ELBWindowBlockFeature features : windowBlockFeatures) {
+        ReadWriteIOUtils.write(features.startTime, outputStream);
+        ReadWriteIOUtils.write(features.endTime, outputStream);
+        ReadWriteIOUtils.write(features.feature, outputStream);
+      }
+    } catch (IOException e) {
+      logger.error("Error when serialize router. Given up.", e);
+    }
   }
 
   @Override
@@ -209,10 +264,9 @@ public class ELBIndex extends IoTDBIndex {
     for (double v : pattern) {
       patternList.putDouble(0, v);
     }
-//    this.elbFeatureExtractor = new ELBFeatureExtractor(distance, windowRange,
-//        featureDim, elbType);
+    this.elbFeatureExtractor = null;
+//  this.elbFeatureExtractor = new ELBFeatureExtractor(distance, windowRange, featureDim, elbType);
     IndexUtils.breakDown("featureDim need to be replaced");
-
 
     this.patternFeatures = elbFeatureExtractor
         .calcELBFeature(patternList, 0, thresholds, borders);
@@ -224,8 +278,8 @@ public class ELBIndex extends IoTDBIndex {
     int featureDim = 0;
     IndexUtils.breakDown("featureDim ");
 
-    List<ELBWindowBlockFeature> windowBlockFeatures;
-    windowBlockFeatures = ELBMatchFeatureExtractor.deserializeFeatures(indexChunkData);
+//    List<ELBWindowBlockFeature> windowBlockFeatures;
+//    windowBlockFeatures = ELBMatchFeatureExtractor.deserializeFeatures(indexChunkData);
 
     List<Identifier> res = new ArrayList<>();
     // pruning
@@ -259,4 +313,10 @@ public class ELBIndex extends IoTDBIndex {
     TVListAllocator.getInstance().release(aligned);
     return reminding;
   }
+
+  @Override
+  public String toString() {
+    return windowBlockFeatures.toString();
+  }
+
 }
