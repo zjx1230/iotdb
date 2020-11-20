@@ -68,7 +68,7 @@ public class NoIndex extends IoTDBIndex {
       this.indexFeatureExtractor.clear();
     }
     this.indexFeatureExtractor = new CountFixedFeatureExtractor(tsDataType, windowRange,
-        slideStep, false, false);
+        slideStep, false, false, inQueryMode);
     indexFeatureExtractor.deserializePrevious(previous);
   }
 

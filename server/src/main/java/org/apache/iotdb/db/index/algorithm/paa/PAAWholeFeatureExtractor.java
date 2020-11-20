@@ -40,8 +40,8 @@ public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
   private final int paaWidth;
   private boolean hasNewData;
 
-  public PAAWholeFeatureExtractor(TSDataType dataType, int alignedLength, int paaDim) {
-    super(dataType, WindowType.WHOLE_MATCH, alignedLength, -1);
+  public PAAWholeFeatureExtractor(TSDataType dataType, int alignedLength, int paaDim, boolean inQueryMode) {
+    super(dataType, WindowType.WHOLE_MATCH, alignedLength, -1, inQueryMode);
     this.alignedLength = alignedLength;
     this.paaDim = paaDim;
     this.paaWidth = alignedLength / paaDim;

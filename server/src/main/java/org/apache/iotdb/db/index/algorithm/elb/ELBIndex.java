@@ -42,6 +42,7 @@ import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBWindowBlockFeature;
 import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.distance.Distance;
 import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
 import org.apache.iotdb.db.index.preprocess.Identifier;
@@ -118,9 +119,8 @@ public class ELBIndex extends IoTDBIndex {
       this.indexFeatureExtractor.clear();
     }
     this.elbMatchPreprocessor = new ELBMatchFeatureExtractor(tsDataType, windowRange, blockWidth,
-        elbType);
+        elbType, inQueryMode);
     this.indexFeatureExtractor = elbMatchPreprocessor;
-    elbMatchPreprocessor.setInQueryMode(inQueryMode);
     indexFeatureExtractor.deserializePrevious(previous);
   }
 
@@ -209,8 +209,11 @@ public class ELBIndex extends IoTDBIndex {
     for (double v : pattern) {
       patternList.putDouble(0, v);
     }
-    this.elbFeatureExtractor = new ELBFeatureExtractor(distance, windowRange,
-        featureDim, elbType);
+//    this.elbFeatureExtractor = new ELBFeatureExtractor(distance, windowRange,
+//        featureDim, elbType);
+    IndexUtils.breakDown("featureDim need to be replaced");
+
+
     this.patternFeatures = elbFeatureExtractor
         .calcELBFeature(patternList, 0, thresholds, borders);
   }
@@ -218,12 +221,11 @@ public class ELBIndex extends IoTDBIndex {
   @Override
   public List<Identifier> queryByIndex(ByteBuffer indexChunkData) throws IndexManagerException {
     // deserialize
+    int featureDim = 0;
+    IndexUtils.breakDown("featureDim ");
+
     List<ELBWindowBlockFeature> windowBlockFeatures;
-    try {
-      windowBlockFeatures = ELBMatchFeatureExtractor.deserializeFeatures(indexChunkData);
-    } catch (IOException e) {
-      throw new IndexManagerException(e.getMessage());
-    }
+    windowBlockFeatures = ELBMatchFeatureExtractor.deserializeFeatures(indexChunkData);
 
     List<Identifier> res = new ArrayList<>();
     // pruning

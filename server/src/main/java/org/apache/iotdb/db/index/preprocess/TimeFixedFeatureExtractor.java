@@ -84,17 +84,21 @@ public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
    * @param storeAligned true if we need to store all aligned sequences. The cost will be counted.
    */
   public TimeFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
-      int alignedDim, long timeAnchor, boolean storeIdentifier, boolean storeAligned) {
-    super(tsDataType, WindowType.COUNT_FIXED, windowRange, slideStep);
+      int alignedDim, long timeAnchor, boolean storeIdentifier, boolean storeAligned, boolean inQueryMode) {
+    super(tsDataType, WindowType.COUNT_FIXED, windowRange, slideStep, inQueryMode);
     this.storeIdentifier = storeIdentifier;
     this.storeAligned = storeAligned;
     this.alignedDim = alignedDim;
     this.timeAnchor = timeAnchor;
   }
 
+  public TimeFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
+      int alignedDim, long timeAnchor, boolean storeIdentifier, boolean storeAligned) {
+    this(tsDataType, windowRange, slideStep, alignedDim, timeAnchor, storeIdentifier, storeAligned, false);
+  }
   public TimeFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int alignedDim,
       int slideStep, long timeAnchor) {
-    this(tsDataType, windowRange, slideStep, alignedDim, timeAnchor, true, true);
+    this(tsDataType, windowRange, slideStep, alignedDim, timeAnchor, true, true, false);
   }
 
   @Override

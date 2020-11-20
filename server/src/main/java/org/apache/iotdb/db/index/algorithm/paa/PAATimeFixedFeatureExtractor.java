@@ -36,15 +36,22 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
  */
 public class PAATimeFixedFeatureExtractor extends TimeFixedFeatureExtractor {
 
-  public PAATimeFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep, int paaDim,
-      long timeAnchor, boolean storeIdentifier, boolean storeAligned) {
-    super(tsDataType, windowRange, slideStep, paaDim, timeAnchor, storeIdentifier, storeAligned);
+  public PAATimeFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
+      int paaDim, long timeAnchor, boolean storeIdentifier, boolean storeAligned,
+      boolean inQueryMode) {
+    super(tsDataType, windowRange, slideStep, paaDim, timeAnchor, storeIdentifier, storeAligned,
+        inQueryMode);
   }
 
-  public PAATimeFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep, int paaDim,
-      boolean storeIdentifier, boolean storeAligned, long timeAnchor) {
-    super(tsDataType, windowRange, slideStep, paaDim, timeAnchor, storeIdentifier, storeAligned);
+  public PAATimeFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
+      int paaDim, long timeAnchor, boolean storeIdentifier, boolean storeAligned) {
+    super(tsDataType, windowRange, slideStep, paaDim, timeAnchor, storeIdentifier, storeAligned,
+        false);
   }
+//  public PAATimeFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep, int paaDim,
+//      boolean storeIdentifier, boolean storeAligned, long timeAnchor) {
+//    super(tsDataType, windowRange, slideStep, paaDim, timeAnchor, storeIdentifier, storeAligned, true);
+//  }
 
 
   protected boolean checkValid(int startIdx, long startTime, long endTime) {

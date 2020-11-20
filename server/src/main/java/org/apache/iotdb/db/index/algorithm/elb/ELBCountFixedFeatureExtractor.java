@@ -60,8 +60,8 @@ public class ELBCountFixedFeatureExtractor extends CountFixedFeatureExtractor {
    */
   public ELBCountFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
       int blockNum, Distance distance, CalcParam calcParam, ELBType elbType,
-      boolean storeIdentifier, boolean storeAligned, boolean storeFeature) {
-    super(tsDataType, windowRange, slideStep, storeIdentifier, storeAligned);
+      boolean storeIdentifier, boolean storeAligned, boolean storeFeature, boolean inQueryMode) {
+    super(tsDataType, windowRange, slideStep, storeIdentifier, storeAligned, inQueryMode);
     this.calcParam = calcParam;
     this.storeFeature = storeFeature;
     if (blockNum > windowRange) {
@@ -79,7 +79,7 @@ public class ELBCountFixedFeatureExtractor extends CountFixedFeatureExtractor {
   public ELBCountFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
       int blockNum, Distance distance, CalcParam calcParam, ELBType elbType) {
     this(tsDataType, windowRange, slideStep, blockNum, distance, calcParam, elbType, false, false,
-        true);
+        true, false);
   }
 
   @Override

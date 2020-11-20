@@ -97,8 +97,8 @@ public class ELBIndexNotGood extends RTreeIndex {
       this.indexFeatureExtractor.clear();
     }
     this.elbTimeFixedPreprocessor = new ELBCountFixedFeatureExtractor(tsDataType, windowRange,
-        slideStep, featureDim, distance, calcParam, elbType, true, false, false);
-    elbTimeFixedPreprocessor.setInQueryMode(inQueryMode);
+        slideStep, featureDim, distance, calcParam, elbType, true, false, false, inQueryMode);
+//    elbTimeFixedPreprocessor.setInQueryMode(inQueryMode);
     this.indexFeatureExtractor = elbTimeFixedPreprocessor;
     indexFeatureExtractor.deserializePrevious(previous);
   }

@@ -83,6 +83,12 @@ public class CountFixedFeatureExtractor extends IndexFeatureExtractor {
     this.storeAligned = storeAligned;
   }
 
+  public CountFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
+      boolean storeIdentifier, boolean storeAligned) {
+    this(tsDataType, windowRange, slideStep, storeIdentifier, storeAligned, false);
+//    this.storeIdentifier = storeIdentifier;
+//    this.storeAligned = storeAligned;
+  }
 
 //  public CountFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep) {
 //    this(tsDataType, windowRange, slideStep, true, true);

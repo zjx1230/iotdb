@@ -79,13 +79,13 @@ public class ELBPreprocessorTest {
     Distance distance = new LInfinityNormdouble();
     CalcParam calcParam = new SingleSegmentationParam(-1, 0.2, windowRange);
     ELBCountFixedFeatureExtractor elbProcessor = new ELBCountFixedFeatureExtractor(TSDataType.INT32,
-        windowRange, slideStep, blockNum, distance, calcParam, ELBType.ELE, false, false, true);
+        windowRange, slideStep, blockNum, distance, calcParam, ELBType.ELE, false, false, true, false);
     elbProcessor.appendNewSrcData(srcData);
     assertL3(elbProcessor, groundTruthL3, true);
     elbProcessor.clear();
     //Not store
     elbProcessor = new ELBCountFixedFeatureExtractor(TSDataType.INT32,
-        windowRange, slideStep, blockNum, distance, calcParam, ELBType.ELE, false, false, false);
+        windowRange, slideStep, blockNum, distance, calcParam, ELBType.ELE, false, false, false, false);
     elbProcessor.appendNewSrcData(srcData);
     assertL3(elbProcessor, groundTruthL3, false);
     elbProcessor.clear();
@@ -115,7 +115,7 @@ public class ELBPreprocessorTest {
     Distance distance = new LInfinityNormdouble();
     CalcParam calcParam = new SingleSegmentationParam(-1, 0.2, windowRange);
     ELBCountFixedFeatureExtractor elbProcessor = new ELBCountFixedFeatureExtractor(TSDataType.INT32,
-        windowRange, slideStep, blockNum, distance, calcParam, ELBType.ELE, false, false, true);
+        windowRange, slideStep, blockNum, distance, calcParam, ELBType.ELE, false, false, true, false);
     elbProcessor.appendNewSrcData(srcData);
 
     while (elbProcessor.hasNext()) {
@@ -131,7 +131,7 @@ public class ELBPreprocessorTest {
     boolean storeFeature = true;
     ELBCountFixedFeatureExtractor elbProcessor2 = new ELBCountFixedFeatureExtractor(TSDataType.INT32,
         windowRange, slideStep, blockNum, distance, calcParam, ELBType.ELE, false, false,
-        storeFeature);
+        storeFeature, false);
 
     elbProcessor2.deserializePrevious(previous);
     elbProcessor2.appendNewSrcData(srcData2);
