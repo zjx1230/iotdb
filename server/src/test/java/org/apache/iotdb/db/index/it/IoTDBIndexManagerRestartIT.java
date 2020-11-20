@@ -40,7 +40,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class IoTDBIndexIndexManagerIT {
+public class IoTDBIndexManagerRestartIT {
 
   private static final String insertPattern = "INSERT INTO %s(timestamp, %s) VALUES (%d, %d)";
   private static final String storageGroup = "root.v";

@@ -6,7 +6,12 @@ import static org.apache.iotdb.db.index.common.IndexConstant.PAA_DIM;
 import static org.apache.iotdb.db.index.common.IndexType.NO_INDEX;
 import static org.apache.iotdb.db.index.common.IndexType.RTREE_PAA;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,6 +29,7 @@ import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.utils.Pair;
+import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -139,5 +145,18 @@ public class ProtoIndexRouterTest {
 
   }
 
+  @Test
+  public void aa() throws IOException {
+    ByteBuffer byteBuffer = ByteBuffer.allocate(0);
+    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+    ReadWriteIOUtils.write(byteBuffer, byteArrayOutputStream);
+    ReadWriteIOUtils.write(1, byteArrayOutputStream);
 
+    ByteArrayInputStream in = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
+    ByteBuffer out = ReadWriteIOUtils
+        .readByteBufferWithSelfDescriptionLength(in);
+    int r = ReadWriteIOUtils.readInt(in);
+    System.out.println(r);
+
+  }
 }

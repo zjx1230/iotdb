@@ -279,11 +279,9 @@ public class PlanExecutor implements IPlanExecutor {
         operateCreateSnapshot();
         return true;
       case CREATE_INDEX:
-        throw new QueryProcessException("Create index hasn't been supported yet");
-//        return createIndex((CreateIndexPlan) plan);
+        return createIndex((CreateIndexPlan) plan);
       case DROP_INDEX:
-        throw new QueryProcessException("Drop index hasn't been supported yet");
-//        return dropIndex((DropIndexPlan) plan);
+        return dropIndex((DropIndexPlan) plan);
       default:
         throw new UnsupportedOperationException(
             String.format("operation %s is not supported", plan.getOperatorType()));

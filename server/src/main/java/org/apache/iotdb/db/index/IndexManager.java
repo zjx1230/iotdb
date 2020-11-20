@@ -46,13 +46,14 @@ import org.apache.iotdb.db.service.IService;
 import org.apache.iotdb.db.service.JMXService;
 import org.apache.iotdb.db.service.ServiceType;
 import org.apache.iotdb.db.utils.FileUtils;
+import org.apache.iotdb.db.utils.TestOnly;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class IndexManager implements IService {
+public class IndexManager implements IndexManagerMBean, IService {
 
   private static final Logger logger = LoggerFactory.getLogger(IndexManager.class);
-  private SystemFileFactory fsFactory = SystemFileFactory.INSTANCE;
+//  private SystemFileFactory fsFactory;
   private final String indexRootDirPath;
   private final String indexRouterDir;
   private final String indexMetaDirPath;
@@ -151,9 +152,9 @@ public class IndexManager implements IService {
 
   private void checkIndexSGMetaDataDir() {
     IndexUtils.breakDown();
-    File metaDir = fsFactory.getFile(this.indexMetaDirPath);
+    File metaDir = IndexUtils.getIndexFile(this.indexMetaDirPath);
     if (!metaDir.exists()) {
-      boolean mk = fsFactory.getFile(this.indexMetaDirPath).mkdirs();
+      boolean mk = metaDir.mkdirs();
       if (mk) {
         logger.info("create index SG metadata folder {}", this.indexMetaDirPath);
         System.out.println("create index SG metadata folder " + this.indexMetaDirPath);
@@ -233,16 +234,16 @@ public class IndexManager implements IService {
     logger.info("Start deleting all storage groups' timeseries");
     close();
 
-    File indexMetaDir = fsFactory.getFile(this.indexMetaDirPath);
+    File indexMetaDir = IndexUtils.getIndexFile(this.indexMetaDirPath);
     if (indexMetaDir.exists()) {
       FileUtils.deleteDirectory(indexMetaDir);
     }
 
-    File indexDataDir = fsFactory.getFile(this.indexDataDirPath);
+    File indexDataDir = IndexUtils.getIndexFile(this.indexDataDirPath);
     if (indexDataDir.exists()) {
       FileUtils.deleteDirectory(indexDataDir);
     }
-    File indexRootDir = fsFactory.getFile(DirectoryManager.getInstance().getIndexRootFolder());
+    File indexRootDir = IndexUtils.getIndexFile(DirectoryManager.getInstance().getIndexRootFolder());
     if (indexRootDir.exists()) {
       FileUtils.deleteDirectory(indexRootDir);
     }
@@ -254,9 +255,14 @@ public class IndexManager implements IService {
     return new IndexMemTableFlushTask(sgRouter, sequence);
   }
 
+  @TestOnly
+  public IIndexRouter getRouter() {
+    return router;
+  }
 
-  public IndexManager getIndexRegister() {
-    return null;
+  @Override
+  public int getIndexNum() {
+    return router.getIndexNum();
   }
 
 
@@ -271,19 +277,19 @@ public class IndexManager implements IService {
   ////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////
   private void prepareDirectory() {
-    File rootDir = fsFactory.getFile(indexRootDirPath);
+    File rootDir = IndexUtils.getIndexFile(indexRootDirPath);
     if (!rootDir.exists()) {
       rootDir.mkdirs();
     }
-    File routerDir = fsFactory.getFile(indexRouterDir);
+    File routerDir = IndexUtils.getIndexFile(indexRouterDir);
     if (!routerDir.exists()) {
       routerDir.mkdirs();
     }
-    File metaDir = fsFactory.getFile(indexMetaDirPath);
+    File metaDir = IndexUtils.getIndexFile(indexMetaDirPath);
     if (!metaDir.exists()) {
       metaDir.mkdirs();
     }
-    File dataDir = fsFactory.getFile(indexDataDirPath);
+    File dataDir = IndexUtils.getIndexFile(indexDataDirPath);
     if (!dataDir.exists()) {
       dataDir.mkdirs();
     }
@@ -293,10 +299,10 @@ public class IndexManager implements IService {
    * When IoTDB restarts, check all index processors and let them reorganize their dirty data.
    */
   private void recoverIndexData() throws IOException, IllegalPathException {
-    IndexUtils.breakDown();
+//    IndexUtils.breakDown();
     // Remove files not in the routers
     for (File processorDataDir : Objects
-        .requireNonNull(fsFactory.getFile(indexDataDirPath).listFiles())) {
+        .requireNonNull(IndexUtils.getIndexFile(indexDataDirPath).listFiles())) {
       String processorName = processorDataDir.getName();
       if (!router.hasIndexProcessor(new PartialPath(processorName))) {
         FileUtils.deleteDirectory(processorDataDir);

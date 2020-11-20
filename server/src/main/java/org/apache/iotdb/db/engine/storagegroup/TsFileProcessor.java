@@ -878,11 +878,11 @@ public class TsFileProcessor {
       tsFileResource.close();
       MultiFileLogNodeManager.getInstance()
           .deleteNode(storageGroupName + "-" + tsFileResource.getTsFile().getName());
-      if (IoTDBDescriptor.getInstance().getConfig().isEnableIndex()) {
-        IndexUtils.breakDown();
-//        IndexManager.getInstance().removeIndexProcessor(storageGroupName, sequence,
-//            getIndexProcessor().getIndexSeries());
-      }
+//      if (IoTDBDescriptor.getInstance().getConfig().isEnableIndex()) {
+//        IndexUtils.breakDown();
+////        IndexManager.getInstance().removeIndexProcessor(storageGroupName, sequence,
+////            getIndexProcessor().getIndexSeries());
+//      }
     } catch (IOException e) {
       throw new TsFileProcessorException(e);
     }

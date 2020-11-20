@@ -69,6 +69,7 @@ public class IndexConstant {
   public static final String ELB_TYPE_ELE = "ELE";
   public static final String ELB_TYPE_SEQ = "SEQ";
   public static final String DEFAULT_ELB_TYPE = "SEQ";
+  public static final int DEFAULT_BLOCK_SIZE = 20;
 
   //ELB: calc param
   public static final String BLOCK_SIZE = "BLOCK_SIZE";

@@ -17,6 +17,8 @@
  */
 package org.apache.iotdb.db.index.common;
 
+import java.io.File;
+import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.TestOnly;
@@ -264,6 +266,9 @@ public class IndexUtils {
     throw new Error(message);
   }
 
+  public static File getIndexFile(String filePath){
+    return SystemFileFactory.INSTANCE.getFile(filePath);
+  }
   private IndexUtils() {
   }
 

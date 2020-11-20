@@ -59,6 +59,11 @@ public class NoIndex extends IoTDBIndex {
 
   @Override
   public void initPreprocessor(ByteBuffer previous, boolean inQueryMode) {
+    if (!inQueryMode) {
+      return;
+    }
+    IndexUtils.breakDown();
+
     if (this.indexFeatureExtractor != null) {
       this.indexFeatureExtractor.clear();
     }
@@ -76,26 +81,7 @@ public class NoIndex extends IoTDBIndex {
    * convert the L1 identifiers to byteArray
    */
   @Override
-  public IndexFlushChunk flush() {
-    if (indexFeatureExtractor.getCurrentChunkSize() == 0) {
-      System.out.println(String.format("%s-%s not input why flush? return", path, indexType));
-      return null;
-    }
-    List<Identifier> list = indexFeatureExtractor.getAll_L1_Identifiers();
-    ByteArrayOutputStream baos = new ByteArrayOutputStream(list.size());
-    try {
-      ReadWriteIOUtils.write(list.size(), baos);
-      for (Identifier id : list) {
-        id.serialize(baos);
-      }
-    } catch (IOException e) {
-      logger.error("flush failed", e);
-      return null;
-    }
-    long st = list.get(0).getStartTime();
-    long end = list.get(list.size() - 1).getEndTime();
-    return new IndexFlushChunk(path, indexType, baos, st, end);
-
+  public void flush() {
   }
 
   /**
@@ -112,9 +98,13 @@ public class NoIndex extends IoTDBIndex {
 
   @Override
   protected void serializeIndexAndFlush() {
-    throw new UnsupportedOperationException();
+    // do nothing
   }
 
+  @Override
+  public ByteBuffer serializeFeatureExtractor() {
+    return ByteBuffer.allocate(0);
+  }
 
   @Override
   public void delete() {
@@ -127,7 +117,7 @@ public class NoIndex extends IoTDBIndex {
   @Override
   public List<Identifier> queryByIndex(ByteBuffer indexChunkData) throws IndexManagerException {
     // return null directly
-    return null;
+    throw new UnsupportedOperationException("NoIndex ,query ,return what?");
   }
 
 

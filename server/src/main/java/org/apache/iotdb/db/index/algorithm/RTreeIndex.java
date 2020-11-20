@@ -183,11 +183,11 @@ public abstract class RTreeIndex extends IoTDBIndex {
   protected abstract void calcAndFillQueryFeature();
 
   @Override
-  public IndexFlushChunk flush() {
+  public void flush() {
     if (indexFeatureExtractor.getCurrentChunkSize() == 0) {
       logger.warn("Nothing to be flushed, directly return null");
       System.out.println("Nothing to be flushed, directly return null");
-      return null;
+      return;
     }
     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     // serialize RTree
@@ -196,11 +196,11 @@ public abstract class RTreeIndex extends IoTDBIndex {
       rTree.serialize(outputStream, biConsumer);
     } catch (IOException e) {
       logger.error("flush failed", e);
-      return null;
+      return;
     }
     long st = indexFeatureExtractor.getChunkStartTime();
     long end = indexFeatureExtractor.getChunkEndTime();
-    return new IndexFlushChunk(path, indexType, outputStream, st, end);
+//    return new IndexFlushChunk(path, indexType, outputStream, st, end);
   }
 
   /**

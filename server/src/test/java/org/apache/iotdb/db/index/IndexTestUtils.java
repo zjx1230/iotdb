@@ -59,7 +59,7 @@ public class IndexTestUtils {
     FSFactoryProducer.getFSFactory().getFile(index_name + INDEXING_SUFFIX).delete();
   }
 
-  public static String tvListToString(TVList tvList) throws IOException {
+  public static String tvListToString(TVList tvList) {
     StringBuilder sb = new StringBuilder();
     sb.append("{");
     for (int i = 0; i < tvList.size(); i++) {

@@ -77,20 +77,20 @@ public class CountFixedFeatureExtractor extends IndexFeatureExtractor {
    * @param storeIdentifier true if we need to store all identifiers. The cost will be counted.
    */
   public CountFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
-      boolean storeIdentifier, boolean storeAligned) {
-    super(tsDataType, WindowType.COUNT_FIXED, windowRange, slideStep);
+      boolean storeIdentifier, boolean storeAligned, boolean inQueryMode) {
+    super(tsDataType, WindowType.COUNT_FIXED, windowRange, slideStep, inQueryMode);
     this.storeIdentifier = storeIdentifier;
     this.storeAligned = storeAligned;
   }
 
 
-  public CountFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep) {
-    this(tsDataType, windowRange, slideStep, true, true);
-  }
-
-  public CountFixedFeatureExtractor(TSDataType tsDataType, int windowRange) {
-    this(tsDataType, windowRange, 1, true, true);
-  }
+//  public CountFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep) {
+//    this(tsDataType, windowRange, slideStep, true, true);
+//  }
+//
+//  public CountFixedFeatureExtractor(TSDataType tsDataType, int windowRange) {
+//    this(tsDataType, windowRange, 1, true, true);
+//  }
 
   @Override
   protected void initParams() {

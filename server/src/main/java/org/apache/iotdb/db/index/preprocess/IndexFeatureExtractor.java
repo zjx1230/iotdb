@@ -93,7 +93,7 @@ public abstract class IndexFeatureExtractor {
 
 
   public IndexFeatureExtractor(TSDataType dataType, WindowType widthType, int windowRange,
-      int slideStep) {
+      int slideStep, boolean inQueryMode) {
     this.srcData = TVListAllocator.getInstance().allocate(dataType);
     if (slideStep > windowRange) {
       throw new IllegalIndexParamException(
@@ -103,6 +103,7 @@ public abstract class IndexFeatureExtractor {
     this.windowRange = windowRange;
     this.windowType = widthType;
     this.slideStep = slideStep;
+    this.inQueryMode = inQueryMode;
   }
 
   public void appendNewSrcData(TVList newData) {
@@ -117,9 +118,9 @@ public abstract class IndexFeatureExtractor {
 
   protected abstract void initParams();
 
-  public void setInQueryMode(boolean inQueryMode) {
-    this.inQueryMode = inQueryMode;
-  }
+//  public void setInQueryMode(boolean inQueryMode) {
+//    this.inQueryMode = inQueryMode;
+//  }
 
   /**
    * clear data which has been processed

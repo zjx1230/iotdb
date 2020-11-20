@@ -165,6 +165,11 @@ public class ProtoIndexRouter implements IIndexRouter {
     }
   }
 
+  @Override
+  public int getIndexNum() {
+    return fullPathProcessorMap.size() + wildCardProcessorMap.size();
+  }
+
 
   @Override
   public boolean hasIndexProcessor(PartialPath indexSeriesPath) {
@@ -293,7 +298,7 @@ public class ProtoIndexRouter implements IIndexRouter {
     } else {
       wildCardProcessorMap.forEach((k, v) -> {
         if (k.matchFullPath(path)) {
-          res.add(fullPathProcessorMap.get(path.getFullPath()).right);
+          res.add(v.right);
         }
       });
     }

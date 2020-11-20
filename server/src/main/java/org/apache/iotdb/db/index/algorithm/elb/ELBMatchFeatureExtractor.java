@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
+import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBWindowBlockFeature;
 import org.apache.iotdb.db.index.preprocess.CountFixedFeatureExtractor;
@@ -43,7 +44,7 @@ import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
  */
 public class ELBMatchFeatureExtractor extends CountFixedFeatureExtractor {
 
-  private final int blockNum;
+  //  private final int blockNum;
   private final int blockWidth;
 
   private final List<ELBWindowBlockFeature> windowBlockFeatures;
@@ -58,40 +59,50 @@ public class ELBMatchFeatureExtractor extends CountFixedFeatureExtractor {
    * A block contains {@code L/b} points. {@code b} blocks cover adjacent {@code L/b} sliding
    * windows.
    */
-  public ELBMatchFeatureExtractor(TSDataType tsDataType, int windowRange, int blockNum,
-      ELBType elbType) {
-    super(tsDataType, windowRange, 1, false, false);
+  public ELBMatchFeatureExtractor(TSDataType tsDataType, int windowRange, int blockWidth,
+      ELBType elbType, boolean inQueryMode) {
+    super(tsDataType, -1, -1, false, false, inQueryMode);
     this.elbType = elbType;
-    if (blockNum > windowRange) {
-      throw new IllegalIndexParamException(String
-          .format("In ELB, blockNum %d cannot be larger than windowRange %d", blockNum,
-              windowRange));
-    }
-    this.blockNum = blockNum;
-    this.blockWidth = Math.floorDiv(windowRange, blockNum);
+    this.blockWidth = blockWidth;
     this.windowBlockFeatures = new ArrayList<>();
+    if (inQueryMode) {
+      this.windowRange = windowRange; // in query, it's query length.
+      this.slideStep = 1; // in query, we need scan every windows
+      if (blockWidth > windowRange) {
+        throw new IllegalIndexParamException(
+            String.format("In ELB, blockWidth %d cannot be larger than windowRange %d", blockWidth,
+                windowRange));
+      }
+    } else {
+      this.windowRange = blockWidth;
+      this.slideStep = blockWidth;
+    }
   }
 
   @Override
   public void processNext() {
     super.processNext();
-    if (!inQueryMode && currentStartTimeIdx % blockWidth == 0) {
-      // loop until all blocks in current sliding window are computed.
-      int startIdx = windowBlockFeatures.size() * blockWidth;
-      int windowEndIdx = currentStartTimeIdx + windowRange;
-      while (startIdx + blockWidth <= windowEndIdx) {
-        double f = ELBFeatureExtractor
-            .calcWindowBlockFeature(elbType, srcData, currentStartTimeIdx, blockWidth);
-        // A window block starting from index {@code idx} corresponds {@code L/b} adjacent windows:
-        // the time range of the 1-st window: [srcData[idx], srcData[idx+range-1]]
-        // the time range of the L/b-th window: [srcData[idx+width], srcData[idx+width+range-1]]
-        // Therefore, this window block covers time range [srcData[idx], srcData[idx+width+range-1]]
-        long startCoverTime = srcData.getTime(currentStartTimeIdx);
-        int endIdx = currentStartTimeIdx + blockWidth + windowRange - 1;
-        long endCoverTime = srcData.getTime(endIdx >= srcData.size() ? srcData.size() - 1: endIdx);
-        windowBlockFeatures.add(new ELBWindowBlockFeature(startCoverTime, endCoverTime, f));
-        startIdx += blockWidth;
+    if (!inQueryMode) {
+      if (currentStartTimeIdx % blockWidth != 0) {
+        throw new IndexRuntimeException("not divided clearly");
       }
+      // loop until all blocks in current sliding window are computed.
+//      int startIdx = windowBlockFeatures.size() * blockWidth;
+//      int windowEndIdx = currentStartTimeIdx + windowRange;
+//      while (startIdx + blockWidth <= windowEndIdx) {
+      double f = ELBFeatureExtractor
+          .calcWindowBlockFeature(elbType, srcData, currentStartTimeIdx, blockWidth);
+      // A window block starting from index {@code idx} corresponds {@code L/b} adjacent windows:
+      // the time range of the 1-st window: [srcData[idx], srcData[idx+range-1]]
+      // the time range of the L/b-th window: [srcData[idx+width], srcData[idx+width+range-1]]
+      // Therefore, this window block covers time range [srcData[idx], srcData[idx+width+range-1]]
+      long startCoverTime = srcData.getTime(currentStartTimeIdx);
+      int endIdx = currentStartTimeIdx + blockWidth - 1;
+      if (endIdx >= srcData.size()) {
+        throw new IndexRuntimeException("why the block exceeds?");
+      }
+      long endCoverTime = srcData.getTime(endIdx);
+      windowBlockFeatures.add(new ELBWindowBlockFeature(startCoverTime, endCoverTime, f));
     }
   }
 
@@ -125,8 +136,7 @@ public class ELBMatchFeatureExtractor extends CountFixedFeatureExtractor {
     }
   }
 
-  static List<ELBWindowBlockFeature> deserializeFeatures(ByteBuffer indexChunkData)
-      throws IOException {
+  static List<ELBWindowBlockFeature> deserializeFeatures(ByteBuffer indexChunkData) {
     List<ELBWindowBlockFeature> res = new ArrayList<>();
     int size = ReadWriteIOUtils.readInt(indexChunkData);
 

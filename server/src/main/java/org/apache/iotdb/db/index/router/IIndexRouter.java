@@ -38,6 +38,8 @@ public interface IIndexRouter {
 
   IIndexRouter getRouterByStorageGroup(String storageGroupPath);
 
+  int getIndexNum();
+
   class Factory {
 
     private Factory() {

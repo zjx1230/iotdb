@@ -57,7 +57,7 @@ public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
   private int sliceNum;
   private int scanIdx;
   protected PrimitiveList identifierList;
-  private long currentStartTime;
+  protected long currentStartTime;
   private long currentEndTime;
   private ArrayList<TVList> alignedList;
   protected TVList currentAligned;

@@ -93,4 +93,15 @@ public class DoublePrimitiveList extends PrimitiveList {
     System.arraycopy(array, 0, cloneArray, 0, array.length);
     return cloneArray;
   }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("[");
+    for (int i = 0; i < size; i++) {
+      sb.append(String.format("%.2f,", getDouble(i)));
+    }
+    sb.append("]");
+    return sb.toString();
+  }
 }

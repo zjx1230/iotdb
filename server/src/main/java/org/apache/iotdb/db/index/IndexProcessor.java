@@ -39,6 +39,7 @@ import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.common.func.IndexNaiveFunc;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexBuildTaskPoolManager;
@@ -77,6 +78,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   private PartialPath indexSeries;
   private final IndexBuildTaskPoolManager indexBuildPoolManager;
   private ReadWriteLock lock = new ReentrantReadWriteLock();
+  private Map<IndexType, ReadWriteLock> indexLockMap = new HashMap<>();
 
   /**
    * we use numIndexBuildTasks to record how many indexes are building. If it's 0, there is no
@@ -109,11 +111,15 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     this.numIndexBuildTasks = new AtomicInteger(0);
     this.indexSeries = indexSeries;
     this.indexSeriesDirPath = indexSeriesDirPath;
+    File dir = IndexUtils.getIndexFile(indexSeriesDirPath);
+    if (!dir.exists()) {
+      dir.mkdirs();
+    }
     this.closed = false;
-
     this.allPathsIndexMap = new EnumMap<>(IndexType.class);
     this.previousBufferMap = new EnumMap<>(IndexType.class);
-    this.usableMap = new HashMap<>();
+    this.indexLockMap = new EnumMap<>(IndexType.class);
+    this.usableMap = new EnumMap<>(IndexType.class);
     this.previousBufferFile = indexSeriesDirPath + File.separator + "previousBuffer";
     this.usableFile = indexSeriesDirPath + File.separator + "usableMap";
 
@@ -208,6 +214,9 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
       try {
         // store Preprocessor
         for (Entry<IndexType, IoTDBIndex> entry : allPathsIndexMap.entrySet()) {
+          IndexType indexType = entry.getKey();
+          if(indexType == IndexType.NO_INDEX)
+            continue;
           IoTDBIndex index = entry.getValue();
           previousBufferMap.put(entry.getKey(), index.serializeFeatureExtractor());
         }
@@ -263,7 +272,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     logger.info("Start deleting all files in index processor {}", indexSeries);
     close();
     // delete all index files in this dir.
-    File indexSeriesDirFile = new File(indexSeriesDirPath);
+    File indexSeriesDirFile = IndexUtils.getIndexFile(indexSeriesDirPath);
     if (indexSeriesDirFile.exists()) {
       FileUtils.deleteDirectory(indexSeriesDirFile);
     }
@@ -337,8 +346,13 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     numIndexBuildTasks.incrementAndGet();
     try {
       allPathsIndexMap.forEach((indexType, index) -> {
+        if(indexType == IndexType.NO_INDEX) {
+          numIndexBuildTasks.decrementAndGet();
+          return;
+        }
         Runnable buildTask = () -> {
           try {
+            indexLockMap.get(indexType).writeLock().lock();
             IndexFeatureExtractor extractor = index.startFlushTask(tvList);
             int previousOffset = Integer.MIN_VALUE;
             while (extractor.hasNext()) {
@@ -360,6 +374,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
             }
             index.endFlushTask();
             this.usableMap.get(indexType).addUsableRange(path, tvList);
+            indexLockMap.get(indexType).writeLock().unlock();
           } catch (IndexManagerException e) {
             //Give up the following data, but the previously serialized chunk will not be affected.
             logger.error("build index failed", e);
@@ -400,6 +415,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
             .constructIndex(indexSeries.getFullPath(), getIndexDir(indexType), indexType,
                 indexInfo, previousBufferMap.get(indexType));
         allPathsIndexMap.putIfAbsent(indexType, index);
+        indexLockMap.putIfAbsent(indexType, new ReentrantReadWriteLock());
         usableMap.putIfAbsent(indexType, IIndexUsable.Factory.getIndexUsability(indexSeries));
       }
     }

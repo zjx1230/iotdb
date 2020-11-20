@@ -17,7 +17,9 @@
  */
 package org.apache.iotdb.db.index.algorithm.elb;
 
+import static org.apache.iotdb.db.index.common.IndexConstant.BLOCK_SIZE;
 import static org.apache.iotdb.db.index.common.IndexConstant.BORDER;
+import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_BLOCK_SIZE;
 import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_DISTANCE;
 import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_ELB_TYPE;
 import static org.apache.iotdb.db.index.common.IndexConstant.DISTANCE;
@@ -88,14 +90,17 @@ public class ELBIndex extends IoTDBIndex {
   private ELBMatchFeatureExtractor elbMatchPreprocessor;
 
   // Only for query
-  private int featureDim;
+  private int queryTimeRange;
   private double[] pattern;
   // leaf: upper bounds, right: lower bounds
   private Pair<double[], double[]> patternFeatures;
   private ELBFeatureExtractor elbFeatureExtractor;
+  private int blockWidth;
 
   public ELBIndex(String path, String indexDir, IndexInfo indexInfo) {
     super(path, indexInfo);
+    // ELB always variable query length, so it's needed windowRange
+    windowRange = -1;
     initELBParam();
     throw new Error("indexDir没用起来，记得初始化");
   }
@@ -103,7 +108,8 @@ public class ELBIndex extends IoTDBIndex {
   private void initELBParam() {
     this.distance = Distance.getDistance(props.getOrDefault(DISTANCE, DEFAULT_DISTANCE));
     elbType = ELBType.valueOf(props.getOrDefault(ELB_TYPE, DEFAULT_ELB_TYPE));
-    this.featureDim = Integer.parseInt(props.get(FEATURE_DIM));
+    this.blockWidth = props.containsKey(BLOCK_SIZE) ? Integer.parseInt(props.get(BLOCK_SIZE))
+        : DEFAULT_BLOCK_SIZE;
   }
 
   @Override
@@ -111,7 +117,7 @@ public class ELBIndex extends IoTDBIndex {
     if (this.indexFeatureExtractor != null) {
       this.indexFeatureExtractor.clear();
     }
-    this.elbMatchPreprocessor = new ELBMatchFeatureExtractor(tsDataType, windowRange, featureDim,
+    this.elbMatchPreprocessor = new ELBMatchFeatureExtractor(tsDataType, windowRange, blockWidth,
         elbType);
     this.indexFeatureExtractor = elbMatchPreprocessor;
     elbMatchPreprocessor.setInQueryMode(inQueryMode);
@@ -124,11 +130,11 @@ public class ELBIndex extends IoTDBIndex {
   }
 
   @Override
-  public IndexFlushChunk flush() {
+  public void flush() {
     if (indexFeatureExtractor.getCurrentChunkSize() == 0) {
       logger.warn("Nothing to be flushed, directly return null");
       System.out.println("Nothing to be flushed, directly return null");
-      return null;
+      return;
     }
     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     // serialize window block features
@@ -136,11 +142,11 @@ public class ELBIndex extends IoTDBIndex {
       elbMatchPreprocessor.serializeFeatures(outputStream);
     } catch (IOException e) {
       logger.error("flush failed", e);
-      return null;
+      return;
     }
     long st = indexFeatureExtractor.getChunkStartTime();
     long end = indexFeatureExtractor.getChunkEndTime();
-    return new IndexFlushChunk(path, indexType, outputStream, st, end);
+//    return new IndexFlushChunk(path, indexType, outputStream, st, end);
   }
 
   @Override
@@ -243,7 +249,7 @@ public class ELBIndex extends IoTDBIndex {
   public int postProcessNext(List<IndexFuncResult> funcResult) throws QueryIndexException {
     TVList aligned = (TVList) indexFeatureExtractor.getCurrent_L2_AlignedSequence();
     int reminding = funcResult.size();
-    if ( elbFeatureExtractor.exactDistanceCalc(aligned)){
+    if (elbFeatureExtractor.exactDistanceCalc(aligned)) {
       for (IndexFuncResult result : funcResult) {
         IndexFuncFactory.basicSimilarityCalc(result, indexFeatureExtractor, pattern);
       }

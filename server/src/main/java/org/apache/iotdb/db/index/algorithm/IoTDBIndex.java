@@ -44,6 +44,7 @@ import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.service.IoTDB;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.common.BatchData;
@@ -65,16 +66,31 @@ public abstract class IoTDBIndex {
   protected IndexFeatureExtractor indexFeatureExtractor;
 
   public IoTDBIndex(String path, IndexInfo indexInfo) {
-    try {
-      this.tsDataType = MManager.getInstance().getSeriesType(new PartialPath(path));
-    } catch (MetadataException e) {
-      throw new IndexRuntimeException("get type failed. ", e);
-    }
+    tsDataType = getSeriesType();
     this.path = path;
     this.indexType = indexInfo.getIndexType();
     this.confIndexStartTime = indexInfo.getTime();
     this.props = indexInfo.getProps();
     parsePropsAndInit(this.props);
+  }
+
+  private TSDataType getSeriesType() {
+    try {
+      PartialPath partialPath = new PartialPath(path);
+      if (partialPath.isFullPath()) {
+        return MManager.getInstance().getSeriesType(partialPath);
+      } else {
+        List<PartialPath> list = IoTDB.metaManager
+            .getAllTimeseriesPathWithAlias(partialPath, 1, 0).left;
+        if (list.isEmpty()) {
+          throw new IndexRuntimeException("No series in the wildcard path");
+        } else {
+          return MManager.getInstance().getSeriesType(list.get(0));
+        }
+      }
+    } catch (MetadataException e) {
+      throw new IndexRuntimeException("get type failed. ", e);
+    }
   }
 
   private void parsePropsAndInit(Map<String, String> props) {
@@ -92,8 +108,8 @@ public abstract class IoTDBIndex {
 
   /**
    * Each index has its own preprocessor. Through the preprocessor provided by this index,
-   * {@linkplain IndexProcessor IndexFileProcessor} can control the
-   * its data process, memory occupation and triggers forceFlush.
+   * {@linkplain IndexProcessor IndexFileProcessor} can control the its data process, memory
+   * occupation and triggers forceFlush.
    *
    * @param tvList tvList in current FlushTask.
    * @return Preprocessor with new data.
@@ -142,9 +158,9 @@ public abstract class IoTDBIndex {
   public abstract boolean buildNext() throws IndexManagerException;
 
   /**
-   * @return the byte-like chunk data and its description information
+   * flush
    */
-  public abstract IndexFlushChunk flush() throws IndexManagerException;
+  public abstract void flush() throws IndexManagerException;
 
   /**
    * clear and release the occupied memory. The preprocessor has been cleared in IoTDBIndex, so
@@ -153,8 +169,7 @@ public abstract class IoTDBIndex {
    * This method is called when completing a sub-flush.  Note that one flush task will trigger
    * multiple sub-brush tasks due to the memory control.
    *
-   * clear和其他的区别：哦，上一个版本中，索引会定时刷出去，所以还可以理解，现在似乎没有这个必要了，
-   * TODO 删掉这个？不用，因为现在他不会在被调用了，仅在flush的时候才会被调用
+   * clear和其他的区别：哦，上一个版本中，索引会定时刷出去，所以还可以理解，现在似乎没有这个必要了， TODO 删掉这个？不用，因为现在他不会在被调用了，仅在flush的时候才会被调用
    *
    * @return how much memory was freed.
    */
@@ -168,7 +183,8 @@ public abstract class IoTDBIndex {
    */
   public void closeAndRelease() {
     clearFeatureExtractor();
-    indexFeatureExtractor.closeAndRelease();
+    if(indexFeatureExtractor != null)
+      indexFeatureExtractor.closeAndRelease();
     serializeIndexAndFlush();
   }
 
@@ -271,5 +287,10 @@ public abstract class IoTDBIndex {
 
   public boolean mergeFinished() {
     return false;
+  }
+
+  @Override
+  public String toString() {
+    return indexType.toString();
   }
 }
