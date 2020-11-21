@@ -38,7 +38,7 @@ import org.apache.iotdb.db.index.common.IndexInfo;
 public abstract class HammingHashIndex extends IoTDBIndex {
 
   public HammingHashIndex(String path, IndexInfo indexInfo) {
-    super(path, indexInfo);
+    super(path, null, indexInfo);
   }
 
 

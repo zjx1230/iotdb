@@ -24,13 +24,18 @@ import static org.apache.iotdb.db.index.common.IndexConstant.ROUTER_DIR;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
-import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
+import org.apache.iotdb.db.engine.StorageEngine;
+import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor;
 import org.apache.iotdb.db.exception.StartupException;
+import org.apache.iotdb.db.exception.StorageEngineException;
+import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.common.IndexInfo;
@@ -41,19 +46,22 @@ import org.apache.iotdb.db.index.common.func.CreateIndexProcessorFunc;
 import org.apache.iotdb.db.index.io.IndexBuildTaskPoolManager;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
 import org.apache.iotdb.db.index.router.IIndexRouter;
+import org.apache.iotdb.db.index.router.ProtoIndexRouter.IndexProcessorStruct;
 import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.service.IService;
 import org.apache.iotdb.db.service.JMXService;
 import org.apache.iotdb.db.service.ServiceType;
 import org.apache.iotdb.db.utils.FileUtils;
 import org.apache.iotdb.db.utils.TestOnly;
+import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class IndexManager implements IndexManagerMBean, IService {
 
   private static final Logger logger = LoggerFactory.getLogger(IndexManager.class);
-//  private SystemFileFactory fsFactory;
+  //  private SystemFileFactory fsFactory;
   private final String indexRootDirPath;
   private final String indexRouterDir;
   private final String indexMetaDirPath;
@@ -244,7 +252,8 @@ public class IndexManager implements IndexManagerMBean, IService {
     if (indexDataDir.exists()) {
       FileUtils.deleteDirectory(indexDataDir);
     }
-    File indexRootDir = IndexUtils.getIndexFile(DirectoryManager.getInstance().getIndexRootFolder());
+    File indexRootDir = IndexUtils
+        .getIndexFile(DirectoryManager.getInstance().getIndexRootFolder());
     if (indexRootDir.exists()) {
       FileUtils.deleteDirectory(indexRootDir);
     }
@@ -264,6 +273,24 @@ public class IndexManager implements IndexManagerMBean, IService {
   @Override
   public int getIndexNum() {
     return router.getIndexNum();
+  }
+
+  public List<TVList> queryIndex(List<PartialPath> paths,
+      IndexType indexType, Map<String, Object> queryProps,
+      QueryContext context) throws QueryIndexException, StorageEngineException {
+    if (paths.size() != 1) {
+      throw new QueryIndexException("Index allows to query only one path");
+    }
+    PartialPath queryIndexSeries = paths.get(0);
+    IndexProcessorStruct indexProcessorStruct = router.startQueryAndCheck(queryIndexSeries, indexType, context);
+    List<StorageGroupProcessor> list = StorageEngine.getInstance()
+        .mergeLock(indexProcessorStruct.storageGroups);
+    try {
+      return indexProcessorStruct.processor.query(indexType, queryProps, context);
+    } finally {
+      StorageEngine.getInstance().mergeUnLock(list);
+      router.endQuery(indexProcessorStruct.processor.getIndexSeries(), indexType, context);
+    }
   }
 
 

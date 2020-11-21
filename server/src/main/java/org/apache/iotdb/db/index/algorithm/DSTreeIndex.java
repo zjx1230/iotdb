@@ -36,6 +36,6 @@ import org.apache.iotdb.db.index.common.IndexInfo;
 public abstract class DSTreeIndex extends IoTDBIndex {
 
   public DSTreeIndex(String path, IndexInfo indexInfo) {
-    super(path, indexInfo);
+    super(path, null, indexInfo);
   }
 }

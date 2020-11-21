@@ -33,8 +33,8 @@ import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.index.algorithm.RTree.SeedsPicker;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
-import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
 import org.apache.iotdb.db.index.preprocess.Identifier;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,8 +71,9 @@ public abstract class RTreeIndex extends IoTDBIndex {
   protected double threshold;
   private int amortizedPerInputCost;
 
-  public RTreeIndex(String path, IndexInfo indexInfo, boolean usePointType) {
-    super(path, indexInfo);
+  public RTreeIndex(String path, TSDataType tsDataType,
+      IndexInfo indexInfo, boolean usePointType) {
+    super(path, tsDataType, indexInfo);
     this.usePointType = usePointType;
     initRTree();
   }

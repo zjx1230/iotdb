@@ -33,6 +33,7 @@ import org.apache.iotdb.db.index.algorithm.elb.ELBIndexNotGood;
 import org.apache.iotdb.db.index.algorithm.paa.RTreePAAIndex;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 
 public enum IndexType {
 
@@ -98,27 +99,27 @@ public enum IndexType {
     }
   }
 
-  private static IoTDBIndex newIndexByType(String path, String indexDir, IndexType indexType,
+  private static IoTDBIndex newIndexByType(String path, TSDataType tsDataType, String indexDir, IndexType indexType,
       IndexInfo indexInfo) {
     switch (indexType) {
       case NO_INDEX:
-        return new NoIndex(path, indexDir, indexInfo);
+        return new NoIndex(path, tsDataType, indexDir, indexInfo);
       case ELB_INDEX:
-        return new ELBIndex(path, indexDir, indexInfo);
+        return new ELBIndex(path, tsDataType, indexDir, indexInfo);
       case RTREE_PAA:
-        return new RTreePAAIndex(path, indexDir, indexInfo);
+        return new RTreePAAIndex(path, tsDataType, indexDir, indexInfo);
       case ELB:
-        return new ELBIndexNotGood(path, indexInfo);
+        return new ELBIndexNotGood(path, tsDataType, indexInfo);
       case KV_INDEX:
       default:
         throw new NotImplementedException("unsupported index type:" + indexType);
     }
   }
 
-  public static IoTDBIndex constructIndex(String indexSeries, String indexDir, IndexType indexType,
+  public static IoTDBIndex constructIndex(String indexSeries, TSDataType tsDataType, String indexDir, IndexType indexType,
       IndexInfo indexInfo, ByteBuffer previous) {
     indexInfo.setProps(uppercaseStringProps(indexInfo.getProps()));
-    IoTDBIndex index = newIndexByType(indexSeries, indexDir, indexType, indexInfo);
+    IoTDBIndex index = newIndexByType(indexSeries, tsDataType, indexDir, indexType, indexInfo);
     index.initPreprocessor(previous, false);
     return index;
   }
@@ -138,7 +139,7 @@ public enum IndexType {
       throw new IllegalIndexParamException(
           String.format("%s.%s not found, why it escapes the check?", path, indexType));
     }
-    IoTDBIndex index = newIndexByType(path, null, indexType, indexInfo);
+    IoTDBIndex index = newIndexByType(path, null, null, indexType, indexInfo);
     IndexUtils.breakDown("temp set index Dir is NULL!");
 
     index.initQuery(queryProps, indexFuncs);

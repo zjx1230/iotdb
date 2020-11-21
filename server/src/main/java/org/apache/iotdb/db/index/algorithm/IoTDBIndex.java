@@ -38,7 +38,6 @@ import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategy;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategyType;
-import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
@@ -65,32 +64,18 @@ public abstract class IoTDBIndex {
   protected int slideStep;
   protected IndexFeatureExtractor indexFeatureExtractor;
 
-  public IoTDBIndex(String path, IndexInfo indexInfo) {
+
+  public IoTDBIndex(String path, TSDataType tsDataType, IndexInfo indexInfo) {
     this.path = path;
     this.indexType = indexInfo.getIndexType();
     this.confIndexStartTime = indexInfo.getTime();
     this.props = indexInfo.getProps();
-    this.tsDataType = getSeriesType();
+    this.tsDataType = tsDataType;
     parsePropsAndInit(this.props);
   }
 
-  private TSDataType getSeriesType() {
-    try {
-      PartialPath partialPath = new PartialPath(path);
-      if (partialPath.isFullPath()) {
-        return MManager.getInstance().getSeriesType(partialPath);
-      } else {
-        List<PartialPath> list = IoTDB.metaManager
-            .getAllTimeseriesPathWithAlias(partialPath, 1, 0).left;
-        if (list.isEmpty()) {
-          throw new IndexRuntimeException("No series in the wildcard path");
-        } else {
-          return MManager.getInstance().getSeriesType(list.get(0));
-        }
-      }
-    } catch (MetadataException e) {
-      throw new IndexRuntimeException("get type failed. ", e);
-    }
+  public TSDataType getTsDataType() {
+    return tsDataType;
   }
 
   private void parsePropsAndInit(Map<String, String> props) {
@@ -182,8 +167,9 @@ public abstract class IoTDBIndex {
    * methods will be invalid.
    */
   public void closeAndRelease() {
-    if(indexFeatureExtractor != null)
+    if (indexFeatureExtractor != null) {
       indexFeatureExtractor.closeAndRelease();
+    }
     serializeIndexAndFlush();
   }
 

@@ -59,6 +59,7 @@ import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.metadata.StorageGroupNotSetException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.exception.runtime.SQLParserException;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.metrics.server.SqlArgument;
 import org.apache.iotdb.db.qp.Planner;
@@ -75,6 +76,7 @@ import org.apache.iotdb.db.qp.physical.crud.GroupByTimePlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
 import org.apache.iotdb.db.qp.physical.crud.LastQueryPlan;
+import org.apache.iotdb.db.qp.physical.crud.QueryIndexPlan;
 import org.apache.iotdb.db.qp.physical.crud.QueryPlan;
 import org.apache.iotdb.db.qp.physical.crud.RawDataQueryPlan;
 import org.apache.iotdb.db.qp.physical.sys.AuthorPlan;
@@ -708,6 +710,13 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
       }
       // create and cache dataset
       QueryDataSet newDataSet = createQueryDataSet(queryId, plan);
+      if (plan instanceof QueryIndexPlan){
+        IndexUtils.breakDown("asdasdalkxxzx query paln");
+        resp.setColumns(
+            newDataSet.getPaths().stream().map(Path::getFullPath).collect(Collectors.toList()));
+        resp.setDataTypeList(
+            newDataSet.getDataTypes().stream().map(Enum::toString).collect(Collectors.toList()));
+      }
       if (plan instanceof QueryPlan && !((QueryPlan) plan).isAlignByTime()
           && newDataSet instanceof NonAlignEngineDataSet) {
         TSQueryNonAlignDataSet result = fillRpcNonAlignReturnData(fetchSize, newDataSet, username);
@@ -927,22 +936,25 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
         seriesTypes = getSeriesTypesByPaths(paths, aggregations);
         break;
       case QUERY_INDEX:
-        aggregations = plan.getAggregations();
-        if (aggregations.size() != paths.size()) {
-          for (int i = 1; i < paths.size(); i++) {
-            aggregations.add(aggregations.get(0));
-          }
-        }
-        // Each index query has an ID column to the left.
-        seriesTypes = new ArrayList<>();
-        for (int i = 0; i < paths.size(); i++) {
-          respColumns.add(IndexConstant.ID + i);
-          respColumns.add(aggregations.get(i) + "(" + paths.get(i).getFullPath() + ")");
+        // For query index, we don't know the columns before actual query.
+        // It will be deferred after obtaining query result set.
 
-          seriesTypes.add(TSDataType.INT32);
-          TSDataType dataType = getIndexFunc(aggregations.get(i)).getType();
-          seriesTypes.add(dataType);
-        }
+//        aggregations = plan.getAggregations();
+//        if (aggregations.size() != paths.size()) {
+//          for (int i = 1; i < paths.size(); i++) {
+//            aggregations.add(aggregations.get(0));
+//          }
+//        }
+//        // Each index query has an ID column to the left.
+//        seriesTypes = new ArrayList<>();
+//        for (int i = 0; i < paths.size(); i++) {
+//          respColumns.add(IndexConstant.ID + i);
+//          respColumns.add(aggregations.get(i) + "(" + paths.get(i).getFullPath() + ")");
+//
+//          seriesTypes.add(TSDataType.INT32);
+//          TSDataType dataType = getIndexFunc(aggregations.get(i)).getType();
+//          seriesTypes.add(dataType);
+//        }
         break;
       default:
         throw new TException("unsupported query type: " + plan.getOperatorType());

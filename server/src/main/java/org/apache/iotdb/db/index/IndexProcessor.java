@@ -26,7 +26,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -36,6 +38,7 @@ import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
+import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexUtils;
@@ -44,10 +47,14 @@ import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexBuildTaskPoolManager;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
+import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.query.context.QueryContext;
+import org.apache.iotdb.db.service.IoTDB;
 import org.apache.iotdb.db.utils.FileUtils;
 import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.db.utils.datastructure.TVList;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,21 +63,6 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
 
   private static final Logger logger = LoggerFactory.getLogger(IndexProcessor.class);
 
-
-  /**
-   * previousMetaPointer is just a point of StorageGroup, thus it can be initialized by null. In
-   * general, it won't be updated until the file is closed. when the file is closed, the newly
-   * generated map in {@code serializeForNextOpen} will directly update the supper
-   * StorageGroupProcessor (not directly replace, but insert layer by layer).  At this time, this
-   * map will be updated naturally, but this indexFileProcessor will also be closed at once, so this
-   * update will not affect anything.
-   *
-   * However, it is necessary to consider potentially very complicated and special situations, such
-   * as: deleting the index, removing the index and then adding the index exactly same as the
-   * previous one, without closing current index file. Will this bring about inconsistency between
-   * StorageGroupProcessor and IndexFileProcessor?  We must be very cautious.
-   */
-//  private final Map<IndexType, ByteBuffer> previousMetaPointer;
   private final String indexSeriesDirPath;
   private final String usableFile;
   private final String previousBufferFile;
@@ -103,6 +95,12 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
    */
   private final Map<IndexType, ByteBuffer> previousBufferMap;
 
+  /**
+   * For index built on several series (whole matching case), it's one of them. These series must
+   * have same tsDataType.
+   */
+  private TSDataType tsDataType;
+
   public IndexProcessor(PartialPath indexSeries, String indexSeriesDirPath,
       Map<IndexType, IndexInfo> indexInfoMap) {
     this.indexBuildPoolManager = IndexBuildTaskPoolManager.getInstance();
@@ -121,11 +119,29 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     this.usableMap = new EnumMap<>(IndexType.class);
     this.previousBufferFile = indexSeriesDirPath + File.separator + "previousBuffer";
     this.usableFile = indexSeriesDirPath + File.separator + "usableMap";
-
+    this.tsDataType = initSeriesType();
     deserializePreviousBuffer(indexSeries);
     deserializeUsable(indexSeries);
     refreshSeriesIndexMapFromMManager(indexInfoMap);
 
+  }
+
+  private TSDataType initSeriesType() {
+    try {
+      if (indexSeries.isFullPath()) {
+        return MManager.getInstance().getSeriesType(indexSeries);
+      } else {
+        List<PartialPath> list = IoTDB.metaManager
+            .getAllTimeseriesPathWithAlias(indexSeries, 1, 0).left;
+        if (list.isEmpty()) {
+          throw new IndexRuntimeException("No series in the wildcard path");
+        } else {
+          return MManager.getInstance().getSeriesType(list.get(0));
+        }
+      }
+    } catch (MetadataException e) {
+      throw new IndexRuntimeException("get type failed. ", e);
+    }
   }
 
   private String getIndexDir(IndexType indexType) {
@@ -416,7 +432,8 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
       IndexInfo indexInfo = entry.getValue();
       if (!allPathsIndexMap.containsKey(indexType)) {
         IoTDBIndex index = IndexType
-            .constructIndex(indexSeries.getFullPath(), getIndexDir(indexType), indexType,
+            .constructIndex(indexSeries.getFullPath(), tsDataType, getIndexDir(indexType),
+                indexType,
                 indexInfo, previousBufferMap.get(indexType));
         allPathsIndexMap.putIfAbsent(indexType, index);
         indexLockMap.putIfAbsent(indexType, new ReentrantReadWriteLock());
@@ -445,14 +462,18 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     });
   }
 
-//  @TestOnly
-//  public Map<IndexType, ByteBuffer> getPreviousMeta() {
-//    return previousBufferMap;
+//  public List<PartialPath> getRelatedStorageGroupPaths() {
+//    if (indexSeries.isFullPath()) {
+//      return Collections.singletonList(indexSeries);
+//    } else {
+//      return
+//    }
+//    throw new UnsupportedOperationException("zxckzjxckz");
 //  }
-//
-//  @TestOnly
-//  public Map<IndexType, ByteBuffer> getPreviousMeta() {
-//    return previousBufferMap;
-//  }
+
+  public List<TVList> query(IndexType indexType, Map<String, Object> queryProps,
+      QueryContext context) {
+    throw new UnsupportedOperationException("zxckzjxckz");
+  }
 
 }

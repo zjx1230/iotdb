@@ -52,6 +52,7 @@ import org.apache.iotdb.db.index.read.func.IndexFuncFactory;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,8 +73,9 @@ public class ELBIndexNotGood extends RTreeIndex {
   // Only for query
   private Map<Integer, Identifier> identifierMap = new HashMap<>();
 
-  public ELBIndexNotGood(String path, IndexInfo indexInfo) {
-    super(path, indexInfo, false);
+  public ELBIndexNotGood(String path,
+      TSDataType tsDataType, IndexInfo indexInfo) {
+    super(path, tsDataType, indexInfo, false);
     initELBParam();
   }
 

@@ -35,6 +35,6 @@ import org.apache.iotdb.db.index.common.IndexInfo;
 public abstract class ISAXIndex extends IoTDBIndex {
 
   public ISAXIndex(String path, IndexInfo indexInfo) {
-    super(path, indexInfo);
+    super(path, null, indexInfo);
   }
 }

@@ -40,6 +40,7 @@ import org.apache.iotdb.db.index.read.func.IndexFuncFactory;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,8 +57,10 @@ public class RTreePAAIndex extends RTreeIndex {
   // Only for query
   private Map<Integer, Identifier> identifierMap = new HashMap<>();
 
-  public RTreePAAIndex(String path, String indexDir, IndexInfo indexInfo) {
-    super(path, indexInfo, true);
+  public RTreePAAIndex(String path,
+      TSDataType tsDataType, String indexDir,
+      IndexInfo indexInfo) {
+    super(path, tsDataType, indexInfo, true);
     IndexUtils.breakDown("indexDir没用起来，记得初始化");
   }
 

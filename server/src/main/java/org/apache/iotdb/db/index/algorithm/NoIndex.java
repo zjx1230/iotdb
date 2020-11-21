@@ -37,6 +37,7 @@ import org.apache.iotdb.db.index.read.func.IndexFuncFactory;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,8 +53,9 @@ public class NoIndex extends IoTDBIndex {
   private double[] patterns;
   private double threshold;
 
-  public NoIndex(String path, String indexDir, IndexInfo indexInfo) {
-    super(path, indexInfo);
+  public NoIndex(String path, TSDataType tsDataType,
+      String indexDir, IndexInfo indexInfo) {
+    super(path, tsDataType, indexInfo);
   }
 
 

@@ -21,12 +21,14 @@ package org.apache.iotdb.db.query.executor;
 
 import java.io.IOException;
 import org.apache.iotdb.db.exception.StorageEngineException;
+import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.qp.physical.crud.AggregationPlan;
 import org.apache.iotdb.db.qp.physical.crud.FillQueryPlan;
 import org.apache.iotdb.db.qp.physical.crud.GroupByTimeFillPlan;
 import org.apache.iotdb.db.qp.physical.crud.GroupByTimePlan;
 import org.apache.iotdb.db.qp.physical.crud.LastQueryPlan;
+import org.apache.iotdb.db.qp.physical.crud.QueryIndexPlan;
 import org.apache.iotdb.db.qp.physical.crud.RawDataQueryPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.tsfile.exception.filter.QueryFilterOptimizationException;
@@ -71,4 +73,13 @@ public interface IQueryRouter {
    */
   QueryDataSet lastQuery(LastQueryPlan lastQueryPlan, QueryContext context)
       throws StorageEngineException, QueryProcessException, IOException;
+
+  /**
+   * Query executor
+   * @param queryPlan
+   * @param context
+   * @return
+   */
+  QueryDataSet indexQuery(QueryIndexPlan queryPlan, QueryContext context)
+      throws QueryIndexException, StorageEngineException;
 }

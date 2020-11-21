@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.apache.iotdb.db.exception.StorageEngineException;
+import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.index.read.QueryIndexExecutor;
 import org.apache.iotdb.db.metadata.PartialPath;
@@ -235,7 +236,8 @@ public class QueryRouter implements IQueryRouter {
   }
 
   @Override
-  public QueryDataSet indexQuery(QueryIndexPlan queryPlan, QueryContext context) {
+  public QueryDataSet indexQuery(QueryIndexPlan queryPlan, QueryContext context)
+      throws QueryIndexException, StorageEngineException {
     QueryIndexExecutor executor = new QueryIndexExecutor(queryPlan, context);
     return executor.executeIndexQuery();
 

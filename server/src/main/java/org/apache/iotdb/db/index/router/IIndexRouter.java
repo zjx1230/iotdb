@@ -1,14 +1,14 @@
 package org.apache.iotdb.db.index.router;
 
-import java.util.Map;
+import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
-import org.apache.iotdb.db.index.common.func.CreateIndexProcessorFunc;
-import org.apache.iotdb.db.index.common.func.IndexNaiveFunc;
 import org.apache.iotdb.db.index.IndexProcessor;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.index.common.func.CreateIndexProcessorFunc;
+import org.apache.iotdb.db.index.router.ProtoIndexRouter.IndexProcessorStruct;
 import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.tsfile.utils.Pair;
+import org.apache.iotdb.db.query.context.QueryContext;
 
 public interface IIndexRouter {
 
@@ -24,7 +24,7 @@ public interface IIndexRouter {
       throws MetadataException;
 
 
-  Iterable<Pair<Map<IndexType, IndexInfo>, IndexProcessor>> getAllIndexProcessorsAndInfo();
+  Iterable<IndexProcessorStruct> getAllIndexProcessorsAndInfo();
 
   Iterable<IndexProcessor> getIndexProcessorByPath(PartialPath path);
 
@@ -39,6 +39,19 @@ public interface IIndexRouter {
   IIndexRouter getRouterByStorageGroup(String storageGroupPath);
 
   int getIndexNum();
+
+  /**
+   * Index Register validation.
+   * @param partialPath
+   * @param indexType
+   * @param context
+   * @return
+   * @throws QueryIndexException
+   */
+  IndexProcessorStruct startQueryAndCheck(PartialPath partialPath,
+      IndexType indexType, QueryContext context) throws QueryIndexException;
+
+  void endQuery(PartialPath indexProcessor, IndexType indexType, QueryContext context);
 
   class Factory {
 

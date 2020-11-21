@@ -109,8 +109,9 @@ public class ELBIndex extends IoTDBIndex {
   private int blockWidth;
   private File featureFile;
 
-  public ELBIndex(String path, String indexDir, IndexInfo indexInfo) {
-    super(path, indexInfo);
+  public ELBIndex(String path, TSDataType tsDataType,
+      String indexDir, IndexInfo indexInfo) {
+    super(path, tsDataType, indexInfo);
     windowBlockFeatures = new ArrayList<>();
     featureFile = IndexUtils.getIndexFile(indexDir + File.separator + "feature");
     File indexDirFile = IndexUtils.getIndexFile(indexDir);

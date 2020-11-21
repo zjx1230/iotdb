@@ -4,6 +4,7 @@ import java.util.Map;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.router.IIndexRouter;
+import org.apache.iotdb.db.index.router.ProtoIndexRouter.IndexProcessorStruct;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.utils.Pair;
@@ -39,9 +40,8 @@ public class IndexMemTableFlushTask {
     this.sequence = sequence;
     // in current version, we don't build index for unsequence block
     if (sequence) {
-      for (Pair<Map<IndexType, IndexInfo>, IndexProcessor> p : router
-          .getAllIndexProcessorsAndInfo()) {
-        p.right.startFlushMemTable(p.left);
+      for (IndexProcessorStruct p : router.getAllIndexProcessorsAndInfo()) {
+        p.processor.startFlushMemTable(p.infos);
       }
     }
   }
@@ -57,7 +57,7 @@ public class IndexMemTableFlushTask {
 
   public void endFlush() {
     if (sequence) {
-      router.getAllIndexProcessorsAndInfo().forEach(p->p.right.endFlushMemTable());
+      router.getAllIndexProcessorsAndInfo().forEach(p->p.processor.endFlushMemTable());
     }
   }
 }
