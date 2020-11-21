@@ -24,7 +24,6 @@ import static org.apache.iotdb.db.index.common.IndexConstant.ROUTER_DIR;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -46,7 +45,7 @@ import org.apache.iotdb.db.index.common.func.CreateIndexProcessorFunc;
 import org.apache.iotdb.db.index.io.IndexBuildTaskPoolManager;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
 import org.apache.iotdb.db.index.router.IIndexRouter;
-import org.apache.iotdb.db.index.router.ProtoIndexRouter.IndexProcessorStruct;
+import org.apache.iotdb.db.index.common.IndexProcessorStruct;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.service.IService;

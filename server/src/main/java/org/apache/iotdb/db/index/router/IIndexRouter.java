@@ -6,7 +6,7 @@ import org.apache.iotdb.db.index.IndexProcessor;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.common.func.CreateIndexProcessorFunc;
-import org.apache.iotdb.db.index.router.ProtoIndexRouter.IndexProcessorStruct;
+import org.apache.iotdb.db.index.common.IndexProcessorStruct;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
 

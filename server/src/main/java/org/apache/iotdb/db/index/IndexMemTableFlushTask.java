@@ -1,15 +1,9 @@
 package org.apache.iotdb.db.index;
 
-import java.util.Map;
-import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.router.IIndexRouter;
-import org.apache.iotdb.db.index.router.ProtoIndexRouter.IndexProcessorStruct;
+import org.apache.iotdb.db.index.common.IndexProcessorStruct;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.tsfile.utils.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * IndexMemTableFlushTask is responsible for the index insertion when a TsFileProcessor flushes.

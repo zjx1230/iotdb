@@ -20,6 +20,7 @@ package org.apache.iotdb.db.index.common;
 import java.io.File;
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.TestOnly;
@@ -273,4 +274,8 @@ public class IndexUtils {
   private IndexUtils() {
   }
 
+  public static PartialPath toLowerCasePartialPath(PartialPath partialPath)
+      throws IllegalPathException {
+    return new PartialPath(partialPath.getFullPath().toLowerCase());
+  }
 }

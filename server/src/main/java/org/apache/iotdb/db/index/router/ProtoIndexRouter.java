@@ -23,7 +23,9 @@ import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.IndexProcessor;
 import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexProcessorStruct;
 import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.common.func.CreateIndexProcessorFunc;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.PartialPath;
@@ -39,20 +41,6 @@ import org.slf4j.LoggerFactory;
 public class ProtoIndexRouter implements IIndexRouter {
 
   private static final Logger logger = LoggerFactory.getLogger(ProtoIndexRouter.class);
-
-  public static class IndexProcessorStruct {
-
-    public IndexProcessor processor;
-    public List<PartialPath> storageGroups;
-    public Map<IndexType, IndexInfo> infos;
-
-    public IndexProcessorStruct(IndexProcessor processor, List<PartialPath> storageGroups,
-        Map<IndexType, IndexInfo> infos) {
-      this.processor = processor;
-      this.storageGroups = storageGroups;
-      this.infos = infos;
-    }
-  }
 
   /**
    * index series path -> index processor
@@ -239,6 +227,7 @@ public class ProtoIndexRouter implements IIndexRouter {
     if (unmodifiable) {
       throw new MetadataException("cannot add index to unmodifiable router");
     }
+    partialPath = IndexUtils.toLowerCasePartialPath(partialPath);
     // only the pair.left (indexType map) will be updated.
     lock.writeLock().lock();
     IndexType indexType = indexInfo.getIndexType();
@@ -295,6 +284,7 @@ public class ProtoIndexRouter implements IIndexRouter {
     if (unmodifiable) {
       throw new MetadataException("cannot remove index from unmodifiable router");
     }
+    partialPath = IndexUtils.toLowerCasePartialPath(partialPath);
     // only the pair.left (indexType map) will be updated.
     lock.writeLock().lock();
     // record the relationship between storage group and the index processors
