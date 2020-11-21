@@ -109,16 +109,16 @@ public class _ELBIndexReadIT {
             speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
       }
       statement.execute("flush");
-      System.out.println("==========================");
-      System.out.println(IndexManager.getInstance().getRouter());
+//      System.out.println("==========================");
+//      System.out.println(IndexManager.getInstance().getRouter());
 
       for (int i = 20; i < 40; i++) {
         statement.execute(String.format(insertPattern,
             speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
       }
       statement.execute("flush");
-      System.out.println("==========================");
-      System.out.println(IndexManager.getInstance().getRouter());
+//      System.out.println("==========================");
+//      System.out.println(IndexManager.getInstance().getRouter());
 
       IndexManager.getInstance().stop();
       IndexManager.getInstance().start();
@@ -128,8 +128,8 @@ public class _ELBIndexReadIT {
             speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
       }
       statement.execute("flush");
-      System.out.println("==========================");
-      System.out.println(IndexManager.getInstance().getRouter());
+//      System.out.println("==========================");
+//      System.out.println(IndexManager.getInstance().getRouter());
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -146,8 +146,9 @@ public class _ELBIndexReadIT {
 
       String querySQL = "SELECT speed.* FROM root.wind1.azq01 WHERE Speed "
           + String.format("CONTAIN (%s) WITH TOLERANCE 0 ", getArrayRange(17, 19))
-          + String.format("CONTAIN (%s) WITH TOLERANCE 0 ", getArrayRange(20, 23))
-          + String.format("CONTAIN (%s) WITH TOLERANCE 0 ", getArrayRange(24, 26));
+          + String.format("CONCAT (%s) WITH TOLERANCE 0 ", getArrayRange(20, 23))
+          + String.format("CONCAT (%s) WITH TOLERANCE 0 ", getArrayRange(24, 26));
+      System.out.println(querySQL);
       boolean hasIndex = statement.execute(querySQL);
 
       Assert.assertTrue(hasIndex);

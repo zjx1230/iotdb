@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
+import org.apache.iotdb.db.index.read.QueryIndexExecutor;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.physical.crud.AggregationPlan;
 import org.apache.iotdb.db.qp.physical.crud.FillQueryPlan;
@@ -231,6 +232,13 @@ public class QueryRouter implements IQueryRouter {
       throws StorageEngineException, QueryProcessException, IOException {
     LastQueryExecutor lastQueryExecutor = getLastQueryExecutor(lastQueryPlan);
     return lastQueryExecutor.execute(context, lastQueryPlan);
+  }
+
+  @Override
+  public QueryDataSet indexQuery(QueryIndexPlan queryPlan, QueryContext context) {
+    QueryIndexExecutor executor = new QueryIndexExecutor(queryPlan, context);
+    return executor.executeIndexQuery();
+
   }
 
   protected LastQueryExecutor getLastQueryExecutor(LastQueryPlan lastQueryPlan) {

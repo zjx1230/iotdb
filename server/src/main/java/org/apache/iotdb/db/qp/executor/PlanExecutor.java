@@ -371,9 +371,9 @@ public class PlanExecutor implements IPlanExecutor {
         GroupByTimePlan groupByTimePlan = (GroupByTimePlan) queryPlan;
         queryDataSet = queryRouter.groupBy(groupByTimePlan, context);
       } else if (queryPlan instanceof QueryIndexPlan) {
-        throw new QueryProcessException("Query index hasn't been supported yet");
 //        QueryIndexPlan queryIndexPlan = (QueryIndexPlan) queryPlan;
-//        queryDataSet = queryRouter.aggregate(queryIndexPlan, context);
+        queryDataSet = queryRouter.indexQuery((QueryIndexPlan) queryPlan, context);
+//        throw new QueryProcessException("Query index hasn't been supported yet");
       } else if (queryPlan instanceof AggregationPlan) {
         AggregationPlan aggregationPlan = (AggregationPlan) queryPlan;
         queryDataSet = queryRouter.aggregate(aggregationPlan, context);

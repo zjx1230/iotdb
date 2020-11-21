@@ -64,9 +64,12 @@ public class IndexTestUtils {
   }
 
   public static String getArrayRange(int start, int end, int interval) {
-    StringBuilder array = new StringBuilder();
-    for (int i = start; i <= end; i += interval) {
-      array.append(i).append(',');
+    if (start >= end) {
+      return "";
+    }
+    StringBuilder array = new StringBuilder().append(start);
+    for (int i = start + 1; i <= end; i += interval) {
+      array.append(',').append(i);
     }
     return array.toString();
   }
