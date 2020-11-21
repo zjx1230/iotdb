@@ -1327,9 +1327,8 @@ public class MManager {
           if (tagIndex.containsKey(key) && tagIndex.get(key).containsKey(beforeValue)) {
             if (logger.isDebugEnabled()) {
               logger.debug(String.format(
-                  DEBUG_MSG, "Upsert"
-                      + TAG_FORMAT,
-                  leafMNode.getFullPath(), key, beforeValue, leafMNode.getOffset()));
+                      String.format(DEBUG_MSG, "Upsert" + TAG_FORMAT, leafMNode.getFullPath()),
+                      key, beforeValue, leafMNode.getOffset()));
             }
 
             tagIndex.get(key).get(beforeValue).remove(leafMNode);
@@ -1339,10 +1338,8 @@ public class MManager {
           } else {
             if (logger.isDebugEnabled()) {
               logger.debug(String.format(
-                  DEBUG_MSG_1, "Upsert"
-                      + PREVIOUS_CONDITION,
-                  leafMNode.getFullPath(), key, beforeValue, leafMNode.getOffset(),
-                  tagIndex.containsKey(key)));
+                      String.format(DEBUG_MSG_1, "Upsert" + PREVIOUS_CONDITION, leafMNode.getFullPath()),
+                      key, beforeValue, leafMNode.getOffset(), tagIndex.containsKey(key)));
             }
           }
         }
@@ -1489,9 +1486,8 @@ public class MManager {
       if (tagIndex.containsKey(key) && tagIndex.get(key).containsKey(value)) {
         if (logger.isDebugEnabled()) {
           logger.debug(String.format(
-              DEBUG_MSG, "Drop"
-                  + TAG_FORMAT,
-              leafMNode.getFullPath(), entry.getKey(), entry.getValue(), leafMNode.getOffset()));
+                  String.format(DEBUG_MSG, "Drop" + TAG_FORMAT, leafMNode.getFullPath()),
+                  entry.getKey(), entry.getValue(), leafMNode.getOffset()));
         }
 
         tagIndex.get(key).get(value).remove(leafMNode);
@@ -1504,10 +1500,8 @@ public class MManager {
       } else {
         if (logger.isDebugEnabled()) {
           logger.debug(String.format(
-              DEBUG_MSG_1, "Drop"
-                  + PREVIOUS_CONDITION,
-              leafMNode.getFullPath(), key, value, leafMNode.getOffset(),
-              tagIndex.containsKey(key)));
+                  String.format(DEBUG_MSG_1, "Drop" + PREVIOUS_CONDITION, leafMNode.getFullPath()),
+                  key, value, leafMNode.getOffset(), tagIndex.containsKey(key)));
         }
       }
 
@@ -1568,19 +1562,16 @@ public class MManager {
 
         if (logger.isDebugEnabled()) {
           logger.debug(String.format(
-              DEBUG_MSG, "Set"
-                  + TAG_FORMAT,
-              leafMNode.getFullPath(), entry.getKey(), beforeValue, leafMNode.getOffset()));
+                  String.format(DEBUG_MSG, "Set" + TAG_FORMAT, leafMNode.getFullPath()),
+                  entry.getKey(), beforeValue, leafMNode.getOffset()));
         }
 
         tagIndex.get(key).get(beforeValue).remove(leafMNode);
       } else {
         if (logger.isDebugEnabled()) {
           logger.debug(String.format(
-              DEBUG_MSG_1, "Set"
-                  + PREVIOUS_CONDITION,
-              leafMNode.getFullPath(), key, beforeValue, leafMNode.getOffset(),
-              tagIndex.containsKey(key)));
+                  String.format(DEBUG_MSG_1, "Set" + PREVIOUS_CONDITION, leafMNode.getFullPath()),
+                  key, beforeValue, leafMNode.getOffset(), tagIndex.containsKey(key)));
         }
       }
       tagIndex.computeIfAbsent(key, k -> new ConcurrentHashMap<>())
@@ -1629,9 +1620,8 @@ public class MManager {
 
         if (logger.isDebugEnabled()) {
           logger.debug(String.format(
-              DEBUG_MSG, "Rename"
-                  + TAG_FORMAT,
-              leafMNode.getFullPath(), oldKey, value, leafMNode.getOffset()));
+                  String.format(DEBUG_MSG, "Rename" + TAG_FORMAT, leafMNode.getFullPath()),
+                  oldKey, value, leafMNode.getOffset()));
         }
 
         tagIndex.get(oldKey).get(value).remove(leafMNode);
@@ -1639,10 +1629,8 @@ public class MManager {
       } else {
         if (logger.isDebugEnabled()) {
           logger.debug(String.format(
-              DEBUG_MSG_1, "Rename"
-                  + PREVIOUS_CONDITION,
-              leafMNode.getFullPath(), oldKey, value, leafMNode.getOffset(),
-              tagIndex.containsKey(oldKey)));
+                  String.format(DEBUG_MSG_1, "Rename" + PREVIOUS_CONDITION, leafMNode.getFullPath()),
+                  oldKey, value, leafMNode.getOffset(), tagIndex.containsKey(oldKey)));
         }
       }
       tagIndex.computeIfAbsent(newKey, k -> new ConcurrentHashMap<>())
