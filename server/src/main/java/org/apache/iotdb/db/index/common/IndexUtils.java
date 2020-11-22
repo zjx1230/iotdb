@@ -18,6 +18,11 @@
 package org.apache.iotdb.db.index.common;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
@@ -277,5 +282,20 @@ public class IndexUtils {
   public static PartialPath toLowerCasePartialPath(PartialPath partialPath)
       throws IllegalPathException {
     return new PartialPath(partialPath.getFullPath().toLowerCase());
+  }
+
+
+  public static Map<String, Object> toLowerCaseProps(Map<String, Object> props) {
+    Map<String, Object> uppercase = new HashMap<>(props.size());
+    for (Entry<String, Object> entry : props.entrySet()) {
+      String k = entry.getKey();
+      Object v = entry.getValue();
+      if (v instanceof String) {
+        uppercase.put(k.toUpperCase(), ((String) v).toUpperCase());
+      } else {
+        uppercase.put(k.toUpperCase(), v);
+      }
+    }
+    return uppercase;
   }
 }

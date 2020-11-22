@@ -40,7 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import org.apache.iotdb.db.index.algorithm.RTreeIndex;
-import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
+import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.CalcParam;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.SingleSegmentationParam;
 import org.apache.iotdb.db.index.common.IndexInfo;
@@ -50,6 +50,9 @@ import org.apache.iotdb.db.index.distance.Distance;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.read.func.IndexFuncFactory;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
+import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
+import org.apache.iotdb.db.index.usable.IIndexUsable;
+import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -99,10 +102,18 @@ public class ELBIndexNotGood extends RTreeIndex {
       this.indexFeatureExtractor.clear();
     }
     this.elbTimeFixedPreprocessor = new ELBCountFixedFeatureExtractor(tsDataType, windowRange,
-        slideStep, featureDim, distance, calcParam, elbType, true, false, false, inQueryMode);
+        slideStep, windowRange / featureDim, distance, calcParam, elbType, true, false, false,
+        inQueryMode);
 //    elbTimeFixedPreprocessor.setInQueryMode(inQueryMode);
     this.indexFeatureExtractor = elbTimeFixedPreprocessor;
     indexFeatureExtractor.deserializePrevious(previous);
+  }
+
+  @Override
+  public List<TVList> query(Map<String, Object> queryProps, IIndexUsable iIndexUsable,
+      QueryContext context, IIndexRefinePhaseOptimize refinePhaseOptimizer)
+      throws QueryIndexException {
+    return null;
   }
 
 
@@ -134,7 +145,6 @@ public class ELBIndexNotGood extends RTreeIndex {
     throw new UnsupportedOperationException();
   }
 
-  @Override
   public void initQuery(Map<String, Object> queryConditions, List<IndexFuncResult> indexFuncResults)
       throws UnsupportedIndexFuncException {
     for (IndexFuncResult result : indexFuncResults) {
@@ -176,7 +186,7 @@ public class ELBIndexNotGood extends RTreeIndex {
   @Override
   protected List<Identifier> getQueryCandidates(List<Integer> candidateIds) {
     List<Identifier> res = new ArrayList<>(candidateIds.size());
-    candidateIds.forEach(i->res.add(identifierMap.get(i)));
+    candidateIds.forEach(i -> res.add(identifierMap.get(i)));
     this.identifierMap.clear();
     return res;
   }
@@ -203,7 +213,6 @@ public class ELBIndexNotGood extends RTreeIndex {
     }
   }
 
-  @Override
   public int postProcessNext(List<IndexFuncResult> funcResult) throws QueryIndexException {
     TVList aligned = (TVList) indexFeatureExtractor.getCurrent_L2_AlignedSequence();
     double ed = IndexFuncFactory.calcEuclidean(aligned, patterns);

@@ -17,6 +17,9 @@
  */
 package org.apache.iotdb.db.index.read;
 
+import static org.apache.iotdb.db.index.common.IndexUtils.toLowerCasePartialPath;
+import static org.apache.iotdb.db.index.common.IndexUtils.toLowerCaseProps;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -63,10 +66,12 @@ public class QueryIndexExecutor {
 
   public QueryIndexExecutor(QueryIndexPlan queryIndexPlan, QueryContext context) {
     this.indexType = queryIndexPlan.getIndexType();
-    this.queryProps = queryIndexPlan.getProps();
+    this.queryProps = IndexUtils.toLowerCaseProps(queryIndexPlan.getProps());
     this.paths = queryIndexPlan.getPaths();
+    this.paths.forEach(PartialPath::toLowerCase);
     this.context = context;
   }
+
 
   public QueryDataSet executeIndexQuery() throws StorageEngineException, QueryIndexException{
     // get all related storage group

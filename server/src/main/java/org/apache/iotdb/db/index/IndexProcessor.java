@@ -26,7 +26,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +36,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
+import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
@@ -46,6 +46,7 @@ import org.apache.iotdb.db.index.common.func.IndexNaiveFunc;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.io.IndexBuildTaskPoolManager;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
+import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.PartialPath;
@@ -66,6 +67,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   private final String indexSeriesDirPath;
   private final String usableFile;
   private final String previousBufferFile;
+  private final IIndexRefinePhaseOptimize refinePhaseOptimizer;
   private PartialPath indexSeries;
   private final IndexBuildTaskPoolManager indexBuildPoolManager;
   private ReadWriteLock lock = new ReentrantReadWriteLock();
@@ -120,6 +122,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     this.previousBufferFile = indexSeriesDirPath + File.separator + "previousBuffer";
     this.usableFile = indexSeriesDirPath + File.separator + "usableMap";
     this.tsDataType = initSeriesType();
+    this.refinePhaseOptimizer = IIndexRefinePhaseOptimize.Factory.getOptimize();
     deserializePreviousBuffer(indexSeries);
     deserializeUsable(indexSeries);
     refreshSeriesIndexMapFromMManager(indexInfoMap);
@@ -392,7 +395,6 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
             }
             index.endFlushTask();
             this.usableMap.get(indexType).addUsableRange(path, tvList);
-            indexLockMap.get(indexType).writeLock().unlock();
           } catch (IndexManagerException e) {
             //Give up the following data, but the previously serialized chunk will not be affected.
             logger.error("build index failed", e);
@@ -402,6 +404,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
             System.out.println("RuntimeException: " + e);
           } finally {
             numIndexBuildTasks.decrementAndGet();
+            indexLockMap.get(indexType).writeLock().unlock();
           }
         };
         indexBuildPoolManager.submit(buildTask);
@@ -458,7 +461,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
 
   void updateUnsequenceData(PartialPath path, TVList tvList) {
     this.usableMap.forEach((indexType, usable) -> {
-      usable.minusUsableRange(path, tvList);
+      usable.minusUsableRange(tvList.getMinTime(), tvList.getLastTime());
     });
   }
 
@@ -472,8 +475,23 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
 //  }
 
   public List<TVList> query(IndexType indexType, Map<String, Object> queryProps,
-      QueryContext context) {
-    throw new UnsupportedOperationException("zxckzjxckz");
+      QueryContext context) throws QueryIndexException {
+    try {
+      lock.readLock().lock();
+      if(!indexLockMap.containsKey(indexType)){
+        lock.readLock().unlock();
+        throw new QueryIndexException(
+            String.format("%s hasn't been built on %s", indexType.toString(), indexSeries.getFullPath()));
+      }else {
+        indexLockMap.get(indexType).readLock().lock();
+        lock.readLock().unlock();
+      }
+      IoTDBIndex index = allPathsIndexMap.get(indexType);
+      return index.query(queryProps, this.usableMap.get(indexType), context, refinePhaseOptimizer);
+
+    } finally {
+      indexLockMap.get(indexType).readLock().unlock();
+    }
   }
 
 }

@@ -38,6 +38,9 @@ import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.read.func.IndexFuncFactory;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
+import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
+import org.apache.iotdb.db.index.usable.IIndexUsable;
+import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -75,6 +78,13 @@ public class RTreePAAIndex extends RTreeIndex {
     this.indexFeatureExtractor = paaTimeFixedPreprocessor;
   }
 
+  @Override
+  public List<TVList> query(Map<String, Object> queryProps, IIndexUsable iIndexUsable,
+      QueryContext context, IIndexRefinePhaseOptimize refinePhaseOptimizer)
+      throws QueryIndexException {
+    return null;
+  }
+
 
   /**
    * Fill {@code currentCorners} and the optional {@code currentRanges}, and return the current idx
@@ -105,7 +115,6 @@ public class RTreePAAIndex extends RTreeIndex {
     throw new UnsupportedOperationException();
   }
 
-  @Override
   public void initQuery(Map<String, Object> queryConditions, List<IndexFuncResult> indexFuncResults)
       throws UnsupportedIndexFuncException {
     for (IndexFuncResult result : indexFuncResults) {
@@ -174,7 +183,6 @@ public class RTreePAAIndex extends RTreeIndex {
     }
   }
 
-  @Override
   public int postProcessNext(List<IndexFuncResult> funcResult) throws QueryIndexException {
     Identifier identifier =  indexFeatureExtractor.getCurrent_L1_Identifier();
     TVList srcList = indexFeatureExtractor

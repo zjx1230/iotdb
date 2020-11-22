@@ -58,19 +58,20 @@ public class MilesPattern {
   public int subpatternCount;
   public double[] thresholdsArray;
 
-  private TVList tvList;
+  public double[] tvList;
   private double[] diff;
   private double[] thresholdPowers;
   private int[] idxSet;
   public final Distance distanceMetric;
-  private int tvListOffset;
+  public int tvListOffset;
 
   public MilesPattern(Distance distanceMetric) {
     this.distanceMetric = distanceMetric;
   }
 
-  public void initPattern(TVList tvList, int tvListOffset, int length, int subpatternCount,
+  public void initPattern(double[] tvList, int tvListOffset, int length, int subpatternCount,
       double[] thresholdsArray, int[] minLeftBorders, int[] maxLeftBorders) {
+//    this.tvList = tvList;
     this.tvList = tvList;
     this.tvListOffset = tvListOffset;
     this.sequenceLen = length;
@@ -147,13 +148,13 @@ public class MilesPattern {
       for (j = this.maxLeftBorders[i - 1]; j < this.minLeftBorders[i] - 1; j++) {
         leftSum +=
             normdouble.pow(
-                Math.abs(getDoubleFromRelativeIdx(j) - stream[j + offset]))
+                Math.abs(tvList[tvListOffset + j] - stream[j + offset]))
                 - normdouble.pow(this.thresholdsArray[i - 1]);
       }
       int k = 0;
       for (; j < this.maxLeftBorders[i]; j++, k++) {
         diff[k] = normdouble
-            .pow(Math.abs(getDoubleFromAnyType(tvList, j + tvListOffset) - stream[j + offset]));
+            .pow(Math.abs(tvList[j + tvListOffset] - stream[j + offset]));
         leftSum += diff[k] - thresholdPowers[i - 1];
         if (leftSum <= 0) {
           idxSet[k] = j;
@@ -181,7 +182,7 @@ public class MilesPattern {
     }
     for (int j = this.maxLeftBorders[i - 1]; j < this.sequenceLen; j++) {
       leftSum += normdouble
-          .pow(Math.abs(getDoubleFromAnyType(tvList, j + tvListOffset) - stream[j + offset]))
+          .pow(Math.abs(tvList[j + tvListOffset] - stream[j + offset]))
           - normdouble.pow(this.thresholdsArray[i - 1]);
     }
     return (leftSum <= 0) ? -1 : 1;
@@ -201,8 +202,7 @@ public class MilesPattern {
     int len;
     for (int i = 0; i < subpatternCount; i++) {
       len = bps[i + 1] - bps[i];
-      int count = disMetric.distEarlyAbandonDetailNoRoot(stream, offset + bps[i],
-          tvList, bps[i], len, thresholdPowers[i] * len);
+      int count = disMetric.distEarlyAbandonDetailNoRoot(stream, offset + bps[i], tvList, bps[i], len, thresholdPowers[i] * len);
       if (count > 0) {
         return ret + count;
       } else {
@@ -245,7 +245,7 @@ public class MilesPattern {
     return true;
   }
 
-  public double getDoubleFromRelativeIdx(int idx) {
-    return getDoubleFromAnyType(tvList, tvListOffset + idx);
-  }
+//  public double getDoubleFromRelativeIdx(int idx) {
+//    return getDoubleFromAnyType(tvList, tvListOffset + idx);
+//  }
 }

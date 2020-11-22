@@ -18,6 +18,7 @@
 package org.apache.iotdb.db.index.algorithm;
 
 import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.metadata.PartialPath;
 
 /**
  * Hash lookup table is a data structure a structure that can map keys to values. A hash table uses
@@ -37,7 +38,7 @@ import org.apache.iotdb.db.index.common.IndexInfo;
  */
 public abstract class HammingHashIndex extends IoTDBIndex {
 
-  public HammingHashIndex(String path, IndexInfo indexInfo) {
+  public HammingHashIndex(PartialPath path, IndexInfo indexInfo) {
     super(path, null, indexInfo);
   }
 

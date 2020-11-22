@@ -31,7 +31,9 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.index.IndexManager;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.db.utils.datastructure.TVList;
@@ -145,9 +147,9 @@ public class _ELBIndexReadIT {
         Statement statement = connection.createStatement()) {
 
       String querySQL = "SELECT speed.* FROM root.wind1.azq01 WHERE Speed "
-          + String.format("CONTAIN (%s) WITH TOLERANCE 0 ", getArrayRange(17, 19))
-          + String.format("CONCAT (%s) WITH TOLERANCE 0 ", getArrayRange(20, 23))
-          + String.format("CONCAT (%s) WITH TOLERANCE 0 ", getArrayRange(24, 26));
+          + String.format("CONTAIN (%s) WITH TOLERANCE 0 ", getArrayRange(170, 190, 10))
+          + String.format("CONCAT (%s) WITH TOLERANCE 0 ", getArrayRange(200, 230, 10))
+          + String.format("CONCAT (%s) WITH TOLERANCE 0 ", getArrayRange(240, 260, 10));
       System.out.println(querySQL);
       boolean hasIndex = statement.execute(querySQL);
 

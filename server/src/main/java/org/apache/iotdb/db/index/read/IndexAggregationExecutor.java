@@ -156,7 +156,7 @@ public class IndexAggregationExecutor extends AggregationExecutor {
 //    IndexQueryReader indexQueryReader = IndexManager.getInstance()
 //        .getQuerySource(seriesPath, indexType, timeFilter);
     IndexQueryReader indexQueryReader = null;
-    indexQueryReader.initQueryCondition(queryProps, indexFuncResults);
+//    indexQueryReader.initQueryCondition(queryProps, indexFuncResults);
     // update filter by TTL
     timeFilter = queryDataSource.updateFilterUsingTTL(timeFilter);
 

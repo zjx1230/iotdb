@@ -35,7 +35,9 @@ public interface Distance {
 
   double distPower(double[] a, int aOffset, TVList b, int bOffset, int length);
 
-  double distPower(TVList a, int aOffset, TVList b, int bOffset, int length);
+  double distPower(double[] a, int aOffset, double[] b, int bOffset, int length);
+
+  double distPower(TVList a, int aOffset, double[] b, int bOffset, int length);
 
   int distEarlyAbandon(double[] a, int aOffset, double[] b, int bOffset, int length, double thres);
 
@@ -47,6 +49,9 @@ public interface Distance {
   double getP();
 
   int distEarlyAbandonDetailNoRoot(double[] a, int aOffset, TVList b, int bOffset, int length,
+      double thresholdPow);
+
+  int distEarlyAbandonDetailNoRoot(double[] a, int aOffset, double[] b, int bOffset, int length,
       double thresholdPow);
 
   static Distance getDistance(String distance) {

@@ -1,20 +1,13 @@
 package org.apache.iotdb.db.index.usable;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import org.apache.iotdb.db.exception.metadata.MetadataException;
-import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBWindowBlockFeature;
 import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.tsfile.utils.Pair;
+import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
+import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,22 +33,22 @@ public class SingleLongIndexUsability implements IIndexUsable {
   private int maxSizeOfUsableSegments;
   private RangeNode unusableRanges;
   private int size;
+  protected final PartialPath indexSeries;
 
   SingleLongIndexUsability(PartialPath indexSeries) {
     this(indexSeries, defaultSizeOfUsableSegments);
   }
 
   SingleLongIndexUsability(PartialPath indexSeries, int maxSizeOfUsableSegments) {
+    this.indexSeries = indexSeries;
     this.maxSizeOfUsableSegments = maxSizeOfUsableSegments;
     unusableRanges = new RangeNode(Long.MIN_VALUE, Long.MAX_VALUE, null);
     size = 1;
   }
 
   @Override
-  public void addUsableRange(PartialPath fullPath, TVList tvList) {
-    long startTime = tvList.getMinTime();
-    long endTime = tvList.getLastTime();
-    RangeNode node = locateIdxByTime(tvList.getMinTime());
+  public void addUsableRange(PartialPath fullPath, long startTime, long endTime) {
+    RangeNode node = locateIdxByTime(startTime);
     RangeNode prevNode = node;
     while (node != null && node.start <= endTime) {
       assert node.start <= node.end;
@@ -108,10 +101,8 @@ public class SingleLongIndexUsability implements IIndexUsable {
 
 
   @Override
-  public void minusUsableRange(PartialPath fullPath, TVList tvList) {
-    long startTime = tvList.getMinTime();
-    long endTime = tvList.getLastTime();
-    RangeNode node = locateIdxByTime(tvList.getMinTime());
+  public void minusUsableRange(PartialPath fullPath, long startTime, long endTime) {
+    RangeNode node = locateIdxByTime(startTime);
     if (endTime <= node.end) {
       return;
     }
@@ -187,6 +178,12 @@ public class SingleLongIndexUsability implements IIndexUsable {
       this.next = next;
     }
 
+    RangeNode(RangeNode unusableRanges) {
+      this.start = unusableRanges.start;
+      this.end = unusableRanges.end;
+      this.next = unusableRanges.next;
+    }
+
     @Override
     public String toString() {
       return "[" + (start == Long.MIN_VALUE ? "MIN" : start) + "," +
@@ -229,7 +226,7 @@ public class SingleLongIndexUsability implements IIndexUsable {
   }
 
   @Override
-  public List<Pair<Long, Long>> getUnusableRangeForSeriesMatching(PartialPath indexSeries) {
+  public Filter getUnusableRangeForSeriesMatching() {
     throw new UnsupportedOperationException();
   }
 
@@ -242,6 +239,40 @@ public class SingleLongIndexUsability implements IIndexUsable {
   @Override
   public void deserialize(InputStream inputStream) throws IOException {
     unusableRanges = RangeNode.deserialize(inputStream);
+  }
+
+  /**
+   * It's a inefficient implementation
+   */
+  @Override
+  public void updateELBBlocksForSeriesMatching(PrimitiveList unusableBlocks,
+      List<ELBWindowBlockFeature> windowBlocks) {
+    for (int i = 0; i < windowBlocks.size(); i++) {
+      ELBWindowBlockFeature block = windowBlocks.get(i);
+      RangeNode node = locateIdxByTime(block.startTime);
+      if (node.end < block.startTime && block.endTime < node.next.start) {
+        unusableBlocks.setBoolean(i, true);
+      }
+    }
+  }
+
+  @Override
+  public IIndexUsable deepCopy() {
+    SingleLongIndexUsability res = new SingleLongIndexUsability(indexSeries,
+        defaultSizeOfUsableSegments);
+    res.size = this.size;
+    if (this.unusableRanges == null) {
+      return res;
+    }
+    res.unusableRanges = new RangeNode(this.unusableRanges);
+    RangeNode pThis = this.unusableRanges;
+    RangeNode pRes = res.unusableRanges;
+    while (pThis.next != null) {
+      pRes.next = new RangeNode(pThis.next);
+      pRes = pRes.next;
+      pThis = pThis.next;
+    }
+    return res;
   }
 
   @Override

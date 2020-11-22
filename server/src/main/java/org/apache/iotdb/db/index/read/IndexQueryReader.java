@@ -33,6 +33,7 @@ import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.index.IndexUsability;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.io.IndexChunkMeta;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
@@ -89,15 +90,15 @@ public class IndexQueryReader {
   /**
    * Invoke after having chunkMeta, tell reader about all condition
    */
-  void initQueryCondition(Map<String, Object> queryProps,
-      List<IndexFuncResult> indexFuncResults) throws UnsupportedIndexFuncException {
-//    List<IndexFunc> indexFuncs = new ArrayList<>();
-//    indexFuncResults.forEach(p -> indexFuncs.add(p.getIndexFunc()));
-    String path = seriesPath.getFullPath();
-    index = IndexType.constructQueryIndex(path, indexType, queryProps, indexFuncResults);
-    index.initPreprocessor(null, true);
-    indexQueryOptimize.needUnpackIndexChunk(null, 0, 0);
-  }
+//  void initQueryCondition(Map<String, Object> queryProps,
+//      List<IndexFuncResult> indexFuncResults) throws UnsupportedIndexFuncException {
+////    List<IndexFunc> indexFuncs = new ArrayList<>();
+////    indexFuncResults.forEach(p -> indexFuncs.add(p.getIndexFunc()));
+//    String path = seriesPath.getFullPath();
+//    index = IndexType.constructQueryIndex(path, indexType, queryProps, indexFuncResults);
+//    index.initPreprocessor(null, true);
+//    indexQueryOptimize.needUnpackIndexChunk(null, 0, 0);
+//  }
 
   /**
    * For new chunk，update the IndexUsableRange
@@ -136,19 +137,20 @@ public class IndexQueryReader {
       } else if (optimizer.needUnpackIndexChunk(indexUsabilityRanger.getIndexUsableRange(),
           chunkMeta.getStartTime(),
           chunkMeta.getEndTime())) {
-        chunkMeta = seqResources.poll();
-        ByteBuffer chunkData;
-        try {
-          chunkData = chunkMeta.unpack();
-          List<Identifier> candidateList = index.queryByIndex(chunkData);
-          if (candidateList != null) {
-            updatePrunedRange(chunkMeta, candidateList);
-          }
-        } catch (IOException e) {
-          logger.error("unpack chunk failed:{}, skip it", chunkMeta, e);
-        } catch (IndexManagerException e) {
-          logger.error("query chunk failed:{}, skip it", chunkMeta, e);
-        }
+        IndexUtils.breakDown("empty: org.apache.iotdb.db.index.read.IndexQueryReader.updateIndexChunk");
+//        chunkMeta = seqResources.poll();
+//        ByteBuffer chunkData;
+//        try {
+//          chunkData = chunkMeta.unpack();
+//          List<Identifier> candidateList = index.queryByIndex(chunkData);
+//          if (candidateList != null) {
+//            updatePrunedRange(chunkMeta, candidateList);
+//          }
+//        } catch (IOException e) {
+//          logger.error("unpack chunk failed:{}, skip it", chunkMeta, e);
+//        } catch (IndexManagerException e) {
+//          logger.error("query chunk failed:{}, skip it", chunkMeta, e);
+//        }
       }
     }
   }
@@ -197,7 +199,7 @@ public class IndexQueryReader {
     while (reminding > 0 && preprocessor
         .hasNext(indexUsabilityRanger.getAllowedRange().getTimeFilter())) {
       preprocessor.processNext();
-      reminding = index.postProcessNext(aggregateResultList);
+//      reminding = index.postProcessNext(aggregateResultList);
     }
     index.endFlushTask();
     return reminding;

@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
+import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.CalcParam;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
@@ -46,7 +46,7 @@ public class ELBCountFixedFeatureExtractor extends CountFixedFeatureExtractor {
    * Format: {@code {u_11, l_11, ..., u_1b, l_1b; u_21, l_21, ..., u_2b, l_2b; ...}}
    */
   private final PrimitiveList mbrs;
-  private final ELBFeatureExtractor elbFeatureExtractor;
+  private final ELB elb;
   private final CalcParam calcParam;
   private final boolean storeFeature;
   private final PrimitiveList currentMBR;
@@ -72,7 +72,7 @@ public class ELBCountFixedFeatureExtractor extends CountFixedFeatureExtractor {
     this.blockNum = blockNum;
     this.mbrs = PrimitiveList.newList(TSDataType.DOUBLE);
     this.currentMBR = PrimitiveList.newList(TSDataType.DOUBLE);
-    elbFeatureExtractor = new ELBFeatureExtractor(distance, windowRange,
+    elb = new ELB(distance, windowRange,
         blockNum, elbType);
   }
 
@@ -84,14 +84,15 @@ public class ELBCountFixedFeatureExtractor extends CountFixedFeatureExtractor {
 
   @Override
   public void processNext() {
-    super.processNext();
-    if (!inQueryMode) {
-      currentMBR.clearButNotRelease();
-      elbFeatureExtractor.calcELBFeature(srcData, currentStartTimeIdx, currentMBR, calcParam);
-      if (storeFeature) {
-        mbrs.putAllDouble(currentMBR);
-      }
-    }
+    throw new UnsupportedOperationException("this class shouldn't be used");
+//    super.processNext();
+//    if (!inQueryMode) {
+//      currentMBR.clearButNotRelease();
+//      elb.calcELBFeature(srcData, currentStartTimeIdx, currentMBR, calcParam);
+//      if (storeFeature) {
+//        mbrs.putAllDouble(currentMBR);
+//      }
+//    }
   }
 
   private double[][] formatELBFeature(PrimitiveList list, int idx) {
@@ -131,7 +132,7 @@ public class ELBCountFixedFeatureExtractor extends CountFixedFeatureExtractor {
   public long clear() {
     long toBeReleased = super.clear();
     if (storeFeature) {
-      toBeReleased += getCurrentChunkSize() * elbFeatureExtractor.getAmortizedSize();
+      toBeReleased += getCurrentChunkSize() * elb.getAmortizedSize();
       mbrs.clearAndRelease();
     }
     return toBeReleased;
@@ -141,7 +142,7 @@ public class ELBCountFixedFeatureExtractor extends CountFixedFeatureExtractor {
   public int getAmortizedSize() {
     int res = super.getAmortizedSize();
     if (storeFeature) {
-      res += elbFeatureExtractor.getAmortizedSize();
+      res += elb.getAmortizedSize();
     }
     return res;
   }

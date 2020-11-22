@@ -18,6 +18,7 @@
 package org.apache.iotdb.db.index.algorithm;
 
 import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.metadata.PartialPath;
 
 /**
  * ISAXIndex first splits the input data into segments and extracts their discrete SAX features, and
@@ -34,7 +35,7 @@ import org.apache.iotdb.db.index.common.IndexInfo;
  */
 public abstract class ISAXIndex extends IoTDBIndex {
 
-  public ISAXIndex(String path, IndexInfo indexInfo) {
+  public ISAXIndex(PartialPath path, IndexInfo indexInfo) {
     super(path, null, indexInfo);
   }
 }

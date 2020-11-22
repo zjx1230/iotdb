@@ -35,20 +35,22 @@ import org.apache.iotdb.tsfile.utils.Pair;
 /**
  * Memory consumption can be considered constant.
  */
-public class ELBFeatureExtractor {
+public class ELB {
 
   // final fields
   private final int windowRange;
   private final int blockNum;
+  private final int blockWidth;
   private final MilesPattern pattern;
 
   private PatternEnvelope envelope;
   private ELBType elbType;
   private ELBFeature elbFeature;
 
-  public ELBFeatureExtractor(Distance distance, int windowRange, int blockNum, ELBType elbType) {
+  public ELB(Distance distance, int windowRange, int blockWidth, ELBType elbType) {
     this.windowRange = windowRange;
-    this.blockNum = blockNum;
+    this.blockWidth = blockWidth;
+    this.blockNum = windowRange / blockWidth;
 
     pattern = new MilesPattern(distance);
     this.elbType = elbType;
@@ -62,33 +64,34 @@ public class ELBFeatureExtractor {
     } else {
       elbFeature = new SequenceELBFeature(distance);
     }
+
   }
 
-  /**
-   * Given {@code offset}, calculate ELB features and append to {@code mbrs}. The pattern threshold
-   * and segmentation will be computed by {@code calcParam}
-   *
-   * @param tvList source data
-   * @param offset the pattern is a subsequence of @{tvList} starting from {@code offset}
-   * @param mbrs mbrs should be empty and this function will append the elb features into it.
-   */
-  public void calcELBFeature(TVList tvList, int offset, PrimitiveList mbrs, CalcParam calcParam) {
-    // refresh array
-    Object[] params = calcParam.calculateParam(tvList, offset, windowRange);
-    int subpatternCount = (int) params[0];
-    double[] thresholdsArray = (double[]) params[1];
-    int[] minLeftBorders = (int[]) params[2];
-    int[] maxLeftBorders = (int[]) params[3];
-    pattern
-        .initPattern(tvList, offset, windowRange, subpatternCount, thresholdsArray, minLeftBorders,
-            maxLeftBorders);
-    if (elbType == ELBType.ELE) {
-      envelope.refresh(pattern);
-    }
-    Pair<double[], double[]> features = elbFeature
-        .calcPatternFeature(pattern, blockNum, envelope);
-    appendToMBRs(mbrs, features);
-  }
+//  /**
+//   * Given {@code offset}, calculate ELB features and append to {@code mbrs}. The pattern threshold
+//   * and segmentation will be computed by {@code calcParam}
+//   *
+//   * @param tvList source data
+//   * @param offset the pattern is a subsequence of @{tvList} starting from {@code offset}
+//   * @param mbrs mbrs should be empty and this function will append the elb features into it.
+//   */
+//  public void calcELBFeature(TVList tvList, int offset, PrimitiveList mbrs, CalcParam calcParam) {
+//    // refresh array
+//    Object[] params = calcParam.calculateParam(tvList, offset, windowRange);
+//    int subpatternCount = (int) params[0];
+//    double[] thresholdsArray = (double[]) params[1];
+//    int[] minLeftBorders = (int[]) params[2];
+//    int[] maxLeftBorders = (int[]) params[3];
+//    pattern
+//        .initPattern(tvList, offset, windowRange, subpatternCount, thresholdsArray, minLeftBorders,
+//            maxLeftBorders);
+//    if (elbType == ELBType.ELE) {
+//      envelope.refresh(pattern);
+//    }
+//    Pair<double[], double[]> features = elbFeature
+//        .calcPatternFeature(pattern, blockNum, envelope);
+//    appendToMBRs(mbrs, features);
+//  }
 
   private void appendToMBRs(PrimitiveList mbrs, Pair<double[], double[]> features) {
     for (int i = 0; i < blockNum; i++) {
@@ -105,7 +108,7 @@ public class ELBFeatureExtractor {
    * @param offset the pattern is a subsequence of @{tvList} starting from {@code offset}
    * @return left: upper bounds, right: lower bounds
    */
-  public Pair<double[], double[]> calcELBFeature(TVList tvList, int offset,
+  public Pair<double[], double[]> calcELBFeature(double[] tvList, int offset,
       double[] thresholdsArray, int[] borders) {
     // refresh array
     int subpatternCount = thresholdsArray.length;
@@ -159,7 +162,8 @@ public class ELBFeatureExtractor {
         for (int i = offset; i < offset + blockWidth; i++) {
           res += getDoubleFromAnyType(tvList, i);
         }
-        return res / blockWidth;
+        // for SEQ, we use sum version for efficiency
+        return res;
       default:
         throw new NotImplementedException("unsupported elb type:" + elbType);
     }

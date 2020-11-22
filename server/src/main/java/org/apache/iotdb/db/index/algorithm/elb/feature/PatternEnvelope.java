@@ -53,18 +53,18 @@ public class PatternEnvelope {
         double left = mtt(pattern, i - 1);
         double right = mtt(pattern, i);
         tol = Math.max(left, right);
-        upperLine[j] = pattern.getDoubleFromRelativeIdx(j) + tol;
-        valueLine[j] = pattern.getDoubleFromRelativeIdx(j);
-        lowerLine[j] = pattern.getDoubleFromRelativeIdx(j) - tol;
+        upperLine[j] = pattern.tvList[pattern.tvListOffset + j] + tol;
+        valueLine[j] = pattern.tvList[pattern.tvListOffset + j];
+        lowerLine[j] = pattern.tvList[pattern.tvListOffset + j] - tol;
       }
       // region of non-variable border ，[e_k,s_k+1)
       int m =
           (i + 1 == pattern.subpatternCount) ? pattern.sequenceLen : pattern.minLeftBorders[i + 1];
       for (int j = pattern.maxLeftBorders[i]; j < m; j++) {
         tol = mtt(pattern, i);
-        upperLine[j] = pattern.getDoubleFromRelativeIdx(j) + tol;
-        valueLine[j] = pattern.getDoubleFromRelativeIdx(j);
-        lowerLine[j] = pattern.getDoubleFromRelativeIdx(j) - tol;
+        upperLine[j] = pattern.tvList[pattern.tvListOffset + j] + tol;
+        valueLine[j] = pattern.tvList[pattern.tvListOffset + j];
+        lowerLine[j] = pattern.tvList[pattern.tvListOffset + j] - tol;
       }
     }
   }

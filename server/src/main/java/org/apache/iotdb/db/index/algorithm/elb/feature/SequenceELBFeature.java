@@ -43,10 +43,10 @@ public class SequenceELBFeature extends ELBFeature {
 
   /**
    * refresh and calculate new SEQ-ELB
-   * @return
    */
   @Override
-  public Pair<double[], double[]> calcPatternFeature(MilesPattern pattern, int blockNum, PatternEnvelope envelope) {
+  public Pair<double[], double[]> calcPatternFeature(MilesPattern pattern, int blockNum,
+      PatternEnvelope envelope) {
     checkAndExpandArrays(blockNum);
     int windowBlockSize = (int) Math.floor(((double) pattern.sequenceLen) / blockNum);
 
@@ -72,7 +72,7 @@ public class SequenceELBFeature extends ELBFeature {
         double interval = getEpsilonSum(pattern, distance, j, end, windowBlockSize);
 
         for (int l = j; l <= end; l++) {
-          sumValues[startIndex] += pattern.getDoubleFromRelativeIdx(l);
+          sumValues[startIndex] += pattern.tvList[pattern.tvListOffset + l];
         }
         sumLowers[startIndex] = sumValues[startIndex] - interval;
         sumUppers[startIndex] = sumValues[startIndex] + interval;
@@ -91,6 +91,8 @@ public class SequenceELBFeature extends ELBFeature {
         }
       }
     }
+    upperLines[0] = Double.MAX_VALUE;
+    lowerLines[0] = Double.MIN_VALUE;
     return new Pair<>(upperLines, lowerLines);
   }
 

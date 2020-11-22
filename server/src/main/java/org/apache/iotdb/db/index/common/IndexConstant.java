@@ -62,6 +62,7 @@ public class IndexConstant {
   // Distance
   public static final String DISTANCE = "DISTANCE";
   public static final String L_INFINITY = "L_INFINITY";
+//  public static final String DEFAULT_DISTANCE = "L_INFINITY";
   public static final String DEFAULT_DISTANCE = "2";
 
   // ELB Type

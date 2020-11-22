@@ -87,6 +87,26 @@ public class LNormDouble implements Distance {
     return dis;
   }
 
+  @Override
+  public double distPower(double[] a, int aOffset, double[] b, int bOffset, int length) {
+    assert a.length >= aOffset + length && b.length >= bOffset + length;
+    double dis = 0;
+    for (int i = 0; i < length; i++) {
+      dis += pow(Math.abs(a[i + aOffset] - b[i + bOffset]));
+    }
+    return dis;
+  }
+
+  @Override
+  public double distPower(TVList a, int aOffset, double[] b, int bOffset, int length) {
+    assert a.size() >= aOffset + length && b.length >= bOffset + length;
+    double dis = 0;
+    for (int i = 0; i < length; i++) {
+      dis += pow(Math.abs(getDoubleFromAnyType(a, i + aOffset) - b[i + bOffset]));
+    }
+    return dis;
+  }
+
   public double distPower(TVList a, int aOffset, TVList b, int bOffset, int length) {
     assert a.size() >= aOffset + length && b.size() >= bOffset + length;
     double dis = 0;
@@ -141,6 +161,12 @@ public class LNormDouble implements Distance {
       }
     }
     return -length;
+  }
+
+  @Override
+  public int distEarlyAbandonDetailNoRoot(double[] a, int aOffset, double[] b, int bOffset,
+      int length, double thresholdPow) {
+    return 0;
   }
 
   @Override

@@ -1,26 +1,18 @@
 package org.apache.iotdb.db.index.usable;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
-import org.apache.iotdb.db.exception.metadata.MetadataException;
-import org.apache.iotdb.db.index.IndexProcessor;
-import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexType;
-import org.apache.iotdb.db.index.router.ProtoIndexRouter;
+import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBWindowBlockFeature;
+import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.tsfile.utils.Pair;
+import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
+import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,12 +40,12 @@ public class MultiShortIndexUsability implements IIndexUsable {
 
 
   @Override
-  public void addUsableRange(PartialPath fullPath, TVList tvList) {
+  public void addUsableRange(PartialPath fullPath, long start, long end) {
     // do nothing temporarily
   }
 
   @Override
-  public void minusUsableRange(PartialPath fullPath, TVList tvList) {
+  public void minusUsableRange(PartialPath fullPath, long start, long end) {
     usableInfoSet.add(fullPath);
   }
 
@@ -63,8 +55,8 @@ public class MultiShortIndexUsability implements IIndexUsable {
   }
 
   @Override
-  public List<Pair<Long, Long>> getUnusableRangeForSeriesMatching(PartialPath indexSeries) {
-    throw new UnsupportedOperationException(indexSeries.getFullPath());
+  public Filter getUnusableRangeForSeriesMatching() {
+    throw new UnsupportedOperationException(indexSeries.toString());
   }
 
   @Override
@@ -81,5 +73,15 @@ public class MultiShortIndexUsability implements IIndexUsable {
     for (int i = 0; i < size; i++) {
       usableInfoSet.add(new PartialPath(ReadWriteIOUtils.readString(inputStream)));
     }
+  }
+
+  @Override
+  public void updateELBBlocksForSeriesMatching(PrimitiveList unusableBlocks, List<ELBWindowBlockFeature> windowBlocks) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public IIndexUsable deepCopy() {
+    throw new UnsupportedOperationException();
   }
 }

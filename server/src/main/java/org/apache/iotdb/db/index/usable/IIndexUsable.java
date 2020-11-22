@@ -1,15 +1,15 @@
 package org.apache.iotdb.db.index.usable;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
-import org.apache.iotdb.db.index.common.func.CreateIndexProcessorFunc;
+import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBWindowBlockFeature;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.tsfile.utils.Pair;
+import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
+import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 
 /**
  * 思考：
@@ -29,9 +29,11 @@ import org.apache.iotdb.tsfile.utils.Pair;
  */
 public interface IIndexUsable {
 
-  void addUsableRange(PartialPath fullPath, TVList tvList);
+  void addUsableRange(PartialPath fullPath, long start, long end);
 
-  void minusUsableRange(PartialPath fullPath, TVList tvList);
+//  void minusUsableRange(PartialPath fullPath, TVList tvList);
+
+  void minusUsableRange(PartialPath fullPath, long start, long end);
 
   /**
    * 获取下面的所有不可用；
@@ -44,14 +46,17 @@ public interface IIndexUsable {
   /**
    * 获取一段序列的可用区间
    *
-   * @param indexSeries a full path
    * @return a time range
    */
-  List<Pair<Long, Long>> getUnusableRangeForSeriesMatching(PartialPath indexSeries);
+  Filter getUnusableRangeForSeriesMatching();
 
   void serialize(OutputStream outputStream) throws IOException;
 
   void deserialize(InputStream inputStream) throws IllegalPathException, IOException;
+
+  void updateELBBlocksForSeriesMatching(PrimitiveList unusableBlocks, List<ELBWindowBlockFeature> windowBlocks);
+
+  IIndexUsable deepCopy();
 
   class Factory {
 
@@ -79,5 +84,6 @@ public interface IIndexUsable {
       }
       return res;
     }
+
   }
 }

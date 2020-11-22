@@ -30,20 +30,16 @@ import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
-import org.apache.iotdb.db.exception.index.IndexRuntimeException;
-import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
-import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.IndexProcessor;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategy;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategyType;
-import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
-import org.apache.iotdb.db.index.read.func.IndexFuncResult;
-import org.apache.iotdb.db.metadata.MManager;
+import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
+import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.db.service.IoTDB;
+import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.common.BatchData;
@@ -54,7 +50,8 @@ import org.apache.iotdb.tsfile.read.common.BatchData;
  */
 public abstract class IoTDBIndex {
 
-  protected final String path;
+//  protected final String path;
+  protected final PartialPath indexSeries;
   protected final IndexType indexType;
   protected final long confIndexStartTime;
   protected final Map<String, String> props;
@@ -65,8 +62,8 @@ public abstract class IoTDBIndex {
   protected IndexFeatureExtractor indexFeatureExtractor;
 
 
-  public IoTDBIndex(String path, TSDataType tsDataType, IndexInfo indexInfo) {
-    this.path = path;
+  public IoTDBIndex(PartialPath indexSeries, TSDataType tsDataType, IndexInfo indexInfo) {
+    this.indexSeries = indexSeries;
     this.indexType = indexInfo.getIndexType();
     this.confIndexStartTime = indexInfo.getTime();
     this.props = indexInfo.getProps();
@@ -203,14 +200,18 @@ public abstract class IoTDBIndex {
     return indexFeatureExtractor == null ? 0 : indexFeatureExtractor.getAmortizedSize();
   }
 
+  public abstract List<TVList> query(Map<String, Object> queryProps, IIndexUsable iIndexUsable,
+      QueryContext context, IIndexRefinePhaseOptimize refinePhaseOptimizer)
+      throws QueryIndexException;
+
   /**
    * Initial parameters by query, check if all query conditions and function types are supported
    *
    * @param queryConditions query conditions
    * @throws IllegalIndexParamException when conditions or funcs are not supported
    */
-  public abstract void initQuery(Map<String, Object> queryConditions,
-      List<IndexFuncResult> indexFuncResults) throws UnsupportedIndexFuncException;
+//  public abstract void initQuery(Map<String, Object> queryConditions,
+//      List<IndexFuncResult> indexFuncResults) throws UnsupportedIndexFuncException;
 
 
   /**
@@ -219,8 +220,8 @@ public abstract class IoTDBIndex {
    *
    * @return null means nothing to be pruned
    */
-  public abstract List<Identifier> queryByIndex(ByteBuffer indexChunkData)
-      throws IndexManagerException;
+//  public abstract List<Identifier> queryByIndex(ByteBuffer indexChunkData)
+//      throws IndexManagerException;
 
 
   /**
@@ -232,8 +233,8 @@ public abstract class IoTDBIndex {
    *
    * @throws UnsupportedOperationException If you meet an unsupported AggregateResult
    */
-  public abstract int postProcessNext(List<IndexFuncResult> indexFuncResults)
-      throws QueryIndexException;
+//  public abstract int postProcessNext(List<IndexFuncResult> indexFuncResults)
+//      throws QueryIndexException;
 
   /**
    * the file is no more needed. Stop ongoing construction and flush operations, clear memory
@@ -278,4 +279,5 @@ public abstract class IoTDBIndex {
   public String toString() {
     return indexType.toString();
   }
+
 }

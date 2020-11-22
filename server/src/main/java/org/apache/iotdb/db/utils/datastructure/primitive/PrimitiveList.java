@@ -18,6 +18,7 @@
  */
 
 package org.apache.iotdb.db.utils.datastructure.primitive;
+
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 
@@ -74,6 +75,10 @@ public abstract class PrimitiveList {
     throw new UnsupportedOperationException(ERR_PRIMITIVE_DATATYPE_NOT_MATCH);
   }
 
+  public boolean getBoolean(int index) {
+    throw new UnsupportedOperationException(ERR_PRIMITIVE_DATATYPE_NOT_MATCH);
+  }
+
   public int getInt(int index) {
     throw new UnsupportedOperationException(ERR_PRIMITIVE_DATATYPE_NOT_MATCH);
   }
@@ -85,6 +90,16 @@ public abstract class PrimitiveList {
   public double getDouble(int index) {
     throw new UnsupportedOperationException(ERR_PRIMITIVE_DATATYPE_NOT_MATCH);
   }
+
+  public void putBoolean(boolean value) {
+    throw new UnsupportedOperationException(ERR_PRIMITIVE_DATATYPE_NOT_MATCH);
+
+  }
+
+  public void setBoolean(int i, boolean b) {
+    throw new UnsupportedOperationException(ERR_PRIMITIVE_DATATYPE_NOT_MATCH);
+  }
+
 
   protected abstract void expandValues();
 
@@ -133,5 +148,6 @@ public abstract class PrimitiveList {
         throw new NotImplementedException("unsupported type: " + dataType);
     }
   }
+
 
 }

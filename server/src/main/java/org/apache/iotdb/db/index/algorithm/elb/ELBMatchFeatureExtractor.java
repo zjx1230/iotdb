@@ -17,20 +17,12 @@
  */
 package org.apache.iotdb.db.index.algorithm.elb;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
-import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
-import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBWindowBlockFeature;
+import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBType;
+import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBWindowBlockFeature;
 import org.apache.iotdb.db.index.preprocess.CountFixedFeatureExtractor;
-import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 /**
  * <p>A preprocessor for ELB Matching which calculates the mean value of a list of adjacent blocks
@@ -65,7 +57,7 @@ public class ELBMatchFeatureExtractor extends CountFixedFeatureExtractor {
     super(tsDataType, -1, -1, false, false, inQueryMode);
     this.elbType = elbType;
     this.blockWidth = blockWidth;
-    this.currentBlockFeature = new ELBWindowBlockFeature(-1,-1,-1);
+    this.currentBlockFeature = new ELBWindowBlockFeature(-1, -1, -1);
     if (inQueryMode) {
       this.windowRange = windowRange; // in query, it's query length.
       this.slideStep = 1; // in query, we need scan every windows
@@ -91,8 +83,7 @@ public class ELBMatchFeatureExtractor extends CountFixedFeatureExtractor {
 //      int startIdx = windowBlockFeatures.size() * blockWidth;
 //      int windowEndIdx = currentStartTimeIdx + windowRange;
 //      while (startIdx + blockWidth <= windowEndIdx) {
-      double f = ELBFeatureExtractor
-          .calcWindowBlockFeature(elbType, srcData, currentStartTimeIdx, blockWidth);
+      double f = ELB.calcWindowBlockFeature(elbType, srcData, currentStartTimeIdx, blockWidth);
       // A window block starting from index {@code idx} corresponds {@code L/b} adjacent windows:
       // the time range of the 1-st window: [srcData[idx], srcData[idx+range-1]]
       // the time range of the L/b-th window: [srcData[idx+width], srcData[idx+width+range-1]]

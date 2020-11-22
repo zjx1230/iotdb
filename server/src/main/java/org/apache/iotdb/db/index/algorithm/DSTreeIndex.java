@@ -18,6 +18,7 @@
 package org.apache.iotdb.db.index.algorithm;
 
 import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.metadata.PartialPath;
 
 /**
  * <p>The DSTree approach uses the EAPCA representation technique, which allows, during node
@@ -35,7 +36,7 @@ import org.apache.iotdb.db.index.common.IndexInfo;
  */
 public abstract class DSTreeIndex extends IoTDBIndex {
 
-  public DSTreeIndex(String path, IndexInfo indexInfo) {
+  public DSTreeIndex(PartialPath path, IndexInfo indexInfo) {
     super(path, null, indexInfo);
   }
 }

@@ -48,7 +48,7 @@ public class PatternEnvelopeTest {
     double[] thresholdsArray = {2, 1, 2};
     int[] minLeftBorders = {0, 5, 7, seriesLength};
     int[] maxLeftBorders = {0, 5, 7, seriesLength};
-    pattern.initPattern(tvList, 0, seriesLength, subpatternCount, thresholdsArray, minLeftBorders,
+    pattern.initPattern(dataPoints, 0, seriesLength, subpatternCount, thresholdsArray, minLeftBorders,
         maxLeftBorders);
     envelope.refresh(pattern);
 

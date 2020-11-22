@@ -127,25 +127,25 @@ public enum IndexType {
   /**
    * Construct an index for an index-query
    */
-  public static IoTDBIndex constructQueryIndex(String path, IndexType indexType,
-      Map<String, Object> queryProps, List<IndexFuncResult> indexFuncs)
-      throws UnsupportedIndexFuncException {
-    queryProps = uppercaseProps(queryProps);
-    IndexUtils.breakDown();
-//    IndexInfo indexInfo = IndexManager.getInstance().getIndexRegister()
-//        .getIndexInfoByPath(path, indexType);
-    IndexInfo indexInfo = null;
-    if (indexInfo == null) {
-      throw new IllegalIndexParamException(
-          String.format("%s.%s not found, why it escapes the check?", path, indexType));
-    }
-    IoTDBIndex index = newIndexByType(path, null, null, indexType, indexInfo);
-    IndexUtils.breakDown("temp set index Dir is NULL!");
-
-    index.initQuery(queryProps, indexFuncs);
-
-    return index;
-  }
+//  public static IoTDBIndex constructQueryIndex(String path, IndexType indexType,
+//      Map<String, Object> queryProps, List<IndexFuncResult> indexFuncs)
+//      throws UnsupportedIndexFuncException {
+//    queryProps = uppercaseProps(queryProps);
+//    IndexUtils.breakDown();
+////    IndexInfo indexInfo = IndexManager.getInstance().getIndexRegister()
+////        .getIndexInfoByPath(path, indexType);
+//    IndexInfo indexInfo = null;
+//    if (indexInfo == null) {
+//      throw new IllegalIndexParamException(
+//          String.format("%s.%s not found, why it escapes the check?", path, indexType));
+//    }
+//    IoTDBIndex index = newIndexByType(path, null, null, indexType, indexInfo);
+//    IndexUtils.breakDown("temp set index Dir is NULL!");
+//
+//    index.initQuery(queryProps, indexFuncs);
+//
+//    return index;
+//  }
 
   private static Map<String, String> uppercaseStringProps(Map<String, String> props) {
     Map<String, String> uppercase = new HashMap<>(props.size());
@@ -153,17 +153,5 @@ public enum IndexType {
     return uppercase;
   }
 
-  private static Map<String, Object> uppercaseProps(Map<String, Object> props) {
-    Map<String, Object> uppercase = new HashMap<>(props.size());
-    for (Entry<String, Object> entry : props.entrySet()) {
-      String k = entry.getKey();
-      Object v = entry.getValue();
-      if (v instanceof String) {
-        uppercase.put(k.toUpperCase(), ((String) v).toUpperCase());
-      } else {
-        uppercase.put(k.toUpperCase(), v);
-      }
-    }
-    return uppercase;
-  }
+
 }

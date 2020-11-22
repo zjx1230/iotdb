@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import org.apache.iotdb.db.index.algorithm.elb.ELBCountFixedFeatureExtractor;
-import org.apache.iotdb.db.index.algorithm.elb.ELBFeatureExtractor.ELBType;
+import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.CalcParam;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.SingleSegmentationParam;
 import org.apache.iotdb.db.index.distance.Distance;
