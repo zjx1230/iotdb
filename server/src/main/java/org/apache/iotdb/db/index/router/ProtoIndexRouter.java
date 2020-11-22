@@ -240,13 +240,14 @@ public class ProtoIndexRouter implements IIndexRouter {
         String fullPath = partialPath.getFullPath();
         if (!fullPathProcessorMap.containsKey(fullPath)) {
           Map<IndexType, IndexInfo> infoMap = new EnumMap<>(IndexType.class);
+          infoMap.put(indexType, indexInfo);
           IndexProcessor processor = func.act(partialPath, infoMap);
           fullPathProcessorMap.put(fullPath,
               new IndexProcessorStruct(processor, Collections.singletonList(partialPath),
                   infoMap));
         }
-        IndexProcessorStruct pair = fullPathProcessorMap.get(fullPath);
-        pair.infos.put(indexType, indexInfo);
+//        IndexProcessorStruct pair = fullPathProcessorMap.get(fullPath);
+//        pair.infos.put(indexType, indexInfo);
         // add to sg
         Set<String> indexSeriesSet = new HashSet<>();
         Set<String> preSet = sgToFullPathMap.putIfAbsent(storageGroupPath, indexSeriesSet);

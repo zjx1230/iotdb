@@ -252,6 +252,10 @@ public class SingleLongIndexUsability implements IIndexUsable {
     long endTime = Math.max(unusableRanges.end, singleCannotPruned.unusableRanges.end);
     RangeNode pThis = unusableRanges.next;
     RangeNode pThat = singleCannotPruned.unusableRanges.next;
+    if(pThis == null && pThat == null){
+      res.add(toFilter(startTime, endTime));
+      return res;
+    }
     while (pThis != null || pThat != null) {
       if (pThat != null && pThat.start - 1 <= endTime) {
         if (pThat.end > endTime) {
