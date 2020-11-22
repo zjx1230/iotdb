@@ -18,9 +18,7 @@
 package org.apache.iotdb.db.index.common;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
@@ -158,11 +156,14 @@ public class IndexUtils {
     return v.substring(start, end);
   }
 
-  @TestOnly
   public static String tvListToStr(TVList tvList) {
+    return tvListToStr(tvList, 0, tvList.size());
+  }
+  @TestOnly
+  public static String tvListToStr(TVList tvList, int offset, int length) {
     StringBuilder sb = new StringBuilder();
     sb.append("{");
-    for (int i = 0; i < tvList.size(); i++) {
+    for (int i = offset; i < offset + length; i++) {
       TimeValuePair pair = tvList.getTimeValuePair(i);
       switch (tvList.getDataType()) {
         case INT32:

@@ -59,6 +59,7 @@ import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.metadata.StorageGroupNotSetException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.exception.runtime.SQLParserException;
+import org.apache.iotdb.db.index.algorithm.IoTDBIndex.IndexQueryDataSet;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.metrics.server.SqlArgument;
@@ -659,8 +660,7 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
           throw new QueryProcessException("Group by doesn't support disable align clause.");
         }
       }
-      if (plan.getOperatorType() == OperatorType.AGGREGATION
-          || plan.getOperatorType() == OperatorType.QUERY_INDEX) {
+      if (plan.getOperatorType() == OperatorType.AGGREGATION) {
         resp.setIgnoreTimeStamp(true);
         // the actual row number of aggregation query is 1
         fetchSize = 1;
@@ -711,11 +711,11 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
       // create and cache dataset
       QueryDataSet newDataSet = createQueryDataSet(queryId, plan);
       if (plan instanceof QueryIndexPlan){
-        IndexUtils.breakDown("asdasdalkxxzx query paln");
         resp.setColumns(
             newDataSet.getPaths().stream().map(Path::getFullPath).collect(Collectors.toList()));
         resp.setDataTypeList(
             newDataSet.getDataTypes().stream().map(Enum::toString).collect(Collectors.toList()));
+        resp.setColumnNameIndexMap(((IndexQueryDataSet) newDataSet).getPathToIndex());
       }
       if (plan instanceof QueryPlan && !((QueryPlan) plan).isAlignByTime()
           && newDataSet instanceof NonAlignEngineDataSet) {

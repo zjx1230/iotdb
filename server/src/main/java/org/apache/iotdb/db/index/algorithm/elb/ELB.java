@@ -120,8 +120,8 @@ public class ELB {
     return elbFeature.calcPatternFeature(pattern, blockNum, envelope);
   }
 
-  public boolean exactDistanceCalc(TVList slidingWindow) {
-    return pattern.exactDistanceCalc(slidingWindow);
+  public boolean exactDistanceCalc(TVList slidingWindow, int offset) {
+    return pattern.exactDistanceCalc(slidingWindow, offset);
   }
 
   public enum ELBType {

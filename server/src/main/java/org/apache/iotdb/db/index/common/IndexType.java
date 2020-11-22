@@ -32,6 +32,7 @@ import org.apache.iotdb.db.index.algorithm.elb.ELBIndex;
 import org.apache.iotdb.db.index.algorithm.elb.ELBIndexNotGood;
 import org.apache.iotdb.db.index.algorithm.paa.RTreePAAIndex;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 
@@ -99,7 +100,7 @@ public enum IndexType {
     }
   }
 
-  private static IoTDBIndex newIndexByType(String path, TSDataType tsDataType, String indexDir, IndexType indexType,
+  private static IoTDBIndex newIndexByType(PartialPath path, TSDataType tsDataType, String indexDir, IndexType indexType,
       IndexInfo indexInfo) {
     switch (indexType) {
       case NO_INDEX:
@@ -116,7 +117,7 @@ public enum IndexType {
     }
   }
 
-  public static IoTDBIndex constructIndex(String indexSeries, TSDataType tsDataType, String indexDir, IndexType indexType,
+  public static IoTDBIndex constructIndex(PartialPath indexSeries, TSDataType tsDataType, String indexDir, IndexType indexType,
       IndexInfo indexInfo, ByteBuffer previous) {
     indexInfo.setProps(uppercaseStringProps(indexInfo.getProps()));
     IoTDBIndex index = newIndexByType(indexSeries, tsDataType, indexDir, indexType, indexInfo);

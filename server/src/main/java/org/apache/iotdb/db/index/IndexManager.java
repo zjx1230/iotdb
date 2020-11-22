@@ -53,7 +53,7 @@ import org.apache.iotdb.db.service.JMXService;
 import org.apache.iotdb.db.service.ServiceType;
 import org.apache.iotdb.db.utils.FileUtils;
 import org.apache.iotdb.db.utils.TestOnly;
-import org.apache.iotdb.db.utils.datastructure.TVList;
+import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -274,18 +274,19 @@ public class IndexManager implements IndexManagerMBean, IService {
     return router.getIndexNum();
   }
 
-  public List<TVList> queryIndex(List<PartialPath> paths,
-      IndexType indexType, Map<String, Object> queryProps,
-      QueryContext context) throws QueryIndexException, StorageEngineException {
+  public QueryDataSet queryIndex(List<PartialPath> paths, IndexType indexType,
+      Map<String, Object> queryProps, QueryContext context, boolean alignedByTime)
+      throws QueryIndexException, StorageEngineException {
     if (paths.size() != 1) {
       throw new QueryIndexException("Index allows to query only one path");
     }
     PartialPath queryIndexSeries = paths.get(0);
-    IndexProcessorStruct indexProcessorStruct = router.startQueryAndCheck(queryIndexSeries, indexType, context);
+    IndexProcessorStruct indexProcessorStruct = router
+        .startQueryAndCheck(queryIndexSeries, indexType, context);
     List<StorageGroupProcessor> list = StorageEngine.getInstance()
         .mergeLock(indexProcessorStruct.storageGroups);
     try {
-      return indexProcessorStruct.processor.query(indexType, queryProps, context);
+      return indexProcessorStruct.processor.query(indexType, queryProps, context, alignedByTime);
     } finally {
       StorageEngine.getInstance().mergeUnLock(list);
       router.endQuery(indexProcessorStruct.processor.getIndexSeries(), indexType, context);

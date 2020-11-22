@@ -19,8 +19,10 @@
 
 package org.apache.iotdb.db.utils.datastructure.primitive;
 
+import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.read.TimeValuePair;
 
 public abstract class PrimitiveList {
 
@@ -142,11 +144,42 @@ public abstract class PrimitiveList {
         return new FloatPrimitiveList();
       case DOUBLE:
         return new DoublePrimitiveList();
-      case TEXT:
       case BOOLEAN:
+        return new BooleanPrimitiveList();
+      case TEXT:
       default:
         throw new NotImplementedException("unsupported type: " + dataType);
     }
+  }
+
+  @TestOnly
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("{");
+    for (int i = 0; i < size; i++) {
+      switch (tsDataType) {
+        case INT32:
+          sb.append(String.format("%d,", getInt(i)));
+          break;
+        case INT64:
+          sb.append(String.format("%d,", getLong(i)));
+          break;
+        case FLOAT:
+          sb.append(String.format("%.2f,", getFloat(i)));
+          break;
+        case DOUBLE:
+          sb.append(String.format("%.2f,", getDouble(i)));
+          break;
+        case BOOLEAN:
+          sb.append(String.format("%b,", getBoolean(i)));
+          break;
+        default:
+          throw new NotImplementedException(tsDataType.toString());
+      }
+    }
+    sb.append("}");
+    return sb.toString();
   }
 
 

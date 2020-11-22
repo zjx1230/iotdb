@@ -233,11 +233,11 @@ public class MilesPattern {
    * @param slidingWindow to be calculated
    * @return true if slidingWindow is a matched result.
    */
-  public boolean exactDistanceCalc(TVList slidingWindow) {
+  public boolean exactDistanceCalc(TVList slidingWindow, int offset) {
     int len;
     for (int i = 0; i < subpatternCount; i++) {
       len = minLeftBorders[i + 1] - minLeftBorders[i];
-      double dist = distanceMetric.distPower(slidingWindow, minLeftBorders[i], tvList, minLeftBorders[i], len);
+      double dist = distanceMetric.distPower(slidingWindow, offset + minLeftBorders[i], tvList, minLeftBorders[i], len);
       if (dist > thresholdPowers[i] * len) {
         return false;
       }

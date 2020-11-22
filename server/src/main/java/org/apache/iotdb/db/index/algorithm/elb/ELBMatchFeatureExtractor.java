@@ -22,7 +22,10 @@ import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBWindowBlockFeature;
 import org.apache.iotdb.db.index.preprocess.CountFixedFeatureExtractor;
+import org.apache.iotdb.db.index.read.TVListPointer;
+import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.utils.Pair;
 
 /**
  * <p>A preprocessor for ELB Matching which calculates the mean value of a list of adjacent blocks
@@ -98,6 +101,11 @@ public class ELBMatchFeatureExtractor extends CountFixedFeatureExtractor {
       currentBlockFeature.endTime = endCoverTime;
       currentBlockFeature.feature = f;
     }
+  }
+
+  @Override
+  public TVListPointer getCurrent_L2_AlignedSequence(){
+    return new TVListPointer(srcData, currentStartTimeIdx, windowRange);
   }
 
   @Override

@@ -8,9 +8,7 @@ import java.util.List;
 import java.util.Set;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBWindowBlockFeature;
-import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
@@ -55,7 +53,8 @@ public class MultiShortIndexUsability implements IIndexUsable {
   }
 
   @Override
-  public Filter getUnusableRangeForSeriesMatching() {
+  public List<Filter> getUnusableRangeForSeriesMatching(
+      IIndexUsable cannotPruned) {
     throw new UnsupportedOperationException(indexSeries.toString());
   }
 

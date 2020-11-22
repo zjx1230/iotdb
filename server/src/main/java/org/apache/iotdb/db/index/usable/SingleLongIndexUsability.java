@@ -1,8 +1,11 @@
 package org.apache.iotdb.db.index.usable;
 
+import static org.apache.iotdb.db.index.read.IndexTimeRange.toFilter;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBWindowBlockFeature;
 import org.apache.iotdb.db.metadata.PartialPath;
@@ -26,9 +29,10 @@ public class SingleLongIndexUsability implements IIndexUsable {
 
   private static final Logger logger = LoggerFactory.getLogger(SingleLongIndexUsability.class);
   /**
-   * it will be moved to configuration.
+   * TODO it will be moved to configuration.
+   *
    */
-  private static final int defaultSizeOfUsableSegments = 10;
+  private static final int defaultSizeOfUsableSegments = 20;
 
   private int maxSizeOfUsableSegments;
   private RangeNode unusableRanges;
@@ -48,6 +52,13 @@ public class SingleLongIndexUsability implements IIndexUsable {
 
   @Override
   public void addUsableRange(PartialPath fullPath, long startTime, long endTime) {
+    // simplify the problem
+    if (startTime == Long.MIN_VALUE) {
+      startTime = startTime + 10;
+    }
+    if (endTime == Long.MAX_VALUE) {
+      endTime = endTime - 10;
+    }
     RangeNode node = locateIdxByTime(startTime);
     RangeNode prevNode = node;
     while (node != null && node.start <= endTime) {
@@ -102,6 +113,13 @@ public class SingleLongIndexUsability implements IIndexUsable {
 
   @Override
   public void minusUsableRange(PartialPath fullPath, long startTime, long endTime) {
+    // simplify the problem
+    if (startTime == Long.MIN_VALUE) {
+      startTime = startTime + 10;
+    }
+    if (endTime == Long.MAX_VALUE) {
+      endTime = endTime - 10;
+    }
     RangeNode node = locateIdxByTime(startTime);
     if (endTime <= node.end) {
       return;
@@ -226,8 +244,47 @@ public class SingleLongIndexUsability implements IIndexUsable {
   }
 
   @Override
-  public Filter getUnusableRangeForSeriesMatching() {
-    throw new UnsupportedOperationException();
+  public List<Filter> getUnusableRangeForSeriesMatching(IIndexUsable cannotPruned) {
+    List<Filter> res = new ArrayList<>();
+    SingleLongIndexUsability singleCannotPruned = (SingleLongIndexUsability) cannotPruned;
+    // merge them.
+    long startTime = Long.MIN_VALUE;
+    long endTime = Math.max(unusableRanges.end, singleCannotPruned.unusableRanges.end);
+    RangeNode pThis = unusableRanges.next;
+    RangeNode pThat = singleCannotPruned.unusableRanges.next;
+    while (pThis != null || pThat != null) {
+      if (pThat != null && pThat.start - 1 <= endTime) {
+        if (pThat.end > endTime) {
+          endTime = pThat.end;
+        }
+        pThat = pThat.next;
+      }
+      if (pThis != null && pThis.start - 1 <= endTime) {
+        if (pThis.end > endTime) {
+          endTime = pThis.end;
+        }
+        pThis = pThis.next;
+      }
+      if (endTime == Long.MAX_VALUE) {
+        res.add(toFilter(startTime, endTime));
+        return res;
+      }
+      // endTime != MAX_VALUE, means neither pThat or pThis be null.
+      assert pThat != null && pThis != null;
+      if (endTime + 1 < pThat.start && endTime + 1 < pThis.start) {
+        res.add(toFilter(startTime, endTime));
+        if (pThis.start > pThat.start) {
+          startTime = pThat.start;
+          endTime = pThat.end;
+          pThat = pThat.next;
+        } else {
+          startTime = pThis.start;
+          endTime = pThis.end;
+          pThis = pThis.next;
+        }
+      }
+    }
+    return res;
   }
 
   @Override

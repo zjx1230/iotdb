@@ -56,6 +56,7 @@ import org.apache.iotdb.db.utils.FileUtils;
 import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -358,7 +359,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     } finally {
       lock.writeLock().unlock();
     }
-    System.out.println("dklajxklcj");
+//    System.out.println("dklajxklcj");
   }
 
   public void buildIndexForOneSeries(PartialPath path, TVList tvList) {
@@ -394,7 +395,8 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
               index.flush();
             }
             index.endFlushTask();
-            this.usableMap.get(indexType).addUsableRange(path, tvList);
+            this.usableMap.get(indexType)
+                .addUsableRange(path, tvList.getMinTime(), tvList.getLastTime());
           } catch (IndexManagerException e) {
             //Give up the following data, but the previously serialized chunk will not be affected.
             logger.error("build index failed", e);
@@ -426,8 +428,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
 
   private synchronized void refreshSeriesIndexMapFromMManager(
       Map<IndexType, IndexInfo> indexInfoMap) {
-    System.out.println(
-        "refreshSeriesIndexMapFromMManager--refreshSeriesIndexMapFromMManager: " + indexInfoMap);
+//    System.out.println("refreshSeriesIndexMapFromMManager--: " + indexInfoMap);
     // Add indexes that are not in the previous map
 
     for (Entry<IndexType, IndexInfo> entry : indexInfoMap.entrySet()) {
@@ -435,7 +436,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
       IndexInfo indexInfo = entry.getValue();
       if (!allPathsIndexMap.containsKey(indexType)) {
         IoTDBIndex index = IndexType
-            .constructIndex(indexSeries.getFullPath(), tsDataType, getIndexDir(indexType),
+            .constructIndex(indexSeries, tsDataType, getIndexDir(indexType),
                 indexType,
                 indexInfo, previousBufferMap.get(indexType));
         allPathsIndexMap.putIfAbsent(indexType, index);
@@ -460,9 +461,8 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   }
 
   void updateUnsequenceData(PartialPath path, TVList tvList) {
-    this.usableMap.forEach((indexType, usable) -> {
-      usable.minusUsableRange(tvList.getMinTime(), tvList.getLastTime());
-    });
+    this.usableMap.forEach((indexType, usable) -> usable
+        .minusUsableRange(path, tvList.getMinTime(), tvList.getLastTime()));
   }
 
 //  public List<PartialPath> getRelatedStorageGroupPaths() {
@@ -474,20 +474,22 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
 //    throw new UnsupportedOperationException("zxckzjxckz");
 //  }
 
-  public List<TVList> query(IndexType indexType, Map<String, Object> queryProps,
-      QueryContext context) throws QueryIndexException {
+  public QueryDataSet query(IndexType indexType, Map<String, Object> queryProps,
+      QueryContext context, boolean alignedByTime) throws QueryIndexException {
     try {
       lock.readLock().lock();
-      if(!indexLockMap.containsKey(indexType)){
+      if (!indexLockMap.containsKey(indexType)) {
         lock.readLock().unlock();
         throw new QueryIndexException(
-            String.format("%s hasn't been built on %s", indexType.toString(), indexSeries.getFullPath()));
-      }else {
+            String.format("%s hasn't been built on %s", indexType.toString(),
+                indexSeries.getFullPath()));
+      } else {
         indexLockMap.get(indexType).readLock().lock();
         lock.readLock().unlock();
       }
       IoTDBIndex index = allPathsIndexMap.get(indexType);
-      return index.query(queryProps, this.usableMap.get(indexType), context, refinePhaseOptimizer);
+      return index.query(queryProps, this.usableMap.get(indexType), context, refinePhaseOptimizer,
+          alignedByTime);
 
     } finally {
       indexLockMap.get(indexType).readLock().unlock();

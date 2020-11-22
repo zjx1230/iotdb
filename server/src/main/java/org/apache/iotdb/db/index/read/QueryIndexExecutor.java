@@ -63,34 +63,39 @@ public class QueryIndexExecutor {
   private final IndexType indexType;
   private final QueryContext context;
   private final List<PartialPath> paths;
+  private final boolean alignedByTime;
 
   public QueryIndexExecutor(QueryIndexPlan queryIndexPlan, QueryContext context) {
     this.indexType = queryIndexPlan.getIndexType();
     this.queryProps = IndexUtils.toLowerCaseProps(queryIndexPlan.getProps());
     this.paths = queryIndexPlan.getPaths();
+    this.alignedByTime = queryIndexPlan.isAlignedByTime();
     this.paths.forEach(PartialPath::toLowerCase);
     this.context = context;
   }
 
 
-  public QueryDataSet executeIndexQuery() throws StorageEngineException, QueryIndexException{
+  public QueryDataSet executeIndexQuery() throws StorageEngineException, QueryIndexException {
     // get all related storage group
-    List<TVList> result = IndexManager.getInstance()
-        .queryIndex(paths, indexType, queryProps, context);
-    return constructDataSet(result);
+    return IndexManager.getInstance()
+        .queryIndex(paths, indexType, queryProps, context, alignedByTime);
+//    return constructDataSet(paths.get(0), result);
   }
 
-  private QueryDataSet constructDataSet(List<TVList> result) {
-    for (TVList tvList : result) {
-      System.out.println(tvList);
-    }
-//    types =
-    ListDataSet dataSet = new ListDataSet(paths, null);
-    return dataSet;
-  }
+//  private QueryDataSet constructDataSet(PartialPath indexSeries, List<TVList> result) {
+////    for (TVList tvList : result) {
+////      System.out.println(tvList);
+////    }
+////    types =
+////    ListDataSet dataSet = new ListDataSet(paths, null);
+//    return new IndexQueryDataSet(paths, result, alignedByTime);
+//  }
 
-  private QueryDataSet constructDataSet(List<AggregateResult> aggregateResultList, RawDataQueryPlan plan)
+
+  private QueryDataSet constructDataSet(List<AggregateResult> aggregateResultList,
+      RawDataQueryPlan plan)
       throws QueryProcessException {
+
     List<PartialPath> dupSeries = new ArrayList<>();
     List<TSDataType> dupTypes = new ArrayList<>();
 //    for (int i = 0; i < selectedSeries.size(); i++) {
@@ -122,5 +127,4 @@ public class QueryIndexExecutor {
     }
     return dataSet;
   }
-
 }

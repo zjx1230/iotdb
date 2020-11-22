@@ -92,7 +92,7 @@ public class SequenceELBFeature extends ELBFeature {
       }
     }
     upperLines[0] = Double.MAX_VALUE;
-    lowerLines[0] = Double.MIN_VALUE;
+    lowerLines[0] = -Double.MAX_VALUE;
     return new Pair<>(upperLines, lowerLines);
   }
 

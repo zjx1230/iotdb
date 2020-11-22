@@ -24,6 +24,10 @@ import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
@@ -36,13 +40,20 @@ import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategy;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategyType;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
+import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.query.aggregation.AggregateResult;
 import org.apache.iotdb.db.query.context.QueryContext;
+import org.apache.iotdb.db.query.dataset.ListDataSet;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.common.BatchData;
+import org.apache.iotdb.tsfile.read.common.RowRecord;
+import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
+import org.apache.iotdb.tsfile.utils.Binary;
+import org.apache.iotdb.tsfile.utils.Pair;
 
 /**
  * Each StorageGroupProcessor contains a IndexProcessor, and each IndexProcessor can contain more
@@ -50,7 +61,7 @@ import org.apache.iotdb.tsfile.read.common.BatchData;
  */
 public abstract class IoTDBIndex {
 
-//  protected final String path;
+  //  protected final String path;
   protected final PartialPath indexSeries;
   protected final IndexType indexType;
   protected final long confIndexStartTime;
@@ -200,8 +211,8 @@ public abstract class IoTDBIndex {
     return indexFeatureExtractor == null ? 0 : indexFeatureExtractor.getAmortizedSize();
   }
 
-  public abstract List<TVList> query(Map<String, Object> queryProps, IIndexUsable iIndexUsable,
-      QueryContext context, IIndexRefinePhaseOptimize refinePhaseOptimizer)
+  public abstract QueryDataSet query(Map<String, Object> queryProps, IIndexUsable iIndexUsable,
+      QueryContext context, IIndexRefinePhaseOptimize refinePhaseOptimizer, boolean alignedByTime)
       throws QueryIndexException;
 
   /**
@@ -213,7 +224,6 @@ public abstract class IoTDBIndex {
 //  public abstract void initQuery(Map<String, Object> queryConditions,
 //      List<IndexFuncResult> indexFuncResults) throws UnsupportedIndexFuncException;
 
-
   /**
    * query on path with parameters, return the candidate list. return null is regarded as Nothing to
    * be pruned.
@@ -222,7 +232,6 @@ public abstract class IoTDBIndex {
    */
 //  public abstract List<Identifier> queryByIndex(ByteBuffer indexChunkData)
 //      throws IndexManagerException;
-
 
   /**
    * IndexPreprocessor has preprocess a new sequence, produce L1, L2 or L3 features as user's
@@ -280,4 +289,53 @@ public abstract class IoTDBIndex {
     return indexType.toString();
   }
 
+  protected QueryDataSet constructSubMatchingDataset(PartialPath indexSeries, List<TVList> res,
+      boolean alignedByTime, int nMaxReturnSeries) throws QueryIndexException {
+    if (alignedByTime) {
+      throw new QueryIndexException("Unsupported alignedByTime result");
+    }
+    // make result paths and types
+    nMaxReturnSeries = Math.min(nMaxReturnSeries, res.size());
+    List<PartialPath> paths = new ArrayList<>();
+    List<TSDataType> types = new ArrayList<>();
+    Map<String, Integer> pathToIndex = new HashMap<>();
+    int nMinLength = Integer.MAX_VALUE;
+    for (int i = 0; i < nMaxReturnSeries; i++) {
+      PartialPath series = indexSeries.concatNode(String.valueOf(res.get(i).getMinTime()));
+      paths.add(series);
+      pathToIndex.put(series.getFullPath(), i);
+      types.add(tsDataType);
+      if (res.get(i).size() < nMinLength) {
+        nMinLength = res.get(i).size();
+      }
+    }
+    IndexQueryDataSet dataSet = new IndexQueryDataSet(paths, types, pathToIndex);
+    if(nMaxReturnSeries == 0)
+      return dataSet;
+    for (int row = 0; row < nMinLength; row++) {
+      RowRecord record = new RowRecord(row);
+      for (int col = 0; col < nMaxReturnSeries; col++) {
+        TVList tvList = res.get(col);
+        record.addField(tvList.getFloat(row), tsDataType);
+      }
+      dataSet.putRecord(record);
+    }
+    return dataSet;
+  }
+
+  public static class IndexQueryDataSet extends ListDataSet{
+
+    private Map<String, Integer> pathToIndex;
+
+    public IndexQueryDataSet(List<PartialPath> paths,
+        List<TSDataType> dataTypes, Map<String, Integer> pathToIndex) {
+      super(paths, dataTypes);
+      this.pathToIndex = pathToIndex;
+    }
+
+    public Map<String, Integer> getPathToIndex() {
+      return pathToIndex;
+    }
+
+  }
 }

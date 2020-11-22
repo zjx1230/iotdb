@@ -7,7 +7,6 @@ import java.util.List;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBWindowBlockFeature;
 import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 
@@ -44,11 +43,16 @@ public interface IIndexUsable {
   PartialPath[] getAllUnusableSeriesForWholeMatching(PartialPath indexSeries);
 
   /**
-   * 获取一段序列的可用区间
+   * 基于index给出的后处理范围，结合乱序区间，返回真正的后处理区间
+   *
+   * 对于subsequence matching，就是区间合并过程
+   *
+   * 但是，对于不连续的区间，要划分为多个filter，不能连起来
    *
    * @return a time range
+   * @param cannotPruned
    */
-  Filter getUnusableRangeForSeriesMatching();
+  List<Filter> getUnusableRangeForSeriesMatching(IIndexUsable cannotPruned);
 
   void serialize(OutputStream outputStream) throws IOException;
 

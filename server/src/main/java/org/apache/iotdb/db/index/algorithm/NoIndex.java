@@ -20,8 +20,6 @@ package org.apache.iotdb.db.index.algorithm;
 import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
 import static org.apache.iotdb.db.index.common.IndexConstant.THRESHOLD;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -30,18 +28,18 @@ import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
-import org.apache.iotdb.db.index.io.IndexIOWriter.IndexFlushChunk;
 import org.apache.iotdb.db.index.preprocess.CountFixedFeatureExtractor;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.read.func.IndexFuncFactory;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
+import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,7 +54,7 @@ public class NoIndex extends IoTDBIndex {
   private double[] patterns;
   private double threshold;
 
-  public NoIndex(String path, TSDataType tsDataType,
+  public NoIndex(PartialPath path, TSDataType tsDataType,
       String indexDir, IndexInfo indexInfo) {
     super(path, tsDataType, indexInfo);
   }
@@ -179,8 +177,8 @@ public class NoIndex extends IoTDBIndex {
   }
 
   @Override
-  public List<TVList> query(Map<String, Object> queryProps, IIndexUsable iIndexUsable,
-      QueryContext context, IIndexRefinePhaseOptimize refinePhaseOptimizer)
+  public QueryDataSet query(Map<String, Object> queryProps, IIndexUsable iIndexUsable,
+      QueryContext context, IIndexRefinePhaseOptimize refinePhaseOptimizer, boolean alignedByTime)
       throws QueryIndexException {
     return null;
   }

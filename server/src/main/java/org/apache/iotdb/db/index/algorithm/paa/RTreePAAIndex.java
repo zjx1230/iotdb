@@ -40,10 +40,12 @@ import org.apache.iotdb.db.index.read.func.IndexFuncFactory;
 import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,7 +62,7 @@ public class RTreePAAIndex extends RTreeIndex {
   // Only for query
   private Map<Integer, Identifier> identifierMap = new HashMap<>();
 
-  public RTreePAAIndex(String path,
+  public RTreePAAIndex(PartialPath path,
       TSDataType tsDataType, String indexDir,
       IndexInfo indexInfo) {
     super(path, tsDataType, indexInfo, true);
@@ -79,8 +81,8 @@ public class RTreePAAIndex extends RTreeIndex {
   }
 
   @Override
-  public List<TVList> query(Map<String, Object> queryProps, IIndexUsable iIndexUsable,
-      QueryContext context, IIndexRefinePhaseOptimize refinePhaseOptimizer)
+  public QueryDataSet query(Map<String, Object> queryProps, IIndexUsable iIndexUsable,
+      QueryContext context, IIndexRefinePhaseOptimize refinePhaseOptimizer, boolean alignedByTime)
       throws QueryIndexException {
     return null;
   }

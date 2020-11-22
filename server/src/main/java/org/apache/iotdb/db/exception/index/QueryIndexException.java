@@ -32,4 +32,5 @@ public class QueryIndexException extends QueryProcessException {
   public QueryIndexException(String message) {
     super(message, TSStatusCode.INDEX_QUERY_ERROR.getStatusCode());
   }
+
 }

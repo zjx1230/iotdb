@@ -48,8 +48,8 @@ public class BooleanPrimitiveList extends PrimitiveList {
       checkExpansion();
       size++;
     }
-    int arrayIndex = size / ARRAY_SIZE;
-    int elementIndex = size % ARRAY_SIZE;
+    int arrayIndex = i / ARRAY_SIZE;
+    int elementIndex = i % ARRAY_SIZE;
     values.get(arrayIndex)[elementIndex] = b;
   }
 
@@ -75,7 +75,7 @@ public class BooleanPrimitiveList extends PrimitiveList {
 
   @Override
   protected void expandValues() {
-    values.add((boolean[]) PrimitiveArrayManager.getPrimitiveArraysByType(TSDataType.INT32));
+    values.add((boolean[]) PrimitiveArrayManager.getPrimitiveArraysByType(TSDataType.BOOLEAN));
     capacity += ARRAY_SIZE;
   }
 
