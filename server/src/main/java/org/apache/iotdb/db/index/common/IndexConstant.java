@@ -52,12 +52,16 @@ public class IndexConstant {
 
   // MBR Index parameters
   public static final String FEATURE_DIM = "FEATURE_DIM";
+  public static final String DEFAULT_FEATURE_DIM = "4";
   public static final String SEED_PICKER = "SEED_PICKER";
   public static final String MAX_ENTRIES = "MAX_ENTRIES";
   public static final String MIN_ENTRIES = "MIN_ENTRIES";
 
   // RTree PAA parameters
   public static final String PAA_DIM = "PAA_DIM";
+  public static final String SERIES_LENGTH = "SERIES_LENGTH";
+  public static final String DEFAULT_SERIES_LENGTH = "16";
+  public static final String DEFAULT_RTREE_PAA_DISTANCE = "2";
 
   // Distance
   public static final String DISTANCE = "DISTANCE";

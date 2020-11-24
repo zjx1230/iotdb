@@ -251,7 +251,7 @@ public abstract class TVList {
    * The arrays for sorting are not including in write memory now, 
    * the memory usage is considered as temporary memory.
    */
-  abstract void clearSortedValue();
+  protected abstract void clearSortedValue();
 
   protected void checkExpansion() {
     if ((size % ARRAY_SIZE) == 0) {

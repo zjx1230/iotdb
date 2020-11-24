@@ -18,9 +18,11 @@
 package org.apache.iotdb.db.index.algorithm.paa;
 
 import java.util.List;
+import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
-import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
+import org.apache.iotdb.db.utils.datastructure.TVList;
+import org.apache.iotdb.db.utils.datastructure.TruncatedTVListWrapper;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
@@ -36,15 +38,23 @@ public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
 
   private static final String NON_SUPPORT_MSG = "For whole matching, it's not supported";
   private final int alignedLength;
-  private final int paaDim;
+  private final int featureDim;
+  private final float[] featureArray;
   private final int paaWidth;
   private boolean hasNewData;
 
-  public PAAWholeFeatureExtractor(TSDataType dataType, int alignedLength, int paaDim, boolean inQueryMode) {
+  public PAAWholeFeatureExtractor(TSDataType dataType, int alignedLength, int featureDim,
+      boolean inQueryMode, float[] featureArray) {
     super(dataType, WindowType.WHOLE_MATCH, alignedLength, -1, inQueryMode);
     this.alignedLength = alignedLength;
-    this.paaDim = paaDim;
-    this.paaWidth = alignedLength / paaDim;
+    this.featureDim = featureDim;
+    if (featureArray.length != featureDim) {
+      throw new IllegalIndexParamException(
+          String.format("the featureDim (%d) doesn't match the length of feature array (%d)",
+              featureDim, featureArray.length));
+    }
+    this.featureArray = featureArray;
+    this.paaWidth = alignedLength / featureDim;
     this.hasNewData = false;
   }
 
@@ -65,16 +75,28 @@ public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
   }
 
   @Override
-  public Object getCurrent_L2_AlignedSequence() {
-    return srcData;
+  public Object getCurrent_L3_Feature() {
+    throw new UnsupportedOperationException();
   }
 
   @Override
-  public Object getCurrent_L3_Feature() {
-    PrimitiveList seq = PrimitiveList.newList(TSDataType.FLOAT);
-    for (int i = 0; i < paaDim; i++) {
+  public boolean hasNext(Filter timeFilter) {
+    throw new UnsupportedOperationException(NON_SUPPORT_MSG);
+  }
+
+  @Override
+  public TVList getCurrent_L2_AlignedSequence() {
+    return new TruncatedTVListWrapper(srcData, alignedLength);
+  }
+
+  /**
+   * 两件事：长度为aligned_len，不足补齐，多了不管
+   */
+  private void doL3() {
+    //    featureArray
+    for (int i = 0; i < featureDim; i++) {
       float sum = 0;
-      for (int j = 0; j <  paaWidth; j++) {
+      for (int j = 0; j < paaWidth; j++) {
         int idx = paaWidth * i + j;
         if (idx >= srcData.size()) {
           idx = srcData.size() - 1;
@@ -96,31 +118,29 @@ public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
             throw new NotImplementedException(srcData.getDataType().toString());
         }
       }
-      seq.putFloat(sum / paaWidth);
+      featureArray[i] = sum / paaWidth;
     }
-    return seq;
-  }
-
-  @Override
-  public boolean hasNext(Filter timeFilter) {
-    throw new UnsupportedOperationException(NON_SUPPORT_MSG);
   }
 
   @Override
   public void processNext() {
+    if (inQueryMode) {
+      // do nothing.
+    } else {
+      doL3();
+    }
     hasNewData = false;
+
   }
 
   @Override
   public int getCurrentChunkOffset() {
-//    return 0;
     throw new UnsupportedOperationException(NON_SUPPORT_MSG);
   }
 
   @Override
   public int getCurrentChunkSize() {
-//    return 0;
-    throw new UnsupportedOperationException(NON_SUPPORT_MSG);
+    return hasNewData ? 0 : 1;
   }
 
   @Override
@@ -157,4 +177,10 @@ public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
   public int nextUnprocessedWindowStartIdx() {
     throw new UnsupportedOperationException(NON_SUPPORT_MSG);
   }
+
+  @Override
+  public void clearProcessedSrcData() {
+    this.srcData.clear();
+  }
+
 }

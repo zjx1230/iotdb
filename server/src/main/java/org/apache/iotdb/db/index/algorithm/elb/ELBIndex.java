@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
 import org.apache.iotdb.db.exception.StorageEngineException;
+import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
@@ -283,17 +284,16 @@ public class ELBIndex extends IoTDBIndex {
   //  @Deprecated
 //  @Override
   @SuppressWarnings("unchecked")
-  public void initQuery(ELBQueryStruct struct, Map<String, Object> queryProps)
-      throws UnsupportedIndexFuncException {
+  private void initQuery(ELBQueryStruct struct, Map<String, Object> queryProps) {
     struct.distance = Distance.getDistance(props.getOrDefault(DISTANCE, DEFAULT_DISTANCE));
 
     if (!queryProps.containsKey(THRESHOLD)) {
-      throw new UnsupportedIndexFuncException(
+      throw new IllegalIndexParamException(
           String.format(MISSING_PARAM_ERROR_MESSAGE, THRESHOLD));
     }
 
     if (!queryProps.containsKey(PATTERN)) {
-      throw new UnsupportedIndexFuncException(String.format(MISSING_PARAM_ERROR_MESSAGE, PATTERN));
+      throw new IllegalIndexParamException(String.format(MISSING_PARAM_ERROR_MESSAGE, PATTERN));
     }
 
     int patternLength = 0;

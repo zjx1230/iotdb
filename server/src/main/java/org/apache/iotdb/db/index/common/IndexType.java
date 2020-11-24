@@ -20,18 +20,12 @@ package org.apache.iotdb.db.index.common;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
-import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexTypeException;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.algorithm.NoIndex;
 import org.apache.iotdb.db.index.algorithm.elb.ELBIndex;
-import org.apache.iotdb.db.index.algorithm.elb.ELBIndexNotGood;
 import org.apache.iotdb.db.index.algorithm.paa.RTreePAAIndex;
-import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -110,7 +104,7 @@ public enum IndexType {
       case RTREE_PAA:
         return new RTreePAAIndex(path, tsDataType, indexDir, indexInfo);
       case ELB:
-        return new ELBIndexNotGood(path, tsDataType, indexInfo);
+//        return new ELBIndexNotGood(path, tsDataType, indexInfo);
       case KV_INDEX:
       default:
         throw new NotImplementedException("unsupported index type:" + indexType);

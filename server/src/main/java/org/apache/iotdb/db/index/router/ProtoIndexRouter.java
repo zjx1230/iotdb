@@ -21,6 +21,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
+import org.apache.iotdb.db.index.IndexManager;
 import org.apache.iotdb.db.index.IndexProcessor;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexProcessorStruct;
@@ -243,11 +244,13 @@ public class ProtoIndexRouter implements IIndexRouter {
           infoMap.put(indexType, indexInfo);
           IndexProcessor processor = func.act(partialPath, infoMap);
           fullPathProcessorMap.put(fullPath,
-              new IndexProcessorStruct(processor, Collections.singletonList(partialPath),
+              new IndexProcessorStruct(processor,
+                  Collections.singletonList(storageGroupMNode.getPartialPath()),
                   infoMap));
+        } else {
+          IndexProcessorStruct pair = fullPathProcessorMap.get(fullPath);
+          pair.infos.put(indexType, indexInfo);
         }
-//        IndexProcessorStruct pair = fullPathProcessorMap.get(fullPath);
-//        pair.infos.put(indexType, indexInfo);
         // add to sg
         Set<String> indexSeriesSet = new HashSet<>();
         Set<String> preSet = sgToFullPathMap.putIfAbsent(storageGroupPath, indexSeriesSet);
@@ -258,13 +261,16 @@ public class ProtoIndexRouter implements IIndexRouter {
       } else {
         if (!wildCardProcessorMap.containsKey(partialPath)) {
           Map<IndexType, IndexInfo> infoMap = new EnumMap<>(IndexType.class);
+          infoMap.put(indexType, indexInfo);
           IndexProcessor processor = func.act(partialPath, infoMap);
           wildCardProcessorMap.put(partialPath,
-              new IndexProcessorStruct(processor, Collections.singletonList(partialPath),
+              new IndexProcessorStruct(processor,
+                  Collections.singletonList(storageGroupMNode.getPartialPath()),
                   infoMap));
+        } else {
+          IndexProcessorStruct pair = wildCardProcessorMap.get(partialPath);
+          pair.infos.put(indexType, indexInfo);
         }
-        IndexProcessorStruct pair = wildCardProcessorMap.get(partialPath);
-        pair.infos.put(indexType, indexInfo);
         // add to sg
         Set<PartialPath> indexSeriesSet = new HashSet<>();
         Set<PartialPath> preSet = sgToWildCardPathMap.putIfAbsent(storageGroupPath, indexSeriesSet);

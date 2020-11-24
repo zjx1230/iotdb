@@ -135,27 +135,27 @@ public class IndexTestUtils {
     }
   }
 
-  public static String deserializeIndexChunk(IndexType indexType, ByteBuffer byteBuffer) {
-    StringBuilder sb = new StringBuilder();
-    switch (indexType) {
-      case NO_INDEX:
-        int size = ReadWriteIOUtils.readInt(byteBuffer);
-        for (int i = 0; i < size; i++) {
-          sb.append(Identifier.deserialize(byteBuffer));
-        }
-        return sb.toString();
-      case RTREE_PAA:
-      case ELB:
-        BiConsumer<Integer, ByteBuffer> deserial = (i, b) -> {
-          Identifier id = Identifier.deserialize(b);
-          sb.append(String.format("(%d,%s)", i, id.toString()));
-        };
-        RTree.deserialize(byteBuffer, deserial);
-        return sb.toString();
-      case KV_INDEX:
-      default:
-        throw new UnsupportedOperationException();
-    }
-  }
+//  public static String deserializeIndexChunk(IndexType indexType, ByteBuffer byteBuffer) {
+//    StringBuilder sb = new StringBuilder();
+//    switch (indexType) {
+//      case NO_INDEX:
+//        int size = ReadWriteIOUtils.readInt(byteBuffer);
+//        for (int i = 0; i < size; i++) {
+//          sb.append(Identifier.deserialize(byteBuffer));
+//        }
+//        return sb.toString();
+//      case RTREE_PAA:
+//      case ELB:
+//        BiConsumer<Integer, ByteBuffer> deserial = (i, b) -> {
+//          Identifier id = Identifier.deserialize(b);
+//          sb.append(String.format("(%d,%s)", i, id.toString()));
+//        };
+//        RTree.deserialize(byteBuffer, deserial);
+//        return sb.toString();
+//      case KV_INDEX:
+//      default:
+//        throw new UnsupportedOperationException();
+//    }
+//  }
 
 }

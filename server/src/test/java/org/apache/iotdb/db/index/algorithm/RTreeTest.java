@@ -19,8 +19,10 @@ package org.apache.iotdb.db.index.algorithm;
 
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -111,16 +113,21 @@ public class RTreeTest {
         e.printStackTrace();
       }
     };
-    rTree.serialize(boas, serial);
+    rTree.serialize(boas);
     //deserialize
-    ByteBuffer byteBuffer = ByteBuffer.wrap(boas.toByteArray());
+    InputStream byteBuffer = new ByteArrayInputStream(boas.toByteArray());
     int afterSize = ReadWriteIOUtils.readInt(byteBuffer);
     int[] afterData = new int[afterSize];
-    BiConsumer<Integer, ByteBuffer> deserial = (i, b) -> {
-      int value = ReadWriteIOUtils.readInt(b);
+    BiConsumer<Integer, InputStream> deserial = (i, b) -> {
+      int value = 0;
+      try {
+        value = ReadWriteIOUtils.readInt(b);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
       afterData[i] = value;
     };
-    RTree<Integer> afterRTree = RTree.deserialize(byteBuffer, deserial);
+    RTree<String> afterRTree = RTree.deserialize(byteBuffer);
     System.out.println(rTree);
     System.out.println(afterRTree);
     Assert.assertEquals(rTree.toString(), afterRTree.toString());

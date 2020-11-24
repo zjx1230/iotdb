@@ -40,7 +40,7 @@ public interface IIndexUsable {
    * @param indexSeries contains wildcard characters.
    * @return a list of full paths
    */
-  PartialPath[] getAllUnusableSeriesForWholeMatching(PartialPath indexSeries);
+  List<PartialPath> getAllUnusableSeriesForWholeMatching(PartialPath indexSeries);
 
   /**
    * 基于index给出的后处理范围，结合乱序区间，返回真正的后处理区间
@@ -58,6 +58,11 @@ public interface IIndexUsable {
 
   void deserialize(InputStream inputStream) throws IllegalPathException, IOException;
 
+  /**
+   * special for ELB, it's not elegant
+   * @param unusableBlocks
+   * @param windowBlocks
+   */
   void updateELBBlocksForSeriesMatching(PrimitiveList unusableBlocks, List<ELBWindowBlockFeature> windowBlocks);
 
   IIndexUsable deepCopy();

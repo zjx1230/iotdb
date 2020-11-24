@@ -116,7 +116,7 @@ public class IntTVList extends TVList {
   }
 
   @Override
-  void clearSortedValue() {
+  protected void clearSortedValue() {
     if (sortedValues != null) {
       sortedValues = null;
     }

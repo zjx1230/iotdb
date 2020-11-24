@@ -117,7 +117,7 @@ public class BooleanTVList extends TVList {
   }
 
   @Override
-  void clearSortedValue() {
+  protected void clearSortedValue() {
     if (sortedValues != null) {
       sortedValues = null;
     }

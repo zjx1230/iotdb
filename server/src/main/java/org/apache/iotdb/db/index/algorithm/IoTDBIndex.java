@@ -107,19 +107,19 @@ public abstract class IoTDBIndex {
    * @param tvList tvList in current FlushTask.
    * @return Preprocessor with new data.
    */
-  public IndexFeatureExtractor startFlushTask(TVList tvList) {
+  public IndexFeatureExtractor startFlushTask(PartialPath partialPath, TVList tvList) {
     this.indexFeatureExtractor.appendNewSrcData(tvList);
     return indexFeatureExtractor;
   }
 
 
-  /**
-   * Sorry but this method is ugly.
-   */
-  public IndexFeatureExtractor startFlushTask(BatchData batchData) {
-    this.indexFeatureExtractor.appendNewSrcData(batchData);
-    return indexFeatureExtractor;
-  }
+//  /**
+//   * Sorry but this method is ugly.
+//   */
+//  public IndexFeatureExtractor startFlushTask(BatchData batchData) {
+//    this.indexFeatureExtractor.appendNewSrcData(batchData);
+//    return indexFeatureExtractor;
+//  }
 
   /**
    * An index should determine which preprocessor it uses and hook it to {@linkplain

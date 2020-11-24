@@ -18,24 +18,63 @@
  */
 package org.apache.iotdb.db.index.algorithm;
 
+import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_DISTANCE;
+import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_FEATURE_DIM;
+import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_RTREE_PAA_DISTANCE;
+import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_SERIES_LENGTH;
+import static org.apache.iotdb.db.index.common.IndexConstant.DISTANCE;
 import static org.apache.iotdb.db.index.common.IndexConstant.FEATURE_DIM;
 import static org.apache.iotdb.db.index.common.IndexConstant.MAX_ENTRIES;
 import static org.apache.iotdb.db.index.common.IndexConstant.MIN_ENTRIES;
+import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
 import static org.apache.iotdb.db.index.common.IndexConstant.SEED_PICKER;
+import static org.apache.iotdb.db.index.common.IndexConstant.SERIES_LENGTH;
+import static org.apache.iotdb.db.index.common.IndexConstant.THRESHOLD;
+import static org.apache.iotdb.db.index.common.IndexConstant.TOP_K;
+import static org.apache.iotdb.db.index.common.IndexType.RTREE_PAA;
 
-import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.function.BiConsumer;
-import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import java.util.Map;
+import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
+import org.apache.iotdb.db.exception.StorageEngineException;
+import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
+import org.apache.iotdb.db.exception.index.IndexRuntimeException;
+import org.apache.iotdb.db.exception.index.QueryIndexException;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
+import org.apache.iotdb.db.exception.query.QueryProcessException;
+import org.apache.iotdb.db.index.algorithm.RTree.RNode;
 import org.apache.iotdb.db.index.algorithm.RTree.SeedsPicker;
+import org.apache.iotdb.db.index.algorithm.elb.ELBMatchFeatureExtractor;
+import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.exception.index.IndexManagerException;
+import org.apache.iotdb.db.index.common.IndexUtils;
+import org.apache.iotdb.db.index.distance.Distance;
 import org.apache.iotdb.db.index.preprocess.Identifier;
+import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
+import org.apache.iotdb.db.index.read.TVListPointer;
+import org.apache.iotdb.db.index.read.func.IndexFuncFactory;
+import org.apache.iotdb.db.index.read.func.IndexFuncResult;
+import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
+import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.query.context.QueryContext;
+import org.apache.iotdb.db.query.control.QueryResourceManager;
+import org.apache.iotdb.db.query.reader.series.SeriesRawDataBatchReader;
+import org.apache.iotdb.db.rescon.TVListAllocator;
+import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.read.common.BatchData;
+import org.apache.iotdb.tsfile.read.filter.basic.Filter;
+import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
+import org.apache.iotdb.tsfile.read.reader.IBatchReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,6 +93,8 @@ public abstract class RTreeIndex extends IoTDBIndex {
   private static final Logger logger = LoggerFactory.getLogger(RTreeIndex.class);
 
   protected int featureDim;
+  protected int seriesLength;
+
   /**
    * <p>MBRIndex supports two features: POINT and RANGE.</p>
    * Point features: {@code corner = float [dim]}
@@ -65,22 +106,56 @@ public abstract class RTreeIndex extends IoTDBIndex {
   /**
    * For generality, RTree only store ids of identifiers or others.
    */
-  private RTree<Integer> rTree;
+  private RTree<String> rTree;
   protected float[] currentLowerBounds;
   protected float[] currentUpperBounds;
-  protected double[] patterns;
-  protected double threshold;
-  private int amortizedPerInputCost;
+  //  protected double[] patterns;
+//  protected double threshold;
+  //  private int amortizedPerInputCost;
+  private File featureFile;
+  private PartialPath currentInsertPath;
 
-  public RTreeIndex(PartialPath path, TSDataType tsDataType,
-      IndexInfo indexInfo, boolean usePointType) {
-    super(path, tsDataType, indexInfo);
+  public RTreeIndex(PartialPath indexSeries, TSDataType tsDataType,
+      String indexDir, IndexInfo indexInfo, boolean usePointType) {
+    super(indexSeries, tsDataType, indexInfo);
     this.usePointType = usePointType;
     initRTree();
+    featureFile = IndexUtils.getIndexFile(indexDir + File.separator + "rTreeFeature");
+    File indexDirFile = IndexUtils.getIndexFile(indexDir);
+    if (indexDirFile.exists()) {
+      System.out.println(String.format("reload index %s from %s", RTREE_PAA, indexDir));
+      deserializeFeatures();
+    } else {
+      indexDirFile.mkdirs();
+    }
+  }
+
+  private void deserializeFeatures() {
+    if (!featureFile.exists()) {
+      return;
+    }
+    try (InputStream inputStream = new FileInputStream(featureFile)) {
+      this.rTree = RTree.deserialize(inputStream);
+    } catch (IOException e) {
+      logger.error("Error when deserialize ELB features. Given up.", e);
+    }
+
+  }
+
+  @Override
+  protected void serializeIndexAndFlush() {
+    try (OutputStream outputStream = new FileOutputStream(featureFile)) {
+      rTree.serialize(outputStream);
+      rTree.clear();
+    } catch (IOException e) {
+      logger.error("Error when serialize router. Given up.", e);
+    }
   }
 
   private void initRTree() {
-    this.featureDim = Integer.parseInt(props.getOrDefault(FEATURE_DIM, "4"));
+    this.seriesLength = Integer.parseInt(props.getOrDefault(SERIES_LENGTH, DEFAULT_SERIES_LENGTH));
+
+    this.featureDim = Integer.parseInt(props.getOrDefault(FEATURE_DIM, DEFAULT_FEATURE_DIM));
     int nMaxPerNode = Integer.parseInt(props.getOrDefault(MAX_ENTRIES, "50"));
     int nMinPerNode = Integer.parseInt(props.getOrDefault(MIN_ENTRIES, "2"));
     if (nMaxPerNode < nMinPerNode) {
@@ -92,7 +167,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
       logger.warn("param error: max_entries cannot be less than 2. set to default 50");
       nMaxPerNode = 50;
     }
-    this.amortizedPerInputCost = calcAmortizedCost(nMaxPerNode, nMinPerNode);
+//    this.amortizedPerInputCost = calcAmortizedCost(nMaxPerNode, nMinPerNode);
     SeedsPicker seedPicker = SeedsPicker.valueOf(props.getOrDefault(SEED_PICKER, "LINEAR"));
     rTree = new RTree<>(nMaxPerNode, nMinPerNode, featureDim, seedPicker);
     currentLowerBounds = new float[featureDim];
@@ -121,23 +196,23 @@ public abstract class RTreeIndex extends IoTDBIndex {
    * @param b min entities
    * @return estimation
    */
-  private int calcAmortizedCost(int a, int b) {
-    int leafNodeCost = rTreeNodeCost();
-    // n: how many points when flushing
-    int n = (int) (IoTDBDescriptor.getInstance().getConfig().getIndexBufferSize()
-        / (leafNodeCost + 3 * Long.BYTES));
-    double amortizedInnerNodeNum;
-    if (n < b) {
-      return leafNodeCost;
-    } else {
-      float af = (float) a;
-      float bf = (float) b;
-      float nf = (float) n;
-      amortizedInnerNodeNum = ((af * nf / bf - 1.) / (af - 1.));
-    }
-    return (int) (leafNodeCost + leafNodeCost / amortizedInnerNodeNum);
-  }
-
+//  @Deprecated
+//  private int calcAmortizedCost(int a, int b) {
+//    int leafNodeCost = rTreeNodeCost();
+//    // n: how many points when flushing
+//    int n = (int) (IoTDBDescriptor.getInstance().getConfig().getIndexBufferSize()
+//        / (leafNodeCost + 3 * Long.BYTES));
+//    double amortizedInnerNodeNum;
+//    if (n < b) {
+//      return leafNodeCost;
+//    } else {
+//      float af = (float) a;
+//      float bf = (float) b;
+//      float nf = (float) n;
+//      amortizedInnerNodeNum = ((af * nf / bf - 1.) / (af - 1.));
+//    }
+//    return (int) (leafNodeCost + leafNodeCost / amortizedInnerNodeNum);
+//  }
 
   /**
    * 2 float arrays + T (4 bytes, an integer or a point) + boolean + 2 pointers for the parent point
@@ -145,24 +220,53 @@ public abstract class RTreeIndex extends IoTDBIndex {
    *
    * @return estimated cost.
    */
-  private int rTreeNodeCost() {
-    return (2 * featureDim * Float.BYTES + 4) + 1 + 2 * Integer.BYTES;
-  }
+//  private int rTreeNodeCost() {
+//    return (2 * featureDim * Float.BYTES + 4) + 1 + 2 * Integer.BYTES;
+//  }
 
   /**
    * Fill {@code currentCorners} and the optional {@code currentRanges}, and return the current idx
    *
    * @return the current idx
    */
-  protected abstract int fillCurrentFeature();
+  protected abstract void fillCurrentFeature();
+
+  public IndexFeatureExtractor startFlushTask(PartialPath partialPath, TVList tvList) {
+    IndexFeatureExtractor res = super.startFlushTask(partialPath, tvList);
+    currentInsertPath = partialPath;
+    return res;
+  }
+
+  public void endFlushTask() {
+    super.endFlushTask();
+    currentInsertPath = null;
+  }
+
+  /**
+   * We can optimize it in the future. For instance, the index is built on root.wind.*.direction.
+   * Suppose root.wind.azq01.direction to be inserted, we can only save "azq01" but not the whole
+   * path.
+   */
+  private String fromPathToInsertValue(PartialPath partialPath) {
+    return partialPath.getFullPath();
+  }
+
+  private PartialPath fromInsertValueToPath(String value) {
+    try {
+      return new PartialPath(value);
+    } catch (IllegalPathException e) {
+      throw new IndexRuntimeException("parse partial series failed: " + value);
+    }
+  }
 
   @Override
   public boolean buildNext() {
-    int currentIdx = fillCurrentFeature();
+    fillCurrentFeature();
     if (usePointType) {
-      rTree.insert(currentLowerBounds, currentIdx);
+      rTree.insert(currentLowerBounds, fromPathToInsertValue(currentInsertPath));
     } else {
-      rTree.insert(currentLowerBounds, currentUpperBounds, currentIdx);
+      rTree
+          .insert(currentLowerBounds, currentUpperBounds, fromPathToInsertValue(currentInsertPath));
     }
     return true;
   }
@@ -170,76 +274,169 @@ public abstract class RTreeIndex extends IoTDBIndex {
   /**
    * For index building.
    */
-  protected abstract BiConsumer<Integer, OutputStream> getSerializeFunc();
+//  protected abstract BiConsumer<Integer, OutputStream> getSerializeFunc();
 
   /**
    * Following three methods are for query.
    */
-  protected abstract BiConsumer<Integer, ByteBuffer> getDeserializeFunc();
-
-  protected abstract List<Identifier> getQueryCandidates(List<Integer> candidateIds);
+//  protected abstract BiConsumer<String, InputStream> getDeserializeFunc();
+//  protected abstract List<Identifier> getQueryCandidates(List<Integer> candidateIds);
 
   /**
    *
    */
-  protected abstract void calcAndFillQueryFeature();
+  protected abstract double[] calcQueryFeature(double[] patterns);
+
+  protected abstract double minDistBetweenFeatures(double[] pFeatures,
+      double[] cFeatures);
 
   @Override
   public void flush() {
-    if (indexFeatureExtractor.getCurrentChunkSize() == 0) {
-      logger.warn("Nothing to be flushed, directly return null");
-      System.out.println("Nothing to be flushed, directly return null");
-      return;
+    // we need to do nothing when a batch of memtable flush out.
+    // maybe we can take a serialization?
+  }
+
+
+  private static class RTreeQueryStruct {
+
+    public double[] patternFeatures;
+    private double[] patterns;
+    int topK = -1;
+    double threshold = -1;
+//    public Distance distance;
+
+  }
+
+  public RTreeQueryStruct initQuery(Map<String, Object> queryProps) {
+    RTreeQueryStruct struct = new RTreeQueryStruct();
+//    struct.distance = Distance.getDistance(props.getOrDefault(DISTANCE, DEFAULT_RTREE_PAA_DISTANCE));
+    if (queryProps.containsKey(THRESHOLD) && queryProps.containsKey(TOP_K)) {
+      throw new IllegalIndexParamException("TopK and Threshold cannot be set at the same.");
     }
-    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    // serialize RTree
-    BiConsumer<Integer, OutputStream> biConsumer = getSerializeFunc();
+    if (!queryProps.containsKey(THRESHOLD) || !queryProps.containsKey(TOP_K)) {
+      throw new IllegalIndexParamException("TopK and Threshold should be set at least one");
+    }
+    if (queryProps.containsKey(PATTERN)) {
+      struct.patterns = (double[]) queryProps.get(PATTERN);
+    } else {
+      throw new IllegalIndexParamException("missing parameter: " + PATTERN);
+    }
+    if (queryProps.containsKey(THRESHOLD)) {
+      struct.threshold = (double) queryProps.get(THRESHOLD);
+    }
+    if (queryProps.containsKey(TOP_K)) {
+      struct.topK = (int) queryProps.get(TOP_K);
+    }
+    struct.patternFeatures = calcQueryFeature(struct.patterns);
+    return struct;
+  }
+
+
+  TVList readTimeSeries(PartialPath partialPath) {
     try {
-      rTree.serialize(outputStream, biConsumer);
-    } catch (IOException e) {
-      logger.error("flush failed", e);
-      return;
+
+      for (Filter timeFilter : filterList) {
+        QueryDataSource queryDataSource = QueryResourceManager.getInstance()
+            .getQueryDataSource(indexSeries, context, timeFilter);
+        timeFilter = queryDataSource.updateFilterUsingTTL(timeFilter);
+
+        IBatchReader reader = new SeriesRawDataBatchReader(indexSeries,
+            Collections.singleton(indexSeries.getMeasurement()), tsDataType, context,
+            queryDataSource, timeFilter, null, null, true);
+        ELBMatchFeatureExtractor featureExtractor = new ELBMatchFeatureExtractor(tsDataType,
+            struct.pattern.length, blockWidth, elbType, true);
+//        System.out.println(">>>>>>>>>>>>>>>> Time range: " + timeFilter);
+        while (reader.hasNextBatch()) {
+          BatchData batch = reader.nextBatch();
+          featureExtractor.appendNewSrcData(batch);
+          while (featureExtractor.hasNext()) {
+            featureExtractor.processNext();
+            TVListPointer p = featureExtractor.getCurrent_L2_AlignedSequence();
+//            System.out.println(">>>>>>>>>>>>>>>> " + IndexUtils.tvListToStr(p.tvList, p.offset, p.length));
+            if (struct.elb.exactDistanceCalc(p.tvList, p.offset)) {
+              TVList series = TVListAllocator.getInstance().allocate(tsDataType);
+              TVList.append(series, p.tvList, p.offset, p.length);
+              res.add(series);
+            }
+          }
+          featureExtractor.clearProcessedSrcData();
+        }
+        reader.close();
+      }
+
+    } catch (StorageEngineException | QueryProcessException | IOException e) {
+      throw new QueryIndexException(e.getMessage());
     }
-    long st = indexFeatureExtractor.getChunkStartTime();
-    long end = indexFeatureExtractor.getChunkEndTime();
-//    return new IndexFlushChunk(path, indexType, outputStream, st, end);
   }
 
   /**
+   * Search with PMR-Quadtree [1], which is for any hierarchical index structure that is constructed
+   * using a conservative and recursive partitioning of the data [2].
    *
+   * [1] G. R. Hjaltason and H. Samet. Ranking in Spatial Databases. In Proceedings of the 4th
+   * International Symposium on Advances in Spatial Databases, SSD ’95, pages 83–95, Berlin,
+   * Heidelberg, 1995. Springer- Verlag.
+   *
+   * [2] S. Berchtold, C. B ̈ohm, D. A. Keim, and H.-P. Kriegel. A Cost Model for Nearest Neighbor
+   * Search in High- dimensional Data Space. In Proceedings of the Six- teenth ACM
+   * SIGACT-SIGMOD-SIGART Symposium on Principles of Database Systems, PODS ’97, pages 78–86, New
+   * York, NY, USA, 1997. ACM.
    */
-  @Override
-  @SuppressWarnings("squid:S1185")
-  public long clearFeatureExtractor() {
-    int estimateSize = indexFeatureExtractor.getCurrentChunkSize() * amortizedPerInputCost;
-    estimateSize += super.clearFeatureExtractor();
-    initRTree();
-    return estimateSize;
+  public QueryDataSet query(Map<String, Object> queryProps, IIndexUsable iIndexUsable,
+      QueryContext context, IIndexRefinePhaseOptimize refinePhaseOptimizer, boolean alignedByTime)
+      throws QueryIndexException {
+    RTreeQueryStruct struct = initQuery(queryProps);
+    List<PartialPath> approxNodePaths = rTree.approxSearch(currentLowerBounds, currentUpperBounds);
+
+//    List<PartialPath> filterList = queryByIndex(struct, iIndexUsable);
+    List<TVList> res = new ArrayList<>();
+    return constructWholeMatchingDataset(indexSeries, res, alignedByTime, 5);
   }
 
-  /**
-   * All it needs depends on its preprocessor. Just for explain.
-   */
-  @Override
-  @SuppressWarnings("squid:S1185")
-  public int getAmortizedSize() {
-    return super.getAmortizedSize() + this.amortizedPerInputCost;
+  protected QueryDataSet constructWholeMatchingDataset(PartialPath indexSeries, List<TVList> res, boolean alignedByTime, int i){
+    IndexUtils.breakDown("protected QueryDataSet constructWholeMatchingDataset");
+  }
+
+  public class PqItem {
+    RNode node;
+    double dist;
   }
 
 
-  public List<Identifier> queryByIndex(ByteBuffer indexChunkData) throws IndexManagerException {
-    calcAndFillQueryFeature();
-    RTree<Integer> chunkRTree = RTree.deserialize(indexChunkData, getDeserializeFunc());
-    double lowerBoundThreshold = calcLowerBoundThreshold(threshold);
-    List<Integer> candidateIds = chunkRTree
-        .searchWithThreshold(currentLowerBounds, currentUpperBounds, lowerBoundThreshold);
-    return getQueryCandidates(candidateIds);
-  }
+//  public int postProcessNext(List<IndexFuncResult> funcResult) throws QueryIndexException {
+//    Identifier identifier = indexFeatureExtractor.getCurrent_L1_Identifier();
+//    TVList srcList = indexFeatureExtractor
+//        .get_L0_SourceData(identifier.getStartTime(), identifier.getEndTime());
+//    TVList aligned = IndexUtils.alignUniform(srcList, patterns.length);
+//    double ed = IndexFuncFactory.calcEuclidean(aligned, patterns);
+//    System.out.println(String.format(
+//        "PAA Process: ed:%.3f: %s", ed, IndexUtils.tvListToStr(aligned)));
+//    int reminding = funcResult.size();
+//    if (ed <= threshold) {
+//      for (IndexFuncResult result : funcResult) {
+//        if (result.getIndexFunc() == IndexFunc.ED) {
+//          result.addScalar(ed);
+//        } else {
+//          IndexFuncFactory.basicSimilarityCalc(result, indexFeatureExtractor, patterns);
+//        }
+//      }
+//    }
+//    TVListAllocator.getInstance().release(aligned);
+//
+//    return reminding;
+//  }
 
   protected abstract double calcLowerBoundThreshold(double queryThreshold);
 
+
   @Override
-  protected void serializeIndexAndFlush() {
+  public void delete() {
     throw new UnsupportedOperationException();
   }
+
+  @Override
+  public String toString() {
+    return rTree.toString();
+  }
+
 }

@@ -53,7 +53,6 @@ import org.apache.iotdb.tsfile.read.filter.GroupByFilter;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.iotdb.db.index.read.IndexAggregationExecutor;
 
 /**
  * Query entrance class of IoTDB query process. All query clause will be transformed to physical

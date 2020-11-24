@@ -2,6 +2,7 @@ package org.apache.iotdb.db.index.algorithm;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -11,6 +12,7 @@ import java.util.Random;
 import java.util.function.BiConsumer;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 /**
@@ -365,13 +367,12 @@ public class RTree<T> {
    *
    * @param outputStream serialize to
    */
-  public void serialize(ByteArrayOutputStream outputStream,
-      BiConsumer<Integer, OutputStream> biConsumer) throws IOException {
+  public void serialize(OutputStream outputStream) throws IOException {
     ReadWriteIOUtils.write(dim, outputStream);
     ReadWriteIOUtils.write(nMaxPerNode, outputStream);
     ReadWriteIOUtils.write(nMinPerNode, outputStream);
     ReadWriteIOUtils.write(seedsPicker.serialize(), outputStream);
-    serialize(root, outputStream, biConsumer);
+    serialize(root, outputStream);
   }
 
   /**
@@ -380,8 +381,7 @@ public class RTree<T> {
    * @param outputStream serialize to
    */
   @SuppressWarnings("unchecked")
-  private void serialize(RNode node, ByteArrayOutputStream outputStream,
-      BiConsumer<Integer, OutputStream> biConsumer) throws IOException {
+  private void serialize(RNode node, OutputStream outputStream) throws IOException {
     if (node instanceof Item) {
       ReadWriteIOUtils.write(ITEM, outputStream);
     } else if (node.isLeaf) {
@@ -396,56 +396,55 @@ public class RTree<T> {
       ReadWriteIOUtils.write(ub, outputStream);
     }
     if (node instanceof Item) {
-      int idx = ((Item<Integer>) node).v;
-      ReadWriteIOUtils.write(idx, outputStream);
-      biConsumer.accept(idx, outputStream);
+      T value = ((Item<T>) node).v;
+      ReadWriteIOUtils.write(value.toString(), outputStream);
+//      biConsumer.accept(value, outputStream);
     } else {
       // write child
       ReadWriteIOUtils.write(node.getChildren().size(), outputStream);
       for (RNode child : node.getChildren()) {
-        serialize(child, outputStream, biConsumer);
+        serialize(child, outputStream);
       }
     }
   }
 
 
-  public static RTree<Integer> deserialize(ByteBuffer byteBuffer,
-      BiConsumer<Integer, ByteBuffer> biConsumer) {
-    int dim = ReadWriteIOUtils.readInt(byteBuffer);
-    int nMaxPerNode = ReadWriteIOUtils.readInt(byteBuffer);
-    int nMinPerNode = ReadWriteIOUtils.readInt(byteBuffer);
-    SeedsPicker seedsPicker = SeedsPicker.deserialize(ReadWriteIOUtils.readShort(byteBuffer));
-    RTree<Integer> rTree = new RTree<>(nMaxPerNode, nMinPerNode, dim, seedsPicker);
-    deserialize(rTree, null, byteBuffer, biConsumer);
+  public static RTree<String> deserialize(InputStream inputStream) throws IOException {
+    int dim = ReadWriteIOUtils.readInt(inputStream);
+    int nMaxPerNode = ReadWriteIOUtils.readInt(inputStream);
+    int nMinPerNode = ReadWriteIOUtils.readInt(inputStream);
+    SeedsPicker seedsPicker = SeedsPicker.deserialize(ReadWriteIOUtils.readShort(inputStream));
+    RTree<String> rTree = new RTree<>(nMaxPerNode, nMinPerNode, dim, seedsPicker);
+    deserialize(rTree, null, inputStream);
     return rTree;
   }
 
   /**
    * Pre-order traversal
    *
-   * @param byteBuffer deserialize from
+   * @param inputStream deserialize from
    */
-  private static void deserialize(RTree rTree, RNode parent, ByteBuffer byteBuffer,
-      BiConsumer<Integer, ByteBuffer> biConsumer) {
-    int nodeType = ReadWriteIOUtils.readInt(byteBuffer);
+  private static void deserialize(RTree rTree, RNode parent, InputStream inputStream)
+      throws IOException {
+    int nodeType = ReadWriteIOUtils.readInt(inputStream);
     float[] lbs = new float[rTree.dim];
     float[] ubs = new float[rTree.dim];
     for (int i = 0; i < rTree.dim; i++) {
-      lbs[i] = ReadWriteIOUtils.readFloat(byteBuffer);
+      lbs[i] = ReadWriteIOUtils.readFloat(inputStream);
     }
     for (int i = 0; i < rTree.dim; i++) {
-      ubs[i] = ReadWriteIOUtils.readFloat(byteBuffer);
+      ubs[i] = ReadWriteIOUtils.readFloat(inputStream);
     }
     RNode node;
     if (nodeType == ITEM) {
-      int idx = ReadWriteIOUtils.readInt(byteBuffer);
-      biConsumer.accept(idx, byteBuffer);
-      node = new Item<>(lbs, ubs, idx);
+      String value = ReadWriteIOUtils.readString(inputStream);
+//      T value = biConsumer.accept(inputStream);
+      node = new Item<>(lbs, ubs, value);
     } else {
       node = new RNode(lbs, ubs, nodeType == LEAF_NODE);
-      int childSize = ReadWriteIOUtils.readInt(byteBuffer);
+      int childSize = ReadWriteIOUtils.readInt(inputStream);
       for (int i = 0; i < childSize; i++) {
-        deserialize(rTree, node, byteBuffer, biConsumer);
+        deserialize(rTree, node, inputStream);
       }
     }
     if (parent == null) {
@@ -470,6 +469,18 @@ public class RTree<T> {
     return sb.toString();
   }
 
+  public String toDetailedString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append(String.format("nMax:%d,", nMaxPerNode));
+    sb.append(String.format("nMin:%d,", nMinPerNode));
+    sb.append(String.format("dim:%d,", dim));
+    sb.append(String.format("seedsPicker:%s%n", seedsPicker));
+    if (root == null) {
+      return sb.toString();
+    }
+    toString(root, 0, sb);
+    return sb.toString();
+  }
 
   private void toString(RNode node, int depth, StringBuilder sb) {
     for (int i = 0; i < depth; i++) {
@@ -482,6 +493,10 @@ public class RTree<T> {
         toString(child, depth + 1, sb);
       }
     }
+  }
+
+  public List<PartialPath> approxSearch(float[] currentLowerBounds, float[] currentUpperBounds) {
+    return null;
   }
 
   static class RNode {

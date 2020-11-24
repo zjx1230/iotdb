@@ -375,22 +375,21 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
         Runnable buildTask = () -> {
           try {
             indexLockMap.get(indexType).writeLock().lock();
-            IndexFeatureExtractor extractor = index.startFlushTask(tvList);
+            IndexFeatureExtractor extractor = index.startFlushTask(path, tvList);
             int previousOffset = Integer.MIN_VALUE;
             while (extractor.hasNext()) {
-              int currentOffset = extractor.getCurrentChunkOffset();
-              if (currentOffset != previousOffset) {
-                if (!index.checkNeedIndex(tvList, currentOffset)) {
-                  System.out.println("if (!index.checkNeedIndex(tvList, currentOffset))");
-                  return;
-                }
-                previousOffset = currentOffset;
-              }
+//              int currentOffset = extractor.getCurrentChunkOffset();
+//              if (currentOffset != previousOffset) {
+//                if (!index.checkNeedIndex(tvList, currentOffset)) {
+//                  System.out.println("if (!index.checkNeedIndex(tvList, currentOffset))");
+//                  return;
+//                }
+//                previousOffset = currentOffset;
+//              }
               extractor.processNext();
               index.buildNext();
             }
-            System.out
-                .println(String.format("%s-%s process all, final flush", indexSeries, indexType));
+//            System.out.println(String.format("%s-%s process all, final flush", indexSeries, indexType));
             if (extractor.getCurrentChunkSize() > 0) {
               index.flush();
             }

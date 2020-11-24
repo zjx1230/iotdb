@@ -18,6 +18,7 @@
 package org.apache.iotdb.db.index.preprocess;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
@@ -65,6 +66,13 @@ public class Identifier {
   }
 
   public static Identifier deserialize(ByteBuffer input) {
+    long st = ReadWriteIOUtils.readLong(input);
+    long ed = ReadWriteIOUtils.readLong(input);
+    int length = ReadWriteIOUtils.readInt(input);
+    return new Identifier(st, ed, length);
+  }
+
+  public static Identifier deserialize(InputStream input) throws IOException {
     long st = ReadWriteIOUtils.readLong(input);
     long ed = ReadWriteIOUtils.readLong(input);
     int length = ReadWriteIOUtils.readInt(input);
