@@ -92,7 +92,7 @@ public class _ELBRandomWalkReadIT {
       TVList subInput = Randomwalk.generateRanWalkTVList(200);
       long startInsertSub = System.currentTimeMillis();
       for (int i = 0; i < subInput.size(); i++) {
-        System.out.println(String.format(insertPattern, speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
+//        System.out.println(String.format(insertPattern, speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
         statement.execute(String.format(insertPattern,
             speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
       }
@@ -127,7 +127,7 @@ public class _ELBRandomWalkReadIT {
           + String.format("CONTAIN (%s) WITH TOLERANCE 0.6 ", getSubPa(subInput, offset, 10))
           + String.format("CONCAT (%s) WITH TOLERANCE 1.3 ", getSubPa(subInput, offset + 10, 30))
           + String
-          .format("CONCAT (%s) WITH TOLERANCE 0.9 ", getSubPa(subInput, offset + 40, 10));
+          .format("CONCAT (%s) WITH TOLERANCE 0.9", getSubPa(subInput, offset + 40, 10));
       System.out.println(querySQL);
       boolean hasIndex = statement.execute(querySQL);
       String[] gt = {"0,0,50210,0,50219,0,0.0"};

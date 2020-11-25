@@ -1,0 +1,431 @@
+﻿{
+  "paragraphs": [
+    {
+      "text": "SET STORAGE GROUP TO root.wind2;\nCREATE TIMESERIES root.wind2.0.direction WITH DATATYPE=FLOAT,ENCODING=PLAIN;\nCREATE INDEX ON root.wind2.*.direction WITH INDEX=RTREE_PAA, SERIES_LENGTH=15, FEATURE_DIM=4, MAX_ENTRIES=10, MIN_ENTRIES=2;",
+      "user": "anonymous",
+      "dateUpdated": "2020-11-25T22:40:19+0800",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 9,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionKey": "TAB"
+        },
+        "editorMode": "ace/mode/sql",
+        "title": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Sql executed."
+          }
+        ]
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1606314509564_554107843",
+      "id": "paragraph_1606314509564_554107843",
+      "dateCreated": "2020-11-25T22:28:29+0800",
+      "dateStarted": "2020-11-25T22:31:33+0800",
+      "dateFinished": "2020-11-25T22:31:33+0800",
+      "status": "FINISHED",
+      "focus": true,
+      "$$hashKey": "object:181",
+      "title": "全序列检索-数据库模式"
+    },
+    {
+      "text": "INSERT INTO root.wind2.0(timestamp, direction) VALUES (1, 1.000);\nINSERT INTO root.wind2.0(timestamp, direction) VALUES (2, 2.000);\nINSERT INTO root.wind2.0(timestamp, direction) VALUES (3, 3.000);\nINSERT INTO root.wind2.0(timestamp, direction) VALUES (4, 4.000);\nINSERT INTO root.wind2.0(timestamp, direction) VALUES (5, 5.000);\nINSERT INTO root.wind2.0(timestamp, direction) VALUES (6, 6.000);\nINSERT INTO root.wind2.0(timestamp, direction) VALUES (7, 7.000);\nINSERT INTO root.wind2.0(timestamp, direction) VALUES (8, 8.000);\nINSERT INTO root.wind2.0(timestamp, direction) VALUES (9, 9.000);\nINSERT INTO root.wind2.0(timestamp, direction) VALUES (10, 10.000);\nINSERT INTO root.wind2.0(timestamp, direction) VALUES (11, 11.000);\nINSERT INTO root.wind2.0(timestamp, direction) VALUES (12, 12.000);\nINSERT INTO root.wind2.0(timestamp, direction) VALUES (13, 13.000);\nINSERT INTO root.wind2.0(timestamp, direction) VALUES (14, 14.000);\nINSERT INTO root.wind2.1(timestamp, direction) VALUES (0, 15.000);\nINSERT INTO root.wind2.1(timestamp, direction) VALUES (1, 16.000);\nINSERT INTO root.wind2.1(timestamp, direction) VALUES (2, 17.000);\nINSERT INTO root.wind2.1(timestamp, direction) VALUES (3, 18.000);\nINSERT INTO root.wind2.1(timestamp, direction) VALUES (4, 19.000);\nINSERT INTO root.wind2.1(timestamp, direction) VALUES (5, 20.000);\nINSERT INTO root.wind2.1(timestamp, direction) VALUES (6, 21.000);\nINSERT INTO root.wind2.1(timestamp, direction) VALUES (7, 22.000);\nINSERT INTO root.wind2.1(timestamp, direction) VALUES (8, 23.000);\nINSERT INTO root.wind2.1(timestamp, direction) VALUES (9, 24.000);\nINSERT INTO root.wind2.1(timestamp, direction) VALUES (10, 25.000);\nINSERT INTO root.wind2.1(timestamp, direction) VALUES (11, 26.000);\nINSERT INTO root.wind2.1(timestamp, direction) VALUES (12, 27.000);\nINSERT INTO root.wind2.1(timestamp, direction) VALUES (13, 28.000);\nINSERT INTO root.wind2.1(timestamp, direction) VALUES (14, 29.000);\nINSERT INTO root.wind2.2(timestamp, direction) VALUES (0, 30.000);\nINSERT INTO root.wind2.2(timestamp, direction) VALUES (1, 31.000);\nINSERT INTO root.wind2.2(timestamp, direction) VALUES (2, 32.000);\nINSERT INTO root.wind2.2(timestamp, direction) VALUES (3, 33.000);\nINSERT INTO root.wind2.2(timestamp, direction) VALUES (4, 34.000);\nINSERT INTO root.wind2.2(timestamp, direction) VALUES (5, 35.000);\nINSERT INTO root.wind2.2(timestamp, direction) VALUES (6, 36.000);\nINSERT INTO root.wind2.2(timestamp, direction) VALUES (7, 37.000);\nINSERT INTO root.wind2.2(timestamp, direction) VALUES (8, 38.000);\nINSERT INTO root.wind2.2(timestamp, direction) VALUES (9, 39.000);\nINSERT INTO root.wind2.2(timestamp, direction) VALUES (10, 40.000);\nINSERT INTO root.wind2.2(timestamp, direction) VALUES (11, 41.000);\nINSERT INTO root.wind2.2(timestamp, direction) VALUES (12, 42.000);\nINSERT INTO root.wind2.2(timestamp, direction) VALUES (13, 43.000);\nINSERT INTO root.wind2.2(timestamp, direction) VALUES (14, 44.000);\nINSERT INTO root.wind2.3(timestamp, direction) VALUES (0, 45.000);\nINSERT INTO root.wind2.3(timestamp, direction) VALUES (1, 46.000);\nINSERT INTO root.wind2.3(timestamp, direction) VALUES (2, 47.000);\nINSERT INTO root.wind2.3(timestamp, direction) VALUES (3, 48.000);\nINSERT INTO root.wind2.3(timestamp, direction) VALUES (4, 49.000);\nINSERT INTO root.wind2.3(timestamp, direction) VALUES (5, 50.000);\nINSERT INTO root.wind2.3(timestamp, direction) VALUES (6, 51.000);\nINSERT INTO root.wind2.3(timestamp, direction) VALUES (7, 52.000);\nINSERT INTO root.wind2.3(timestamp, direction) VALUES (8, 53.000);\nINSERT INTO root.wind2.3(timestamp, direction) VALUES (9, 54.000);\nINSERT INTO root.wind2.3(timestamp, direction) VALUES (10, 55.000);\nINSERT INTO root.wind2.3(timestamp, direction) VALUES (11, 56.000);\nINSERT INTO root.wind2.3(timestamp, direction) VALUES (12, 57.000);\nINSERT INTO root.wind2.3(timestamp, direction) VALUES (13, 58.000);\nINSERT INTO root.wind2.3(timestamp, direction) VALUES (14, 59.000);\nINSERT INTO root.wind2.4(timestamp, direction) VALUES (0, 60.000);\nINSERT INTO root.wind2.4(timestamp, direction) VALUES (1, 61.000);\nINSERT INTO root.wind2.4(timestamp, direction) VALUES (2, 62.000);\nINSERT INTO root.wind2.4(timestamp, direction) VALUES (3, 63.000);\nINSERT INTO root.wind2.4(timestamp, direction) VALUES (4, 64.000);\nINSERT INTO root.wind2.4(timestamp, direction) VALUES (5, 65.000);\nINSERT INTO root.wind2.4(timestamp, direction) VALUES (6, 66.000);\nINSERT INTO root.wind2.4(timestamp, direction) VALUES (7, 67.000);\nINSERT INTO root.wind2.4(timestamp, direction) VALUES (8, 68.000);\nINSERT INTO root.wind2.4(timestamp, direction) VALUES (9, 69.000);\nINSERT INTO root.wind2.4(timestamp, direction) VALUES (10, 70.000);\nINSERT INTO root.wind2.4(timestamp, direction) VALUES (11, 71.000);\nINSERT INTO root.wind2.4(timestamp, direction) VALUES (12, 72.000);\nINSERT INTO root.wind2.4(timestamp, direction) VALUES (13, 73.000);\nINSERT INTO root.wind2.4(timestamp, direction) VALUES (14, 74.000);\nINSERT INTO root.wind2.5(timestamp, direction) VALUES (0, 75.000);\nINSERT INTO root.wind2.5(timestamp, direction) VALUES (1, 76.000);\nINSERT INTO root.wind2.5(timestamp, direction) VALUES (2, 77.000);\nINSERT INTO root.wind2.5(timestamp, direction) VALUES (3, 78.000);\nINSERT INTO root.wind2.5(timestamp, direction) VALUES (4, 79.000);\nINSERT INTO root.wind2.5(timestamp, direction) VALUES (5, 80.000);\nINSERT INTO root.wind2.5(timestamp, direction) VALUES (6, 81.000);\nINSERT INTO root.wind2.5(timestamp, direction) VALUES (7, 82.000);\nINSERT INTO root.wind2.5(timestamp, direction) VALUES (8, 83.000);\nINSERT INTO root.wind2.5(timestamp, direction) VALUES (9, 84.000);\nINSERT INTO root.wind2.5(timestamp, direction) VALUES (10, 85.000);\nINSERT INTO root.wind2.5(timestamp, direction) VALUES (11, 86.000);\nINSERT INTO root.wind2.5(timestamp, direction) VALUES (12, 87.000);\nINSERT INTO root.wind2.5(timestamp, direction) VALUES (13, 88.000);\nINSERT INTO root.wind2.5(timestamp, direction) VALUES (14, 89.000);\nINSERT INTO root.wind2.6(timestamp, direction) VALUES (0, 90.000);\nINSERT INTO root.wind2.6(timestamp, direction) VALUES (1, 91.000);\nINSERT INTO root.wind2.6(timestamp, direction) VALUES (2, 92.000);\nINSERT INTO root.wind2.6(timestamp, direction) VALUES (3, 93.000);\nINSERT INTO root.wind2.6(timestamp, direction) VALUES (4, 94.000);\nINSERT INTO root.wind2.6(timestamp, direction) VALUES (5, 95.000);\nINSERT INTO root.wind2.6(timestamp, direction) VALUES (6, 96.000);\nINSERT INTO root.wind2.6(timestamp, direction) VALUES (7, 97.000);\nINSERT INTO root.wind2.6(timestamp, direction) VALUES (8, 98.000);\nINSERT INTO root.wind2.6(timestamp, direction) VALUES (9, 99.000);\nINSERT INTO root.wind2.6(timestamp, direction) VALUES (10, 100.000);\nINSERT INTO root.wind2.6(timestamp, direction) VALUES (11, 101.000);\nINSERT INTO root.wind2.6(timestamp, direction) VALUES (12, 102.000);\nINSERT INTO root.wind2.6(timestamp, direction) VALUES (13, 103.000);\nINSERT INTO root.wind2.6(timestamp, direction) VALUES (14, 104.000);\nINSERT INTO root.wind2.7(timestamp, direction) VALUES (0, 105.000);\nINSERT INTO root.wind2.7(timestamp, direction) VALUES (1, 106.000);\nINSERT INTO root.wind2.7(timestamp, direction) VALUES (2, 107.000);\nINSERT INTO root.wind2.7(timestamp, direction) VALUES (3, 108.000);\nINSERT INTO root.wind2.7(timestamp, direction) VALUES (4, 109.000);\nINSERT INTO root.wind2.7(timestamp, direction) VALUES (5, 110.000);\nINSERT INTO root.wind2.7(timestamp, direction) VALUES (6, 111.000);\nINSERT INTO root.wind2.7(timestamp, direction) VALUES (7, 112.000);\nINSERT INTO root.wind2.7(timestamp, direction) VALUES (8, 113.000);\nINSERT INTO root.wind2.7(timestamp, direction) VALUES (9, 114.000);\nINSERT INTO root.wind2.7(timestamp, direction) VALUES (10, 115.000);\nINSERT INTO root.wind2.7(timestamp, direction) VALUES (11, 116.000);\nINSERT INTO root.wind2.7(timestamp, direction) VALUES (12, 117.000);\nINSERT INTO root.wind2.7(timestamp, direction) VALUES (13, 118.000);\nINSERT INTO root.wind2.7(timestamp, direction) VALUES (14, 119.000);\nINSERT INTO root.wind2.8(timestamp, direction) VALUES (0, 120.000);\nINSERT INTO root.wind2.8(timestamp, direction) VALUES (1, 121.000);\nINSERT INTO root.wind2.8(timestamp, direction) VALUES (2, 122.000);\nINSERT INTO root.wind2.8(timestamp, direction) VALUES (3, 123.000);\nINSERT INTO root.wind2.8(timestamp, direction) VALUES (4, 124.000);\nINSERT INTO root.wind2.8(timestamp, direction) VALUES (5, 125.000);\nINSERT INTO root.wind2.8(timestamp, direction) VALUES (6, 126.000);\nINSERT INTO root.wind2.8(timestamp, direction) VALUES (7, 127.000);\nINSERT INTO root.wind2.8(timestamp, direction) VALUES (8, 128.000);\nINSERT INTO root.wind2.8(timestamp, direction) VALUES (9, 129.000);\nINSERT INTO root.wind2.8(timestamp, direction) VALUES (10, 130.000);\nINSERT INTO root.wind2.8(timestamp, direction) VALUES (11, 131.000);\nINSERT INTO root.wind2.8(timestamp, direction) VALUES (12, 132.000);\nINSERT INTO root.wind2.8(timestamp, direction) VALUES (13, 133.000);\nINSERT INTO root.wind2.8(timestamp, direction) VALUES (14, 134.000);\nINSERT INTO root.wind2.9(timestamp, direction) VALUES (0, 135.000);\nINSERT INTO root.wind2.9(timestamp, direction) VALUES (1, 136.000);\nINSERT INTO root.wind2.9(timestamp, direction) VALUES (2, 137.000);\nINSERT INTO root.wind2.9(timestamp, direction) VALUES (3, 138.000);\nINSERT INTO root.wind2.9(timestamp, direction) VALUES (4, 139.000);\nINSERT INTO root.wind2.9(timestamp, direction) VALUES (5, 140.000);\nINSERT INTO root.wind2.9(timestamp, direction) VALUES (6, 141.000);\nINSERT INTO root.wind2.9(timestamp, direction) VALUES (7, 142.000);\nINSERT INTO root.wind2.9(timestamp, direction) VALUES (8, 143.000);\nINSERT INTO root.wind2.9(timestamp, direction) VALUES (9, 144.000);\nINSERT INTO root.wind2.9(timestamp, direction) VALUES (10, 145.000);\nINSERT INTO root.wind2.9(timestamp, direction) VALUES (11, 146.000);\nINSERT INTO root.wind2.9(timestamp, direction) VALUES (12, 147.000);\nINSERT INTO root.wind2.9(timestamp, direction) VALUES (13, 148.000);\nINSERT INTO root.wind2.9(timestamp, direction) VALUES (14, 149.000);\nINSERT INTO root.wind2.10(timestamp, direction) VALUES (0, 150.000);\nINSERT INTO root.wind2.10(timestamp, direction) VALUES (1, 151.000);\nINSERT INTO root.wind2.10(timestamp, direction) VALUES (2, 152.000);\nINSERT INTO root.wind2.10(timestamp, direction) VALUES (3, 153.000);\nINSERT INTO root.wind2.10(timestamp, direction) VALUES (4, 154.000);\nINSERT INTO root.wind2.10(timestamp, direction) VALUES (5, 155.000);\nINSERT INTO root.wind2.10(timestamp, direction) VALUES (6, 156.000);\nINSERT INTO root.wind2.10(timestamp, direction) VALUES (7, 157.000);\nINSERT INTO root.wind2.10(timestamp, direction) VALUES (8, 158.000);\nINSERT INTO root.wind2.10(timestamp, direction) VALUES (9, 159.000);\nINSERT INTO root.wind2.10(timestamp, direction) VALUES (10, 160.000);\nINSERT INTO root.wind2.10(timestamp, direction) VALUES (11, 161.000);\nINSERT INTO root.wind2.10(timestamp, direction) VALUES (12, 162.000);\nINSERT INTO root.wind2.10(timestamp, direction) VALUES (13, 163.000);\nINSERT INTO root.wind2.10(timestamp, direction) VALUES (14, 164.000);\nINSERT INTO root.wind2.11(timestamp, direction) VALUES (0, 165.000);\nINSERT INTO root.wind2.11(timestamp, direction) VALUES (1, 166.000);\nINSERT INTO root.wind2.11(timestamp, direction) VALUES (2, 167.000);\nINSERT INTO root.wind2.11(timestamp, direction) VALUES (3, 168.000);\nINSERT INTO root.wind2.11(timestamp, direction) VALUES (4, 169.000);\nINSERT INTO root.wind2.11(timestamp, direction) VALUES (5, 170.000);\nINSERT INTO root.wind2.11(timestamp, direction) VALUES (6, 171.000);\nINSERT INTO root.wind2.11(timestamp, direction) VALUES (7, 172.000);\nINSERT INTO root.wind2.11(timestamp, direction) VALUES (8, 173.000);\nINSERT INTO root.wind2.11(timestamp, direction) VALUES (9, 174.000);\nINSERT INTO root.wind2.11(timestamp, direction) VALUES (10, 175.000);\nINSERT INTO root.wind2.11(timestamp, direction) VALUES (11, 176.000);\nINSERT INTO root.wind2.11(timestamp, direction) VALUES (12, 177.000);\nINSERT INTO root.wind2.11(timestamp, direction) VALUES (13, 178.000);\nINSERT INTO root.wind2.11(timestamp, direction) VALUES (14, 179.000);\nINSERT INTO root.wind2.12(timestamp, direction) VALUES (0, 180.000);\nINSERT INTO root.wind2.12(timestamp, direction) VALUES (1, 181.000);\nINSERT INTO root.wind2.12(timestamp, direction) VALUES (2, 182.000);\nINSERT INTO root.wind2.12(timestamp, direction) VALUES (3, 183.000);\nINSERT INTO root.wind2.12(timestamp, direction) VALUES (4, 184.000);\nINSERT INTO root.wind2.12(timestamp, direction) VALUES (5, 185.000);\nINSERT INTO root.wind2.12(timestamp, direction) VALUES (6, 186.000);\nINSERT INTO root.wind2.12(timestamp, direction) VALUES (7, 187.000);\nINSERT INTO root.wind2.12(timestamp, direction) VALUES (8, 188.000);\nINSERT INTO root.wind2.12(timestamp, direction) VALUES (9, 189.000);\nINSERT INTO root.wind2.12(timestamp, direction) VALUES (10, 190.000);\nINSERT INTO root.wind2.12(timestamp, direction) VALUES (11, 191.000);\nINSERT INTO root.wind2.12(timestamp, direction) VALUES (12, 192.000);\nINSERT INTO root.wind2.12(timestamp, direction) VALUES (13, 193.000);\nINSERT INTO root.wind2.12(timestamp, direction) VALUES (14, 194.000);\nINSERT INTO root.wind2.13(timestamp, direction) VALUES (0, 195.000);\nINSERT INTO root.wind2.13(timestamp, direction) VALUES (1, 196.000);\nINSERT INTO root.wind2.13(timestamp, direction) VALUES (2, 197.000);\nINSERT INTO root.wind2.13(timestamp, direction) VALUES (3, 198.000);\nINSERT INTO root.wind2.13(timestamp, direction) VALUES (4, 199.000);\nINSERT INTO root.wind2.13(timestamp, direction) VALUES (5, 200.000);\nINSERT INTO root.wind2.13(timestamp, direction) VALUES (6, 201.000);\nINSERT INTO root.wind2.13(timestamp, direction) VALUES (7, 202.000);\nINSERT INTO root.wind2.13(timestamp, direction) VALUES (8, 203.000);\nINSERT INTO root.wind2.13(timestamp, direction) VALUES (9, 204.000);\nINSERT INTO root.wind2.13(timestamp, direction) VALUES (10, 205.000);\nINSERT INTO root.wind2.13(timestamp, direction) VALUES (11, 206.000);\nINSERT INTO root.wind2.13(timestamp, direction) VALUES (12, 207.000);\nINSERT INTO root.wind2.13(timestamp, direction) VALUES (13, 208.000);\nINSERT INTO root.wind2.13(timestamp, direction) VALUES (14, 209.000);\nINSERT INTO root.wind2.14(timestamp, direction) VALUES (0, 210.000);\nINSERT INTO root.wind2.14(timestamp, direction) VALUES (1, 211.000);\nINSERT INTO root.wind2.14(timestamp, direction) VALUES (2, 212.000);\nINSERT INTO root.wind2.14(timestamp, direction) VALUES (3, 213.000);\nINSERT INTO root.wind2.14(timestamp, direction) VALUES (4, 214.000);\nINSERT INTO root.wind2.14(timestamp, direction) VALUES (5, 215.000);\nINSERT INTO root.wind2.14(timestamp, direction) VALUES (6, 216.000);\nINSERT INTO root.wind2.14(timestamp, direction) VALUES (7, 217.000);\nINSERT INTO root.wind2.14(timestamp, direction) VALUES (8, 218.000);\nINSERT INTO root.wind2.14(timestamp, direction) VALUES (9, 219.000);\nINSERT INTO root.wind2.14(timestamp, direction) VALUES (10, 220.000);\nINSERT INTO root.wind2.14(timestamp, direction) VALUES (11, 221.000);\nINSERT INTO root.wind2.14(timestamp, direction) VALUES (12, 222.000);\nINSERT INTO root.wind2.14(timestamp, direction) VALUES (13, 223.000);\nINSERT INTO root.wind2.14(timestamp, direction) VALUES (14, 224.000);\nINSERT INTO root.wind2.15(timestamp, direction) VALUES (0, 225.000);\nINSERT INTO root.wind2.15(timestamp, direction) VALUES (1, 226.000);\nINSERT INTO root.wind2.15(timestamp, direction) VALUES (2, 227.000);\nINSERT INTO root.wind2.15(timestamp, direction) VALUES (3, 228.000);\nINSERT INTO root.wind2.15(timestamp, direction) VALUES (4, 229.000);\nINSERT INTO root.wind2.15(timestamp, direction) VALUES (5, 230.000);\nINSERT INTO root.wind2.15(timestamp, direction) VALUES (6, 231.000);\nINSERT INTO root.wind2.15(timestamp, direction) VALUES (7, 232.000);\nINSERT INTO root.wind2.15(timestamp, direction) VALUES (8, 233.000);\nINSERT INTO root.wind2.15(timestamp, direction) VALUES (9, 234.000);\nINSERT INTO root.wind2.15(timestamp, direction) VALUES (10, 235.000);\nINSERT INTO root.wind2.15(timestamp, direction) VALUES (11, 236.000);\nINSERT INTO root.wind2.15(timestamp, direction) VALUES (12, 237.000);\nINSERT INTO root.wind2.15(timestamp, direction) VALUES (13, 238.000);\nINSERT INTO root.wind2.15(timestamp, direction) VALUES (14, 239.000);\nINSERT INTO root.wind2.16(timestamp, direction) VALUES (0, 240.000);\nINSERT INTO root.wind2.16(timestamp, direction) VALUES (1, 241.000);\nINSERT INTO root.wind2.16(timestamp, direction) VALUES (2, 242.000);\nINSERT INTO root.wind2.16(timestamp, direction) VALUES (3, 243.000);\nINSERT INTO root.wind2.16(timestamp, direction) VALUES (4, 244.000);\nINSERT INTO root.wind2.16(timestamp, direction) VALUES (5, 245.000);\nINSERT INTO root.wind2.16(timestamp, direction) VALUES (6, 246.000);\nINSERT INTO root.wind2.16(timestamp, direction) VALUES (7, 247.000);\nINSERT INTO root.wind2.16(timestamp, direction) VALUES (8, 248.000);\nINSERT INTO root.wind2.16(timestamp, direction) VALUES (9, 249.000);\nINSERT INTO root.wind2.16(timestamp, direction) VALUES (10, 250.000);\nINSERT INTO root.wind2.16(timestamp, direction) VALUES (11, 251.000);\nINSERT INTO root.wind2.16(timestamp, direction) VALUES (12, 252.000);\nINSERT INTO root.wind2.16(timestamp, direction) VALUES (13, 253.000);\nINSERT INTO root.wind2.16(timestamp, direction) VALUES (14, 254.000);\nINSERT INTO root.wind2.17(timestamp, direction) VALUES (0, 255.000);\nINSERT INTO root.wind2.17(timestamp, direction) VALUES (1, 256.000);\nINSERT INTO root.wind2.17(timestamp, direction) VALUES (2, 257.000);\nINSERT INTO root.wind2.17(timestamp, direction) VALUES (3, 258.000);\nINSERT INTO root.wind2.17(timestamp, direction) VALUES (4, 259.000);\nINSERT INTO root.wind2.17(timestamp, direction) VALUES (5, 260.000);\nINSERT INTO root.wind2.17(timestamp, direction) VALUES (6, 261.000);\nINSERT INTO root.wind2.17(timestamp, direction) VALUES (7, 262.000);\nINSERT INTO root.wind2.17(timestamp, direction) VALUES (8, 263.000);\nINSERT INTO root.wind2.17(timestamp, direction) VALUES (9, 264.000);\nINSERT INTO root.wind2.17(timestamp, direction) VALUES (10, 265.000);\nINSERT INTO root.wind2.17(timestamp, direction) VALUES (11, 266.000);\nINSERT INTO root.wind2.17(timestamp, direction) VALUES (12, 267.000);\nINSERT INTO root.wind2.17(timestamp, direction) VALUES (13, 268.000);\nINSERT INTO root.wind2.17(timestamp, direction) VALUES (14, 269.000);\nINSERT INTO root.wind2.18(timestamp, direction) VALUES (0, 270.000);\nINSERT INTO root.wind2.18(timestamp, direction) VALUES (1, 271.000);\nINSERT INTO root.wind2.18(timestamp, direction) VALUES (2, 272.000);\nINSERT INTO root.wind2.18(timestamp, direction) VALUES (3, 273.000);\nINSERT INTO root.wind2.18(timestamp, direction) VALUES (4, 274.000);\nINSERT INTO root.wind2.18(timestamp, direction) VALUES (5, 275.000);\nINSERT INTO root.wind2.18(timestamp, direction) VALUES (6, 276.000);\nINSERT INTO root.wind2.18(timestamp, direction) VALUES (7, 277.000);\nINSERT INTO root.wind2.18(timestamp, direction) VALUES (8, 278.000);\nINSERT INTO root.wind2.18(timestamp, direction) VALUES (9, 279.000);\nINSERT INTO root.wind2.18(timestamp, direction) VALUES (10, 280.000);\nINSERT INTO root.wind2.18(timestamp, direction) VALUES (11, 281.000);\nINSERT INTO root.wind2.18(timestamp, direction) VALUES (12, 282.000);\nINSERT INTO root.wind2.18(timestamp, direction) VALUES (13, 283.000);\nINSERT INTO root.wind2.18(timestamp, direction) VALUES (14, 284.000);\nINSERT INTO root.wind2.19(timestamp, direction) VALUES (0, 285.000);\nINSERT INTO root.wind2.19(timestamp, direction) VALUES (1, 286.000);\nINSERT INTO root.wind2.19(timestamp, direction) VALUES (2, 287.000);\nINSERT INTO root.wind2.19(timestamp, direction) VALUES (3, 288.000);\nINSERT INTO root.wind2.19(timestamp, direction) VALUES (4, 289.000);\nINSERT INTO root.wind2.19(timestamp, direction) VALUES (5, 290.000);\nINSERT INTO root.wind2.19(timestamp, direction) VALUES (6, 291.000);\nINSERT INTO root.wind2.19(timestamp, direction) VALUES (7, 292.000);\nINSERT INTO root.wind2.19(timestamp, direction) VALUES (8, 293.000);\nINSERT INTO root.wind2.19(timestamp, direction) VALUES (9, 294.000);\nINSERT INTO root.wind2.19(timestamp, direction) VALUES (10, 295.000);\nINSERT INTO root.wind2.19(timestamp, direction) VALUES (11, 296.000);\nINSERT INTO root.wind2.19(timestamp, direction) VALUES (12, 297.000);\nINSERT INTO root.wind2.19(timestamp, direction) VALUES (13, 298.000);\nINSERT INTO root.wind2.19(timestamp, direction) VALUES (14, 299.000);\nflush;",
+      "user": "anonymous",
+      "dateUpdated": "2020-11-25T22:40:07+0800",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 9,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionKey": "TAB"
+        },
+        "editorMode": "ace/mode/sql",
+        "editorHide": true,
+        "title": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Sql executed."
+          }
+        ]
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1606314556109_1171238598",
+      "id": "paragraph_1606314556109_1171238598",
+      "dateCreated": "2020-11-25T22:29:16+0800",
+      "dateStarted": "2020-11-25T22:32:20+0800",
+      "dateFinished": "2020-11-25T22:32:21+0800",
+      "status": "FINISHED",
+      "$$hashKey": "object:182",
+      "title": "全序列检索-插入和刷写"
+    },
+    {
+      "user": "anonymous",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 9,
+        "enabled": true,
+        "results": {
+          "0": {
+            "graph": {
+              "mode": "lineChart",
+              "height": 300,
+              "optionOpen": false,
+              "setting": {
+                "table": {
+                  "tableGridState": {},
+                  "tableColumnTypeState": {
+                    "names": {
+                      "Time": "string",
+                      "root.wind2.8.direction.(D=0.00)": "string",
+                      "root.wind2.9.direction.(D=58.09)": "string"
+                    },
+                    "updated": false
+                  },
+                  "tableOptionSpecHash": "[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]",
+                  "tableOptionValue": {
+                    "useFilter": false,
+                    "showPagination": false,
+                    "showAggregationFooter": false
+                  },
+                  "updated": false,
+                  "initialized": false
+                },
+                "lineChart": {
+                  "rotate": {
+                    "degree": "-45"
+                  },
+                  "xLabelStatus": "default"
+                }
+              },
+              "commonSetting": {},
+              "keys": [
+                {
+                  "name": "Time",
+                  "index": 0,
+                  "aggr": "sum"
+                }
+              ],
+              "groups": [],
+              "values": [
+                {
+                  "name": "root.wind2.8.direction.(D=0.00)",
+                  "index": 1,
+                  "aggr": "sum"
+                },
+                {
+                  "name": "root.wind2.9.direction.(D=58.09)",
+                  "index": 2,
+                  "aggr": "sum"
+                }
+              ]
+            },
+            "helium": {}
+          }
+        },
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionKey": "TAB"
+        },
+        "editorMode": "ace/mode/sql",
+        "title": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1606314764746_2069093736",
+      "id": "paragraph_1606314764746_2069093736",
+      "dateCreated": "2020-11-25T22:32:44+0800",
+      "status": "FINISHED",
+      "focus": true,
+      "$$hashKey": "object:529",
+      "text": "SELECT TOP 2 direction \nFROM root.wind2.*\nWHERE direction LIKE (120,121,122,123,124,125,126,127,128,129,130,131,132,133,134);",
+      "dateUpdated": "2020-11-25T22:43:09+0800",
+      "dateFinished": "2020-11-25T22:43:09+0800",
+      "dateStarted": "2020-11-25T22:43:09+0800",
+      "title": "全序列检索-查询",
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TABLE",
+            "data": "Time\troot.wind2.8.direction.(D=0.00)\troot.wind2.9.direction.(D=58.09)\n0\t120.0\t135.0\n1\t121.0\t136.0\n2\t122.0\t137.0\n3\t123.0\t138.0\n4\t124.0\t139.0\n5\t125.0\t140.0\n6\t126.0\t141.0\n7\t127.0\t142.0\n8\t128.0\t143.0\n9\t129.0\t144.0\n10\t130.0\t145.0\n11\t131.0\t146.0\n12\t132.0\t147.0\n13\t133.0\t148.0\n14\t134.0\t149.0"
+          }
+        ]
+      }
+    },
+    {
+      "user": "anonymous",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 9,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionKey": "TAB"
+        },
+        "editorMode": "ace/mode/sql",
+        "title": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1606314834009_789503606",
+      "id": "paragraph_1606314834009_789503606",
+      "dateCreated": "2020-11-25T22:33:54+0800",
+      "status": "FINISHED",
+      "focus": true,
+      "$$hashKey": "object:630",
+      "text": "SET STORAGE GROUP TO root.wind1;\nCREATE TIMESERIES root.wind1.azq01.speed WITH DATATYPE=FLOAT,ENCODING=PLAIN;\nCREATE INDEX ON root.wind1.azq01.speed WITH INDEX=ELB_INDEX, BLOCK_SIZE=5;",
+      "dateUpdated": "2020-11-25T22:41:07+0800",
+      "dateFinished": "2020-11-25T22:40:56+0800",
+      "dateStarted": "2020-11-25T22:40:56+0800",
+      "title": "子序列检索-数据库模式",
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Sql executed."
+          }
+        ]
+      }
+    },
+    {
+      "user": "anonymous",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 9,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionKey": "TAB"
+        },
+        "editorMode": "ace/mode/sql",
+        "title": true,
+        "editorHide": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1606315240595_1500442392",
+      "id": "paragraph_1606315240595_1500442392",
+      "dateCreated": "2020-11-25T22:40:40+0800",
+      "status": "FINISHED",
+      "focus": true,
+      "$$hashKey": "object:1701",
+      "dateUpdated": "2020-11-25T22:41:38+0800",
+      "dateFinished": "2020-11-25T22:41:38+0800",
+      "dateStarted": "2020-11-25T22:41:38+0800",
+      "title": "子序列检索-插入和刷写",
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TEXT",
+            "data": "Sql executed."
+          }
+        ]
+      },
+      "text": "INSERT INTO root.wind1.azq01(timestamp, speed) VALUES (0, 0.231);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (1, -0.028);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (2, 0.109);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (3, 0.159);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (4, 0.257);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (5, 0.090);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (6, -0.025);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (7, 0.460);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (8, 0.839);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (9, 1.281);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (10, 1.056);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (11, 0.684);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (12, 0.331);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (13, -0.146);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (14, -0.099);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (15, 0.366);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (16, -0.030);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (17, 0.095);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (18, 0.006);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (19, 0.282);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (20, 0.773);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (21, 0.760);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (22, 1.006);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (23, 1.240);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (24, 1.557);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (25, 1.896);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (26, 1.922);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (27, 2.322);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (28, 1.956);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (29, 1.539);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (30, 2.017);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (31, 2.240);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (32, 2.455);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (33, 2.098);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (34, 2.061);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (35, 1.565);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (36, 1.137);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (37, 0.985);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (38, 0.824);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (39, 1.183);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (40, 1.655);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (41, 2.021);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (42, 2.133);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (43, 1.812);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (44, 1.530);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (45, 1.884);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (46, 1.394);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (47, 1.586);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (48, 1.858);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (49, 2.070);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (50, 1.782);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (51, 2.065);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (52, 2.510);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (53, 2.024);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (54, 1.918);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (55, 2.272);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (56, 2.558);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (57, 3.052);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (58, 3.435);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (59, 3.105);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (60, 3.567);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (61, 3.792);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (62, 3.969);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (63, 4.273);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (64, 4.215);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (65, 4.177);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (66, 4.530);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (67, 4.531);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (68, 5.023);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (69, 5.493);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (70, 5.346);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (71, 4.893);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (72, 4.465);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (73, 3.994);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (74, 3.977);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (75, 4.449);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (76, 4.939);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (77, 5.206);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (78, 5.207);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (79, 4.963);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (80, 4.772);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (81, 5.120);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (82, 4.672);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (83, 4.183);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (84, 4.036);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (85, 3.623);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (86, 3.973);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (87, 3.477);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (88, 3.285);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (89, 3.317);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (90, 3.735);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (91, 3.513);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (92, 3.887);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (93, 3.997);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (94, 4.405);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (95, 3.950);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (96, 4.097);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (97, 4.093);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (98, 4.100);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (99, 4.121);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (100, 3.987);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (101, 3.965);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (102, 4.169);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (103, 3.992);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (104, 3.503);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (105, 3.704);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (106, 3.950);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (107, 4.057);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (108, 3.792);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (109, 3.681);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (110, 4.093);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (111, 3.760);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (112, 3.264);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (113, 3.029);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (114, 3.422);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (115, 3.219);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (116, 3.148);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (117, 3.336);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (118, 3.244);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (119, 3.097);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (120, 3.269);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (121, 3.509);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (122, 3.904);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (123, 3.984);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (124, 3.994);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (125, 3.806);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (126, 3.847);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (127, 4.320);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (128, 4.433);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (129, 3.961);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (130, 4.150);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (131, 4.280);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (132, 4.598);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (133, 4.839);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (134, 4.970);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (135, 4.785);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (136, 5.036);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (137, 4.726);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (138, 4.348);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (139, 4.562);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (140, 4.995);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (141, 4.806);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (142, 4.835);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (143, 4.514);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (144, 4.128);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (145, 4.312);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (146, 4.191);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (147, 4.284);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (148, 4.724);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (149, 4.758);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (150, 4.473);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (151, 4.306);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (152, 4.057);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (153, 4.292);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (154, 3.884);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (155, 3.648);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (156, 3.337);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (157, 3.135);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (158, 3.393);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (159, 2.940);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (160, 2.526);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (161, 2.918);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (162, 2.953);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (163, 2.538);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (164, 2.570);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (165, 2.143);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (166, 1.820);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (167, 2.203);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (168, 2.054);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (169, 2.540);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (170, 2.615);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (171, 2.720);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (172, 2.493);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (173, 2.506);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (174, 2.951);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (175, 2.668);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (176, 3.078);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (177, 2.598);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (178, 2.372);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (179, 2.541);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (180, 2.329);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (181, 1.893);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (182, 1.619);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (183, 1.259);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (184, 1.362);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (185, 1.590);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (186, 1.394);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (187, 1.519);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (188, 1.055);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (189, 1.033);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (190, 0.625);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (191, 0.836);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (192, 0.770);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (193, 1.089);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (194, 1.194);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (195, 1.366);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (196, 1.316);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (197, 1.161);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (198, 0.930);\nINSERT INTO root.wind1.azq01(timestamp, speed) VALUES (199, 1.175);\nflush;"
+    },
+    {
+      "user": "anonymous",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 9,
+        "enabled": true,
+        "results": {
+          "0": {
+            "graph": {
+              "mode": "lineChart",
+              "height": 300,
+              "optionOpen": false,
+              "setting": {
+                "table": {
+                  "tableGridState": {},
+                  "tableColumnTypeState": {
+                    "names": {
+                      "Time": "string",
+                      "root.wind1.azq01.speed.0": "string",
+                      "root.wind1.azq01.speed.1": "string",
+                      "root.wind1.azq01.speed.2": "string",
+                      "root.wind1.azq01.speed.10": "string"
+                    },
+                    "updated": false
+                  },
+                  "tableOptionSpecHash": "[{\"name\":\"useFilter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable filter for columns\"},{\"name\":\"showPagination\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable pagination for better navigation\"},{\"name\":\"showAggregationFooter\",\"valueType\":\"boolean\",\"defaultValue\":false,\"widget\":\"checkbox\",\"description\":\"Enable a footer for displaying aggregated values\"}]",
+                  "tableOptionValue": {
+                    "useFilter": false,
+                    "showPagination": false,
+                    "showAggregationFooter": false
+                  },
+                  "updated": false,
+                  "initialized": false
+                },
+                "lineChart": {
+                  "rotate": {
+                    "degree": "-45"
+                  },
+                  "xLabelStatus": "default"
+                }
+              },
+              "commonSetting": {},
+              "keys": [
+                {
+                  "name": "Time",
+                  "index": 0,
+                  "aggr": "sum"
+                }
+              ],
+              "groups": [],
+              "values": [
+                {
+                  "name": "root.wind1.azq01.speed.0",
+                  "index": 1,
+                  "aggr": "sum"
+                },
+                {
+                  "name": "root.wind1.azq01.speed.1",
+                  "index": 2,
+                  "aggr": "sum"
+                },
+                {
+                  "name": "root.wind1.azq01.speed.2",
+                  "index": 3,
+                  "aggr": "sum"
+                },
+                {
+                  "name": "root.wind1.azq01.speed.10",
+                  "index": 4,
+                  "aggr": "sum"
+                }
+              ]
+            },
+            "helium": {}
+          }
+        },
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionKey": "TAB"
+        },
+        "editorMode": "ace/mode/sql",
+        "title": true
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1606315298015_622267528",
+      "id": "paragraph_1606315298015_622267528",
+      "dateCreated": "2020-11-25T22:41:38+0800",
+      "status": "FINISHED",
+      "focus": true,
+      "$$hashKey": "object:1857",
+      "dateUpdated": "2020-11-25T22:43:32+0800",
+      "dateFinished": "2020-11-25T22:43:32+0800",
+      "dateStarted": "2020-11-25T22:43:32+0800",
+      "title": "子序列检索-查询",
+      "results": {
+        "code": "SUCCESS",
+        "msg": [
+          {
+            "type": "TABLE",
+            "data": "Time\troot.wind1.azq01.speed.0\troot.wind1.azq01.speed.1\troot.wind1.azq01.speed.2\troot.wind1.azq01.speed.10\n0\t0.231\t-0.028\t0.109\t1.056\n1\t-0.028\t0.109\t0.159\t0.684\n2\t0.109\t0.159\t0.257\t0.331\n3\t0.159\t0.257\t0.09\t-0.146\n4\t0.257\t0.09\t-0.025\t-0.099\n5\t0.09\t-0.025\t0.46\t0.366\n6\t-0.025\t0.46\t0.839\t-0.03\n7\t0.46\t0.839\t1.281\t0.095\n8\t0.839\t1.281\t1.056\t0.006\n9\t1.281\t1.056\t0.684\t0.282\n10\t1.056\t0.684\t0.331\t0.773\n11\t0.684\t0.331\t-0.146\t0.76\n12\t0.331\t-0.146\t-0.099\t1.006\n13\t-0.146\t-0.099\t0.366\t1.24\n14\t-0.099\t0.366\t-0.03\t1.557\n15\t0.366\t-0.03\t0.095\t1.896\n16\t-0.03\t0.095\t0.006\t1.922\n17\t0.095\t0.006\t0.282\t2.322\n18\t0.006\t0.282\t0.773\t1.956\n19\t0.282\t0.773\t0.76\t1.539\n20\t0.773\t0.76\t1.006\t2.017\n21\t0.76\t1.006\t1.24\t2.24\n22\t1.006\t1.24\t1.557\t2.455\n23\t1.24\t1.557\t1.896\t2.098\n24\t1.557\t1.896\t1.922\t2.061\n25\t1.896\t1.922\t2.322\t1.565\n26\t1.922\t2.322\t1.956\t1.137\n27\t2.322\t1.956\t1.539\t0.985\n28\t1.956\t1.539\t2.017\t0.824\n29\t1.539\t2.017\t2.24\t1.183\n30\t2.017\t2.24\t2.455\t1.655\n31\t2.24\t2.455\t2.098\t2.021\n32\t2.455\t2.098\t2.061\t2.133\n33\t2.098\t2.061\t1.565\t1.812\n34\t2.061\t1.565\t1.137\t1.53\n35\t1.565\t1.137\t0.985\t1.884\n36\t1.137\t0.985\t0.824\t1.394\n37\t0.985\t0.824\t1.183\t1.586\n38\t0.824\t1.183\t1.655\t1.858\n39\t1.183\t1.655\t2.021\t2.07\n40\t1.655\t2.021\t2.133\t1.782\n41\t2.021\t2.133\t1.812\t2.065\n42\t2.133\t1.812\t1.53\t2.51\n43\t1.812\t1.53\t1.884\t2.024\n44\t1.53\t1.884\t1.394\t1.918\n45\t1.884\t1.394\t1.586\t2.272\n46\t1.394\t1.586\t1.858\t2.558\n47\t1.586\t1.858\t2.07\t3.052\n48\t1.858\t2.07\t1.782\t3.435\n49\t2.07\t1.782\t2.065\t3.105"
+          }
+        ]
+      },
+      "text": "SELECT speed.* \nFROM root.wind1.azq01 \nWHERE Speed \n    CONTAIN (0.231,-0.028,0.109,0.159,0.257,0.090,-0.025,0.460,0.839,1.281) \n        WITH TOLERANCE 0.6 \n    CONCAT (1.056,0.684,0.331,-0.146,-0.099,0.366,-0.030,0.095,0.006,0.282,0.773,0.760,1.006,1.240,1.557,1.896,1.922,2.322,1.956,1.539,2.017,2.240,2.455,2.098,2.061,1.565,1.137,0.985,0.824,1.183) \n        WITH TOLERANCE 1.3\n    CONCAT (1.655,2.021,2.133,1.812,1.530,1.884,1.394,1.586,1.858,2.070)\n        WITH TOLERANCE 0.9;"
+    },
+    {
+      "user": "anonymous",
+      "config": {
+        "colWidth": 12,
+        "fontSize": 9,
+        "enabled": true,
+        "results": {},
+        "editorSetting": {
+          "language": "sql",
+          "editOnDblClick": false,
+          "completionKey": "TAB"
+        },
+        "editorMode": "ace/mode/sql"
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "apps": [],
+      "runtimeInfos": {},
+      "progressUpdateIntervalMs": 500,
+      "jobName": "paragraph_1606315351758_462535029",
+      "id": "paragraph_1606315351758_462535029",
+      "dateCreated": "2020-11-25T22:42:31+0800",
+      "status": "READY",
+      "focus": true,
+      "$$hashKey": "object:1966"
+    }
+  ],
+  "name": "IoTDB-Index-Demo",
+  "id": "2FRRG5PAX",
+  "defaultInterpreterGroup": "iotdb",
+  "version": "0.9.0-preview2",
+  "noteParams": {},
+  "noteForms": {},
+  "angularObjects": {},
+  "config": {
+    "isZeppelinNotebookCronEnable": false,
+    "looknfeel": "default",
+    "personalizedMode": "false"
+  },
+  "info": {},
+  "path": "/IoTDB-Index"
+}
