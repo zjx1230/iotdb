@@ -432,12 +432,12 @@ public class RTree<T> {
   }
 
 
-  public static RTree<String> deserialize(InputStream inputStream) throws IOException {
+  public static RTree<PartialPath> deserializePartialPath(InputStream inputStream) throws IOException {
     int dim = ReadWriteIOUtils.readInt(inputStream);
     int nMaxPerNode = ReadWriteIOUtils.readInt(inputStream);
     int nMinPerNode = ReadWriteIOUtils.readInt(inputStream);
     SeedsPicker seedsPicker = SeedsPicker.deserialize(ReadWriteIOUtils.readShort(inputStream));
-    RTree<String> rTree = new RTree<>(nMaxPerNode, nMinPerNode, dim, seedsPicker);
+    RTree<PartialPath> rTree = new RTree<>(nMaxPerNode, nMinPerNode, dim, seedsPicker);
     deserialize(rTree, null, inputStream);
     return rTree;
   }
@@ -676,7 +676,7 @@ public class RTree<T> {
   ) {
     RNode approxNode = approximateSearch(patternFeatures);
     Pair<List<PartialPath>, List<TVList>> pairs = readSeriesFromBinaryFileAtOnceWithIdx(approxNode,
-        loadSeriesFunc, modifiedPaths);
+        loadSeriesFunc, modifiedPaths, Double.MAX_VALUE, calcLowerBoundDistFunc, patternFeatures);
     PqItem bsfAnswer = new PqItem();
     PriorityQueue<DistSeries> topKPQ = new PriorityQueue<>(topK, new DistSeriesComparator());
     bsfAnswer.dist = minTopKDistOfNode(pairs.right, pairs.left, queryTs, topKPQ, calcRealDistFunc,
@@ -691,12 +691,12 @@ public class RTree<T> {
     tempItem.node = root;
     tempItem.dist = calcLowerBoundDistFunc.apply(root.lbs, root.ubs, patternFeatures);
     pq.add(tempItem);
-    int lastMislstone = 100000;
+//    int lastMislstone = 100000;
     //process the priority queue
-    int leafCount = 1;
-    int calcDistCount = bsfAnswer.node.size();
-    int processTerminalCount = 1;
-    int processInnerCount = 0;
+//    int leafCount = 1;
+//    int calcDistCount = bsfAnswer.node.size();
+//    int processTerminalCount = 1;
+//    int processInnerCount = 0;
     PqItem minPqItem;
     while (!pq.isEmpty()) {
       minPqItem = pq.remove();
@@ -708,18 +708,18 @@ public class RTree<T> {
           continue;
         }
 
-        leafCount++;
+//        leafCount++;
         //verify the true distance,replace the estimate with the true dist
-        calcDistCount += minPqItem.node.size();
-        processTerminalCount++;
+//        calcDistCount += minPqItem.node.size();
+//        processTerminalCount++;
 
         pairs = readSeriesFromBinaryFileAtOnceWithIdx(minPqItem.node, loadSeriesFunc,
-            modifiedPaths);
+            modifiedPaths, bsfAnswer.dist, calcLowerBoundDistFunc, patternFeatures);
         bsfAnswer.dist = minTopKDistOfNode(pairs.right, pairs.left, queryTs, topKPQ,
             calcRealDistFunc, topK);
 
       } else {
-        processInnerCount++;
+//        processInnerCount++;
         // minPqItem is internal
         // for left
         for (RNode child : minPqItem.node.children) {
@@ -737,7 +737,14 @@ public class RTree<T> {
     List<TVList> modifiedSeries = readModifiedSeries(modifiedPaths, loadSeriesFunc);
     bsfAnswer.dist = minTopKDistOfNode(modifiedSeries, new ArrayList<>(modifiedPaths), queryTs,
         topKPQ, calcRealDistFunc, topK);
-    return new ArrayList<>(topKPQ);
+
+    DistSeries[] res = new DistSeries[topK];
+    int idx = topK - 1;
+    while (!topKPQ.isEmpty()) {
+      DistSeries distSeries = topKPQ.poll();
+      res[idx--] = distSeries;
+    }
+    return Arrays.asList(res);
   }
 
 
@@ -753,18 +760,18 @@ public class RTree<T> {
     double kthMinDist =
         (topKPQ.size() < K || topKPQ.peek() == null) ? Double.MAX_VALUE : topKPQ.peek().dist;
     double tempDist;
-    double sumExactDist = 0;
-    double minExactDist = Double.MAX_VALUE;
+//    double sumExactDist = 0;
+//    double minExactDist = Double.MAX_VALUE;
     int acceptCount = 0;
     for (int i = 0; i < tss.size(); i++) {
       TVList ts = tss.get(i);
       PartialPath partialPath = paths.get(i);
 
       tempDist = calcRealDistFunc.apply(queryTs, ts);
-      sumExactDist += tempDist;
-      if (tempDist < minExactDist) {
-        minExactDist = tempDist;
-      }
+//      sumExactDist += tempDist;
+//      if (tempDist < minExactDist) {
+//        minExactDist = tempDist;
+//      }
       if (topKPQ.size() < K || tempDist < kthMinDist) {
         if (topKPQ.size() == K) {
           topKPQ.poll();
@@ -787,14 +794,19 @@ public class RTree<T> {
   }
 
   private Pair<List<PartialPath>, List<TVList>> readSeriesFromBinaryFileAtOnceWithIdx(RNode node,
-      Function<PartialPath, TVList> loadSeriesFunc, Set<PartialPath> modifiedPaths) {
+      Function<PartialPath, TVList> loadSeriesFunc, Set<PartialPath> modifiedPaths,
+      double bsfDist, TriFunction<float[], float[], float[], Double> calcLowerBoundDistFunc,
+      float[] patternFeatures) {
     List<PartialPath> ps = new ArrayList<>();
     List<TVList> tvs = new ArrayList<>();
     for (RNode rNode : node.children) {
       PartialPath p = (PartialPath) ((Item) rNode).v;
       if (!modifiedPaths.contains(p)) {
-        ps.add(p);
-        tvs.add(loadSeriesFunc.apply(p));
+        double tempDist = calcLowerBoundDistFunc.apply(node.lbs, node.ubs, patternFeatures);
+        if(tempDist < bsfDist){
+          ps.add(p);
+          tvs.add(loadSeriesFunc.apply(p));
+        }
       }
     }
     return new Pair<>(ps, tvs);

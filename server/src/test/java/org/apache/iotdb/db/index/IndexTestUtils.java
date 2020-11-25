@@ -61,7 +61,7 @@ public class IndexTestUtils {
       return "";
     }
     StringBuilder array = new StringBuilder().append(start);
-    for (int i = start + interval; i <= end; i += interval) {
+    for (int i = start + interval; i < end; i += interval) {
       array.append(',').append(i);
     }
     return array.toString();

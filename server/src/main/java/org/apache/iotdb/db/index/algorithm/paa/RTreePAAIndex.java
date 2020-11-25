@@ -21,7 +21,6 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 import org.apache.iotdb.db.index.algorithm.RTreeIndex;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexUtils;
@@ -29,7 +28,6 @@ import org.apache.iotdb.db.index.common.TriFunction;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
 import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.slf4j.Logger;
@@ -168,7 +166,7 @@ public class RTreePAAIndex extends RTreeIndex {
 
   protected IndexFeatureExtractor createQueryFeatureExtractor() {
     return new PAAWholeFeatureExtractor(tsDataType, seriesLength,
-        featureDim, true, currentLowerBounds);
+        featureDim, true, null);
   }
 
 }

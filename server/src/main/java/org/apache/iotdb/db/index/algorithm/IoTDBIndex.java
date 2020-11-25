@@ -36,6 +36,7 @@ import org.apache.iotdb.db.index.IndexProcessor;
 import org.apache.iotdb.db.index.algorithm.rtree.RTree.DistSeries;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategy;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategyType;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
@@ -311,7 +312,7 @@ public abstract class IoTDBIndex {
       RowRecord record = new RowRecord(row);
       for (int col = 0; col < nMaxReturnSeries; col++) {
         TVList tvList = res.get(col).tvList;
-        record.addField(tvList.getFloat(row), tsDataType);
+        record.addField(IndexUtils.getValue(tvList, row), tsDataType);
       }
       dataSet.putRecord(record);
     }

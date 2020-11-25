@@ -275,7 +275,7 @@ public class IoTDBConfig {
   /**
    * Is the write ahead log enable.
    */
-  private boolean enableIndex = false;
+  private boolean enableIndex = true;
 
   /**
    * How many threads can concurrently build index. When <= 0, use CPU core number.

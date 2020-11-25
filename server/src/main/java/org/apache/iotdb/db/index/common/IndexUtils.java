@@ -159,6 +159,7 @@ public class IndexUtils {
   public static String tvListToStr(TVList tvList) {
     return tvListToStr(tvList, 0, tvList.size());
   }
+
   @TestOnly
   public static String tvListToStr(TVList tvList, int offset, int length) {
     StringBuilder sb = new StringBuilder();
@@ -274,9 +275,10 @@ public class IndexUtils {
     throw new IndexRuntimeException(message);
   }
 
-  public static File getIndexFile(String filePath){
+  public static File getIndexFile(String filePath) {
     return SystemFileFactory.INSTANCE.getFile(filePath);
   }
+
   private IndexUtils() {
   }
 
@@ -298,5 +300,20 @@ public class IndexUtils {
       }
     }
     return uppercase;
+  }
+
+  public static Object getValue(TVList srcData, int idx) {
+    switch (srcData.getDataType()) {
+      case INT32:
+        return srcData.getInt(idx);
+      case INT64:
+        return srcData.getLong(idx);
+      case FLOAT:
+        return srcData.getFloat(idx);
+      case DOUBLE:
+        return (float) srcData.getDouble(idx);
+      default:
+        throw new NotImplementedException(srcData.getDataType().toString());
+    }
   }
 }

@@ -98,7 +98,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
   /**
    * For generality, RTree only store ids of identifiers or others.
    */
-  private RTree<String> rTree;
+  private RTree<PartialPath> rTree;
   protected float[] currentLowerBounds;
   protected float[] currentUpperBounds;
   //  protected double[] patterns;
@@ -127,7 +127,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
       return;
     }
     try (InputStream inputStream = new FileInputStream(featureFile)) {
-      this.rTree = RTree.deserialize(inputStream);
+      this.rTree = RTree.deserializePartialPath(inputStream);
     } catch (IOException e) {
       logger.error("Error when deserialize ELB features. Given up.", e);
     }
@@ -161,7 +161,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
     }
 //    this.amortizedPerInputCost = calcAmortizedCost(nMaxPerNode, nMinPerNode);
     SeedsPicker seedPicker = SeedsPicker.valueOf(props.getOrDefault(SEED_PICKER, "LINEAR"));
-    rTree = new RTree<>(nMaxPerNode, nMinPerNode, featureDim, seedPicker);
+    rTree = new RTree<PartialPath>(nMaxPerNode, nMinPerNode, featureDim, seedPicker);
     currentLowerBounds = new float[featureDim];
     currentUpperBounds = new float[featureDim];
 
@@ -234,31 +234,14 @@ public abstract class RTreeIndex extends IoTDBIndex {
     currentInsertPath = null;
   }
 
-  /**
-   * We can optimize it in the future. For instance, the index is built on root.wind.*.direction.
-   * Suppose root.wind.azq01.direction to be inserted, we can only save "azq01" but not the whole
-   * path.
-   */
-  private String fromPathToInsertValue(PartialPath partialPath) {
-    return partialPath.getFullPath();
-  }
-
-  private PartialPath fromInsertValueToPath(String value) {
-    try {
-      return new PartialPath(value);
-    } catch (IllegalPathException e) {
-      throw new IndexRuntimeException("parse partial series failed: " + value);
-    }
-  }
-
   @Override
   public boolean buildNext() {
     fillCurrentFeature();
     if (usePointType) {
-      rTree.insert(currentLowerBounds, fromPathToInsertValue(currentInsertPath));
+      rTree.insert(currentLowerBounds, currentInsertPath);
     } else {
       rTree
-          .insert(currentLowerBounds, currentUpperBounds, fromPathToInsertValue(currentInsertPath));
+          .insert(currentLowerBounds, currentUpperBounds, currentInsertPath);
     }
     return true;
   }
@@ -325,7 +308,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
     if (queryProps.containsKey(THRESHOLD) && queryProps.containsKey(TOP_K)) {
       throw new IllegalIndexParamException("TopK and Threshold cannot be set at the same.");
     }
-    if (!queryProps.containsKey(THRESHOLD) || !queryProps.containsKey(TOP_K)) {
+    if (!queryProps.containsKey(THRESHOLD) && !queryProps.containsKey(TOP_K)) {
       throw new IllegalIndexParamException("TopK and Threshold should be set at least one");
     }
     if (queryProps.containsKey(PATTERN)) {
@@ -385,8 +368,8 @@ public abstract class RTreeIndex extends IoTDBIndex {
   /**
    * to be initialized by child class.
    *
-   * input both sides of boundaries (double[], double[]) of a node, a pattern(double[]), return
-   * the lower-boundary distance.
+   * input both sides of boundaries (double[], double[]) of a node, a pattern(double[]), return the
+   * lower-boundary distance.
    *
    * input: float[]: lower bounds, float[]: upper bounds, float[] pattern features
    *
@@ -425,6 +408,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
           BatchData batch = reader.nextBatch();
           featureExtractor.appendNewSrcData(batch);
         }
+        reader.close();
         if (featureExtractor.hasNext()) {
           featureExtractor.processNext();
           res = (TVList) featureExtractor.getCurrent_L2_AlignedSequence();
@@ -457,19 +441,20 @@ public abstract class RTreeIndex extends IoTDBIndex {
       throws QueryIndexException {
     RTreeQueryStruct struct = initQuery(queryProps);
     List<DistSeries> res;
-    try {
-      res = rTree
-          .exactTopKSearch(struct.topK, struct.patterns, struct.patternFeatures,
-              iIndexUsable.getAllUnusableSeriesForWholeMatching(),
-              getCalcLowerDistFunc(), getCalcExactDistFunc(),
-              getLoadSeriesFunc(context, createQueryFeatureExtractor()));
-    } catch (RuntimeException e) {
-      throw new QueryIndexException(e.getMessage());
+//    try {
+    res = rTree
+        .exactTopKSearch(struct.topK, struct.patterns, struct.patternFeatures,
+            iIndexUsable.getAllUnusableSeriesForWholeMatching(),
+            getCalcLowerDistFunc(), getCalcExactDistFunc(),
+            getLoadSeriesFunc(context, createQueryFeatureExtractor()));
+//    } catch (RuntimeException e) {
+//      throw new QueryIndexException(e.getMessage());
+//    }
+    for (DistSeries ds : res) {
+      ds.partialPath = ds.partialPath.concatNode(String.format("(D=%.2f)", ds.dist));
     }
     return constructSearchDataset(res, alignedByTime, MAX_RETURN_SET);
   }
-
-
 
 //  public int postProcessNext(List<IndexFuncResult> funcResult) throws QueryIndexException {
 //    Identifier identifier = indexFeatureExtractor.getCurrent_L1_Identifier();

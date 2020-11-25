@@ -17,13 +17,14 @@
  */
 package org.apache.iotdb.db.index.algorithm.paa;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.db.utils.datastructure.TruncatedTVListWrapper;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
@@ -49,7 +50,7 @@ public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
     super(dataType, WindowType.WHOLE_MATCH, alignedLength, -1, inQueryMode);
     this.alignedLength = alignedLength;
     this.featureDim = featureDim;
-    if (featureArray.length != featureDim) {
+    if (!inQueryMode && featureArray.length != featureDim) {
       throw new IllegalIndexParamException(
           String.format("the featureDim (%d) doesn't match the length of feature array (%d)",
               featureDim, featureArray.length));
@@ -63,6 +64,11 @@ public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
   protected void initParams() {
     // Do nothing
     hasNewData = true;
+  }
+
+  @Override
+  public void deserializePrevious(ByteBuffer byteBuffer) {
+    //whole matching has nothing to deserialize.
   }
 
   @Override
@@ -85,9 +91,20 @@ public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
     throw new UnsupportedOperationException(NON_SUPPORT_MSG);
   }
 
+  /**
+   * For Whole mathing, it's will deep copy
+   */
   @Override
   public TVList getCurrent_L2_AlignedSequence() {
-    return new TruncatedTVListWrapper(srcData, alignedLength);
+    TVList res = TVListAllocator.getInstance().allocate(TSDataType.DOUBLE);
+    double timeInterval =
+        ((double) (srcData.getLastTime() - srcData.getMinTime())) / (srcData.size() - 1);
+    for (int i = 0; i < alignedLength; i++) {
+      int idx = i >= srcData.size() ? srcData.size() - 1 : i;
+      long t = (long) (srcData.getMinTime() + timeInterval * i);
+      res.putDouble(t, IndexUtils.getDoubleFromAnyType(srcData, idx));
+    }
+    return res;
   }
 
   /**

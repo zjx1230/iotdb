@@ -29,6 +29,7 @@ import java.util.Random;
 import java.util.function.BiConsumer;
 import org.apache.iotdb.db.index.algorithm.rtree.RTree.RNode;
 import org.apache.iotdb.db.index.algorithm.rtree.RTree.SeedsPicker;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -126,7 +127,7 @@ public class RTreeTest {
       }
       afterData[i] = value;
     };
-    RTree<String> afterRTree = RTree.deserialize(byteBuffer);
+    RTree<PartialPath> afterRTree = RTree.deserializePartialPath(byteBuffer);
     System.out.println(rTree);
     System.out.println(afterRTree);
     Assert.assertEquals(rTree.toString(), afterRTree.toString());
