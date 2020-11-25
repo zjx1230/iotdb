@@ -464,15 +464,6 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
         .minusUsableRange(path, tvList.getMinTime(), tvList.getLastTime()));
   }
 
-//  public List<PartialPath> getRelatedStorageGroupPaths() {
-//    if (indexSeries.isFullPath()) {
-//      return Collections.singletonList(indexSeries);
-//    } else {
-//      return
-//    }
-//    throw new UnsupportedOperationException("zxckzjxckz");
-//  }
-
   public QueryDataSet query(IndexType indexType, Map<String, Object> queryProps,
       QueryContext context, boolean alignedByTime) throws QueryIndexException {
     try {

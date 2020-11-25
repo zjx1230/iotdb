@@ -25,8 +25,6 @@ import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,25 +33,21 @@ import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.index.IndexProcessor;
+import org.apache.iotdb.db.index.algorithm.rtree.RTree.DistSeries;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategy;
 import org.apache.iotdb.db.index.indexrange.IndexRangeStrategyType;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
-import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.db.query.aggregation.AggregateResult;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.dataset.ListDataSet;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.read.common.BatchData;
 import org.apache.iotdb.tsfile.read.common.RowRecord;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
-import org.apache.iotdb.tsfile.utils.Binary;
-import org.apache.iotdb.tsfile.utils.Pair;
 
 /**
  * Each StorageGroupProcessor contains a IndexProcessor, and each IndexProcessor can contain more
@@ -111,7 +105,6 @@ public abstract class IoTDBIndex {
     this.indexFeatureExtractor.appendNewSrcData(tvList);
     return indexFeatureExtractor;
   }
-
 
 //  /**
 //   * Sorry but this method is ugly.
@@ -289,8 +282,9 @@ public abstract class IoTDBIndex {
     return indexType.toString();
   }
 
-  protected QueryDataSet constructSubMatchingDataset(PartialPath indexSeries, List<TVList> res,
-      boolean alignedByTime, int nMaxReturnSeries) throws QueryIndexException {
+  protected QueryDataSet constructSearchDataset(List<DistSeries> res,
+      boolean alignedByTime, int nMaxReturnSeries)
+      throws QueryIndexException {
     if (alignedByTime) {
       throw new QueryIndexException("Unsupported alignedByTime result");
     }
@@ -301,21 +295,22 @@ public abstract class IoTDBIndex {
     Map<String, Integer> pathToIndex = new HashMap<>();
     int nMinLength = Integer.MAX_VALUE;
     for (int i = 0; i < nMaxReturnSeries; i++) {
-      PartialPath series = indexSeries.concatNode(String.valueOf(res.get(i).getMinTime()));
+      PartialPath series = res.get(i).partialPath;
       paths.add(series);
       pathToIndex.put(series.getFullPath(), i);
       types.add(tsDataType);
-      if (res.get(i).size() < nMinLength) {
-        nMinLength = res.get(i).size();
+      if (res.get(i).tvList.size() < nMinLength) {
+        nMinLength = res.get(i).tvList.size();
       }
     }
     IndexQueryDataSet dataSet = new IndexQueryDataSet(paths, types, pathToIndex);
-    if(nMaxReturnSeries == 0)
+    if (nMaxReturnSeries == 0) {
       return dataSet;
+    }
     for (int row = 0; row < nMinLength; row++) {
       RowRecord record = new RowRecord(row);
       for (int col = 0; col < nMaxReturnSeries; col++) {
-        TVList tvList = res.get(col);
+        TVList tvList = res.get(col).tvList;
         record.addField(tvList.getFloat(row), tsDataType);
       }
       dataSet.putRecord(record);
@@ -323,7 +318,7 @@ public abstract class IoTDBIndex {
     return dataSet;
   }
 
-  public static class IndexQueryDataSet extends ListDataSet{
+  public static class IndexQueryDataSet extends ListDataSet {
 
     private Map<String, Integer> pathToIndex;
 

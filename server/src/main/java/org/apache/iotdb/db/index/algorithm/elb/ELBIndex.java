@@ -23,6 +23,7 @@ import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_DISTANCE;
 import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_ELB_TYPE;
 import static org.apache.iotdb.db.index.common.IndexConstant.DISTANCE;
 import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE;
+import static org.apache.iotdb.db.index.common.IndexConstant.MAX_RETURN_SET;
 import static org.apache.iotdb.db.index.common.IndexConstant.MISSING_PARAM_ERROR_MESSAGE;
 import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
 import static org.apache.iotdb.db.index.common.IndexConstant.THRESHOLD;
@@ -43,11 +44,11 @@ import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
-import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBWindowBlockFeature;
+import org.apache.iotdb.db.index.algorithm.rtree.RTree.DistSeries;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.distance.Distance;
@@ -229,7 +230,7 @@ public class ELBIndex extends IoTDBIndex {
 //      System.out.println(String.format("%.3f", v));
 //    }
     List<Filter> filterList = queryByIndex(struct, iIndexUsable);
-    List<TVList> res = new ArrayList<>();
+    List<DistSeries> res = new ArrayList<>();
     try {
       for (Filter timeFilter : filterList) {
         QueryDataSource queryDataSource = QueryResourceManager.getInstance()
@@ -250,9 +251,10 @@ public class ELBIndex extends IoTDBIndex {
             TVListPointer p = featureExtractor.getCurrent_L2_AlignedSequence();
 //            System.out.println(">>>>>>>>>>>>>>>> " + IndexUtils.tvListToStr(p.tvList, p.offset, p.length));
             if (struct.elb.exactDistanceCalc(p.tvList, p.offset)) {
-              TVList series = TVListAllocator.getInstance().allocate(tsDataType);
-              TVList.append(series, p.tvList, p.offset, p.length);
-              res.add(series);
+              TVList tvList = TVListAllocator.getInstance().allocate(tsDataType);
+              TVList.append(tvList, p.tvList, p.offset, p.length);
+              PartialPath showPath = indexSeries.concatNode(String.valueOf(tvList.getMinTime()));
+              res.add(new DistSeries(0, tvList, showPath));
             }
           }
           featureExtractor.clearProcessedSrcData();
@@ -262,7 +264,7 @@ public class ELBIndex extends IoTDBIndex {
     } catch (StorageEngineException | QueryProcessException | IOException e) {
       throw new QueryIndexException(e.getMessage());
     }
-    return constructSubMatchingDataset(indexSeries, res, alignedByTime, 5);
+    return constructSearchDataset(res, alignedByTime, MAX_RETURN_SET);
   }
 
 

@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBWindowBlockFeature;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
@@ -163,6 +164,11 @@ public class SingleLongIndexUsability implements IIndexUsable {
     }
   }
 
+  @Override
+  public Set<PartialPath> getAllUnusableSeriesForWholeMatching() {
+    throw new UnsupportedOperationException();
+  }
+
   /**
    * Find the latest node whose start time is less than {@code timestamp} A naive scanning search
    * for the linked list. Further optimization is still going on. It returns a node and there is
@@ -236,11 +242,6 @@ public class SingleLongIndexUsability implements IIndexUsable {
       }
       return fakeHead.next;
     }
-  }
-
-  @Override
-  public PartialPath[] getAllUnusableSeriesForWholeMatching(PartialPath indexSeries) {
-    throw new UnsupportedOperationException(indexSeries.getFullPath());
   }
 
   @Override

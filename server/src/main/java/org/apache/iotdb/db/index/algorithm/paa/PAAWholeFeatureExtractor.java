@@ -21,6 +21,7 @@ import java.util.List;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
+import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.TruncatedTVListWrapper;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
@@ -92,7 +93,7 @@ public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
   /**
    * 两件事：长度为aligned_len，不足补齐，多了不管
    */
-  private void doL3() {
+  private void fillGivenFeatureArray() {
     //    featureArray
     for (int i = 0; i < featureDim; i++) {
       float sum = 0;
@@ -127,7 +128,7 @@ public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
     if (inQueryMode) {
       // do nothing.
     } else {
-      doL3();
+      fillGivenFeatureArray();
     }
     hasNewData = false;
 
@@ -152,6 +153,7 @@ public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
   public List<Object> getLatestN_L2_AlignedSequences(int latestN) {
     throw new UnsupportedOperationException(NON_SUPPORT_MSG);
   }
+
 
   @Override
   public long getChunkStartTime() {

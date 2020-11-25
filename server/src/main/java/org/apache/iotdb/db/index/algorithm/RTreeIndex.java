@@ -18,13 +18,11 @@
  */
 package org.apache.iotdb.db.index.algorithm;
 
-import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_DISTANCE;
 import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_FEATURE_DIM;
-import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_RTREE_PAA_DISTANCE;
 import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_SERIES_LENGTH;
-import static org.apache.iotdb.db.index.common.IndexConstant.DISTANCE;
 import static org.apache.iotdb.db.index.common.IndexConstant.FEATURE_DIM;
 import static org.apache.iotdb.db.index.common.IndexConstant.MAX_ENTRIES;
+import static org.apache.iotdb.db.index.common.IndexConstant.MAX_RETURN_SET;
 import static org.apache.iotdb.db.index.common.IndexConstant.MIN_ENTRIES;
 import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
 import static org.apache.iotdb.db.index.common.IndexConstant.SEED_PICKER;
@@ -39,10 +37,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
@@ -50,29 +49,22 @@ import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
-import org.apache.iotdb.db.index.algorithm.RTree.RNode;
-import org.apache.iotdb.db.index.algorithm.RTree.SeedsPicker;
-import org.apache.iotdb.db.index.algorithm.elb.ELBMatchFeatureExtractor;
-import org.apache.iotdb.db.index.common.IndexFunc;
+import org.apache.iotdb.db.index.algorithm.rtree.RTree;
+import org.apache.iotdb.db.index.algorithm.rtree.RTree.DistSeries;
+import org.apache.iotdb.db.index.algorithm.rtree.RTree.SeedsPicker;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexUtils;
-import org.apache.iotdb.db.index.distance.Distance;
-import org.apache.iotdb.db.index.preprocess.Identifier;
+import org.apache.iotdb.db.index.common.TriFunction;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
-import org.apache.iotdb.db.index.read.TVListPointer;
-import org.apache.iotdb.db.index.read.func.IndexFuncFactory;
-import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.QueryResourceManager;
 import org.apache.iotdb.db.query.reader.series.SeriesRawDataBatchReader;
-import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.common.BatchData;
-import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.apache.iotdb.tsfile.read.reader.IBatchReader;
 import org.slf4j.Logger;
@@ -285,10 +277,8 @@ public abstract class RTreeIndex extends IoTDBIndex {
   /**
    *
    */
-  protected abstract double[] calcQueryFeature(double[] patterns);
+  protected abstract float[] calcQueryFeature(double[] patterns);
 
-  protected abstract double minDistBetweenFeatures(double[] pFeatures,
-      double[] cFeatures);
 
   @Override
   public void flush() {
@@ -297,18 +287,40 @@ public abstract class RTreeIndex extends IoTDBIndex {
   }
 
 
-  private static class RTreeQueryStruct {
+  public static class RTreeQueryStruct {
 
-    public double[] patternFeatures;
+    /**
+     * features is represented by float array
+     */
+    float[] patternFeatures;
+    //    TriFunction<float[], float[], float[], Double> calcLowerDistFunc;
+//
+//    BiFunction<double[], TVList, Double> calcExactDistFunc;
+//    Function<PartialPath, TVList> loadSeriesFunc;
     private double[] patterns;
     int topK = -1;
     double threshold = -1;
-//    public Distance distance;
-
   }
 
   public RTreeQueryStruct initQuery(Map<String, Object> queryProps) {
     RTreeQueryStruct struct = new RTreeQueryStruct();
+
+//    if (calcLowerDistFunc == null) {
+//      throw new IllegalIndexParamException("calcLowerDistFunc hasn't been implemented");
+//    } else {
+//      struct.calcLowerDistFunc = calcLowerDistFunc;
+//    }
+//    if (calcExactDistFunc == null) {
+//      throw new IllegalIndexParamException("calcExactDistFunc hasn't been implemented");
+//    } else {
+//      struct.calcExactDistFunc = calcExactDistFunc;
+//    }
+//    if (loadSeriesFunc == null) {
+//      throw new IllegalIndexParamException("loadSeriesFunc hasn't been implemented");
+//    } else {
+//      struct.loadSeriesFunc = loadSeriesFunc;
+//    }
+
 //    struct.distance = Distance.getDistance(props.getOrDefault(DISTANCE, DEFAULT_RTREE_PAA_DISTANCE));
     if (queryProps.containsKey(THRESHOLD) && queryProps.containsKey(TOP_K)) {
       throw new IllegalIndexParamException("TopK and Threshold cannot be set at the same.");
@@ -332,42 +344,100 @@ public abstract class RTreeIndex extends IoTDBIndex {
   }
 
 
-  TVList readTimeSeries(PartialPath partialPath) {
-    try {
+  private TVList readTimeSeries(PartialPath partialPath) {
+    IndexUtils.breakDown("private TVList readTimeSeries(PartialPath partialPath) {");
+    return null;
+//    try {
+//      for (Filter timeFilter : filterList) {
+//        QueryDataSource queryDataSource = QueryResourceManager.getInstance()
+//            .getQueryDataSource(indexSeries, context, timeFilter);
+//        timeFilter = queryDataSource.updateFilterUsingTTL(timeFilter);
+//
+//        IBatchReader reader = new SeriesRawDataBatchReader(indexSeries,
+//            Collections.singleton(indexSeries.getMeasurement()), tsDataType, context,
+//            queryDataSource, timeFilter, null, null, true);
+//        ELBMatchFeatureExtractor featureExtractor = new ELBMatchFeatureExtractor(tsDataType,
+//            struct.pattern.length, blockWidth, elbType, true);
+////        System.out.println(">>>>>>>>>>>>>>>> Time range: " + timeFilter);
+//        while (reader.hasNextBatch()) {
+//          BatchData batch = reader.nextBatch();
+//          featureExtractor.appendNewSrcData(batch);
+//          while (featureExtractor.hasNext()) {
+//            featureExtractor.processNext();
+//            TVListPointer p = featureExtractor.getCurrent_L2_AlignedSequence();
+////            System.out.println(">>>>>>>>>>>>>>>> " + IndexUtils.tvListToStr(p.tvList, p.offset, p.length));
+//            if (struct.elb.exactDistanceCalc(p.tvList, p.offset)) {
+//              TVList series = TVListAllocator.getInstance().allocate(tsDataType);
+//              TVList.append(series, p.tvList, p.offset, p.length);
+//              res.add(series);
+//            }
+//          }
+//          featureExtractor.clearProcessedSrcData();
+//        }
+//        reader.close();
+//      }
+//
+//    } catch (StorageEngineException | QueryProcessException | IOException e) {
+//      throw new QueryIndexException(e.getMessage());
+//    }
+  }
 
-      for (Filter timeFilter : filterList) {
-        QueryDataSource queryDataSource = QueryResourceManager.getInstance()
-            .getQueryDataSource(indexSeries, context, timeFilter);
-        timeFilter = queryDataSource.updateFilterUsingTTL(timeFilter);
+  /**
+   * to be initialized by child class.
+   *
+   * input both sides of boundaries (double[], double[]) of a node, a pattern(double[]), return
+   * the lower-boundary distance.
+   *
+   * input: float[]: lower bounds, float[]: upper bounds, float[] pattern features
+   *
+   * return: lower-bounding distance
+   */
+  protected abstract TriFunction<float[], float[], float[], Double> getCalcLowerDistFunc();
 
-        IBatchReader reader = new SeriesRawDataBatchReader(indexSeries,
-            Collections.singleton(indexSeries.getMeasurement()), tsDataType, context,
-            queryDataSource, timeFilter, null, null, true);
-        ELBMatchFeatureExtractor featureExtractor = new ELBMatchFeatureExtractor(tsDataType,
-            struct.pattern.length, blockWidth, elbType, true);
-//        System.out.println(">>>>>>>>>>>>>>>> Time range: " + timeFilter);
+  /**
+   * to be initialized by child class.
+   *
+   * input a pattern(double[]), a loaded time series ({@link TVList}), return there real distance.
+   */
+  protected abstract BiFunction<double[], TVList, Double> getCalcExactDistFunc();
+
+  protected abstract IndexFeatureExtractor createQueryFeatureExtractor();
+
+  /**
+   * to be initialized by child class.
+   *
+   * input a path({@link PartialPath}), load and return a series ({@link TVList})
+   */
+  protected Function<PartialPath, TVList> getLoadSeriesFunc(
+      QueryContext context,
+      IndexFeatureExtractor featureExtractor) {
+    return path -> {
+      QueryDataSource queryDataSource;
+      TVList res = null;
+      try {
+        queryDataSource = QueryResourceManager.getInstance()
+            .getQueryDataSource(path, context, null);
+
+        IBatchReader reader = new SeriesRawDataBatchReader(path,
+            Collections.singleton(path.getMeasurement()), tsDataType, context,
+            queryDataSource, null, null, null, true);
         while (reader.hasNextBatch()) {
           BatchData batch = reader.nextBatch();
           featureExtractor.appendNewSrcData(batch);
-          while (featureExtractor.hasNext()) {
-            featureExtractor.processNext();
-            TVListPointer p = featureExtractor.getCurrent_L2_AlignedSequence();
-//            System.out.println(">>>>>>>>>>>>>>>> " + IndexUtils.tvListToStr(p.tvList, p.offset, p.length));
-            if (struct.elb.exactDistanceCalc(p.tvList, p.offset)) {
-              TVList series = TVListAllocator.getInstance().allocate(tsDataType);
-              TVList.append(series, p.tvList, p.offset, p.length);
-              res.add(series);
-            }
-          }
-          featureExtractor.clearProcessedSrcData();
         }
-        reader.close();
+        if (featureExtractor.hasNext()) {
+          featureExtractor.processNext();
+          res = (TVList) featureExtractor.getCurrent_L2_AlignedSequence();
+        }
+        featureExtractor.clearProcessedSrcData();
+        featureExtractor.clear();
+      } catch (StorageEngineException | IOException | QueryProcessException e) {
+        e.printStackTrace();
       }
-
-    } catch (StorageEngineException | QueryProcessException | IOException e) {
-      throw new QueryIndexException(e.getMessage());
-    }
+      return res;
+    };
   }
+
 
   /**
    * Search with PMR-Quadtree [1], which is for any hierarchical index structure that is constructed
@@ -386,21 +456,19 @@ public abstract class RTreeIndex extends IoTDBIndex {
       QueryContext context, IIndexRefinePhaseOptimize refinePhaseOptimizer, boolean alignedByTime)
       throws QueryIndexException {
     RTreeQueryStruct struct = initQuery(queryProps);
-    List<PartialPath> approxNodePaths = rTree.approxSearch(currentLowerBounds, currentUpperBounds);
-
-//    List<PartialPath> filterList = queryByIndex(struct, iIndexUsable);
-    List<TVList> res = new ArrayList<>();
-    return constructWholeMatchingDataset(indexSeries, res, alignedByTime, 5);
+    List<DistSeries> res;
+    try {
+      res = rTree
+          .exactTopKSearch(struct.topK, struct.patterns, struct.patternFeatures,
+              iIndexUsable.getAllUnusableSeriesForWholeMatching(),
+              getCalcLowerDistFunc(), getCalcExactDistFunc(),
+              getLoadSeriesFunc(context, createQueryFeatureExtractor()));
+    } catch (RuntimeException e) {
+      throw new QueryIndexException(e.getMessage());
+    }
+    return constructSearchDataset(res, alignedByTime, MAX_RETURN_SET);
   }
 
-  protected QueryDataSet constructWholeMatchingDataset(PartialPath indexSeries, List<TVList> res, boolean alignedByTime, int i){
-    IndexUtils.breakDown("protected QueryDataSet constructWholeMatchingDataset");
-  }
-
-  public class PqItem {
-    RNode node;
-    double dist;
-  }
 
 
 //  public int postProcessNext(List<IndexFuncResult> funcResult) throws QueryIndexException {

@@ -3,6 +3,7 @@ package org.apache.iotdb.db.index.usable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -48,9 +49,10 @@ public class MultiShortIndexUsability implements IIndexUsable {
   }
 
   @Override
-  public PartialPath[] getAllUnusableSeriesForWholeMatching(PartialPath indexSeries) {
-    return usableInfoSet.toArray(new PartialPath[0]);
+  public Set<PartialPath> getAllUnusableSeriesForWholeMatching() {
+    return Collections.unmodifiableSet(usableInfoSet);
   }
+
 
   @Override
   public List<Filter> getUnusableRangeForSeriesMatching(

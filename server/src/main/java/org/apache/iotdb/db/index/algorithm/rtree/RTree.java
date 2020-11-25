@@ -1,18 +1,41 @@
-package org.apache.iotdb.db.index.algorithm;
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.iotdb.db.index.algorithm.rtree;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.PriorityQueue;
 import java.util.Random;
-import java.util.function.BiConsumer;
+import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
+import org.apache.iotdb.db.index.common.TriFunction;
 import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.utils.datastructure.TVList;
+import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 /**
@@ -488,15 +511,11 @@ public class RTree<T> {
     }
     sb.append(node.toString());
     sb.append("\n");
-    if (!(node instanceof RTree.Item)) {
+    if (!(node instanceof Item)) {
       for (RNode child : node.children) {
         toString(child, depth + 1, sb);
       }
     }
-  }
-
-  public List<PartialPath> approxSearch(float[] currentLowerBounds, float[] currentUpperBounds) {
-    return null;
   }
 
   static class RNode {
@@ -508,7 +527,6 @@ public class RTree<T> {
 
     LinkedList<RNode> children;
 
-
     private RNode(float[] lbs, float[] ubs, boolean isLeaf) {
       this.lbs = new float[lbs.length];
       this.ubs = new float[ubs.length];
@@ -516,6 +534,10 @@ public class RTree<T> {
       System.arraycopy(ubs, 0, this.ubs, 0, ubs.length);
       children = new LinkedList<>();
       this.isLeaf = isLeaf;
+    }
+
+    public int size() {
+      return children.size();
     }
 
     public List<RNode> getChildren() {
@@ -542,6 +564,10 @@ public class RTree<T> {
       this.v = v;
     }
 
+//    public T getValue() {
+//      return v;
+//    }
+
     @Override
     public String toString() {
       return "Item: " + v + "," + super.toString();
@@ -549,7 +575,7 @@ public class RTree<T> {
   }
 
 
-  enum SeedsPicker {
+  public enum SeedsPicker {
     LINEAR {
       @Override
       public RNode[] pickSeeds(LinkedList<RNode> candidates) {
@@ -638,4 +664,183 @@ public class RTree<T> {
     public abstract RNode next(LinkedList<RNode> candidates);
   }
 
+
+  /**
+   * A disturbing function with so many interface functions!
+   */
+  public List<DistSeries> exactTopKSearch(int topK, double[] queryTs, float[] patternFeatures,
+      Set<PartialPath> modifiedPaths,
+      TriFunction<float[], float[], float[], Double> calcLowerBoundDistFunc,
+      BiFunction<double[], TVList, Double> calcRealDistFunc,
+      Function<PartialPath, TVList> loadSeriesFunc
+  ) {
+    RNode approxNode = approximateSearch(patternFeatures);
+    Pair<List<PartialPath>, List<TVList>> pairs = readSeriesFromBinaryFileAtOnceWithIdx(approxNode,
+        loadSeriesFunc, modifiedPaths);
+    PqItem bsfAnswer = new PqItem();
+    PriorityQueue<DistSeries> topKPQ = new PriorityQueue<>(topK, new DistSeriesComparator());
+    bsfAnswer.dist = minTopKDistOfNode(pairs.right, pairs.left, queryTs, topKPQ, calcRealDistFunc,
+        topK);
+
+    // initialize priority queue
+    Comparator<PqItem> comparator = new DistComparator();
+    PriorityQueue<PqItem> pq = new PriorityQueue<>(comparator);
+
+    //initialize the priority queue
+    PqItem tempItem = new PqItem();
+    tempItem.node = root;
+    tempItem.dist = calcLowerBoundDistFunc.apply(root.lbs, root.ubs, patternFeatures);
+    pq.add(tempItem);
+    int lastMislstone = 100000;
+    //process the priority queue
+    int leafCount = 1;
+    int calcDistCount = bsfAnswer.node.size();
+    int processTerminalCount = 1;
+    int processInnerCount = 0;
+    PqItem minPqItem;
+    while (!pq.isEmpty()) {
+      minPqItem = pq.remove();
+      if (minPqItem.dist > bsfAnswer.dist) {
+        break;
+      }
+      if (minPqItem.node.isLeaf) {
+        if (minPqItem.node == approxNode) {
+          continue;
+        }
+
+        leafCount++;
+        //verify the true distance,replace the estimate with the true dist
+        calcDistCount += minPqItem.node.size();
+        processTerminalCount++;
+
+        pairs = readSeriesFromBinaryFileAtOnceWithIdx(minPqItem.node, loadSeriesFunc,
+            modifiedPaths);
+        bsfAnswer.dist = minTopKDistOfNode(pairs.right, pairs.left, queryTs, topKPQ,
+            calcRealDistFunc, topK);
+
+      } else {
+        processInnerCount++;
+        // minPqItem is internal
+        // for left
+        for (RNode child : minPqItem.node.children) {
+          tempItem = new PqItem();
+          tempItem.node = child;
+          tempItem.dist = calcLowerBoundDistFunc.apply(child.lbs, child.ubs, patternFeatures);
+
+          if (tempItem.dist < bsfAnswer.dist) {
+            pq.add(tempItem);
+          }
+        }
+      }
+    }
+    // merge modified parts
+    List<TVList> modifiedSeries = readModifiedSeries(modifiedPaths, loadSeriesFunc);
+    bsfAnswer.dist = minTopKDistOfNode(modifiedSeries, new ArrayList<>(modifiedPaths), queryTs,
+        topKPQ, calcRealDistFunc, topK);
+    return new ArrayList<>(topKPQ);
+  }
+
+
+  private RNode approximateSearch(float[] patterns) {
+    Item item = new Item<>(patterns, patterns, null);
+    return chooseLeaf(root, item);
+  }
+
+  private double minTopKDistOfNode(List<TVList> tss, List<PartialPath> paths, double[] queryTs,
+      PriorityQueue<DistSeries> topKPQ,
+      BiFunction<double[], TVList, Double> calcRealDistFunc,
+      final int K) {
+    double kthMinDist =
+        (topKPQ.size() < K || topKPQ.peek() == null) ? Double.MAX_VALUE : topKPQ.peek().dist;
+    double tempDist;
+    double sumExactDist = 0;
+    double minExactDist = Double.MAX_VALUE;
+    int acceptCount = 0;
+    for (int i = 0; i < tss.size(); i++) {
+      TVList ts = tss.get(i);
+      PartialPath partialPath = paths.get(i);
+
+      tempDist = calcRealDistFunc.apply(queryTs, ts);
+      sumExactDist += tempDist;
+      if (tempDist < minExactDist) {
+        minExactDist = tempDist;
+      }
+      if (topKPQ.size() < K || tempDist < kthMinDist) {
+        if (topKPQ.size() == K) {
+          topKPQ.poll();
+        }
+        topKPQ.add(new DistSeries(tempDist, ts, partialPath));
+        kthMinDist = topKPQ.peek().dist;
+        acceptCount++;
+      }
+    }
+    return kthMinDist;
+  }
+
+  private List<TVList> readModifiedSeries(Set<PartialPath> partialPaths,
+      Function<PartialPath, TVList> loadSeriesFunc) {
+    List<TVList> tvs = new ArrayList<>();
+    for (PartialPath partialPath : partialPaths) {
+      tvs.add(loadSeriesFunc.apply(partialPath));
+    }
+    return tvs;
+  }
+
+  private Pair<List<PartialPath>, List<TVList>> readSeriesFromBinaryFileAtOnceWithIdx(RNode node,
+      Function<PartialPath, TVList> loadSeriesFunc, Set<PartialPath> modifiedPaths) {
+    List<PartialPath> ps = new ArrayList<>();
+    List<TVList> tvs = new ArrayList<>();
+    for (RNode rNode : node.children) {
+      PartialPath p = (PartialPath) ((Item) rNode).v;
+      if (!modifiedPaths.contains(p)) {
+        ps.add(p);
+        tvs.add(loadSeriesFunc.apply(p));
+      }
+    }
+    return new Pair<>(ps, tvs);
+  }
+
+
+  private static class PqItem {
+
+    RNode node;
+    double dist;
+  }
+
+  private static class DistSeriesComparator implements Comparator<DistSeries> {
+
+    public int compare(DistSeries item_1, DistSeries item_2) {
+      return Double.compare(item_2.dist, item_1.dist);
+    }
+  }
+
+  public static class DistSeries {
+
+    public double dist;
+    public TVList tvList;
+    public PartialPath partialPath;
+
+    public DistSeries(double dist, TVList tvList, PartialPath partialPath) {
+      this.dist = dist;
+      this.tvList = tvList;
+      this.partialPath = partialPath;
+    }
+
+    public String toString() {
+      return "(" + partialPath + "," + dist + ":" + tvList + ")";
+    }
+  }
+
+  public class DistComparator implements Comparator<PqItem> {
+
+    public int compare(PqItem item_1, PqItem item_2) {
+      if (item_1.dist < item_2.dist) {
+        return -1;
+      }
+      if (item_1.dist > item_2.dist) {
+        return 1;
+      }
+      return 0;
+    }
+  }
 }

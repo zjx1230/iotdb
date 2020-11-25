@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.iotdb.db.index.algorithm;
+package org.apache.iotdb.db.index.algorithm.rtree;
 
 import static org.junit.Assert.fail;
 
@@ -24,12 +24,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.function.BiConsumer;
-import org.apache.iotdb.db.index.algorithm.RTree.RNode;
-import org.apache.iotdb.db.index.algorithm.RTree.SeedsPicker;
+import org.apache.iotdb.db.index.algorithm.rtree.RTree.RNode;
+import org.apache.iotdb.db.index.algorithm.rtree.RTree.SeedsPicker;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.junit.Assert;
 import org.junit.Test;

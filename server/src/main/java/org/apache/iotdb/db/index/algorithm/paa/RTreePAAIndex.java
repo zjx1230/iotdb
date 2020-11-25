@@ -18,13 +18,19 @@
 package org.apache.iotdb.db.index.algorithm.paa;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import org.apache.iotdb.db.index.algorithm.RTreeIndex;
 import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexUtils;
+import org.apache.iotdb.db.index.common.TriFunction;
 import org.apache.iotdb.db.index.preprocess.Identifier;
+import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
 import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.query.context.QueryContext;
+import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +42,7 @@ import org.slf4j.LoggerFactory;
 public class RTreePAAIndex extends RTreeIndex {
 
   private static final Logger logger = LoggerFactory.getLogger(RTreePAAIndex.class);
+  private final int paaWidth;
 
   private PAAWholeFeatureExtractor paaWholeFeatureExtractor;
 
@@ -46,6 +53,8 @@ public class RTreePAAIndex extends RTreeIndex {
       TSDataType tsDataType, String indexDir,
       IndexInfo indexInfo) {
     super(path, tsDataType, indexDir, indexInfo, true);
+    paaWidth = seriesLength / featureDim;
+
   }
 
   @Override
@@ -114,9 +123,8 @@ public class RTreePAAIndex extends RTreeIndex {
   }
 
   @Override
-  protected double[] calcQueryFeature(double[] patterns) {
-    double[] res = new double[featureDim];
-    int paaWidth = seriesLength / featureDim;
+  protected float[] calcQueryFeature(double[] patterns) {
+    float[] res = new float[featureDim];
     for (int i = 0; i < featureDim; i++) {
       for (int j = 0; j < paaWidth; j++) {
         res[i] += patterns[i * paaWidth + j];
@@ -124,6 +132,43 @@ public class RTreePAAIndex extends RTreeIndex {
       res[i] /= paaWidth;
     }
     return res;
+  }
+
+  @Override
+  protected TriFunction<float[], float[], float[], Double> getCalcLowerDistFunc() {
+    return (lowerBounds, upperBounds, queryFeatures) -> {
+      double sum = 0;
+      for (int i = 0; i < queryFeatures.length; i++) {
+        double dp;
+        if (queryFeatures[i] < lowerBounds[i]) {
+          dp = lowerBounds[i] - queryFeatures[i];
+        } else if (queryFeatures[i] > upperBounds[i]) {
+          dp = queryFeatures[i] - upperBounds[i];
+        } else {
+          dp = 0;
+        }
+        sum += paaWidth * dp * dp;
+      }
+      return Math.sqrt(sum);
+    };
+  }
+
+  @Override
+  protected BiFunction<double[], TVList, Double> getCalcExactDistFunc() {
+    return (queryTs, tvList) -> {
+      double sum = 0;
+      for (int i = 0; i < queryTs.length; i++) {
+        final double dp = queryTs[i] - IndexUtils.getDoubleFromAnyType(tvList, i);
+        sum += dp * dp;
+      }
+      return Math.sqrt(sum);
+    };
+  }
+
+
+  protected IndexFeatureExtractor createQueryFeatureExtractor() {
+    return new PAAWholeFeatureExtractor(tsDataType, seriesLength,
+        featureDim, true, currentLowerBounds);
   }
 
 }

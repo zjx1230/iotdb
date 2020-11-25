@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
+import java.util.Set;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBWindowBlockFeature;
 import org.apache.iotdb.db.metadata.PartialPath;
@@ -37,10 +38,9 @@ public interface IIndexUsable {
   /**
    * 获取下面的所有不可用；
    *
-   * @param indexSeries contains wildcard characters.
    * @return a list of full paths
    */
-  List<PartialPath> getAllUnusableSeriesForWholeMatching(PartialPath indexSeries);
+  Set<PartialPath> getAllUnusableSeriesForWholeMatching();
 
   /**
    * 基于index给出的后处理范围，结合乱序区间，返回真正的后处理区间
