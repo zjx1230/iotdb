@@ -1,9 +1,6 @@
 package org.apache.iotdb.db.index.math;
 
-import java.io.IOException;
 import java.util.Random;
-import org.apache.iotdb.db.index.IndexTestUtils;
-import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.math.probability.UniformProba;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
@@ -58,7 +55,7 @@ public class Randomwalk {
 //    System.out.println(generateRanWalk(10));
     System.out.println(generateRanWalk(10));
 
-    System.out.println(IndexTestUtils.tvListToString(generateRanWalkTVList(10)));
+//    System.out.println(IndexTestUtils.tvListToString(generateRanWalkTVList(10)));
 //    System.out.println(generateRanWalkTVList(10));
   }
 }
