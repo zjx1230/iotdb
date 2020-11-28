@@ -1,6 +1,5 @@
 package org.apache.iotdb.db.index.usable;
 
-import static org.apache.iotdb.db.index.read.IndexTimeRange.toFilter;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,7 +10,9 @@ import java.util.Set;
 import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBWindowBlockFeature;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
+import org.apache.iotdb.tsfile.read.filter.TimeFilter;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
+import org.apache.iotdb.tsfile.read.filter.factory.FilterFactory;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -347,4 +348,9 @@ public class SingleLongIndexUsability implements IIndexUsable {
     }
     return sb.toString();
   }
+
+  private static Filter toFilter(long startTime, long endTime) {
+    return FilterFactory.and(TimeFilter.gtEq(startTime), TimeFilter.ltEq(endTime));
+  }
+
 }

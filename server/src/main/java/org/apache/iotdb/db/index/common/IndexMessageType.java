@@ -1,9 +1,5 @@
 package org.apache.iotdb.db.index.common;
 
-import java.nio.ByteBuffer;
-import java.util.Map;
-import org.apache.iotdb.db.index.read.IndexFileResource;
-
 /**
  *
  */

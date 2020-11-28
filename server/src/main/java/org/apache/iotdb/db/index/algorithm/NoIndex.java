@@ -30,8 +30,6 @@ import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
 import org.apache.iotdb.db.index.preprocess.CountFixedFeatureExtractor;
 import org.apache.iotdb.db.index.preprocess.Identifier;
-import org.apache.iotdb.db.index.read.func.IndexFuncFactory;
-import org.apache.iotdb.db.index.read.func.IndexFuncResult;
 import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.metadata.PartialPath;
@@ -122,50 +120,6 @@ public class NoIndex extends IoTDBIndex {
     throw new UnsupportedOperationException("NoIndex ,query ,return what?");
   }
 
-
-  public void initQuery(Map<String, Object> queryConditions, List<IndexFuncResult> indexFuncResults)
-      throws UnsupportedIndexFuncException {
-    for (IndexFuncResult result : indexFuncResults) {
-      switch (result.getIndexFunc()) {
-        case TIME_RANGE:
-        case SIM_ST:
-        case SIM_ET:
-        case SERIES_LEN:
-        case ED:
-        case DTW:
-          result.setIsTensor(true);
-          break;
-        default:
-          throw new UnsupportedIndexFuncException(indexFuncResults.toString());
-      }
-      result.setIndexFuncDataType(result.getIndexFunc().getType());
-    }
-    if (queryConditions.containsKey(THRESHOLD)) {
-      this.threshold = (double) queryConditions.get(THRESHOLD);
-    } else {
-      this.threshold = Double.MAX_VALUE;
-    }
-    if (queryConditions.containsKey(PATTERN)) {
-      this.patterns = (double[]) queryConditions.get(PATTERN);
-    } else {
-      throw new UnsupportedIndexFuncException("missing parameter: " + PATTERN);
-    }
-  }
-
-  public int postProcessNext(List<IndexFuncResult> funcResult) throws QueryIndexException {
-    TVList aligned = (TVList) indexFeatureExtractor.getCurrent_L2_AlignedSequence();
-    double ed = IndexFuncFactory.calcEuclidean(aligned, patterns);
-    System.out.println(String.format(
-        "NoIndex Process: ed:%.3f: %s", ed, IndexUtils.tvListToStr(aligned)));
-    int reminding = funcResult.size();
-    if (ed <= threshold) {
-      for (IndexFuncResult result : funcResult) {
-        IndexFuncFactory.basicSimilarityCalc(result, indexFeatureExtractor, patterns);
-      }
-    }
-    TVListAllocator.getInstance().release(aligned);
-    return reminding;
-  }
 
   /**
    * All it needs depends on its preprocessor. Just for explain.

@@ -18,21 +18,11 @@
 package org.apache.iotdb.db.index.performance;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.PriorityQueue;
 import org.apache.iotdb.db.index.IndexTestUtils;
 import org.apache.iotdb.db.index.common.IndexUtils;
-import org.apache.iotdb.db.index.io.IndexChunkMeta;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.read.filter.TimeFilter;
-import org.apache.iotdb.tsfile.read.filter.basic.Filter;
-import org.apache.iotdb.tsfile.read.filter.factory.FilterFactory;
-import org.apache.iotdb.tsfile.read.filter.operator.AndFilter;
-import org.junit.Assert;
 import org.junit.Test;
 
 public class IndexTimeRangeFilterTest {

@@ -37,8 +37,6 @@ import org.apache.iotdb.db.index.algorithm.rtree.RTree.DistSeries;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.common.IndexUtils;
-import org.apache.iotdb.db.index.indexrange.IndexRangeStrategy;
-import org.apache.iotdb.db.index.indexrange.IndexRangeStrategyType;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
 import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
@@ -62,7 +60,6 @@ public abstract class IoTDBIndex {
   protected final long confIndexStartTime;
   protected final Map<String, String> props;
   protected final TSDataType tsDataType;
-  private IndexRangeStrategy strategy;
   protected int windowRange;
   protected int slideStep;
   protected IndexFeatureExtractor indexFeatureExtractor;
@@ -83,8 +80,6 @@ public abstract class IoTDBIndex {
 
   private void parsePropsAndInit(Map<String, String> props) {
     // Strategy
-    this.strategy = IndexRangeStrategyType
-        .getIndexStrategy(props.getOrDefault(INDEX_RANGE_STRATEGY, DEFAULT_PROP_NAME));
     //WindowRange
     this.windowRange =
         props.containsKey(INDEX_WINDOW_RANGE) ? Integer.parseInt(props.get(INDEX_WINDOW_RANGE))
@@ -128,14 +123,6 @@ public abstract class IoTDBIndex {
    */
   public abstract void initPreprocessor(ByteBuffer previous, boolean inQueryMode);
 
-  /**
-   * Given a tvList with {@code tvListStartIdx}, we want to know whether to build index for tvList
-   * from {@code tvListStartIdx} to the end，regardless of whether it will be truncated by {@code
-   * forceFlush}.
-   */
-  public boolean checkNeedIndex(TVList sortedTVList, int offset) {
-    return strategy.needBuildIndex(sortedTVList, offset, confIndexStartTime);
-  }
 
 
   /**

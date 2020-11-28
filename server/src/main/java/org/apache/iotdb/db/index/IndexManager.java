@@ -43,7 +43,6 @@ import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.common.func.CreateIndexProcessorFunc;
 import org.apache.iotdb.db.index.io.IndexBuildTaskPoolManager;
-import org.apache.iotdb.db.index.io.IndexChunkMeta;
 import org.apache.iotdb.db.index.router.IIndexRouter;
 import org.apache.iotdb.db.index.common.IndexProcessorStruct;
 import org.apache.iotdb.db.metadata.PartialPath;
@@ -336,67 +335,7 @@ public class IndexManager implements IndexManagerMBean, IService {
         FileUtils.deleteDirectory(processorDataDir);
       }
 
-      // check and remove index not recorded in the routers.
-//      Map<IndexType, IndexInfo> indexInfoMap = indexRouter.getAllIndexInfos(processorName);
-//      if (indexInfoMap.isEmpty()) {
-//        //delete seq files
-//        try {
-//          FileUtils.deleteDirectory(
-//              fsFactory.getFile(indexDataSeqDir + File.separator + processorDataDir));
-//          //delete unseq files
-//          FileUtils.deleteDirectory(
-//              fsFactory.getFile(indexDataUnSeqDir + File.separator + processorDataDir));
-//        } catch (NoSuchFileException ignored) {
-//        }
-//      }
-      // delete metadata of processor
-
-//        String indexSGMetaFileName = indexMetaDirPath + File.separator + processorPathName;
-//        fsFactory.getFile(indexSGMetaFileName + STORAGE_GROUP_INDEXING_SUFFIX).delete();
-//        fsFactory.getFile(indexSGMetaFileName + STORAGE_GROUP_INDEXED_SUFFIX).delete();
     }
-  }
-
-  //  public IndexQueryReader getQuerySource(Path seriesPath, IndexType indexType,
-//      Filter timeFilter) throws IOException, MetadataException {
-//    // TODO it's about the reader
-//    String series = seriesPath.getFullPath();
-//    StorageGroupMNode storageGroup = MManager.getInstance()
-//        .getStorageGroupNodeByPath(new PartialPath(series));
-//    String storageGroupName = storageGroup.getName();
-//    IndexStorageGroupProcessor sgProcessor = createStorageGroupProcessor(storageGroupName);
-//    List<IndexChunkMeta> seq = sgProcessor.getIndexSGMetadata(true, series, indexType);
-//    List<IndexChunkMeta> unseq = sgProcessor.getIndexSGMetadata(false, series, indexType);
-//    return new IndexQueryReader(seriesPath, indexType, timeFilter, seq, unseq);
-//  }
-//
-//  @TestOnly
-//  public List<IndexChunkMeta> getIndexSGMetadata(String storageGroup, boolean sequence,
-//      String seriesPath, IndexType indexType) throws IOException {
-//    IndexStorageGroupProcessor sgProcessor = createStorageGroupProcessor(storageGroup);
-//    return sgProcessor.getIndexSGMetadata(sequence, seriesPath, indexType);
-//  }
-//
-//  /**
-//   * Close all opened IndexFileProcessors and clear all data in memory. It's used to simulate the
-//   * case that IndexManager re-inits from the scratch after index files have been generated and
-//   * sealed. only for test now.
-//   */
-//  @TestOnly
-//  public synchronized void closeAndClear() throws IOException {
-//    for (Entry<String, IndexStorageGroupProcessor> entry : processorMap.entrySet()) {
-//      IndexStorageGroupProcessor processor = entry.getValue();
-//      processor.close();
-//    }
-//    clear();
-//  }
-//  public void closeAndClear() {
-//
-//  }
-
-  public List<IndexChunkMeta> getIndexSGMetadata(String storageGroup, boolean b, String p1,
-      IndexType elb) {
-    return null;
   }
 
 }
