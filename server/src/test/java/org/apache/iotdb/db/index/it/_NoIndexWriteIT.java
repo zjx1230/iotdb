@@ -99,8 +99,7 @@ public class _NoIndexWriteIT {
 
       System.out.println(IndexManager.getInstance().getRouter());
       Assert.assertEquals(
-          "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind2.*.direction: {}>;"
-              + "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind1.azq01.speed: {}>;",
+          "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind2.*.direction: {NO_INDEX=NO_INDEX}>;<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind1.azq01.speed: {NO_INDEX=NO_INDEX}>;",
           IndexManager.getInstance().getRouter().toString());
       TVList subInput = Randomwalk.generateRanWalkTVList(subLength);
       long startInsertSub = System.currentTimeMillis();
@@ -113,7 +112,7 @@ public class _NoIndexWriteIT {
       System.out.println("insert finish for subsequence case");
       System.out.println(IndexManager.getInstance().getRouter());
       Assert.assertEquals(
-          "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind2.*.direction: {}>;<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind1.azq01.speed: {NO_INDEX=NO_INDEX}>;",
+          "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind2.*.direction: {NO_INDEX=NO_INDEX}>;<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind1.azq01.speed: {NO_INDEX=NO_INDEX}>;",
           IndexManager.getInstance().getRouter().toString());
 
       long startInsertWhole = System.currentTimeMillis();

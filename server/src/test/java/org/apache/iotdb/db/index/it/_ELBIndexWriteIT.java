@@ -123,7 +123,7 @@ public class _ELBIndexWriteIT {
       System.out.println(IndexManager.getInstance().getRouter());
 
       Assert.assertEquals(
-          "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {BLOCK_SIZE=10}]},root.wind1.azq01.speed: {ELB_INDEX=[0-9:45.00, 10-19:145.00]}>;",
+          "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {BLOCK_SIZE=10}]},root.wind1.azq01.speed: {ELB_INDEX=[0-9:450.00, 10-19:1450.00]}>;",
           IndexManager.getInstance().getRouter().toString());
 
       for (int i = 23; i < 37; i++) {
@@ -133,14 +133,14 @@ public class _ELBIndexWriteIT {
       statement.execute("flush");
       System.out.println(IndexManager.getInstance().getRouter());
       Assert.assertEquals(
-          "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {BLOCK_SIZE=10}]},root.wind1.azq01.speed: {ELB_INDEX=[0-9:45.00, 10-19:145.00, 20-29:245.00]}>;",
+          "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {BLOCK_SIZE=10}]},root.wind1.azq01.speed: {ELB_INDEX=[0-9:450.00, 10-19:1450.00, 20-29:2450.00]}>;",
           IndexManager.getInstance().getRouter().toString());
 
       IndexManager.getInstance().stop();
       IndexManager.getInstance().start();
       System.out.println(IndexManager.getInstance().getRouter());
       Assert.assertEquals(
-          "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {BLOCK_SIZE=10}]},root.wind1.azq01.speed: {}>;",
+          "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {BLOCK_SIZE=10}]},root.wind1.azq01.speed: {ELB_INDEX=[0-9:450.00, 10-19:1450.00, 20-29:2450.00]}>;",
           IndexManager.getInstance().getRouter().toString());
       for (int i = 37; i < subLength; i++) {
         statement.execute(String.format(insertPattern,
@@ -149,7 +149,7 @@ public class _ELBIndexWriteIT {
       statement.execute("flush");
       System.out.println(IndexManager.getInstance().getRouter());
       Assert.assertEquals(
-          "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {BLOCK_SIZE=10}]},root.wind1.azq01.speed: {ELB_INDEX=[0-9:45.00, 10-19:145.00, 20-29:245.00, 30-39:345.00, 40-49:445.00]}>;",
+          "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {BLOCK_SIZE=10}]},root.wind1.azq01.speed: {ELB_INDEX=[0-9:450.00, 10-19:1450.00, 20-29:2450.00, 30-39:3450.00, 40-49:4450.00]}>;",
           IndexManager.getInstance().getRouter().toString());
 
 
