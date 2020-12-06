@@ -67,7 +67,7 @@ public abstract class IndexFeatureExtractor {
    *
    * The Default is BUILD-mode, i.e., inQueryMode=false
    */
-  protected boolean inQueryMode = false;
+  protected boolean inQueryMode;
   /**
    * the type of sliding window, see {@linkplain WindowType}
    */
