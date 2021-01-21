@@ -37,6 +37,9 @@ import org.apache.iotdb.db.query.aggregation.AggregateResult;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.factory.AggregateResultFactory;
 import org.apache.iotdb.db.query.filter.TsFileFilter;
+import org.apache.iotdb.db.query.workloadmanager.WorkloadManager;
+import org.apache.iotdb.db.query.workloadmanager.queryrecord.GroupByQueryRecord;
+import org.apache.iotdb.db.query.workloadmanager.queryrecord.QueryRecord;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.read.common.RowRecord;
@@ -91,6 +94,8 @@ public class GroupByWithoutValueFilterDataSet extends GroupByEngineDataSet {
         .mergeLock(paths.stream().map(p -> (PartialPath) p).collect(Collectors.toList()));
     try {
       // init resultIndexes, group result indexes by path
+      WorkloadManager manager = WorkloadManager.getInstance();
+      Map<String, List<Integer>> deviceQueryIdxMap = new HashMap<>();
       for (int i = 0; i < paths.size(); i++) {
         PartialPath path = (PartialPath) paths.get(i);
         if (!pathExecutors.containsKey(path)) {
@@ -105,6 +110,28 @@ public class GroupByWithoutValueFilterDataSet extends GroupByEngineDataSet {
             .getAggrResultByName(groupByTimePlan.getDeduplicatedAggregations().get(i),
                 dataTypes.get(i), ascending);
         pathExecutors.get(path).addAggregateResult(aggrResult);
+        // Map the device id to the corresponding query indexes
+        if (deviceQueryIdxMap.containsKey(path.getDevice())) {
+          deviceQueryIdxMap.get(path.getDevice()).add(i);
+        } else {
+          deviceQueryIdxMap.put(path.getDevice(), new ArrayList<>());
+          deviceQueryIdxMap.get(path.getDevice()).add(i);
+        }
+      }
+
+      // Add the query records to the workload manager
+      for(String device: deviceQueryIdxMap.keySet()) {
+        List<Integer> pathIndexes = deviceQueryIdxMap.get(device);
+        List<String> sensors = new ArrayList<>();
+        List<String> ops = new ArrayList<>();
+        for(int idx: pathIndexes) {
+          PartialPath path = (PartialPath) paths.get(idx);
+          sensors.add(path.getMeasurement());
+          ops.add(groupByTimePlan.getDeduplicatedAggregations().get(idx));
+        }
+        QueryRecord record = new GroupByQueryRecord(device, sensors, ops, groupByTimePlan.getStartTime(),
+                groupByTimePlan.getEndTime(), groupByTimePlan.getInterval(), groupByTimePlan.getSlidingStep());
+        manager.addRecord(record);
       }
     } finally {
       StorageEngine.getInstance().mergeUnLock(list);
