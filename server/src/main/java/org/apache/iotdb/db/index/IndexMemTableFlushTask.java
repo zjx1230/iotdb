@@ -17,17 +17,13 @@ import org.apache.iotdb.db.utils.datastructure.TVList;
  */
 public class IndexMemTableFlushTask {
 
-//  private static final Logger logger = LoggerFactory.getLogger(IndexMemTableFlushTask.class);
   private final IIndexRouter router;
-  //  private final IIndexUsable usability;
   private final boolean sequence;
 
   /**
    * it should be immutable.
    */
-//  private final Map<String, IndexProcessor> processorMap;
   public IndexMemTableFlushTask(IIndexRouter router, boolean sequence
-//      ,UpdateIndexFileResourcesCallBack addResourcesCallBack
   ) {
     // check all processors
     this.router = router;
@@ -35,7 +31,7 @@ public class IndexMemTableFlushTask {
     // in current version, we don't build index for unsequence block
     if (sequence) {
       for (IndexProcessorStruct p : router.getAllIndexProcessorsAndInfo()) {
-        p.processor.startFlushMemTable(p.infos);
+        p.processor.startFlushMemTable();
       }
     }
   }
@@ -49,6 +45,9 @@ public class IndexMemTableFlushTask {
     }
   }
 
+  /**
+   * wait for all index processors to finish building indexes.
+   */
   public void endFlush() {
     if (sequence) {
       router.getAllIndexProcessorsAndInfo().forEach(p->p.processor.endFlushMemTable());

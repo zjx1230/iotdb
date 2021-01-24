@@ -18,7 +18,6 @@
  */
 package org.apache.zeppelin.iotdb;
 
-import java.util.Arrays;
 import java.util.Properties;
 import org.apache.zeppelin.interpreter.InterpreterResult;
 import org.junit.After;
@@ -93,7 +92,7 @@ public class IoTDBInterpreterTest {
         + "WHERE time >= 1\n"
         + "\tAND time <= 6;";
 
-    String[] gt = new String[]{
+    String[] gt = new String[] {
         "INSERT INTO root.ln.wf01.wt01 (timestamp, temperature, status, hardware) VALUES (4, 4.4, false, 44)",
         "INSERT INTO root.ln.wf01.wt01 (timestamp, temperature, status, hardware) VALUES (5, 5.5, false, 55)",
         "SELECT * FROM root.ln.wf01.wt01 WHERE time >= 1  AND time <= 6",

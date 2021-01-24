@@ -138,10 +138,8 @@ public class IoTDBConfigCheck {
    *
    * When init: create system.properties directly
    *
-   * When upgrading the system.properties:
-   * (1) create system.properties.tmp
-   * (2) delete system.properties
-   * (3) rename system.properties.tmp to system.properties
+   * When upgrading the system.properties: (1) create system.properties.tmp (2) delete
+   * system.properties (3) rename system.properties.tmp to system.properties
    */
   public void checkConfig() throws IOException {
     propertiesFile = SystemFileFactory.INSTANCE
@@ -327,9 +325,9 @@ public class IoTDBConfigCheck {
             continue;
           }
           File[] tsfiles = FSFactoryProducer.getFSFactory()
-            .listFilesBySuffix(partitionDir.toString(), TsFileConstant.TSFILE_SUFFIX);
+              .listFilesBySuffix(partitionDir.toString(), TsFileConstant.TSFILE_SUFFIX);
           File[] resources = FSFactoryProducer.getFSFactory()
-            .listFilesBySuffix(partitionDir.toString(), TsFileResource.RESOURCE_SUFFIX);
+              .listFilesBySuffix(partitionDir.toString(), TsFileResource.RESOURCE_SUFFIX);
           if (tsfiles.length != resources.length) {
             logger.error("Unclosed Version-2 TsFile detected, please run 'flush' on v0.10 IoTDB"
                 + " before upgrading to v0.11");

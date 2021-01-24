@@ -117,7 +117,7 @@ public class ProtoIndexRouterTest {
         sgRouters.toString());
 
     // serialize
-    router.serializeAndClose();
+    router.serializeAndClose(true);
     IIndexRouter newRouter = new ProtoIndexRouter(testRouterDir);
     newRouter.deserializeAndReload(fakeCreateFunc);
     Assert.assertEquals(

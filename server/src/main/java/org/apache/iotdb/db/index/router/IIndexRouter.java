@@ -1,5 +1,7 @@
 package org.apache.iotdb.db.index.router;
 
+import java.util.Map;
+import net.jcip.annotations.ThreadSafe;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.IndexProcessor;
@@ -14,6 +16,8 @@ public interface IIndexRouter {
 
   /**
    * given a index processor path, justify whether it has been registered in router.
+   *
+   * 线程安全
    */
   boolean hasIndexProcessor(PartialPath path);
 
@@ -24,11 +28,13 @@ public interface IIndexRouter {
       throws MetadataException;
 
 
+  Map<IndexType, IndexInfo> getIndexInfosByIndexSeries(PartialPath indexSeries);
+
   Iterable<IndexProcessorStruct> getAllIndexProcessorsAndInfo();
 
   Iterable<IndexProcessor> getIndexProcessorByPath(PartialPath path);
 
-  void serializeAndClose();
+  void serializeAndClose(boolean doClose);
 
   /**
    * deserialize all index information and processors into the memory

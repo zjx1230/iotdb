@@ -36,7 +36,7 @@ public enum IndexType {
   RTREE_PAA,
   ELB_INDEX,
   KV_INDEX,
-  ELB;
+  ;
 
   /**
    * judge the index type.
@@ -103,8 +103,6 @@ public enum IndexType {
         return new ELBIndex(path, tsDataType, indexDir, indexInfo);
       case RTREE_PAA:
         return new RTreePAAIndex(path, tsDataType, indexDir, indexInfo);
-      case ELB:
-//        return new ELBIndexNotGood(path, tsDataType, indexInfo);
       case KV_INDEX:
       default:
         throw new NotImplementedException("unsupported index type:" + indexType);
@@ -119,34 +117,10 @@ public enum IndexType {
     return index;
   }
 
-  /**
-   * Construct an index for an index-query
-   */
-//  public static IoTDBIndex constructQueryIndex(String path, IndexType indexType,
-//      Map<String, Object> queryProps, List<IndexFuncResult> indexFuncs)
-//      throws UnsupportedIndexFuncException {
-//    queryProps = uppercaseProps(queryProps);
-//    IndexUtils.breakDown();
-////    IndexInfo indexInfo = IndexManager.getInstance().getIndexRegister()
-////        .getIndexInfoByPath(path, indexType);
-//    IndexInfo indexInfo = null;
-//    if (indexInfo == null) {
-//      throw new IllegalIndexParamException(
-//          String.format("%s.%s not found, why it escapes the check?", path, indexType));
-//    }
-//    IoTDBIndex index = newIndexByType(path, null, null, indexType, indexInfo);
-//    IndexUtils.breakDown("temp set index Dir is NULL!");
-//
-//    index.initQuery(queryProps, indexFuncs);
-//
-//    return index;
-//  }
-
   private static Map<String, String> uppercaseStringProps(Map<String, String> props) {
     Map<String, String> uppercase = new HashMap<>(props.size());
     props.forEach((k, v) -> uppercase.put(k.toUpperCase(), v.toUpperCase()));
     return uppercase;
   }
-
 
 }

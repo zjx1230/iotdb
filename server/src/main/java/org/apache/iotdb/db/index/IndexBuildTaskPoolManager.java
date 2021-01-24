@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.iotdb.db.index.io;
+package org.apache.iotdb.db.index;
 
 import org.apache.iotdb.db.concurrent.IoTDBThreadPoolFactory;
 import org.apache.iotdb.db.concurrent.ThreadName;
@@ -31,8 +31,7 @@ public class IndexBuildTaskPoolManager extends AbstractPoolManager {
 
   private IndexBuildTaskPoolManager() {
     int threadCnt = IoTDBDescriptor.getInstance().getConfig().getConcurrentIndexBuildThread();
-    // The additional one is for the IO flush task
-    pool = IoTDBThreadPoolFactory.newFixedThreadPool(threadCnt + 1, ThreadName.INDEX_SERVICE.getName());
+    pool = IoTDBThreadPoolFactory.newFixedThreadPool(threadCnt, ThreadName.INDEX_SERVICE.getName());
   }
 
   public static IndexBuildTaskPoolManager getInstance() {
@@ -56,7 +55,6 @@ public class IndexBuildTaskPoolManager extends AbstractPoolManager {
       pool = IoTDBThreadPoolFactory
               .newFixedThreadPool(threadCnt, ThreadName.INDEX_SERVICE.getName());
     }
-
   }
 
   @Override
