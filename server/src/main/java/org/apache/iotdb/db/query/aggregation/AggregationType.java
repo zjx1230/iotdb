@@ -101,5 +101,4 @@ public enum AggregationType {
     byte[] bytes = BytesUtils.shortToBytes(i);
     outputStream.write(bytes);
   }
-
 }

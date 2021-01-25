@@ -35,6 +35,7 @@ import org.apache.iotdb.db.qp.physical.crud.GroupByTimePlan;
 import org.apache.iotdb.db.qp.physical.crud.LastQueryPlan;
 import org.apache.iotdb.db.qp.physical.crud.QueryIndexPlan;
 import org.apache.iotdb.db.qp.physical.crud.RawDataQueryPlan;
+import org.apache.iotdb.db.qp.physical.crud.UDTFPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.dataset.groupby.GroupByEngineDataSet;
 import org.apache.iotdb.db.query.dataset.groupby.GroupByFillDataSet;
@@ -113,7 +114,8 @@ public class QueryRouter implements IQueryRouter {
     // optimize expression to an executable one
     IExpression optimizedExpression =
         expression == null ? null :
-            ExpressionOptimizer.getInstance().optimize(expression, new ArrayList<>(deduplicatedPaths));
+            ExpressionOptimizer.getInstance()
+                .optimize(expression, new ArrayList<>(deduplicatedPaths));
 
     aggregationPlan.setExpression(optimizedExpression);
 
@@ -123,7 +125,7 @@ public class QueryRouter implements IQueryRouter {
 
     if (optimizedExpression != null
         && optimizedExpression.getType() != ExpressionType.GLOBAL_TIME) {
-      dataSet =  engineExecutor.executeWithValueFilter(context, aggregationPlan);
+      dataSet = engineExecutor.executeWithValueFilter(context, aggregationPlan);
     } else {
       dataSet = engineExecutor.executeWithoutValueFilter(context, aggregationPlan);
     }
@@ -183,18 +185,19 @@ public class QueryRouter implements IQueryRouter {
     return dataSet;
   }
 
-  protected GroupByWithoutValueFilterDataSet getGroupByWithoutValueFilterDataSet(QueryContext context, GroupByTimePlan plan)
+  protected GroupByWithoutValueFilterDataSet getGroupByWithoutValueFilterDataSet(
+      QueryContext context, GroupByTimePlan plan)
       throws StorageEngineException, QueryProcessException {
     return new GroupByWithoutValueFilterDataSet(context, plan);
   }
 
-  protected GroupByWithValueFilterDataSet getGroupByWithValueFilterDataSet(QueryContext context, GroupByTimePlan plan)
-      throws StorageEngineException, QueryProcessException {
+  protected GroupByWithValueFilterDataSet getGroupByWithValueFilterDataSet(QueryContext context,
+      GroupByTimePlan plan) throws StorageEngineException, QueryProcessException {
     return new GroupByWithValueFilterDataSet(context, plan);
   }
 
-  protected GroupByTimeDataSet groupByLevelWithoutTimeIntervalDataSet(QueryContext context, GroupByTimePlan plan,
-      GroupByEngineDataSet dataSet)
+  protected GroupByTimeDataSet groupByLevelWithoutTimeIntervalDataSet(QueryContext context,
+      GroupByTimePlan plan, GroupByEngineDataSet dataSet)
       throws QueryProcessException, IOException {
     return new GroupByTimeDataSet(context, plan, dataSet);
   }
@@ -222,8 +225,10 @@ public class QueryRouter implements IQueryRouter {
   @Override
   public QueryDataSet groupByFill(GroupByTimeFillPlan groupByFillPlan, QueryContext context)
       throws QueryFilterOptimizationException, StorageEngineException, QueryProcessException, IOException {
-    GroupByEngineDataSet groupByEngineDataSet = (GroupByEngineDataSet) groupBy(groupByFillPlan, context);
-    return new GroupByFillDataSet(groupByFillPlan.getDeduplicatedPaths(), groupByFillPlan.getDeduplicatedDataTypes(),
+    GroupByEngineDataSet groupByEngineDataSet = (GroupByEngineDataSet) groupBy(groupByFillPlan,
+        context);
+    return new GroupByFillDataSet(groupByFillPlan.getDeduplicatedPaths(),
+        groupByFillPlan.getDeduplicatedDataTypes(),
         groupByEngineDataSet, groupByFillPlan.getFillType(), context, groupByFillPlan);
   }
 
@@ -246,4 +251,32 @@ public class QueryRouter implements IQueryRouter {
     return new LastQueryExecutor(lastQueryPlan);
   }
 
+  @Override
+  public QueryDataSet udtfQuery(UDTFPlan udtfPlan, QueryContext context)
+      throws StorageEngineException, QueryProcessException, IOException, InterruptedException {
+    IExpression expression = udtfPlan.getExpression();
+    IExpression optimizedExpression;
+    try {
+      optimizedExpression = expression == null ? null
+          : ExpressionOptimizer.getInstance()
+              .optimize(expression, new ArrayList<>(udtfPlan.getDeduplicatedPaths()));
+    } catch (QueryFilterOptimizationException e) {
+      throw new StorageEngineException(e.getMessage());
+    }
+    udtfPlan.setExpression(optimizedExpression);
+
+    boolean withValueFilter =
+        optimizedExpression != null && optimizedExpression.getType() != ExpressionType.GLOBAL_TIME;
+    UDTFQueryExecutor udtfQueryExecutor = new UDTFQueryExecutor(udtfPlan);
+
+    if (udtfPlan.isAlignByTime()) {
+      return withValueFilter
+          ? udtfQueryExecutor.executeWithValueFilterAlignByTime(context)
+          : udtfQueryExecutor.executeWithoutValueFilterAlignByTime(context);
+    } else {
+      return withValueFilter
+          ? udtfQueryExecutor.executeWithValueFilterNonAlign(context)
+          : udtfQueryExecutor.executeWithoutValueFilterNonAlign(context);
+    }
+  }
 }
