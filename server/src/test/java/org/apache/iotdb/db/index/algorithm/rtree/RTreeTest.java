@@ -87,54 +87,6 @@ public class RTreeTest {
     Assert.assertEquals(gt, rTree.toString());
   }
 
-  @Test
-  public void testRTreeSerialization() throws IOException {
-    int dim = 2;
-    Random random = new Random(0);
-    RTree<Integer> rTree = new RTree<>(4, 2, 2, SeedsPicker.LINEAR);
-    int dataSize = 20;
-    int[] beforeData = new int[dataSize];
-    for (int i = 0; i < 20; i++) {
-      float[] in = new float[2];
-      for (int j = 0; j < dim; j++) {
-        in[j] = ((float) random.nextInt(20));
-      }
-      System.out.println(String.format("add: %s, value: %d", Arrays.toString(in), i));
-      rTree.insert(in, i);
-      beforeData[i] = i;
-    }
-
-    ByteArrayOutputStream boas = new ByteArrayOutputStream();
-    ReadWriteIOUtils.write(dataSize, boas);
-    BiConsumer<Integer, OutputStream> serial = (i, o) -> {
-      try {
-        ReadWriteIOUtils.write(beforeData[i], o);
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-    };
-    rTree.serialize(boas);
-    //deserialize
-    InputStream byteBuffer = new ByteArrayInputStream(boas.toByteArray());
-    int afterSize = ReadWriteIOUtils.readInt(byteBuffer);
-    int[] afterData = new int[afterSize];
-    BiConsumer<Integer, InputStream> deserial = (i, b) -> {
-      int value = 0;
-      try {
-        value = ReadWriteIOUtils.readInt(b);
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-      afterData[i] = value;
-    };
-    RTree<PartialPath> afterRTree = RTree.deserializePartialPath(byteBuffer);
-    System.out.println(rTree);
-    System.out.println(afterRTree);
-    Assert.assertEquals(rTree.toString(), afterRTree.toString());
-    Assert.assertArrayEquals(beforeData, afterData);
-
-  }
-
   /**
    * check whether the tree satisfies constraints:
    * <p><ul>

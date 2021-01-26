@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
@@ -738,13 +739,18 @@ public class RTree<T> {
     bsfAnswer.dist = minTopKDistOfNode(modifiedSeries, new ArrayList<>(modifiedPaths), queryTs,
         topKPQ, calcRealDistFunc, topK);
 
-    DistSeries[] res = new DistSeries[topK];
-    int idx = topK - 1;
-    while (!topKPQ.isEmpty()) {
-      DistSeries distSeries = topKPQ.poll();
-      res[idx--] = distSeries;
+    if(topKPQ.isEmpty()){
+      return Collections.emptyList();
+    }else{
+      int retSize = Math.min(topK, topKPQ.size());
+      DistSeries[] res = new DistSeries[retSize];
+      int idx = retSize - 1;
+      while (!topKPQ.isEmpty()) {
+        DistSeries distSeries = topKPQ.poll();
+        res[idx--] = distSeries;
+      }
+      return Arrays.asList(res);
     }
-    return Arrays.asList(res);
   }
 
 

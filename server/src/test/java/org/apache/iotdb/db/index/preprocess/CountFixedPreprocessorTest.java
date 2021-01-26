@@ -119,6 +119,7 @@ public class CountFixedPreprocessorTest {
     while (countFixed.hasNext()) {
       countFixed.processNext();
     }
+    countFixed.clearProcessedSrcData();
     ByteBuffer previous = countFixed.serializePrevious();
     countFixed.closeAndRelease();
 
@@ -132,7 +133,6 @@ public class CountFixedPreprocessorTest {
     countFixed2.appendNewSrcData(srcData2);
     assertL1AndL2(countFixed2, groundTruthL1, groundTruthL2);
     countFixed2.closeAndRelease();
-
   }
 
 

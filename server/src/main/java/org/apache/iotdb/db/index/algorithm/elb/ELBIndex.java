@@ -118,17 +118,15 @@ public class ELBIndex extends IoTDBIndex {
     featureFile = IndexUtils.getIndexFile(indexDir + File.separator + "feature");
     File indexDirFile = IndexUtils.getIndexFile(indexDir);
     if (indexDirFile.exists()) {
-      System.out.println(String.format("reload index %s from %s", ELB_INDEX, indexDir));
+      logger.info("reload index {} from {}", ELB_INDEX, indexDir);
       deserializeFeatures();
     } else {
       indexDirFile.mkdirs();
     }
-//    logger.debug("");
     // ELB always variable query length, so it's needed windowRange
     windowRange = -1;
     usableBlocks = PrimitiveList.newList(TSDataType.BOOLEAN);
     initELBParam();
-//    throw new IndexRuntimeException("indexDir没用起来，记得初始化");
   }
 
   private void initELBParam() {
@@ -362,7 +360,6 @@ public class ELBIndex extends IoTDBIndex {
           long endTime = endIdx >= wbfSize ?
               Long.MAX_VALUE : windowBlockFeatures.get(endIdx).endTime;
           cannotPruned.minusUsableRange(indexSeries, startTime, endTime);
-
         }
       }
     }

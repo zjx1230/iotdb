@@ -3,23 +3,20 @@ package org.apache.iotdb.db.index.router;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_SLIDE_STEP;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
 import static org.apache.iotdb.db.index.common.IndexConstant.PAA_DIM;
+import static org.apache.iotdb.db.index.common.IndexType.ELB_INDEX;
 import static org.apache.iotdb.db.index.common.IndexType.NO_INDEX;
 import static org.apache.iotdb.db.index.common.IndexType.RTREE_PAA;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
-import org.apache.iotdb.db.index.IndexManager;
 import org.apache.iotdb.db.index.IndexProcessor;
 import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.common.func.CreateIndexProcessorFunc;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.PartialPath;
@@ -28,7 +25,6 @@ import org.apache.iotdb.db.utils.FileUtils;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -64,17 +60,18 @@ public class ProtoIndexRouterTest {
     mManager.createTimeseries(new PartialPath(direction3), TSDataType.FLOAT, TSEncoding.PLAIN,
         CompressionType.UNCOMPRESSED, null);
     Map<String, String> props_sub = new HashMap<>();
-    props_sub.put(INDEX_WINDOW_RANGE, "5");
-    props_sub.put(INDEX_SLIDE_STEP, "5");
+    props_sub.put(INDEX_WINDOW_RANGE, "4");
+    props_sub.put(INDEX_SLIDE_STEP, "8");
 
     Map<String, String> props_full = new HashMap<>();
     props_full.put(PAA_DIM, "5");
     Map<String, String> props_full2 = new HashMap<>();
     props_full2.put(PAA_DIM, "10");
-    this.infoSub = new IndexInfo(NO_INDEX, 0, props_sub);
+    this.infoSub = new IndexInfo(ELB_INDEX, 0, props_sub);
     this.infoFull = new IndexInfo(RTREE_PAA, 5, props_full);
     this.infoFull2 = new IndexInfo(NO_INDEX, 10, props_full2);
-    this.fakeCreateFunc = (s, map) -> null;
+    this.fakeCreateFunc = (indexSeries, indexInfoMap) -> new IndexProcessor(
+        indexSeries, testRouterDir + File.separator + "index_fake_" + indexSeries);
   }
 
   private static final String testRouterDir = "test_protoIndexRouter";
@@ -98,65 +95,77 @@ public class ProtoIndexRouterTest {
   }
 
   @Test
-  public void testBasic() throws MetadataException {
+  public void testBasic() throws MetadataException, IOException {
     prepareMManager();
-    IIndexRouter router = new ProtoIndexRouter(testRouterDir);
+    ProtoIndexRouter router = new ProtoIndexRouter(testRouterDir);
 
-    router.addIndexIntoRouter(new PartialPath(index_sub), infoSub, fakeCreateFunc);
-    router.addIndexIntoRouter(new PartialPath(index_full), infoFull, fakeCreateFunc);
-    router.addIndexIntoRouter(new PartialPath(index_full), infoFull2, fakeCreateFunc);
+    router.addIndexIntoRouter(new PartialPath(index_sub), infoSub, fakeCreateFunc, true);
+    router.addIndexIntoRouter(new PartialPath(index_full), infoFull, fakeCreateFunc, true);
+    router.addIndexIntoRouter(new PartialPath(index_full), infoFull2, fakeCreateFunc, true);
+//    System.out.println(router.toString());
     Assert.assertEquals(
-        "<{NO_INDEX=[type: NO_INDEX, time: 10, props: {PAA_DIM=10}], RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]},null>;"
-            + "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {INDEX_WINDOW_RANGE=5, INDEX_SLIDE_STEP=5}]},null>;",
+        "<{NO_INDEX=[type: NO_INDEX, time: 10, props: {PAA_DIM=10}], RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]}\n"
+            + "root.wind2.*.direction: {NO_INDEX=NO_INDEX, RTREE_PAA=nMax:50,nMin:2,dim:4,seedsPicker:LINEAR\n"
+            + "RNode{LB=[3.4028235E38, 3.4028235E38, 3.4028235E38, 3.4028235E38], UB=[-3.4028235E38, -3.4028235E38, -3.4028235E38, -3.4028235E38], leaf=true}\n"
+            + "}>\n"
+            + "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {INDEX_SLIDE_STEP=8, INDEX_WINDOW_RANGE=4}]}\n"
+            + "root.wind1.azq01.speed: {ELB_INDEX=[]}>\n",
         router.toString());
-
     // select by storage group
-    IIndexRouter sgRouters = router.getRouterByStorageGroup(storageGroupFull);
+    ProtoIndexRouter sgRouters = (ProtoIndexRouter) router
+        .getRouterByStorageGroup(storageGroupFull);
     Assert.assertEquals(
-        "<{NO_INDEX=[type: NO_INDEX, time: 10, props: {PAA_DIM=10}], RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]},null>;",
-        sgRouters.toString());
+        "<{NO_INDEX=[type: NO_INDEX, time: 10, props: {PAA_DIM=10}], RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]}\n"
+            + "root.wind2.*.direction: {NO_INDEX=NO_INDEX, RTREE_PAA=nMax:50,nMin:2,dim:4,seedsPicker:LINEAR\n"
+            + "RNode{LB=[3.4028235E38, 3.4028235E38, 3.4028235E38, 3.4028235E38], UB=[-3.4028235E38, -3.4028235E38, -3.4028235E38, -3.4028235E38], leaf=true}\n"
+            + "}>\n", sgRouters.toString());
+//    System.out.println(sgRouters.toString());
 
     // serialize
-    router.serializeAndClose(true);
+    router.serialize(false);
+//    System.out.println(router.toString());
+    Assert.assertEquals(
+        "<{NO_INDEX=[type: NO_INDEX, time: 10, props: {PAA_DIM=10}], RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]}\n"
+            + "root.wind2.*.direction: {NO_INDEX=NO_INDEX, RTREE_PAA=nMax:50,nMin:2,dim:4,seedsPicker:LINEAR\n"
+            + "RNode{LB=[3.4028235E38, 3.4028235E38, 3.4028235E38, 3.4028235E38], UB=[-3.4028235E38, -3.4028235E38, -3.4028235E38, -3.4028235E38], leaf=true}\n"
+            + "}>\n"
+            + "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {INDEX_SLIDE_STEP=8, INDEX_WINDOW_RANGE=4}]}\n"
+            + "root.wind1.azq01.speed: {ELB_INDEX=[]}>\n",
+        router.toString());
+    router.serialize(true);
+    Assert.assertEquals("", router.toString());
+
     IIndexRouter newRouter = new ProtoIndexRouter(testRouterDir);
     newRouter.deserializeAndReload(fakeCreateFunc);
     Assert.assertEquals(
-        "<{NO_INDEX=[type: NO_INDEX, time: 10, props: {PAA_DIM=10}], RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]},null>;"
-            + "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {INDEX_SLIDE_STEP=5, INDEX_WINDOW_RANGE=5}]},null>;",
+        "<{NO_INDEX=[type: NO_INDEX, time: 10, props: {PAA_DIM=10}], RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]}\n"
+            + "root.wind2.*.direction: {NO_INDEX=NO_INDEX, RTREE_PAA=nMax:50,nMin:2,dim:4,seedsPicker:LINEAR\n"
+            + "RNode{LB=[3.4028235E38, 3.4028235E38, 3.4028235E38, 3.4028235E38], UB=[-3.4028235E38, -3.4028235E38, -3.4028235E38, -3.4028235E38], leaf=true}\n"
+            + "}>\n"
+            + "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {INDEX_SLIDE_STEP=8, INDEX_WINDOW_RANGE=4}]}\n"
+            + "root.wind1.azq01.speed: {ELB_INDEX=[]}>\n",
         newRouter.toString());
+
     // delete index
     newRouter.removeIndexFromRouter(new PartialPath(index_full), NO_INDEX);
     Assert.assertEquals(
-        "<{RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]},null>;"
-            + "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {INDEX_SLIDE_STEP=5, INDEX_WINDOW_RANGE=5}]},null>;",
+        "<{RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]}\n"
+            + "root.wind2.*.direction: {RTREE_PAA=nMax:50,nMin:2,dim:4,seedsPicker:LINEAR\n"
+            + "RNode{LB=[3.4028235E38, 3.4028235E38, 3.4028235E38, 3.4028235E38], UB=[-3.4028235E38, -3.4028235E38, -3.4028235E38, -3.4028235E38], leaf=true}\n"
+            + "}>\n"
+            + "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {INDEX_SLIDE_STEP=8, INDEX_WINDOW_RANGE=4}]}\n"
+            + "root.wind1.azq01.speed: {ELB_INDEX=[]}>\n",
         newRouter.toString()
     );
     newRouter.removeIndexFromRouter(new PartialPath(index_full), RTREE_PAA);
-    System.out.println(newRouter);
     Assert.assertEquals(
-        "<{},null>;<{NO_INDEX=[type: NO_INDEX, time: 0, props: {INDEX_SLIDE_STEP=5, INDEX_WINDOW_RANGE=5}]},null>;",
-        newRouter.toString());
-    newRouter.removeIndexFromRouter(new PartialPath(index_sub), NO_INDEX);
-//    System.out.println(router);
-    Assert.assertEquals(
-        "<{},null>;<{},null>;",
+        "<{}\n"
+            + "null>\n"
+            + "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {INDEX_SLIDE_STEP=8, INDEX_WINDOW_RANGE=4}]}\n"
+            + "root.wind1.azq01.speed: {ELB_INDEX=[]}>\n",
         newRouter.toString());
 
-
-  }
-
-  @Test
-  public void aa() throws IOException {
-    ByteBuffer byteBuffer = ByteBuffer.allocate(0);
-    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-    ReadWriteIOUtils.write(byteBuffer, byteArrayOutputStream);
-    ReadWriteIOUtils.write(1, byteArrayOutputStream);
-
-    ByteArrayInputStream in = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
-    ByteBuffer out = ReadWriteIOUtils
-        .readByteBufferWithSelfDescriptionLength(in);
-    int r = ReadWriteIOUtils.readInt(in);
-    System.out.println(r);
-
+    newRouter.removeIndexFromRouter(new PartialPath(index_sub), ELB_INDEX);
+    Assert.assertEquals("<{}\nnull>\n<{}\nnull>\n", newRouter.toString());
   }
 }

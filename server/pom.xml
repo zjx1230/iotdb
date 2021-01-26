@@ -196,7 +196,7 @@
             <artifactId>netty-buffer</artifactId>
             <version>4.1.27.Final</version>
         </dependency>
-      <!-- Deep learning part start -->
+        <!-- Deep learning part start -->
         <dependency>
             <groupId>ai.djl</groupId>
             <artifactId>api</artifactId>

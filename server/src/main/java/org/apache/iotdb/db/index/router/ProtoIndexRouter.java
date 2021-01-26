@@ -30,6 +30,7 @@ import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.metadata.mnode.StorageGroupMNode;
 import org.apache.iotdb.db.query.context.QueryContext;
+import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,7 +71,7 @@ public class ProtoIndexRouter implements IIndexRouter {
   }
 
   @Override
-  public void serializeAndClose(boolean doClose) {
+  public void serialize(boolean closeProcessor) {
     try (OutputStream outputStream = new FileOutputStream(routerFile)) {
       ReadWriteIOUtils.write(fullPathProcessorMap.size(), outputStream);
       for (Entry<String, IndexProcessorStruct> entry : fullPathProcessorMap.entrySet()) {
@@ -82,8 +83,8 @@ public class ProtoIndexRouter implements IIndexRouter {
           IndexInfo indexInfo = e.getValue();
           indexInfo.serialize(outputStream);
         }
-        if (doClose && v.processor != null) {
-          v.processor.close();
+        if (closeProcessor && v.processor != null) {
+          v.processor.close(false);
         }
       }
 
@@ -97,14 +98,14 @@ public class ProtoIndexRouter implements IIndexRouter {
           IndexInfo indexInfo = e.getValue();
           indexInfo.serialize(outputStream);
         }
-        if (doClose && v.processor != null) {
-          v.processor.close();
+        if (closeProcessor && v.processor != null) {
+          v.processor.close(false);
         }
       }
     } catch (IOException e) {
       logger.error("Error when serialize router. Given up.", e);
     }
-    if (doClose) {
+    if (closeProcessor) {
       fullPathProcessorMap.clear();
       sgToFullPathMap.clear();
       sgToWildCardPathMap.clear();
@@ -124,7 +125,7 @@ public class ProtoIndexRouter implements IIndexRouter {
         int indexTypeSize = ReadWriteIOUtils.readInt(inputStream);
         for (int j = 0; j < indexTypeSize; j++) {
           IndexInfo indexInfo = IndexInfo.deserialize(inputStream);
-          addIndexIntoRouter(new PartialPath(indexSeries), indexInfo, func);
+          addIndexIntoRouter(new PartialPath(indexSeries), indexInfo, func, false);
         }
       }
 
@@ -134,7 +135,7 @@ public class ProtoIndexRouter implements IIndexRouter {
         int indexTypeSize = ReadWriteIOUtils.readInt(inputStream);
         for (int j = 0; j < indexTypeSize; j++) {
           IndexInfo indexInfo = IndexInfo.deserialize(inputStream);
-          addIndexIntoRouter(new PartialPath(indexSeries), indexInfo, func);
+          addIndexIntoRouter(new PartialPath(indexSeries), indexInfo, func, false);
         }
       }
     } catch (MetadataException | IOException e) {
@@ -217,10 +218,9 @@ public class ProtoIndexRouter implements IIndexRouter {
     return false;
   }
 
-
   @Override
   public boolean addIndexIntoRouter(PartialPath partialPath, IndexInfo indexInfo,
-      CreateIndexProcessorFunc func) throws MetadataException {
+      CreateIndexProcessorFunc func, boolean doSerialize) throws MetadataException {
     if (unmodifiable) {
       throw new MetadataException("cannot add index to unmodifiable router");
     }
@@ -240,9 +240,7 @@ public class ProtoIndexRouter implements IIndexRouter {
           infoMap.put(indexType, indexInfo);
           IndexProcessor processor = func.act(partialPath, infoMap);
           fullPathProcessorMap.put(fullPath,
-              new IndexProcessorStruct(processor,
-                  Collections.singletonList(storageGroupMNode.getPartialPath()),
-                  infoMap));
+              new IndexProcessorStruct(processor, partialPath, infoMap));
         } else {
           fullPathProcessorMap.get(fullPath).infos.put(indexType, indexInfo);
         }
@@ -261,10 +259,9 @@ public class ProtoIndexRouter implements IIndexRouter {
           Map<IndexType, IndexInfo> infoMap = new EnumMap<>(IndexType.class);
           infoMap.put(indexType, indexInfo);
           IndexProcessor processor = func.act(partialPath, infoMap);
+          PartialPath representativePath = getRepresentativePath(partialPath);
           wildCardProcessorMap.put(partialPath,
-              new IndexProcessorStruct(processor,
-                  Collections.singletonList(storageGroupMNode.getPartialPath()),
-                  infoMap));
+              new IndexProcessorStruct(processor, representativePath, infoMap));
         } else {
           wildCardProcessorMap.get(partialPath).infos.put(indexType, indexInfo);
         }
@@ -278,7 +275,9 @@ public class ProtoIndexRouter implements IIndexRouter {
           indexSeriesSet = preSet;
         }
         indexSeriesSet.add(partialPath);
-        serializeAndClose(false);
+        if(doSerialize){
+          serialize(false);
+        }
       }
     } finally {
       lock.writeLock().unlock();
@@ -286,9 +285,19 @@ public class ProtoIndexRouter implements IIndexRouter {
     return true;
   }
 
+  private PartialPath getRepresentativePath(PartialPath wildcardPath) throws MetadataException {
+    Pair<List<PartialPath>, Integer> paths = mManager
+        .getAllTimeseriesPathWithAlias(wildcardPath, 1, 0);
+    if (paths.left.isEmpty()) {
+      throw new MetadataException("Please create at least one series before create index");
+    } else {
+      return paths.left.get(0);
+    }
+  }
+
   @Override
   public boolean removeIndexFromRouter(PartialPath partialPath, IndexType indexType)
-      throws MetadataException {
+      throws MetadataException, IOException {
     if (unmodifiable) {
       throw new MetadataException("cannot remove index from unmodifiable router");
     }
@@ -306,24 +315,28 @@ public class ProtoIndexRouter implements IIndexRouter {
         if (fullPathProcessorMap.containsKey(fullPath)) {
           IndexProcessorStruct pair = fullPathProcessorMap.get(fullPath);
           pair.infos.remove(indexType);
+          pair.processor.refreshSeriesIndexMapFromMManager(pair.infos);
           if (pair.infos.isEmpty()) {
             sgToFullPathMap.get(storageGroupPath).remove(fullPath);
-            pair.storageGroups = null;
-            //TODO close processor?
+            pair.representativePath = null;
+            pair.processor.close(true);
+            pair.processor = null;
           }
         }
       } else {
         if (wildCardProcessorMap.containsKey(partialPath)) {
           IndexProcessorStruct pair = wildCardProcessorMap.get(partialPath);
           pair.infos.remove(indexType);
+          pair.processor.refreshSeriesIndexMapFromMManager(pair.infos);
           if (pair.infos.isEmpty()) {
             sgToWildCardPathMap.get(storageGroupPath).remove(partialPath);
-            pair.storageGroups = null;
-            //TODO close processor?
+            pair.representativePath = null;
+            pair.processor.close(true);
+            pair.processor = null;
           }
         }
       }
-      serializeAndClose(false);
+      serialize(false);
     } finally {
       lock.writeLock().unlock();
     }
@@ -386,8 +399,8 @@ public class ProtoIndexRouter implements IIndexRouter {
   public String toString() {
     StringBuilder sb = new StringBuilder();
     Iterable<IndexProcessorStruct> all = getAllIndexProcessorsAndInfo();
-    for (IndexProcessorStruct pair : all) {
-      sb.append(pair.toString()).append(";");
+    for (IndexProcessorStruct struct : all) {
+      sb.append(struct.toString()).append("\n");
     }
     return sb.toString();
   }

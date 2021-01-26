@@ -1,5 +1,6 @@
 package org.apache.iotdb.db.index.router;
 
+import java.io.IOException;
 import java.util.Map;
 import net.jcip.annotations.ThreadSafe;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
@@ -21,11 +22,12 @@ public interface IIndexRouter {
    */
   boolean hasIndexProcessor(PartialPath path);
 
-  boolean addIndexIntoRouter(PartialPath prefixPath, IndexInfo indexInfo, CreateIndexProcessorFunc func) throws MetadataException;
+  boolean addIndexIntoRouter(PartialPath prefixPath, IndexInfo indexInfo,
+      CreateIndexProcessorFunc func, boolean doSerialize) throws MetadataException;
 
 
   boolean removeIndexFromRouter(PartialPath prefixPath, IndexType indexType)
-      throws MetadataException;
+      throws MetadataException, IOException;
 
 
   Map<IndexType, IndexInfo> getIndexInfosByIndexSeries(PartialPath indexSeries);
@@ -34,7 +36,7 @@ public interface IIndexRouter {
 
   Iterable<IndexProcessor> getIndexProcessorByPath(PartialPath path);
 
-  void serializeAndClose(boolean doClose);
+  void serialize(boolean doClose);
 
   /**
    * deserialize all index information and processors into the memory

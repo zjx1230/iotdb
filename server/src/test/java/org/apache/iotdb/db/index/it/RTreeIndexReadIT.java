@@ -18,12 +18,9 @@
  */
 package org.apache.iotdb.db.index.it;
 
-import static org.apache.iotdb.db.index.IndexTestUtils.funcForm;
 import static org.apache.iotdb.db.index.IndexTestUtils.getArrayRange;
-import static org.apache.iotdb.db.index.common.IndexFunc.ED;
-import static org.apache.iotdb.db.index.common.IndexFunc.SIM_ET;
-import static org.apache.iotdb.db.index.common.IndexFunc.SIM_ST;
 import static org.apache.iotdb.db.index.common.IndexType.ELB_INDEX;
+import static org.apache.iotdb.db.index.common.IndexType.RTREE_PAA;
 import static org.junit.Assert.fail;
 
 import java.sql.Connection;
@@ -32,9 +29,9 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.index.IndexManager;
-import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.index.common.IndexUtils;
+import org.apache.iotdb.db.index.math.Randomwalk;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.db.utils.datastructure.TVList;
@@ -45,7 +42,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class _ELBIndexReadIT {
+public class RTreeIndexReadIT {
 
   private static final String insertPattern = "INSERT INTO %s(timestamp, %s) VALUES (%d, %.3f)";
 
@@ -62,8 +59,9 @@ public class _ELBIndexReadIT {
 
   private static final String indexSub = speed1;
   private static final String indexWhole = "root.wind2.*.direction";
-  private static final int wholeSize = 5;
-  private static final int wholeDim = 100;
+  private static final int wholeSize = 20;
+  private static final int wholeDim = 15;
+  private static final int PAA_Dim = 4;
   private static final int subLength = 50;
 
   @Before
@@ -74,65 +72,46 @@ public class _ELBIndexReadIT {
     insertSQL();
   }
 
-
-  @After
-  public void tearDown() throws Exception {
-    EnvironmentUtils.cleanEnv();
-    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
-  }
-
-  private static void insertSQL() throws ClassNotFoundException {
-
+  private void insertSQL() throws ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
 //    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
     try (Connection connection = DriverManager.getConnection
         (Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement();) {
-      statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupSub));
+//      statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupSub));
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
+      System.out.println(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
 
-      statement.execute(
-          String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", speed1));
-
-      for (int i = 0; i < wholeSize; i++) {
+      for (int i = 0; i < 1; i++) {
         String wholePath = String.format(directionPattern, i);
-//        System.out.println(String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
+        System.out.println(
+            String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
         statement.execute(
             String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
       }
-      statement.execute(
-          String.format("CREATE INDEX ON %s WITH INDEX=%s, BLOCK_SIZE=%d", indexSub, ELB_INDEX, 5));
+      statement.execute(String.format(
+          "CREATE INDEX ON %s WITH INDEX=%s, SERIES_LENGTH=%d, FEATURE_DIM=%d, MAX_ENTRIES=%d, MIN_ENTRIES=%d",
+          indexWhole, RTREE_PAA, wholeDim, PAA_Dim, 10, 2));
+//      System.out.println(String.format(
+//          "CREATE INDEX ON %s WITH INDEX=%s, SERIES_LENGTH=%d, FEATURE_DIM=%d, MAX_ENTRIES=%d, MIN_ENTRIES=%d",
+//          indexWhole, RTREE_PAA, wholeDim, PAA_Dim, 10, 2));
 
-      TVList subInput = TVListAllocator.getInstance().allocate(TSDataType.DOUBLE);
-      for (int i = 0; i < subLength; i++) {
-        subInput.putDouble(i, i * 10);
-      }
-      for (int i = 0; i < 20; i++) {
-        statement.execute(String.format(insertPattern,
-            speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
-      }
-      statement.execute("flush");
-//      System.out.println("==========================");
-//      System.out.println(IndexManager.getInstance().getRouter());
-
-      for (int i = 20; i < 40; i++) {
-        statement.execute(String.format(insertPattern,
-            speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
-      }
-      statement.execute("flush");
-//      System.out.println("==========================");
-//      System.out.println(IndexManager.getInstance().getRouter());
-
-      IndexManager.getInstance().stop();
-      IndexManager.getInstance().start();
-
-      for (int i = 40; i < subLength; i++) {
-        statement.execute(String.format(insertPattern,
-            speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
+//      TVList wholeInput = Randomwalk.generateRanWalkTVList(wholeDim * wholeSize);
+//      TVList wholeInput = IndexUtils.;
+      for (int i = 0; i < wholeSize; i++) {
+        String device = String.format(directionDevicePattern, i);
+        for (int j = 0; j < wholeDim; j++) {
+          String insertSQL = String.format(insertPattern,
+              device, directionSensor, j, (i * wholeDim + j) * 1d);
+          System.out.println(insertSQL);
+          statement.execute(insertSQL);
+        }
       }
       statement.execute("flush");
-//      System.out.println("==========================");
-//      System.out.println(IndexManager.getInstance().getRouter());
+      System.out.println(IndexManager.getInstance().getRouter());
+//      Assert.assertEquals(
+//          "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {BLOCK_SIZE=10}]},root.wind1.azq01.speed: {ELB_INDEX=[0-9:45.00, 10-19:145.00, 20-29:245.00, 30-39:345.00, 40-49:445.00]}>",
+//          IndexManager.getInstance().getRouter().toString());
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -140,33 +119,59 @@ public class _ELBIndexReadIT {
     }
   }
 
+  @After
+  public void tearDown() throws Exception {
+    EnvironmentUtils.cleanEnv();
+    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
+  }
+
+
   @Test
   public void checkRead() throws ClassNotFoundException {
+
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection = DriverManager.
         getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
 
-      String querySQL = "SELECT speed.* FROM root.wind1.azq01 WHERE Speed "
-          + String.format("CONTAIN (%s) WITH TOLERANCE 0 ", getArrayRange(170, 190, 10))
-          + String.format("CONCAT (%s) WITH TOLERANCE 0 ", getArrayRange(200, 230, 10))
-          + String.format("CONCAT (%s) WITH TOLERANCE 0 ", getArrayRange(240, 260, 10));
+      String querySQL = String
+          .format("SELECT TOP 2 direction FROM root.wind2.* WHERE direction LIKE (%s)",
+              getArrayRange(121, 121 + wholeDim));
+
       System.out.println(querySQL);
       boolean hasIndex = statement.execute(querySQL);
-      String[] gt = {"0,0,50210,0,50219,0,0.0"};
+      String gt = "Time,root.wind2.8.direction.(D=3.87),root.wind2.9.direction.(D=54.22),\n"
+          + "0,120.0,135.0,\n"
+          + "1,121.0,136.0,\n"
+          + "2,122.0,137.0,\n"
+          + "3,123.0,138.0,\n"
+          + "4,124.0,139.0,\n"
+          + "5,125.0,140.0,\n"
+          + "6,126.0,141.0,\n"
+          + "7,127.0,142.0,\n"
+          + "8,128.0,143.0,\n"
+          + "9,129.0,144.0,\n"
+          + "10,130.0,145.0,\n"
+          + "11,131.0,146.0,\n"
+          + "12,132.0,147.0,\n"
+          + "13,133.0,148.0,\n"
+          + "14,134.0,149.0,\n";
       Assert.assertTrue(hasIndex);
       try (ResultSet resultSet = statement.getResultSet()) {
         ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
-        int cnt = 0;
+        StringBuilder sb = new StringBuilder();
+        for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
+          sb.append(resultSetMetaData.getColumnName(i)).append(",");
+        }
+        sb.append("\n");
         while (resultSet.next()) {
-          StringBuilder sb = new StringBuilder();
           for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
             sb.append(resultSet.getString(i)).append(",");
           }
-          System.out.println(sb);
-//          Assert.assertEquals(gt[cnt], builder.toString());
-          cnt++;
+          sb.append("\n");
         }
+        System.out.println(sb);
+        Assert.assertEquals(gt, sb.toString());
       }
     } catch (Exception e) {
       e.printStackTrace();

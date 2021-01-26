@@ -122,7 +122,7 @@ public class IndexManager implements IndexManagerMBean, IService {
   public void createIndex(List<PartialPath> indexSeriesList, IndexInfo indexInfo)
       throws MetadataException {
     if (!indexSeriesList.isEmpty()) {
-      router.addIndexIntoRouter(indexSeriesList.get(0), indexInfo, createIndexProcessorFunc);
+      router.addIndexIntoRouter(indexSeriesList.get(0), indexInfo, createIndexProcessorFunc, true);
     }
   }
 
@@ -133,7 +133,7 @@ public class IndexManager implements IndexManagerMBean, IService {
    * @param indexType 索引类别
    */
   public void dropIndex(List<PartialPath> indexSeriesList, IndexType indexType)
-      throws MetadataException {
+      throws MetadataException, IOException {
     if (!indexSeriesList.isEmpty()) {
       router.removeIndexFromRouter(indexSeriesList.get(0), indexType);
     }
@@ -162,7 +162,7 @@ public class IndexManager implements IndexManagerMBean, IService {
    * 的关闭操作也放在router中。
    */
   private synchronized void close() {
-    router.serializeAndClose(true);
+    router.serialize(true);
   }
 
   /**
@@ -227,7 +227,8 @@ public class IndexManager implements IndexManagerMBean, IService {
    * @see IndexMemTableFlushTask
    */
   public IndexMemTableFlushTask getIndexMemFlushTask(String storageGroupPath, boolean sequence) {
-    IIndexRouter sgRouter = router.getRouterByStorageGroup(storageGroupPath);
+    String realStorageGroupPath = storageGroupPath.split(File.separator)[0];
+    IIndexRouter sgRouter = router.getRouterByStorageGroup(realStorageGroupPath);
     return new IndexMemTableFlushTask(sgRouter, sequence);
   }
 
@@ -261,8 +262,7 @@ public class IndexManager implements IndexManagerMBean, IService {
     PartialPath queryIndexSeries = paths.get(0);
     IndexProcessorStruct indexProcessorStruct = router
         .startQueryAndCheck(queryIndexSeries, indexType, context);
-    List<StorageGroupProcessor> list = StorageEngine.getInstance()
-        .mergeLock(indexProcessorStruct.storageGroups);
+    List<StorageGroupProcessor> list = indexProcessorStruct.addMergeLock();
     try {
       return indexProcessorStruct.processor.query(indexType, queryProps, context, alignedByTime);
     } finally {

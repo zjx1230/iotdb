@@ -115,7 +115,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
     featureFile = IndexUtils.getIndexFile(indexDir + File.separator + "rTreeFeature");
     File indexDirFile = IndexUtils.getIndexFile(indexDir);
     if (indexDirFile.exists()) {
-      System.out.println(String.format("reload index %s from %s", RTREE_PAA, indexDir));
+      logger.info("reload index {} from {}", RTREE_PAA, indexDir);
       deserializeFeatures();
     } else {
       indexDirFile.mkdirs();

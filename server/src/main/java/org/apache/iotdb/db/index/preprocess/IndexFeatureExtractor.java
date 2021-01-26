@@ -23,7 +23,6 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
-import org.apache.iotdb.db.index.algorithm.elb.ELBCountFixedFeatureExtractor;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.TestOnly;
@@ -60,8 +59,7 @@ import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 public abstract class IndexFeatureExtractor {
 
   /**
-   * In the BUILD and QUERY modes, the preprocessor works differently.  For example, {@linkplain
-   * ELBCountFixedFeatureExtractor ELBCountFixedPreprocessor} does not need to generate L3 feature
+   * In the BUILD and QUERY modes, the preprocessor works differently.
    * in QUERY-Mode, and NoIndex does not need to generate L1 Identifier and L2 Aligned sequence in
    * BUILD-Mode.
    *
@@ -329,7 +327,7 @@ public abstract class IndexFeatureExtractor {
       return;
     }
     srcData.clear();
-    TSDataType dataType = TSDataType.deserialize(ReadWriteIOUtils.readShort(byteBuffer));
+    TSDataType dataType = TSDataType.deserialize(ReadWriteIOUtils.readByte(byteBuffer));
     if (dataType != srcData.getDataType()) {
       throw new IndexRuntimeException(String.format("serialized dataType %s != srcData dataType %s",
           dataType, srcData.getDataType()));
@@ -364,10 +362,6 @@ public abstract class IndexFeatureExtractor {
    * serialize the previous overlapped data and output
    */
   public ByteBuffer serializePrevious() throws IOException {
-//    int idx = nextUnprocessedWindowStartIdx();
-//    if (idx > srcData.size()) {
-//      throw new IOException(String.format("idx %d > srcData.size %d", idx, srcData.size()));
-//    }
     int idx = 0;
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     ReadWriteIOUtils.write(srcData.getDataType().serialize(), baos);

@@ -18,24 +18,32 @@
  */
 package org.apache.iotdb.db.index.it;
 
-import static org.apache.iotdb.db.index.common.IndexType.NO_INDEX;
+import static org.apache.iotdb.db.index.common.IndexType.ELB_INDEX;
 import static org.junit.Assert.fail;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
+import java.util.List;
+import java.util.Map;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.index.IndexManager;
+import org.apache.iotdb.db.index.IndexProcessor;
+import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.math.Randomwalk;
+import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.jdbc.Config;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.utils.Pair;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class _NoIndexWriteIT {
+public class ELBIndexWriteIT {
 
   private static final String insertPattern = "INSERT INTO %s(timestamp, %s) VALUES (%d, %.3f)";
 
@@ -54,7 +62,7 @@ public class _NoIndexWriteIT {
   private static final String indexWhole = "root.wind2.*.direction";
   private static final int wholeSize = 5;
   private static final int wholeDim = 100;
-  private static final int subLength = 10_000;
+  private static final int subLength = 50;
 
   @Before
   public void setUp() throws Exception {
@@ -78,7 +86,6 @@ public class _NoIndexWriteIT {
     try (Connection connection = DriverManager.getConnection
         (Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement();) {
-      long start = System.currentTimeMillis();
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupSub));
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
 
@@ -93,49 +100,62 @@ public class _NoIndexWriteIT {
         statement.execute(
             String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
       }
-      long startCreateIndex = System.currentTimeMillis();
-      statement.execute(String.format("CREATE INDEX ON %s WITH INDEX=%s", indexSub, NO_INDEX));
-      statement.execute(String.format("CREATE INDEX ON %s WITH INDEX=%s", indexWhole, NO_INDEX));
+      statement.execute(
+          String.format("CREATE INDEX ON %s WITH INDEX=%s, BLOCK_SIZE=10", indexSub, ELB_INDEX));
 
       System.out.println(IndexManager.getInstance().getRouter());
-      Assert.assertEquals(
-          "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind2.*.direction: {NO_INDEX=NO_INDEX}>;<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind1.azq01.speed: {NO_INDEX=NO_INDEX}>;",
-          IndexManager.getInstance().getRouter().toString());
-      TVList subInput = Randomwalk.generateRanWalkTVList(subLength);
-      long startInsertSub = System.currentTimeMillis();
-      for (int i = 0; i < subInput.size(); i++) {
-//        System.out.println(String.format(insertPattern, speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
+//      Assert.assertEquals(
+//          "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind2.*.direction: {}>;"
+//              + "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind1.azq01.speed: {}>;",
+//          IndexManager.getInstance().getRouter().toString());
+
+//      TVList subInput = Randomwalk.generateRanWalkTVList(subLength);
+      TVList subInput = TVListAllocator.getInstance().allocate(TSDataType.DOUBLE);
+      for (int i = 0; i < subLength; i++) {
+        subInput.putDouble(i, i * 10);
+      }
+      for (int i = 0; i < 23; i++) {
         statement.execute(String.format(insertPattern,
             speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
       }
       statement.execute("flush");
       System.out.println("insert finish for subsequence case");
       System.out.println(IndexManager.getInstance().getRouter());
+
       Assert.assertEquals(
-          "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind2.*.direction: {NO_INDEX=NO_INDEX}>;<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind1.azq01.speed: {NO_INDEX=NO_INDEX}>;",
+          "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {BLOCK_SIZE=10}]}\n"
+              + "root.wind1.azq01.speed: {ELB_INDEX=[0-9:450.00, 10-19:1450.00]}>\n",
           IndexManager.getInstance().getRouter().toString());
 
-      long startInsertWhole = System.currentTimeMillis();
-      TVList wholeInput = Randomwalk.generateRanWalkTVList(wholeDim * wholeSize);
-      for (int i = 0; i < wholeSize; i++) {
-        String device = String.format(directionDevicePattern, i);
-//        System.out.println(String.format(insertPattern, device, directionSensor, wholeInput.getTime(i), wholeInput.getDouble(i)));
+      for (int i = 23; i < 37; i++) {
         statement.execute(String.format(insertPattern,
-            device, directionSensor, wholeInput.getTime(i), wholeInput.getDouble(i)));
+            speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
       }
       statement.execute("flush");
-      long end = System.currentTimeMillis();
       System.out.println(IndexManager.getInstance().getRouter());
       Assert.assertEquals(
-          "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind2.*.direction: {NO_INDEX=NO_INDEX}>;<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind1.azq01.speed: {NO_INDEX=NO_INDEX}>;",
+          "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {BLOCK_SIZE=10}]}\n"
+              + "root.wind1.azq01.speed: {ELB_INDEX=[0-9:450.00, 10-19:1450.00, 20-29:2450.00]}>\n",
           IndexManager.getInstance().getRouter().toString());
-      System.out.println("insert finish for subsequence case");
-      System.out.println(String.format("create series use %d ms", (startCreateIndex - start)));
-      System.out
-          .println(String.format("create index  use %d ms", (startInsertSub - startCreateIndex)));
-      System.out
-          .println(String.format("insert sub    use %d ms", (startInsertWhole - startInsertSub)));
-      System.out.println(String.format("insert whole  use %d ms", (end - startInsertWhole)));
+
+      IndexManager.getInstance().stop();
+      IndexManager.getInstance().start();
+      System.out.println(IndexManager.getInstance().getRouter());
+      Assert.assertEquals(
+          "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {BLOCK_SIZE=10}]}\n"
+              + "root.wind1.azq01.speed: {ELB_INDEX=[0-9:450.00, 10-19:1450.00, 20-29:2450.00]}>\n",
+          IndexManager.getInstance().getRouter().toString());
+      for (int i = 37; i < subLength; i++) {
+        statement.execute(String.format(insertPattern,
+            speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
+      }
+      statement.execute("flush");
+      System.out.println(IndexManager.getInstance().getRouter());
+      Assert.assertEquals(
+          "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {BLOCK_SIZE=10}]}\n"
+              + "root.wind1.azq01.speed: {ELB_INDEX=[0-9:450.00, 10-19:1450.00, 20-29:2450.00, 30-39:3450.00, 40-49:4450.00]}>\n",
+          IndexManager.getInstance().getRouter().toString());
+
 
     } catch (Exception e) {
       e.printStackTrace();

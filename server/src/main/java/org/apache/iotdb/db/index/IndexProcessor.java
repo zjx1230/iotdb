@@ -294,7 +294,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
    * 将除了NoIndex之外的所有索引实例刷出磁盘
    */
   @SuppressWarnings("squid:S2589")
-  public synchronized void close() throws IOException {
+  public synchronized void close(boolean deleteFiles) throws IOException {
     if (closed) {
       return;
     }
@@ -312,6 +312,10 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
         }
         closeAndRelease();
         closed = true;
+        if(deleteFiles){
+          File dir = IndexUtils.getIndexFile(indexSeriesDirPath);
+          dir.delete();
+        }
       } finally {
         lock.writeLock().unlock();
       }
@@ -522,7 +526,10 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
       // remove indexes that are removed from the previous map
       for (IndexType indexType : new ArrayList<>(allPathsIndexMap.keySet())) {
         if (!indexInfoMap.containsKey(indexType)) {
-          allPathsIndexMap.get(indexType).delete();
+          allPathsIndexMap.get(indexType).closeAndRelease();
+          // remove index file directories
+          File dir = IndexUtils.getIndexFile(getIndexDir(indexType));
+          dir.delete();
           allPathsIndexMap.remove(indexType);
           usableMap.remove(indexType);
         }

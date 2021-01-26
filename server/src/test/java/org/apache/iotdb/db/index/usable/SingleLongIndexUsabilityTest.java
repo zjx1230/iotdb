@@ -1,6 +1,13 @@
 package org.apache.iotdb.db.index.usable;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
+import java.util.Set;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
@@ -10,7 +17,7 @@ import org.junit.Test;
 public class SingleLongIndexUsabilityTest {
 
   @Test
-  public void addUsableRange1() {
+  public void addUsableRange1() throws IOException, IllegalPathException {
     SingleLongIndexUsability usability = new SingleLongIndexUsability(null, 4);
     Assert.assertEquals("size:1,[MIN,MAX],", usability.toString());
     // split range
@@ -32,10 +39,17 @@ public class SingleLongIndexUsabilityTest {
     usability.addUsableRange(null, 14, 17);
     Assert.assertEquals("size:4,[MIN,0],[10,13],[18,20],[50,MAX],", usability.toString());
     System.out.println(usability);
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    usability.serialize(out);
+    InputStream in = new ByteArrayInputStream(out.toByteArray());
+    SingleLongIndexUsability usability2 = new SingleLongIndexUsability(null);
+    usability2.deserialize(in);
+    Assert.assertEquals("size:4,[MIN,0],[10,13],[18,20],[50,MAX],", usability2.toString());
   }
 
   @Test
-  public void addUsableRange2() {
+  public void addUsableRange2() throws IOException {
     SingleLongIndexUsability usability = new SingleLongIndexUsability(null, 4);
     usability.addUsableRange(null, 1, 19);
     usability.addUsableRange(null, 51, 59);
@@ -55,10 +69,16 @@ public class SingleLongIndexUsabilityTest {
     System.out.println(usability);
     Assert.assertEquals("size:2,[MIN,0],[100,MAX],", usability.toString());
 
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    usability.serialize(out);
+    InputStream in = new ByteArrayInputStream(out.toByteArray());
+    SingleLongIndexUsability usability2 = new SingleLongIndexUsability(null);
+    usability2.deserialize(in);
+    Assert.assertEquals("size:2,[MIN,0],[100,MAX],", usability2.toString());
   }
 
   @Test
-  public void minusUsableRange() {
+  public void minusUsableRange() throws IOException {
     SingleLongIndexUsability usability = new SingleLongIndexUsability(null, 4);
 
     // merge with MIN, MAX
@@ -117,6 +137,13 @@ public class SingleLongIndexUsabilityTest {
     usability.minusUsableRange(null, 101, 107);
     System.out.println(usability);
     Assert.assertEquals("size:1,[MIN,MAX],", usability.toString());
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    usability.serialize(out);
+    InputStream in = new ByteArrayInputStream(out.toByteArray());
+    SingleLongIndexUsability usability2 = new SingleLongIndexUsability(null);
+    usability2.deserialize(in);
+    Assert.assertEquals("size:1,[MIN,MAX],", usability2.toString());
   }
 
   @Test

@@ -27,12 +27,10 @@ import org.slf4j.LoggerFactory;
  */
 public class MultiShortIndexUsability implements IIndexUsable {
 
-  private static final Logger logger = LoggerFactory.getLogger(MultiShortIndexUsability.class);
-
   private final PartialPath indexSeries;
   private final Set<PartialPath> usableInfoSet;
 
-  public MultiShortIndexUsability(PartialPath indexSeries) {
+  MultiShortIndexUsability(PartialPath indexSeries) {
     this.indexSeries = indexSeries;
     this.usableInfoSet = new HashSet<>();
   }

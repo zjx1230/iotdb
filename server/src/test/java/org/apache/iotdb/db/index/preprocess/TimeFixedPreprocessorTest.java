@@ -139,6 +139,7 @@ public class TimeFixedPreprocessorTest {
       Identifier identifierL1 = (Identifier) timeFixed.getCurrent_L1_Identifier();
       System.out.println(identifierL1);
     }
+    timeFixed.clearProcessedSrcData();
     ByteBuffer previous = timeFixed.serializePrevious();
     timeFixed.closeAndRelease();
 
@@ -181,6 +182,7 @@ public class TimeFixedPreprocessorTest {
       Identifier identifierL1 = (Identifier) timeFixed.getCurrent_L1_Identifier();
       System.out.println(identifierL1);
     }
+    timeFixed.clearProcessedSrcData();
     ByteBuffer previous = timeFixed.serializePrevious();
     timeFixed.closeAndRelease();
 
@@ -236,6 +238,7 @@ public class TimeFixedPreprocessorTest {
       Identifier identifierL1 = (Identifier) timeFixed.getCurrent_L1_Identifier();
       System.out.println(identifierL1);
     }
+    timeFixed.clearProcessedSrcData();
     ByteBuffer previous = timeFixed.serializePrevious();
     timeFixed.closeAndRelease();
 
@@ -268,7 +271,7 @@ public class TimeFixedPreprocessorTest {
       System.out.println("idx:" + idx);
       timeFixed.processNext();
       //L1 latest
-      Identifier identifierL1 = (Identifier) timeFixed.getCurrent_L1_Identifier();
+      Identifier identifierL1 = timeFixed.getCurrent_L1_Identifier();
       System.out.println(identifierL1);
       if (toAssert) {
         Assert.assertEquals(groundTruthL1[idx], identifierL1.toString());

@@ -129,9 +129,11 @@ public class MemTableFlushTask {
         encodingTaskQueue.put(new Pair<>(tvList, desc));
         if (enabledIndex) {
           try {
+            String deviceId = memTableEntry.getKey();
+            String measurementId = iWritableMemChunkEntry.getKey();
             indexFlushTask.buildIndexForOneSeries(new PartialPath(deviceId, measurementId), tvList);
           } catch (IllegalPathException e) {
-            logger.warn("parsing path meets errors, give up to build the index");
+            LOGGER.warn("parsing path meets errors, give up to build the index");
           }
         }
       }

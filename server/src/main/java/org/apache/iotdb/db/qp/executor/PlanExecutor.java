@@ -1324,6 +1324,8 @@ public class PlanExecutor implements IPlanExecutor {
       IndexManager.getInstance().dropIndex(partialPaths, indexType);
     } catch (MetadataException e) {
       throw new IndexManagerException(e);
+    } catch (IOException e2) {
+      throw new IndexManagerException(e2.getMessage());
     }
     return true;
   }

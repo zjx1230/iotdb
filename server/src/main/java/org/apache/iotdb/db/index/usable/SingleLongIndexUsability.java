@@ -29,7 +29,6 @@ import org.slf4j.LoggerFactory;
  */
 public class SingleLongIndexUsability implements IIndexUsable {
 
-  private static final Logger logger = LoggerFactory.getLogger(SingleLongIndexUsability.class);
   /**
    * TODO it will be moved to configuration.
    *
@@ -117,10 +116,10 @@ public class SingleLongIndexUsability implements IIndexUsable {
   public void minusUsableRange(PartialPath fullPath, long startTime, long endTime) {
     // simplify the problem
     if (startTime == Long.MIN_VALUE) {
-      startTime = startTime + 10;
+      startTime = startTime + 1;
     }
     if (endTime == Long.MAX_VALUE) {
-      endTime = endTime - 10;
+      endTime = endTime - 1;
     }
     RangeNode node = locateIdxByTime(startTime);
     if (endTime <= node.end) {
@@ -295,12 +294,16 @@ public class SingleLongIndexUsability implements IIndexUsable {
 
   @Override
   public void serialize(OutputStream outputStream) throws IOException {
+    ReadWriteIOUtils.write(size, outputStream);
+    ReadWriteIOUtils.write(maxSizeOfUsableSegments, outputStream);
     RangeNode.serialize(unusableRanges, outputStream);
 
   }
 
   @Override
   public void deserialize(InputStream inputStream) throws IOException {
+    size = ReadWriteIOUtils.readInt(inputStream);
+    maxSizeOfUsableSegments = ReadWriteIOUtils.readInt(inputStream);
     unusableRanges = RangeNode.deserialize(inputStream);
   }
 

@@ -355,16 +355,6 @@ public class MManager {
         SetStorageGroupPlan setStorageGroupPlan = (SetStorageGroupPlan) plan;
         setStorageGroup(setStorageGroupPlan.getPath());
         break;
-      case MetadataOperationType.CREATE_INDEX:
-        String path = args[1];
-        IndexInfo indexInfo = IndexInfo.deserializeCreateIndex(args);
-        createIndexWithMemoryCheckAndLog(new PartialPath(path), indexInfo);
-        break;
-      case MetadataOperationType.DROP_INDEX:
-        String dropPath = args[1];
-        IndexType indexType = IndexInfo.deserializeDropIndex(args);
-        dropIndexWithMemoryCheckAndLog(new PartialPath(dropPath), indexType);
-        break;
       case DELETE_STORAGE_GROUP:
         DeleteStorageGroupPlan deleteStorageGroupPlan = (DeleteStorageGroupPlan) plan;
         deleteStorageGroups(deleteStorageGroupPlan.getPaths());
@@ -455,92 +445,6 @@ public class MManager {
 
     } catch (IOException e) {
       throw new MetadataException(e);
-    }
-  }
-
-  private void createIndexWithMemoryCheckAndLog(PartialPath fullPath, IndexInfo indexInfo)
-      throws MetadataException, IOException {
-    mtree.createIndex(fullPath, indexInfo);
-    // create index with memory check
-    // TODO shall we check memory like Create Timeseries?
-    if (!isRecovering) {
-        logWriter.createIndex(fullPath.getFullPath(), indexInfo);
-    }
-    // update statistics
-    //TODO shall we update statistics for Create Index?
-    // if (config.isEnableParameterAdapter()) {}
-  }
-
-  /**
-   * Add index information to an exist leaf node, if the leaf node already exists, throw exception
-   *
-   * @param prefixPaths the timeseries paths
-   * @throws MetadataException when the given path does not exist.
-   */
-  public List<PartialPath> createIndex(List<PartialPath> prefixPaths, IndexInfo indexInfo)
-      throws MetadataException {
-    List<PartialPath> res = new ArrayList<>();
-    try {
-      for (PartialPath prefixPath : prefixPaths) {
-        List<PartialPath> fullPaths = getAllTimeseriesPath(prefixPath);
-        for (PartialPath p : fullPaths) {
-          createIndexWithMemoryCheckAndLog(p, indexInfo);
-        }
-        res.addAll(fullPaths);
-      }
-    } catch (IOException e) {
-      throw new MetadataException(e.getMessage());
-    }
-    return res;
-  }
-
-  /**
-   * Drop all indexes on the given paths/prefix paths, may cross different storage group
-   *
-   * @param fullPath paths to drop index   *
-   */
-  private void dropIndexWithMemoryCheckAndLog(PartialPath fullPath, IndexType indexType)
-      throws IOException, MetadataException {
-    // TODO shall we check memory like Drop Timeseries?
-    mtree.dropIndex(fullPath, indexType);
-    if (!isRecovering) {
-      logWriter.dropIndex(fullPath.getFullPath(), indexType);
-    }
-  }
-
-  public List<PartialPath> dropIndex(List<PartialPath> prefixPaths, IndexType indexType)
-      throws MetadataException {
-    List<PartialPath> res = new ArrayList<>();
-    try {
-      for (PartialPath prefixPath : prefixPaths) {
-        List<PartialPath> fullPaths = getAllTimeseriesPath(prefixPath);
-        for (PartialPath p : fullPaths) {
-          dropIndexWithMemoryCheckAndLog(p, indexType);
-        }
-        res.addAll(fullPaths);
-      }
-    } catch (IOException e) {
-      throw new MetadataException(e.getMessage());
-    }
-    return res;
-  }
-
-  public Map<String, Map<IndexType, IndexInfo>> getAllIndexInfosInStorageGroup(
-      String storageGroupName) {
-    try {
-      return mtree.getAllIndexInfosInStorageGroup(new PartialPath(storageGroupName));
-    } catch (MetadataException e) {
-      logger.error("meet errors when get index infos of storage group {}.", storageGroupName, e);
-      return new HashMap<>();
-    }
-  }
-
-  public IndexInfo getIndexInfoByPath(String path, IndexType indexType) {
-    try {
-      return mtree.getIndexInfoByPath(new PartialPath(path), indexType);
-    } catch (MetadataException e) {
-      logger.error("meet errors when get index info for {} {}.", path, indexType, e);
-      return null;
     }
   }
 

@@ -490,18 +490,6 @@ public abstract class TVList {
     return new Ite(floatPrecision, encoding, size, deletionList);
   }
 
-
-  public static long tvListArrayMemSize(TSDataType type) {
-    long size = 0;
-    // time size
-    size +=
-        PrimitiveArrayManager.ARRAY_SIZE * 8;
-    // value size
-    size +=
-        PrimitiveArrayManager.ARRAY_SIZE * type.getDataTypeSize();
-    return size;
-  }
-
   private class Ite implements IPointReader {
 
     private TimeValuePair cachedTimeValuePair;
