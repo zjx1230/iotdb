@@ -182,7 +182,7 @@ public abstract class IndexFeatureExtractor {
    * get the latest N L1-identifiers, including the current one. The caller needs to release them
    * after use.
    */
-  public abstract List<Identifier> getLatestN_L1_Identifiers(int latestN);
+//  public abstract List<Identifier> getLatestN_L1_Identifiers(int latestN);
 
   public TVList get_L0_SourceData(long startTime, long endTime) {
     TVList res = TVListAllocator.getInstance().allocate(srcData.getDataType());
@@ -197,18 +197,18 @@ public abstract class IndexFeatureExtractor {
     return res;
   }
 
-  /**
-   * get current L1 identifier. The caller needs to release them after use.
-   */
-  public Identifier getCurrent_L1_Identifier() {
-    List<Identifier> res = getLatestN_L1_Identifiers(1);
-    return res.isEmpty() ? null : res.get(0);
-  }
-
-  public List<Identifier> getAll_L1_Identifiers() {
-    int chunkNum = getCurrentChunkSize();
-    return getLatestN_L1_Identifiers(chunkNum);
-  }
+//  /**
+//   * get current L1 identifier. The caller needs to release them after use.
+//   */
+//  public Identifier getCurrent_L1_Identifier() {
+//    List<Identifier> res = getLatestN_L1_Identifiers(1);
+//    return res.isEmpty() ? null : res.get(0);
+//  }
+//
+//  public List<Identifier> getAll_L1_Identifiers() {
+//    int chunkNum = getCurrentChunkSize();
+//    return getLatestN_L1_Identifiers(chunkNum);
+//  }
 
   /**
    * get the latest N of L2 aligned sequences, including the current one. The caller needs to

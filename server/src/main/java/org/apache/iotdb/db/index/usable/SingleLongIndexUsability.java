@@ -7,15 +7,11 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBWindowBlockFeature;
 import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.tsfile.read.filter.TimeFilter;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.apache.iotdb.tsfile.read.filter.factory.FilterFactory;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * This class is to record the index usable range for a single long series, which corresponds to the
@@ -245,7 +241,7 @@ public class SingleLongIndexUsability implements IIndexUsable {
   }
 
   @Override
-  public List<Filter> getUnusableRangeForSeriesMatching(IIndexUsable cannotPruned) {
+  public List<Filter> mergeUnusableRangeForSubMatching(IIndexUsable cannotPruned) {
     List<Filter> res = new ArrayList<>();
     SingleLongIndexUsability singleCannotPruned = (SingleLongIndexUsability) cannotPruned;
     // merge them.
@@ -297,7 +293,6 @@ public class SingleLongIndexUsability implements IIndexUsable {
     ReadWriteIOUtils.write(size, outputStream);
     ReadWriteIOUtils.write(maxSizeOfUsableSegments, outputStream);
     RangeNode.serialize(unusableRanges, outputStream);
-
   }
 
   @Override
@@ -307,20 +302,20 @@ public class SingleLongIndexUsability implements IIndexUsable {
     unusableRanges = RangeNode.deserialize(inputStream);
   }
 
-  /**
-   * It's a inefficient implementation
-   */
-  @Override
-  public void updateELBBlocksForSeriesMatching(PrimitiveList unusableBlocks,
-      List<ELBWindowBlockFeature> windowBlocks) {
-    for (int i = 0; i < windowBlocks.size(); i++) {
-      ELBWindowBlockFeature block = windowBlocks.get(i);
-      RangeNode node = locateIdxByTime(block.startTime);
-      if (node.end < block.startTime && block.endTime < node.next.start) {
-        unusableBlocks.setBoolean(i, true);
-      }
-    }
-  }
+//  /**
+//   * It's a inefficient implementation
+//   */
+//  @Override
+//  public void updateELBBlocksForSeriesMatching(PrimitiveList unusableBlocks,
+//      List<ELBWindowBlockFeature> windowBlocks) {
+//    for (int i = 0; i < windowBlocks.size(); i++) {
+//      ELBWindowBlockFeature block = windowBlocks.get(i);
+//      RangeNode node = locateIdxByTime(block.startTime);
+//      if (node.end < block.startTime && block.endTime < node.next.start) {
+//        unusableBlocks.setBoolean(i, true);
+//      }
+//    }
+//  }
 
   @Override
   public IIndexUsable deepCopy() {

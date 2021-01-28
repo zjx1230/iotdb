@@ -8,13 +8,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
-import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBWindowBlockFeature;
 import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * This class is to record the index usable range for a list of short series, which corresponds to
@@ -53,7 +49,7 @@ public class MultiShortIndexUsability implements IIndexUsable {
 
 
   @Override
-  public List<Filter> getUnusableRangeForSeriesMatching(
+  public List<Filter> mergeUnusableRangeForSubMatching(
       IIndexUsable cannotPruned) {
     throw new UnsupportedOperationException(indexSeries.toString());
   }
@@ -73,11 +69,11 @@ public class MultiShortIndexUsability implements IIndexUsable {
       usableInfoSet.add(new PartialPath(ReadWriteIOUtils.readString(inputStream)));
     }
   }
-
-  @Override
-  public void updateELBBlocksForSeriesMatching(PrimitiveList unusableBlocks, List<ELBWindowBlockFeature> windowBlocks) {
-    throw new UnsupportedOperationException();
-  }
+//
+//  @Override
+//  public void updateELBBlocksForSeriesMatching(PrimitiveList unusableBlocks, List<ELBWindowBlockFeature> windowBlocks) {
+//    throw new UnsupportedOperationException();
+//  }
 
   @Override
   public IIndexUsable deepCopy() {

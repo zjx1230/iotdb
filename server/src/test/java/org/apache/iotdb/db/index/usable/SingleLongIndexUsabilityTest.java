@@ -5,11 +5,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
-import java.util.Set;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
-import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.junit.Assert;
 import org.junit.Test;
@@ -162,7 +158,7 @@ public class SingleLongIndexUsabilityTest {
     b.addUsableRange(null, 131, 149);
     b.addUsableRange(null, 181, 209);
     System.out.println(b);
-    List<Filter> res = a.getUnusableRangeForSeriesMatching(b);
+    List<Filter> res = a.mergeUnusableRangeForSubMatching(b);
     Assert.assertEquals(3, res.size());
     Assert.assertEquals(
         "[(time >= -9223372036854775808 && time <= 60), (time >= 80 && time <= 130), (time >= 140 && time <= 9223372036854775807)]",

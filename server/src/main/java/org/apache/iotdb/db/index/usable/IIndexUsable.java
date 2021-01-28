@@ -6,9 +6,7 @@ import java.io.OutputStream;
 import java.util.List;
 import java.util.Set;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
-import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBWindowBlockFeature;
 import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 
 /**
@@ -31,8 +29,6 @@ public interface IIndexUsable {
 
   void addUsableRange(PartialPath fullPath, long start, long end);
 
-//  void minusUsableRange(PartialPath fullPath, TVList tvList);
-
   void minusUsableRange(PartialPath fullPath, long start, long end);
 
   /**
@@ -52,18 +48,18 @@ public interface IIndexUsable {
    * @return a time range
    * @param cannotPruned
    */
-  List<Filter> getUnusableRangeForSeriesMatching(IIndexUsable cannotPruned);
+  List<Filter> mergeUnusableRangeForSubMatching(IIndexUsable cannotPruned);
 
   void serialize(OutputStream outputStream) throws IOException;
 
   void deserialize(InputStream inputStream) throws IllegalPathException, IOException;
 
-  /**
-   * special for ELB, it's not elegant
-   * @param unusableBlocks
-   * @param windowBlocks
-   */
-  void updateELBBlocksForSeriesMatching(PrimitiveList unusableBlocks, List<ELBWindowBlockFeature> windowBlocks);
+//  /**
+//   * special for ELB, it's not elegant
+//   * @param unusableBlocks
+//   * @param windowBlocks
+//   */
+//  void updateELBBlocksForSeriesMatching(PrimitiveList unusableBlocks, List<ELBWindowBlockFeature> windowBlocks);
 
   IIndexUsable deepCopy();
 
