@@ -172,33 +172,33 @@ public class CountFixedFeatureExtractor extends IndexFeatureExtractor {
     return sliceNum - flushedOffset;
   }
 
-  @Override
-  public List<Identifier> getLatestN_L1_Identifiers(int latestN) {
-    latestN = Math.min(getCurrentChunkSize(), latestN);
-    List<Identifier> res = new ArrayList<>(latestN);
-    if (latestN == 0) {
-      return res;
-    }
-    if (storeIdentifier) {
-      int startIdx = sliceNum - latestN;
-      for (int i = startIdx; i < sliceNum; i++) {
-        int actualIdx = i - flushedOffset;
-        Identifier identifier = new Identifier(
-            identifierList.getLong(actualIdx * 3),
-            identifierList.getLong(actualIdx * 3 + 1),
-            (int) identifierList.getLong(actualIdx * 3 + 2));
-        res.add(identifier);
-      }
-      return res;
-    }
-    int startIdxPastN = currentStartTimeIdx - (latestN - 1) * slideStep;
-    while (startIdxPastN >= 0 && startIdxPastN <= currentStartTimeIdx) {
-      res.add(new Identifier(srcData.getTime(startIdxPastN),
-          srcData.getTime(startIdxPastN + windowRange - 1), windowRange));
-      startIdxPastN += slideStep;
-    }
-    return res;
-  }
+//  @Override
+//  public List<Identifier> getLatestN_L1_Identifiers(int latestN) {
+//    latestN = Math.min(getCurrentChunkSize(), latestN);
+//    List<Identifier> res = new ArrayList<>(latestN);
+//    if (latestN == 0) {
+//      return res;
+//    }
+//    if (storeIdentifier) {
+//      int startIdx = sliceNum - latestN;
+//      for (int i = startIdx; i < sliceNum; i++) {
+//        int actualIdx = i - flushedOffset;
+//        Identifier identifier = new Identifier(
+//            identifierList.getLong(actualIdx * 3),
+//            identifierList.getLong(actualIdx * 3 + 1),
+//            (int) identifierList.getLong(actualIdx * 3 + 2));
+//        res.add(identifier);
+//      }
+//      return res;
+//    }
+//    int startIdxPastN = currentStartTimeIdx - (latestN - 1) * slideStep;
+//    while (startIdxPastN >= 0 && startIdxPastN <= currentStartTimeIdx) {
+//      res.add(new Identifier(srcData.getTime(startIdxPastN),
+//          srcData.getTime(startIdxPastN + windowRange - 1), windowRange));
+//      startIdxPastN += slideStep;
+//    }
+//    return res;
+//  }
 
   @Override
   public List<Object> getLatestN_L2_AlignedSequences(int latestN) {

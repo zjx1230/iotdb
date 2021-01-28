@@ -21,7 +21,6 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.index.common.IndexUtils;
-import org.apache.iotdb.db.index.preprocess.Identifier;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
@@ -74,11 +73,6 @@ public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
   @Override
   public boolean hasNext() {
     return hasNewData;
-  }
-
-  @Override
-  public Identifier getCurrent_L1_Identifier() {
-    return new Identifier(srcData.getMinTime(), srcData.getLastTime(), srcData.size());
   }
 
   @Override
@@ -159,11 +153,6 @@ public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
   @Override
   public int getCurrentChunkSize() {
     return hasNewData ? 0 : 1;
-  }
-
-  @Override
-  public List<Identifier> getLatestN_L1_Identifiers(int latestN) {
-    throw new UnsupportedOperationException(NON_SUPPORT_MSG);
   }
 
   @Override

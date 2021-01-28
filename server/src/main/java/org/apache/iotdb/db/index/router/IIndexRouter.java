@@ -15,13 +15,6 @@ import org.apache.iotdb.db.query.context.QueryContext;
 
 public interface IIndexRouter {
 
-  /**
-   * given a index processor path, justify whether it has been registered in router.
-   *
-   * 线程安全
-   */
-  boolean hasIndexProcessor(PartialPath path);
-
   boolean addIndexIntoRouter(PartialPath prefixPath, IndexInfo indexInfo,
       CreateIndexProcessorFunc func, boolean doSerialize) throws MetadataException;
 

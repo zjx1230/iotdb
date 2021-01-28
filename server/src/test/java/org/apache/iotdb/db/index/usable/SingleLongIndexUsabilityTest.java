@@ -5,7 +5,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
-import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.junit.Assert;
 import org.junit.Test;
@@ -13,8 +12,8 @@ import org.junit.Test;
 public class SingleLongIndexUsabilityTest {
 
   @Test
-  public void addUsableRange1() throws IOException, IllegalPathException {
-    SingleLongIndexUsability usability = new SingleLongIndexUsability(null, 4);
+  public void addUsableRange1() throws IOException {
+    SingleLongIndexUsability usability = new SingleLongIndexUsability(4, false);
     Assert.assertEquals("size:1,[MIN,MAX],", usability.toString());
     // split range
     usability.addUsableRange(null, 1, 9);
@@ -39,14 +38,14 @@ public class SingleLongIndexUsabilityTest {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     usability.serialize(out);
     InputStream in = new ByteArrayInputStream(out.toByteArray());
-    SingleLongIndexUsability usability2 = new SingleLongIndexUsability(null);
+    SingleLongIndexUsability usability2 = new SingleLongIndexUsability();
     usability2.deserialize(in);
     Assert.assertEquals("size:4,[MIN,0],[10,13],[18,20],[50,MAX],", usability2.toString());
   }
 
   @Test
   public void addUsableRange2() throws IOException {
-    SingleLongIndexUsability usability = new SingleLongIndexUsability(null, 4);
+    SingleLongIndexUsability usability = new SingleLongIndexUsability(4, false);
     usability.addUsableRange(null, 1, 19);
     usability.addUsableRange(null, 51, 59);
     usability.addUsableRange(null, 81, 99);
@@ -68,14 +67,14 @@ public class SingleLongIndexUsabilityTest {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     usability.serialize(out);
     InputStream in = new ByteArrayInputStream(out.toByteArray());
-    SingleLongIndexUsability usability2 = new SingleLongIndexUsability(null);
+    SingleLongIndexUsability usability2 = new SingleLongIndexUsability();
     usability2.deserialize(in);
     Assert.assertEquals("size:2,[MIN,0],[100,MAX],", usability2.toString());
   }
 
   @Test
   public void minusUsableRange() throws IOException {
-    SingleLongIndexUsability usability = new SingleLongIndexUsability(null, 4);
+    SingleLongIndexUsability usability = new SingleLongIndexUsability(4, false);
 
     // merge with MIN, MAX
     usability.minusUsableRange(null, 1, 19);
@@ -95,7 +94,7 @@ public class SingleLongIndexUsabilityTest {
     Assert.assertEquals("size:3,[MIN,60],[90,100],[260,MAX],", usability.toString());
 
     // new range extend node's start time
-    usability.minusUsableRange(null, 80, 90);
+    usability.minusUsableRange(null, 80, 89);
     System.out.println(usability);
     Assert.assertEquals("size:3,[MIN,60],[80,100],[260,MAX],", usability.toString());
 
@@ -107,6 +106,7 @@ public class SingleLongIndexUsabilityTest {
     // re-insert: new range is totally same as an exist node
     usability.minusUsableRange(null, 120, 140);
     System.out.println(usability);
+    Assert.assertTrue(usability.hasUnusableRange());
     Assert.assertEquals("size:4,[MIN,60],[80,100],[120,140],[260,MAX],", usability.toString());
 
     // re-insert: new range extend the both sides of an exist node
@@ -128,42 +128,48 @@ public class SingleLongIndexUsabilityTest {
     usability.minusUsableRange(null, 105, 200);
     System.out.println(usability);
     Assert.assertEquals("size:2,[MIN,100],[105,MAX],", usability.toString());
-
+    Assert.assertTrue(usability.hasUnusableRange());
     // the end
     usability.minusUsableRange(null, 101, 107);
     System.out.println(usability);
     Assert.assertEquals("size:1,[MIN,MAX],", usability.toString());
+    Assert.assertFalse(usability.hasUnusableRange());
 
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     usability.serialize(out);
     InputStream in = new ByteArrayInputStream(out.toByteArray());
-    SingleLongIndexUsability usability2 = new SingleLongIndexUsability(null);
+    SingleLongIndexUsability usability2 = new SingleLongIndexUsability();
     usability2.deserialize(in);
     Assert.assertEquals("size:1,[MIN,MAX],", usability2.toString());
   }
 
   @Test
-  public void subMatchingMerge() {
-    SingleLongIndexUsability a = new SingleLongIndexUsability(null, 10);
+  public void subMatchingToFilter() {
+    SingleLongIndexUsability a = new SingleLongIndexUsability(10, false);
+    Assert.assertFalse(a.hasUnusableRange());
     a.addUsableRange(null, 31, 39);
     a.addUsableRange(null, 61, 89);
-    a.addUsableRange(null, 121, 139);
-    a.addUsableRange(null, 161, 169);
     System.out.println(a);
 
-    SingleLongIndexUsability b = new SingleLongIndexUsability(null, 10);
-    b.addUsableRange(null, 11, 19);
-    b.addUsableRange(null, 51, 79);
-    b.addUsableRange(null, 101, 109);
-    b.addUsableRange(null, 131, 149);
-    b.addUsableRange(null, 181, 209);
-    System.out.println(b);
-    List<Filter> res = a.mergeUnusableRangeForSubMatching(b);
+    Assert.assertTrue(a.hasUnusableRange());
+    List<Filter> res = a.getUnusableRange();
     Assert.assertEquals(3, res.size());
-    Assert.assertEquals(
-        "[(time >= -9223372036854775808 && time <= 60), (time >= 80 && time <= 130), (time >= 140 && time <= 9223372036854775807)]",
-        res.toString());
     System.out.println(res);
+    Assert.assertEquals(
+        "[(time >= -9223372036854775808 && time <= 30), (time >= 40 && time <= 60), (time >= 90 && time <= 9223372036854775807)]",
+        res.toString());
 
   }
+
+  @Test
+  public void minusUsableRange2() {
+    SingleLongIndexUsability usability = new SingleLongIndexUsability(4, false);
+    Assert.assertFalse(usability.hasUnusableRange());
+    usability.addUsableRange(null, 0, 15);
+    usability.minusUsableRange(null, 20, 24);
+    Assert.assertEquals("size:2,[MIN,-1],[16,MAX],", usability.toString());
+    Assert.assertTrue(usability.hasUnusableRange());
+    System.out.println(usability.toString());
+  }
+
 }

@@ -136,8 +136,8 @@ public class TimeFixedPreprocessorTest {
     timeFixed.appendNewSrcData(srcData);
     while (timeFixed.hasNext()) {
       timeFixed.processNext();
-      Identifier identifierL1 = (Identifier) timeFixed.getCurrent_L1_Identifier();
-      System.out.println(identifierL1);
+//      Identifier identifierL1 = (Identifier) timeFixed.getCurrent_L1_Identifier();
+//      System.out.println(identifierL1);
     }
     timeFixed.clearProcessedSrcData();
     ByteBuffer previous = timeFixed.serializePrevious();
@@ -179,8 +179,8 @@ public class TimeFixedPreprocessorTest {
     timeFixed.appendNewSrcData(srcData);
     while (timeFixed.hasNext()) {
       timeFixed.processNext();
-      Identifier identifierL1 = (Identifier) timeFixed.getCurrent_L1_Identifier();
-      System.out.println(identifierL1);
+//      Identifier identifierL1 = (Identifier) timeFixed.getCurrent_L1_Identifier();
+//      System.out.println(identifierL1);
     }
     timeFixed.clearProcessedSrcData();
     ByteBuffer previous = timeFixed.serializePrevious();
@@ -235,8 +235,8 @@ public class TimeFixedPreprocessorTest {
     timeFixed.appendNewSrcData(srcData);
     while (timeFixed.hasNext()) {
       timeFixed.processNext();
-      Identifier identifierL1 = (Identifier) timeFixed.getCurrent_L1_Identifier();
-      System.out.println(identifierL1);
+//      Identifier identifierL1 = (Identifier) timeFixed.getCurrent_L1_Identifier();
+//      System.out.println(identifierL1);
     }
     timeFixed.clearProcessedSrcData();
     ByteBuffer previous = timeFixed.serializePrevious();
@@ -270,20 +270,20 @@ public class TimeFixedPreprocessorTest {
     while (timeFixed.hasNext()) {
       System.out.println("idx:" + idx);
       timeFixed.processNext();
-      //L1 latest
-      Identifier identifierL1 = timeFixed.getCurrent_L1_Identifier();
-      System.out.println(identifierL1);
-      if (toAssert) {
-        Assert.assertEquals(groundTruthL1[idx], identifierL1.toString());
-      }
-      //L1 latest N
-      List<Identifier> L1s = timeFixed.getLatestN_L1_Identifiers(idx + 5);
-      for (int i = 0; i <= idx; i++) {
-        System.out.println(L1s.get(i).toString());
-        if (toAssert) {
-          Assert.assertEquals(groundTruthL1[i], L1s.get(i).toString());
-        }
-      }
+//      //L1 latest
+//      Identifier identifierL1 = timeFixed.getCurrent_L1_Identifier();
+//      System.out.println(identifierL1);
+//      if (toAssert) {
+//        Assert.assertEquals(groundTruthL1[idx], identifierL1.toString());
+//      }
+//      //L1 latest N
+//      List<Identifier> L1s = timeFixed.getLatestN_L1_Identifiers(idx + 5);
+//      for (int i = 0; i <= idx; i++) {
+//        System.out.println(L1s.get(i).toString());
+//        if (toAssert) {
+//          Assert.assertEquals(groundTruthL1[i], L1s.get(i).toString());
+//        }
+//      }
 
       //L2 latest
       TVList seqL2 = (TVList) timeFixed.getCurrent_L2_AlignedSequence();
@@ -344,9 +344,9 @@ public class TimeFixedPreprocessorTest {
     timeFixed.hasNext();
     timeFixed.processNext();
     //L1 latest
-    Object L1s = timeFixed.getCurrent_L1_Identifier();
-    System.out.println(L1s.toString());
-    Assert.assertEquals(groundTruthL1[4], L1s.toString());
+//    Object L1s = timeFixed.getCurrent_L1_Identifier();
+//    System.out.println(L1s.toString());
+//    Assert.assertEquals(groundTruthL1[4], L1s.toString());
 
     List<Object> L2s = timeFixed.getLatestN_L2_AlignedSequences(4);
     System.out.println(IndexTestUtils.tvListToString((TVList) L2s.get(0)));

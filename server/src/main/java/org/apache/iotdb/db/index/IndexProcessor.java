@@ -281,7 +281,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
       for (int i = 0; i < size; i++) {
         short indexTypeShort = ReadWriteIOUtils.readShort(inputStream);
         IndexType indexType = IndexType.deserialize(indexTypeShort);
-        IIndexUsable usable = IIndexUsable.Factory.getIndexUsability(indexSeries, inputStream);
+        IIndexUsable usable = IIndexUsable.Factory.deserializeIndexUsability(indexSeries, inputStream);
         usableMap.put(indexType, usable);
       }
     } catch (IOException | IllegalPathException e) {
@@ -461,8 +461,9 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
               index.flush();
             }
             index.endFlushTask();
-            this.usableMap.get(indexType)
-                .addUsableRange(path, tvList.getMinTime(), tvList.getLastTime());
+            // we don't update usable ranges. It's a pretty critical decision.
+//            this.usableMap.get(indexType)
+//                .addUsableRange(path, tvList.getMinTime(), tvList.getLastTime());
           } catch (IndexManagerException e) {
             //Give up the following data, but the previously serialized chunk will not be affected.
             logger.error("build index failed", e);
@@ -519,7 +520,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
                   indexInfo, previousDataBufferMap.get(indexType));
           allPathsIndexMap.putIfAbsent(indexType, index);
           indexLockMap.putIfAbsent(indexType, new ReentrantReadWriteLock());
-          usableMap.putIfAbsent(indexType, IIndexUsable.Factory.getIndexUsability(indexSeries));
+          usableMap.putIfAbsent(indexType, IIndexUsable.Factory.createEmptyIndexUsability(indexSeries));
         }
       }
 

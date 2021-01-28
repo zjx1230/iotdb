@@ -203,20 +203,20 @@ public class ProtoIndexRouter implements IIndexRouter {
     // do nothing.
   }
 
-  @Override
-  public boolean hasIndexProcessor(PartialPath indexSeriesPath) {
-    if (fullPathProcessorMap.containsKey(indexSeriesPath.getFullPath())) {
-      return true;
-    }
-    for (Entry<PartialPath, IndexProcessorStruct> entry : wildCardProcessorMap
-        .entrySet()) {
-      PartialPath k = entry.getKey();
-      if (k.matchFullPath(indexSeriesPath)) {
-        return true;
-      }
-    }
-    return false;
-  }
+//  @Override
+//  public boolean hasIndexProcessor(PartialPath indexSeriesPath) {
+//    if (fullPathProcessorMap.containsKey(indexSeriesPath.getFullPath())) {
+//      return true;
+//    }
+//    for (Entry<PartialPath, IndexProcessorStruct> entry : wildCardProcessorMap
+//        .entrySet()) {
+//      PartialPath k = entry.getKey();
+//      if (k.matchFullPath(indexSeriesPath)) {
+//        return true;
+//      }
+//    }
+//    return false;
+//  }
 
   @Override
   public boolean addIndexIntoRouter(PartialPath partialPath, IndexInfo indexInfo,

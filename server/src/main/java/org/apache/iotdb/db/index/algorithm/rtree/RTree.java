@@ -33,6 +33,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
+import org.apache.iotdb.db.index.common.DistSeries;
 import org.apache.iotdb.db.index.common.TriFunction;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.datastructure.TVList;
@@ -829,23 +830,6 @@ public class RTree<T> {
 
     public int compare(DistSeries item_1, DistSeries item_2) {
       return Double.compare(item_2.dist, item_1.dist);
-    }
-  }
-
-  public static class DistSeries {
-
-    public double dist;
-    public TVList tvList;
-    public PartialPath partialPath;
-
-    public DistSeries(double dist, TVList tvList, PartialPath partialPath) {
-      this.dist = dist;
-      this.tvList = tvList;
-      this.partialPath = partialPath;
-    }
-
-    public String toString() {
-      return "(" + partialPath + "," + dist + ":" + tvList + ")";
     }
   }
 

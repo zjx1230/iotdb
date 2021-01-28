@@ -274,36 +274,36 @@ public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
     return seq;
   }
 
-  @Override
-  public List<Identifier> getLatestN_L1_Identifiers(int latestN) {
-    latestN = Math.min(getCurrentChunkSize(), latestN);
-    List<Identifier> res = new ArrayList<>(latestN);
-    if (latestN == 0) {
-      return res;
-    }
-    if (storeIdentifier) {
-      int startIdx = sliceNum - latestN;
-      for (int i = startIdx; i < sliceNum; i++) {
-        int actualIdx = i - flushedOffset;
-        Identifier identifier = new Identifier(
-            identifierList.getLong(actualIdx * 3),
-            identifierList.getLong(actualIdx * 3 + 1),
-            (int) identifierList.getLong(actualIdx * 3 + 2));
-        res.add(identifier);
-      }
-      return res;
-    }
-    long startTimePastN = currentStartTime - (latestN - 1) * slideStep;
-    while (startTimePastN <= currentStartTime) {
-      int startTimePastNIdx = locatedIdxToTimestamp(0, startTimePastN);
-      int pointSize = locatedIdxToTimestamp(startTimePastNIdx, startTimePastN + windowRange)
-          - startTimePastNIdx;
-      res.add(new Identifier(startTimePastN, startTimePastN + windowRange - 1,
-          pointSize));
-      startTimePastN += slideStep;
-    }
-    return res;
-  }
+//  @Override
+//  public List<Identifier> getLatestN_L1_Identifiers(int latestN) {
+//    latestN = Math.min(getCurrentChunkSize(), latestN);
+//    List<Identifier> res = new ArrayList<>(latestN);
+//    if (latestN == 0) {
+//      return res;
+//    }
+//    if (storeIdentifier) {
+//      int startIdx = sliceNum - latestN;
+//      for (int i = startIdx; i < sliceNum; i++) {
+//        int actualIdx = i - flushedOffset;
+//        Identifier identifier = new Identifier(
+//            identifierList.getLong(actualIdx * 3),
+//            identifierList.getLong(actualIdx * 3 + 1),
+//            (int) identifierList.getLong(actualIdx * 3 + 2));
+//        res.add(identifier);
+//      }
+//      return res;
+//    }
+//    long startTimePastN = currentStartTime - (latestN - 1) * slideStep;
+//    while (startTimePastN <= currentStartTime) {
+//      int startTimePastNIdx = locatedIdxToTimestamp(0, startTimePastN);
+//      int pointSize = locatedIdxToTimestamp(startTimePastNIdx, startTimePastN + windowRange)
+//          - startTimePastNIdx;
+//      res.add(new Identifier(startTimePastN, startTimePastN + windowRange - 1,
+//          pointSize));
+//      startTimePastN += slideStep;
+//    }
+//    return res;
+//  }
 
   @Override
   public List<Object> getLatestN_L2_AlignedSequences(int latestN) {

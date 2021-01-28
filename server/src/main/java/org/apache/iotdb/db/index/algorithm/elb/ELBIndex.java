@@ -48,20 +48,20 @@ import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBWindowBlockFeature;
-import org.apache.iotdb.db.index.algorithm.rtree.RTree.DistSeries;
+import org.apache.iotdb.db.index.common.DistSeries;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.common.distance.Distance;
 import org.apache.iotdb.db.index.read.TVListPointer;
 import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
+import org.apache.iotdb.db.index.usable.SingleLongIndexUsability;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.QueryResourceManager;
 import org.apache.iotdb.db.query.reader.series.SeriesRawDataBatchReader;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.common.BatchData;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
@@ -106,7 +106,7 @@ public class ELBIndex extends IoTDBIndex {
 
   private ELBMatchFeatureExtractor elbMatchPreprocessor;
   private List<ELBWindowBlockFeature> windowBlockFeatures;
-  private PrimitiveList usableBlocks;
+//  private PrimitiveList usableBlocks;
 
   private int blockWidth;
   private File featureFile;
@@ -125,7 +125,7 @@ public class ELBIndex extends IoTDBIndex {
     }
     // ELB always variable query length, so it's needed windowRange
     windowRange = -1;
-    usableBlocks = PrimitiveList.newList(TSDataType.BOOLEAN);
+//    usableBlocks = PrimitiveList.newList(TSDataType.BOOLEAN);
     initELBParam();
   }
 
@@ -205,7 +205,7 @@ public class ELBIndex extends IoTDBIndex {
         ReadWriteIOUtils.write(features.endTime, outputStream);
         ReadWriteIOUtils.write(features.feature, outputStream);
       }
-      usableBlocks.clearAndRelease();
+//      usableBlocks.clearAndRelease();
     } catch (IOException e) {
       logger.error("Error when serialize router. Given up.", e);
     }
@@ -224,7 +224,7 @@ public class ELBIndex extends IoTDBIndex {
     ELBQueryStruct struct = new ELBQueryStruct();
 
     initQuery(struct, queryProps);
-    List<Filter> filterList = queryByIndex(struct, iIndexUsable);
+    List<Filter> filterList = queryByIndex(struct, (SingleLongIndexUsability) iIndexUsable);
     List<DistSeries> res = new ArrayList<>();
     try {
       for (Filter timeFilter : filterList) {
@@ -318,18 +318,14 @@ public class ELBIndex extends IoTDBIndex {
     struct.patternFeatures = struct.elb
         .calcELBFeature(struct.pattern, 0, struct.thresholds, struct.borders);
     struct.blockNum = struct.patternFeatures.left.length;
-//    struct.featureExtractor = new ELBMatchFeatureExtractor(tsDataType, struct.pattern.length,
-//        blockWidth, elbType, true);
   }
 
-
-  private void refreshUnusableBlocks(IIndexUsable indexChanged) {
-    indexChanged.updateELBBlocksForSeriesMatching(usableBlocks, windowBlockFeatures);
-  }
-
-  private List<Filter> queryByIndex(ELBQueryStruct struct, IIndexUsable indexChanged) {
-    refreshUnusableBlocks(indexChanged);
-    IIndexUsable cannotPruned = IIndexUsable.Factory.getIndexUsability(indexSeries);
+  private List<Filter> queryByIndex(ELBQueryStruct struct, SingleLongIndexUsability indexUsable) {
+    if(indexUsable.hasUnusableRange()){
+      logger.warn("In current version, ELB will ignore the out-of-order data");
+    }
+    IIndexUsable cannotPruned = IIndexUsable.Factory.createEmptyIndexUsability(indexSeries);
+    cannotPruned.minusUsableRange(indexSeries, Long.MIN_VALUE, Long.MAX_VALUE);
     int wbfSize = windowBlockFeatures.size();
     if (wbfSize >= struct.blockNum) {
       // in the best cases, [wbf[0].start, wbf[wbfSize-featureDim].end] can be pruned
@@ -339,8 +335,7 @@ public class ELBIndex extends IoTDBIndex {
       for (int i = 0; i <= windowBlockFeatures.size() - struct.blockNum; i++) {
         boolean canBePruned = false;
         for (int j = 0; j < struct.blockNum; j++) {
-          if (usableBlocks.getBoolean(i + j) &&
-              (struct.patternFeatures.left[j] <= windowBlockFeatures.get(i + j).feature ||
+          if ((struct.patternFeatures.left[j] <= windowBlockFeatures.get(i + j).feature ||
                   struct.patternFeatures.right[j] >= windowBlockFeatures.get(i + j).feature)) {
             canBePruned = true;
             break;
@@ -348,8 +343,6 @@ public class ELBIndex extends IoTDBIndex {
         }
         if (!canBePruned) {
           // update range
-//        res.add(new Identifier(windowBlockFeatures.get(i).startTime,
-//            windowBlockFeatures.get(i).endTime, -1));
           long startTime = windowBlockFeatures.get(i).startTime;
           int endIdx = i + struct.blockNum + (struct.pattern.length % blockWidth == 0 ? 0 : 1);
           long endTime = endIdx >= wbfSize ?
@@ -358,7 +351,7 @@ public class ELBIndex extends IoTDBIndex {
         }
       }
     }
-    return indexChanged.getUnusableRangeForSeriesMatching(cannotPruned);
+    return  ((SingleLongIndexUsability) cannotPruned).getUnusableRange();
   }
 
   @Deprecated

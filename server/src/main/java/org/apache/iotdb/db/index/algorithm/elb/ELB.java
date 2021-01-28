@@ -39,7 +39,6 @@ public class ELB {
   // final fields
   private final int windowRange;
   private final int blockNum;
-  private final int blockWidth;
   private final MilesPattern pattern;
 
   private PatternEnvelope envelope;
@@ -48,7 +47,6 @@ public class ELB {
 
   public ELB(Distance distance, int windowRange, int blockWidth, ELBType elbType) {
     this.windowRange = windowRange;
-    this.blockWidth = blockWidth;
     this.blockNum = windowRange / blockWidth;
 
     pattern = new MilesPattern(distance);

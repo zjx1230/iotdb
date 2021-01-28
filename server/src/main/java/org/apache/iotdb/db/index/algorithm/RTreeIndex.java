@@ -45,19 +45,18 @@ import java.util.function.Function;
 import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
-import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
-import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.index.algorithm.rtree.RTree;
-import org.apache.iotdb.db.index.algorithm.rtree.RTree.DistSeries;
 import org.apache.iotdb.db.index.algorithm.rtree.RTree.SeedsPicker;
+import org.apache.iotdb.db.index.common.DistSeries;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.common.TriFunction;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
 import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
+import org.apache.iotdb.db.index.usable.MultiShortIndexUsability;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.QueryResourceManager;
@@ -441,15 +440,11 @@ public abstract class RTreeIndex extends IoTDBIndex {
       throws QueryIndexException {
     RTreeQueryStruct struct = initQuery(queryProps);
     List<DistSeries> res;
-//    try {
     res = rTree
         .exactTopKSearch(struct.topK, struct.patterns, struct.patternFeatures,
-            iIndexUsable.getAllUnusableSeriesForWholeMatching(),
+            ((MultiShortIndexUsability) iIndexUsable).getUnusableRange(),
             getCalcLowerDistFunc(), getCalcExactDistFunc(),
             getLoadSeriesFunc(context, createQueryFeatureExtractor()));
-//    } catch (RuntimeException e) {
-//      throw new QueryIndexException(e.getMessage());
-//    }
     for (DistSeries ds : res) {
       ds.partialPath = ds.partialPath.concatNode(String.format("(D=%.2f)", ds.dist));
     }

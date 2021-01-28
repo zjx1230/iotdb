@@ -6,7 +6,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.tsfile.read.filter.TimeFilter;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
@@ -27,24 +26,26 @@ public class SingleLongIndexUsability implements IIndexUsable {
 
   /**
    * TODO it will be moved to configuration.
-   *
    */
   private static final int defaultSizeOfUsableSegments = 20;
 
   private int maxSizeOfUsableSegments;
+  private final boolean initAllUsable;
   private RangeNode unusableRanges;
   private int size;
-  protected final PartialPath indexSeries;
 
-  SingleLongIndexUsability(PartialPath indexSeries) {
-    this(indexSeries, defaultSizeOfUsableSegments);
+  SingleLongIndexUsability() {
+    this(defaultSizeOfUsableSegments, true);
   }
 
-  SingleLongIndexUsability(PartialPath indexSeries, int maxSizeOfUsableSegments) {
-    this.indexSeries = indexSeries;
+  SingleLongIndexUsability(int maxSizeOfUsableSegments, boolean initAllUsable) {
     this.maxSizeOfUsableSegments = maxSizeOfUsableSegments;
+    this.initAllUsable = initAllUsable;
     unusableRanges = new RangeNode(Long.MIN_VALUE, Long.MAX_VALUE, null);
     size = 1;
+    if(initAllUsable){
+      addUsableRange(null, 0, Long.MAX_VALUE - 1);
+    }
   }
 
   @Override
@@ -127,29 +128,36 @@ public class SingleLongIndexUsability implements IIndexUsable {
       // overlapping this node
       node.end = endTime;
       newNode = node;
+      node = newNode.next;
+    } else if (node.next.start <= endTime + 1) {
+      newNode = node.next;
+      if (startTime < newNode.start) {
+        newNode.start = startTime;
+      }
+      if (newNode.end < endTime) {
+        newNode.end = endTime;
+      }
+      node = newNode.next;
     } else {
-      assert node.next != null;
-      if (size < maxSizeOfUsableSegments || node.next.start <= endTime + 1) {
-        // new node is added but it overlaps with latter node
+      // non-overlap with former and latter nodes
+      if (size < maxSizeOfUsableSegments) {
+        // it doesn't overlap with latter node, new node is inserted
         newNode = new RangeNode(startTime, endTime, node.next);
         node.next = newNode;
-        node = newNode;
         size++;
       } else {
-        // we cannot add more range, thus merge it with closer neighbor.
+        // we cannot add more range, merge it with closer neighbor.
         if (startTime - node.end < node.next.start - endTime) {
           node.end = endTime;
         } else {
           node.next.start = startTime;
         }
-        return;
       }
+      return;
     }
-    node = node.next;
+
     // merge the overlapped list
-    while (node != null && node.start <= endTime) {
-      assert node.start <= node.end;
-      assert startTime <= endTime;
+    while (node != null && node.start <= endTime + 1) {
       if (newNode.end < node.end) {
         newNode.end = node.end;
       }
@@ -161,9 +169,20 @@ public class SingleLongIndexUsability implements IIndexUsable {
   }
 
   @Override
-  public Set<PartialPath> getAllUnusableSeriesForWholeMatching() {
-    throw new UnsupportedOperationException();
+  public List<Filter> getUnusableRange() {
+    List<Filter> res = new ArrayList<>();
+    RangeNode p = this.unusableRanges;
+    while (p != null) {
+      res.add(toFilter(p.start, p.end));
+      p = p.next;
+    }
+    return res;
   }
+
+//  @Override
+//  public Set<PartialPath> getAllUnusableSeriesForWholeMatching() {
+//    throw new UnsupportedOperationException();
+//  }
 
   /**
    * Find the latest node whose start time is less than {@code timestamp} A naive scanning search
@@ -186,6 +205,78 @@ public class SingleLongIndexUsability implements IIndexUsable {
     return res;
   }
 
+  @Override
+  public void serialize(OutputStream outputStream) throws IOException {
+    ReadWriteIOUtils.write(size, outputStream);
+    ReadWriteIOUtils.write(maxSizeOfUsableSegments, outputStream);
+    RangeNode.serialize(unusableRanges, outputStream);
+  }
+
+  @Override
+  public void deserialize(InputStream inputStream) throws IOException {
+    size = ReadWriteIOUtils.readInt(inputStream);
+    maxSizeOfUsableSegments = ReadWriteIOUtils.readInt(inputStream);
+    unusableRanges = RangeNode.deserialize(inputStream);
+  }
+
+//  /**
+//   * It's a inefficient implementation
+//   */
+//  @Override
+//  public void updateELBBlocksForSeriesMatching(PrimitiveList unusableBlocks,
+//      List<ELBWindowBlockFeature> windowBlocks) {
+//    for (int i = 0; i < windowBlocks.size(); i++) {
+//      ELBWindowBlockFeature block = windowBlocks.get(i);
+//      RangeNode node = locateIdxByTime(block.startTime);
+//      if (node.end < block.startTime && block.endTime < node.next.start) {
+//        unusableBlocks.setBoolean(i, true);
+//      }
+//    }
+//  }
+
+//  @Override
+//  public IIndexUsable deepCopy() {
+//    SingleLongIndexUsability res = new SingleLongIndexUsability(indexSeries,
+//        defaultSizeOfUsableSegments);
+//    res.size = this.size;
+//    if (this.unusableRanges == null) {
+//      return res;
+//    }
+//    res.unusableRanges = new RangeNode(this.unusableRanges);
+//    RangeNode pThis = this.unusableRanges;
+//    RangeNode pRes = res.unusableRanges;
+//    while (pThis.next != null) {
+//      pRes.next = new RangeNode(pThis.next);
+//      pRes = pRes.next;
+//      pThis = pThis.next;
+//    }
+//    return res;
+//  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder(String.format("size:%d,", size));
+    RangeNode node = unusableRanges;
+    while (node != null) {
+      sb.append(node.toString());
+      node = node.next;
+    }
+    return sb.toString();
+  }
+
+  private static Filter toFilter(long startTime, long endTime) {
+    return FilterFactory.and(TimeFilter.gtEq(startTime), TimeFilter.ltEq(endTime));
+  }
+
+  public boolean hasUnusableRange() {
+    if(initAllUsable){
+      return  !(unusableRanges.end == 0 && unusableRanges.next != null
+          && unusableRanges.next.start == Long.MAX_VALUE - 1 && unusableRanges.next.next == null);
+    }else{
+      return size > 1;
+    }
+  }
+
   private static class RangeNode {
 
     long start;
@@ -198,11 +289,11 @@ public class SingleLongIndexUsability implements IIndexUsable {
       this.next = next;
     }
 
-    RangeNode(RangeNode unusableRanges) {
-      this.start = unusableRanges.start;
-      this.end = unusableRanges.end;
-      this.next = unusableRanges.next;
-    }
+//    RangeNode(RangeNode unusableRanges) {
+//      this.start = unusableRanges.start;
+//      this.end = unusableRanges.end;
+//      this.next = unusableRanges.next;
+//    }
 
     @Override
     public String toString() {
@@ -239,116 +330,4 @@ public class SingleLongIndexUsability implements IIndexUsable {
       return fakeHead.next;
     }
   }
-
-  @Override
-  public List<Filter> mergeUnusableRangeForSubMatching(IIndexUsable cannotPruned) {
-    List<Filter> res = new ArrayList<>();
-    SingleLongIndexUsability singleCannotPruned = (SingleLongIndexUsability) cannotPruned;
-    // merge them.
-    long startTime = Long.MIN_VALUE;
-    long endTime = Math.max(unusableRanges.end, singleCannotPruned.unusableRanges.end);
-    RangeNode pThis = unusableRanges.next;
-    RangeNode pThat = singleCannotPruned.unusableRanges.next;
-    if(pThis == null && pThat == null){
-      res.add(toFilter(startTime, endTime));
-      return res;
-    }
-    while (pThis != null || pThat != null) {
-      if (pThat != null && pThat.start - 1 <= endTime) {
-        if (pThat.end > endTime) {
-          endTime = pThat.end;
-        }
-        pThat = pThat.next;
-      }
-      if (pThis != null && pThis.start - 1 <= endTime) {
-        if (pThis.end > endTime) {
-          endTime = pThis.end;
-        }
-        pThis = pThis.next;
-      }
-      if (endTime == Long.MAX_VALUE) {
-        res.add(toFilter(startTime, endTime));
-        return res;
-      }
-      // endTime != MAX_VALUE, means neither pThat or pThis be null.
-      assert pThat != null && pThis != null;
-      if (endTime + 1 < pThat.start && endTime + 1 < pThis.start) {
-        res.add(toFilter(startTime, endTime));
-        if (pThis.start > pThat.start) {
-          startTime = pThat.start;
-          endTime = pThat.end;
-          pThat = pThat.next;
-        } else {
-          startTime = pThis.start;
-          endTime = pThis.end;
-          pThis = pThis.next;
-        }
-      }
-    }
-    return res;
-  }
-
-  @Override
-  public void serialize(OutputStream outputStream) throws IOException {
-    ReadWriteIOUtils.write(size, outputStream);
-    ReadWriteIOUtils.write(maxSizeOfUsableSegments, outputStream);
-    RangeNode.serialize(unusableRanges, outputStream);
-  }
-
-  @Override
-  public void deserialize(InputStream inputStream) throws IOException {
-    size = ReadWriteIOUtils.readInt(inputStream);
-    maxSizeOfUsableSegments = ReadWriteIOUtils.readInt(inputStream);
-    unusableRanges = RangeNode.deserialize(inputStream);
-  }
-
-//  /**
-//   * It's a inefficient implementation
-//   */
-//  @Override
-//  public void updateELBBlocksForSeriesMatching(PrimitiveList unusableBlocks,
-//      List<ELBWindowBlockFeature> windowBlocks) {
-//    for (int i = 0; i < windowBlocks.size(); i++) {
-//      ELBWindowBlockFeature block = windowBlocks.get(i);
-//      RangeNode node = locateIdxByTime(block.startTime);
-//      if (node.end < block.startTime && block.endTime < node.next.start) {
-//        unusableBlocks.setBoolean(i, true);
-//      }
-//    }
-//  }
-
-  @Override
-  public IIndexUsable deepCopy() {
-    SingleLongIndexUsability res = new SingleLongIndexUsability(indexSeries,
-        defaultSizeOfUsableSegments);
-    res.size = this.size;
-    if (this.unusableRanges == null) {
-      return res;
-    }
-    res.unusableRanges = new RangeNode(this.unusableRanges);
-    RangeNode pThis = this.unusableRanges;
-    RangeNode pRes = res.unusableRanges;
-    while (pThis.next != null) {
-      pRes.next = new RangeNode(pThis.next);
-      pRes = pRes.next;
-      pThis = pThis.next;
-    }
-    return res;
-  }
-
-  @Override
-  public String toString() {
-    StringBuilder sb = new StringBuilder(String.format("size:%d,", size));
-    RangeNode node = unusableRanges;
-    while (node != null) {
-      sb.append(node.toString());
-      node = node.next;
-    }
-    return sb.toString();
-  }
-
-  private static Filter toFilter(long startTime, long endTime) {
-    return FilterFactory.and(TimeFilter.gtEq(startTime), TimeFilter.ltEq(endTime));
-  }
-
 }

@@ -5,11 +5,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 /**
@@ -23,12 +21,10 @@ import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
  */
 public class MultiShortIndexUsability implements IIndexUsable {
 
-  private final PartialPath indexSeries;
-  private final Set<PartialPath> usableInfoSet;
+  private final Set<PartialPath> unusableSeriesSet;
 
-  MultiShortIndexUsability(PartialPath indexSeries) {
-    this.indexSeries = indexSeries;
-    this.usableInfoSet = new HashSet<>();
+  MultiShortIndexUsability() {
+    this.unusableSeriesSet = new HashSet<>();
   }
 
 
@@ -39,25 +35,36 @@ public class MultiShortIndexUsability implements IIndexUsable {
 
   @Override
   public void minusUsableRange(PartialPath fullPath, long start, long end) {
-    usableInfoSet.add(fullPath);
+    unusableSeriesSet.add(fullPath);
   }
 
   @Override
-  public Set<PartialPath> getAllUnusableSeriesForWholeMatching() {
-    return Collections.unmodifiableSet(usableInfoSet);
+  public Set<PartialPath> getUnusableRange() {
+    return Collections.unmodifiableSet(this.unusableSeriesSet);
+//    if (prunedResult == null) {
+//      return Collections.unmodifiableSet(this.unusableSeriesSet);
+//    }
+//    MultiShortIndexUsability multiPrunedResult = (MultiShortIndexUsability) prunedResult;
+//    multiPrunedResult.unusableSeriesSet.addAll(this.unusableSeriesSet);
+//    return multiPrunedResult.unusableSeriesSet;
   }
 
-
-  @Override
-  public List<Filter> mergeUnusableRangeForSubMatching(
-      IIndexUsable cannotPruned) {
-    throw new UnsupportedOperationException(indexSeries.toString());
-  }
+//  @Override
+//  public Set<PartialPath> getAllUnusableSeriesForWholeMatching() {
+//    return Collections.unmodifiableSet(usableInfoSet);
+//  }
+//
+//
+//  @Override
+//  public List<Filter> getUnusableRangeForSubMatching(
+//      IIndexUsable cannotPruned) {
+//    throw new UnsupportedOperationException();
+//  }
 
   @Override
   public void serialize(OutputStream outputStream) throws IOException {
-    ReadWriteIOUtils.write(usableInfoSet.size(), outputStream);
-    for (PartialPath s : usableInfoSet) {
+    ReadWriteIOUtils.write(unusableSeriesSet.size(), outputStream);
+    for (PartialPath s : unusableSeriesSet) {
       ReadWriteIOUtils.write(s.getFullPath(), outputStream);
     }
   }
@@ -66,7 +73,7 @@ public class MultiShortIndexUsability implements IIndexUsable {
   public void deserialize(InputStream inputStream) throws IllegalPathException, IOException {
     int size = ReadWriteIOUtils.readInt(inputStream);
     for (int i = 0; i < size; i++) {
-      usableInfoSet.add(new PartialPath(ReadWriteIOUtils.readString(inputStream)));
+      unusableSeriesSet.add(new PartialPath(ReadWriteIOUtils.readString(inputStream)));
     }
   }
 //
@@ -75,8 +82,8 @@ public class MultiShortIndexUsability implements IIndexUsable {
 //    throw new UnsupportedOperationException();
 //  }
 
-  @Override
-  public IIndexUsable deepCopy() {
-    throw new UnsupportedOperationException();
-  }
+//  @Override
+//  public IIndexUsable deepCopy() {
+//    throw new UnsupportedOperationException();
+//  }
 }
