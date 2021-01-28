@@ -26,7 +26,7 @@ import java.sql.DriverManager;
 import java.sql.Statement;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.index.IndexManager;
-import org.apache.iotdb.db.index.math.Randomwalk;
+import org.apache.iotdb.db.index.common.math.Randomwalk;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.jdbc.Config;

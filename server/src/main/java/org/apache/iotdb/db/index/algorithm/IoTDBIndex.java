@@ -17,8 +17,6 @@
  */
 package org.apache.iotdb.db.index.algorithm;
 
-import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_PROP_NAME;
-import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_RANGE_STRATEGY;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_SLIDE_STEP;
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
 
@@ -38,11 +36,11 @@ import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
+import org.apache.iotdb.db.index.read.IndexQueryDataSet;
 import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
-import org.apache.iotdb.db.query.dataset.ListDataSet;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.common.RowRecord;
@@ -306,19 +304,4 @@ public abstract class IoTDBIndex {
     return dataSet;
   }
 
-  public static class IndexQueryDataSet extends ListDataSet {
-
-    private Map<String, Integer> pathToIndex;
-
-    public IndexQueryDataSet(List<PartialPath> paths,
-        List<TSDataType> dataTypes, Map<String, Integer> pathToIndex) {
-      super(paths, dataTypes);
-      this.pathToIndex = pathToIndex;
-    }
-
-    public Map<String, Integer> getPathToIndex() {
-      return pathToIndex;
-    }
-
-  }
 }

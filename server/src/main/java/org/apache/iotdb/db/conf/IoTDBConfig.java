@@ -314,7 +314,7 @@ public class IoTDBConfig {
   /**
    * If we enable the memory-control mechanism during index building , {@code indexBufferSize}
    * refers to the byte-size of memory buffer threshold. For each index processor, all indexes in
-   * one {@linkplain IndexProcessor IndexFileProcessor} share a total
+   * one {@linkplain IndexProcessor IndexProcessor} share a total
    * common buffer size. With the memory-control mechanism, the occupied memory of all raw data and
    * index structures will be counted. If the memory buffer size reaches this threshold, the indexes
    * will be flushed to the disk file. As a result, data in one series may be divided into more than

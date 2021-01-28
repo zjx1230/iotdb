@@ -21,9 +21,9 @@ package org.apache.iotdb.db.index.algorithm.elb.feature;
 import java.util.Arrays;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.ELBFeature;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.MilesPattern;
-import org.apache.iotdb.db.index.distance.Distance;
-import org.apache.iotdb.db.index.distance.LInfinityNormdouble;
-import org.apache.iotdb.db.index.distance.LNormDouble;
+import org.apache.iotdb.db.index.common.distance.Distance;
+import org.apache.iotdb.db.index.common.distance.LInfinityNormdouble;
+import org.apache.iotdb.db.index.common.distance.LNormDouble;
 import org.apache.iotdb.tsfile.utils.Pair;
 
 /**

@@ -51,7 +51,7 @@ import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBWindowBlockFeature;
 import org.apache.iotdb.db.index.algorithm.rtree.RTree.DistSeries;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexUtils;
-import org.apache.iotdb.db.index.distance.Distance;
+import org.apache.iotdb.db.index.common.distance.Distance;
 import org.apache.iotdb.db.index.read.TVListPointer;
 import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
@@ -224,9 +224,6 @@ public class ELBIndex extends IoTDBIndex {
     ELBQueryStruct struct = new ELBQueryStruct();
 
     initQuery(struct, queryProps);
-//    for (double v : struct.pattern) {
-//      System.out.println(String.format("%.3f", v));
-//    }
     List<Filter> filterList = queryByIndex(struct, iIndexUsable);
     List<DistSeries> res = new ArrayList<>();
     try {
@@ -240,14 +237,12 @@ public class ELBIndex extends IoTDBIndex {
             queryDataSource, timeFilter, null, null, true);
         ELBMatchFeatureExtractor featureExtractor = new ELBMatchFeatureExtractor(tsDataType,
             struct.pattern.length, blockWidth, elbType, true);
-//        System.out.println(">>>>>>>>>>>>>>>> Time range: " + timeFilter);
         while (reader.hasNextBatch()) {
           BatchData batch = reader.nextBatch();
           featureExtractor.appendNewSrcData(batch);
           while (featureExtractor.hasNext()) {
             featureExtractor.processNext();
             TVListPointer p = featureExtractor.getCurrent_L2_AlignedSequence();
-//            System.out.println(">>>>>>>>>>>>>>>> " + IndexUtils.tvListToStr(p.tvList, p.offset, p.length));
             if (struct.elb.exactDistanceCalc(p.tvList, p.offset)) {
               TVList tvList = TVListAllocator.getInstance().allocate(tsDataType);
               TVList.append(tvList, p.tvList, p.offset, p.length);

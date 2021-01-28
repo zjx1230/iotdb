@@ -21,7 +21,7 @@ package org.apache.iotdb;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.iotdb.db.index.math.Randomwalk;
+import org.apache.iotdb.db.index.common.math.Randomwalk;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.rpc.IoTDBConnectionException;
 import org.apache.iotdb.rpc.StatementExecutionException;

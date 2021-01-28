@@ -19,7 +19,6 @@
 package org.apache.iotdb.db.index.it;
 
 import static org.apache.iotdb.db.index.IndexTestUtils.getArrayRange;
-import static org.apache.iotdb.db.index.common.IndexType.ELB_INDEX;
 import static org.apache.iotdb.db.index.common.IndexType.RTREE_PAA;
 import static org.junit.Assert.fail;
 
@@ -30,13 +29,9 @@ import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.index.IndexManager;
-import org.apache.iotdb.db.index.common.IndexUtils;
-import org.apache.iotdb.db.index.math.Randomwalk;
-import org.apache.iotdb.db.rescon.TVListAllocator;
+import org.apache.iotdb.db.index.common.math.Randomwalk;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
-import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.jdbc.Config;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;

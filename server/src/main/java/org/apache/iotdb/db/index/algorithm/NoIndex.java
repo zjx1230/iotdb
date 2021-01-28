@@ -17,29 +17,17 @@
  */
 package org.apache.iotdb.db.index.algorithm;
 
-import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
-import static org.apache.iotdb.db.index.common.IndexConstant.THRESHOLD;
-
 import java.nio.ByteBuffer;
-import java.util.List;
+import java.util.Collections;
 import java.util.Map;
 import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.exception.index.IndexManagerException;
-import org.apache.iotdb.db.exception.index.QueryIndexException;
-import org.apache.iotdb.db.index.common.IndexUtils;
-import org.apache.iotdb.db.exception.index.UnsupportedIndexFuncException;
-import org.apache.iotdb.db.index.preprocess.CountFixedFeatureExtractor;
-import org.apache.iotdb.db.index.preprocess.Identifier;
+import org.apache.iotdb.db.index.read.IndexQueryDataSet;
 import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
-import org.apache.iotdb.db.rescon.TVListAllocator;
-import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * NoIndex do nothing on feature extracting and data pruning. Its index-available range is always
@@ -47,10 +35,6 @@ import org.slf4j.LoggerFactory;
  */
 
 public class NoIndex extends IoTDBIndex {
-
-  private static final Logger logger = LoggerFactory.getLogger(NoIndex.class);
-  private double[] patterns;
-  private double threshold;
 
   public NoIndex(PartialPath path, TSDataType tsDataType,
       String indexDir, IndexInfo indexInfo) {
@@ -60,17 +44,7 @@ public class NoIndex extends IoTDBIndex {
 
   @Override
   public void initPreprocessor(ByteBuffer previous, boolean inQueryMode) {
-    if (!inQueryMode) {
-      return;
-    }
-    IndexUtils.breakDown();
-
-    if (this.indexFeatureExtractor != null) {
-      this.indexFeatureExtractor.clear();
-    }
-    this.indexFeatureExtractor = new CountFixedFeatureExtractor(tsDataType, windowRange,
-        slideStep, false, false, inQueryMode);
-    indexFeatureExtractor.deserializePrevious(previous);
+    // NoIndex does nothing
   }
 
   @Override
@@ -83,6 +57,7 @@ public class NoIndex extends IoTDBIndex {
    */
   @Override
   public void flush() {
+    // NoIndex does nothing
   }
 
   /**
@@ -99,7 +74,7 @@ public class NoIndex extends IoTDBIndex {
 
   @Override
   protected void serializeIndexAndFlush() {
-    // do nothing
+    // NoIndex does nothing
   }
 
   @Override
@@ -113,15 +88,6 @@ public class NoIndex extends IoTDBIndex {
   }
 
   /**
-   * NoIndex cannot prune anything. Return null.
-   */
-  public List<Identifier> queryByIndex(ByteBuffer indexChunkData) throws IndexManagerException {
-    // return null directly
-    throw new UnsupportedOperationException("NoIndex ,query ,return what?");
-  }
-
-
-  /**
    * All it needs depends on its preprocessor. Just for explain.
    */
   @Override
@@ -132,9 +98,9 @@ public class NoIndex extends IoTDBIndex {
 
   @Override
   public QueryDataSet query(Map<String, Object> queryProps, IIndexUsable iIndexUsable,
-      QueryContext context, IIndexRefinePhaseOptimize refinePhaseOptimizer, boolean alignedByTime)
-      throws QueryIndexException {
-    return null;
+      QueryContext context, IIndexRefinePhaseOptimize refinePhaseOptimizer, boolean alignedByTime) {
+    return new IndexQueryDataSet(Collections.emptyList(), Collections.emptyList(),
+        Collections.emptyMap());
   }
 
 

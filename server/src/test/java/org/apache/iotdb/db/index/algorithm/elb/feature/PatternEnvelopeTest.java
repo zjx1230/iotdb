@@ -21,8 +21,8 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.MilesPattern;
-import org.apache.iotdb.db.index.distance.Distance;
-import org.apache.iotdb.db.index.distance.LInfinityNormdouble;
+import org.apache.iotdb.db.index.common.distance.Distance;
+import org.apache.iotdb.db.index.common.distance.LInfinityNormdouble;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.junit.Test;

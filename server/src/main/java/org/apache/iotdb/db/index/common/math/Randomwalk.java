@@ -1,7 +1,7 @@
-package org.apache.iotdb.db.index.math;
+package org.apache.iotdb.db.index.common.math;
 
 import java.util.Random;
-import org.apache.iotdb.db.index.math.probability.UniformProba;
+import org.apache.iotdb.db.index.common.math.probability.UniformProba;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;

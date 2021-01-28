@@ -15,11 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.iotdb.db.index.distance;
+package org.apache.iotdb.db.index.common.distance;
 
 import static org.apache.iotdb.db.index.common.IndexConstant.L_INFINITY;
 
-import org.apache.iotdb.db.index.common.IndexConstant;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 
 /**

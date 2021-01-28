@@ -61,8 +61,7 @@ import org.apache.iotdb.db.exception.metadata.StorageGroupNotSetException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.exception.query.QueryTimeoutRuntimeException;
 import org.apache.iotdb.db.exception.runtime.SQLParserException;
-import org.apache.iotdb.db.index.algorithm.IoTDBIndex.IndexQueryDataSet;
-import org.apache.iotdb.db.index.common.IndexUtils;
+import org.apache.iotdb.db.index.read.IndexQueryDataSet;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.metrics.server.SqlArgument;
 import org.apache.iotdb.db.qp.Planner;
@@ -152,10 +151,6 @@ import org.apache.thrift.TException;
 import org.apache.thrift.server.ServerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.iotdb.db.index.common.IndexConstant;
-import org.apache.iotdb.db.index.common.IndexFunc;
-import org.apache.iotdb.db.metadata.MManager;
-import static org.apache.iotdb.db.index.common.IndexFunc.getIndexFunc;
 
 /**
  * Thrift RPC implementation at server side.

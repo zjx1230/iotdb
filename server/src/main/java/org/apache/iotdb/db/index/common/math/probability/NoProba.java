@@ -1,4 +1,4 @@
-package org.apache.iotdb.db.index.math.probability;
+package org.apache.iotdb.db.index.common.math.probability;
 
 /**
  * Created by kangrong on 17/1/3.
