@@ -426,12 +426,6 @@ public class TsFileProcessor {
           workMemTable.memSize(), tsFileResource.getTsFile().getAbsolutePath());
       return true;
     }
-    if (workMemTable.reachTotalPointNumThreshold()) {
-      logger.info("The avg series points num {} of tsfile {} reaches the threshold",
-          workMemTable.getTotalPointsNum() / workMemTable.getSeriesNumber(),
-          tsFileResource.getTsFile().getAbsolutePath());
-      return true;
-    }
     return false;
   }
 

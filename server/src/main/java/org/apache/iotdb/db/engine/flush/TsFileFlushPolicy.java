@@ -36,11 +36,9 @@ public interface TsFileFlushPolicy {
     @Override
     public void apply(StorageGroupProcessor storageGroupProcessor, TsFileProcessor tsFileProcessor,
         boolean isSeq) {
-      if (tsFileProcessor.shouldClose()) {
-        storageGroupProcessor.asyncCloseOneTsFileProcessor(isSeq, tsFileProcessor);
-      } else {
-        tsFileProcessor.asyncFlush();
-      }
+      // 投稿使用，一个 Tsfile 由一个 memtable flush 形成
+      storageGroupProcessor.asyncCloseOneTsFileProcessor(isSeq, tsFileProcessor);
     }
+
   }
 }
