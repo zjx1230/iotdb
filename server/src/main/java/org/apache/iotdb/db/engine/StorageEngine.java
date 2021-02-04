@@ -50,6 +50,7 @@ import org.apache.iotdb.db.engine.flush.FlushListener;
 import org.apache.iotdb.db.engine.flush.TsFileFlushPolicy;
 import org.apache.iotdb.db.engine.flush.TsFileFlushPolicy.DirectFlushPolicy;
 import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
+import org.apache.iotdb.db.engine.storagegroup.NoSplitStorageGroupProcessor;
 import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor;
 import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor.TimePartitionFilter;
 import org.apache.iotdb.db.engine.storagegroup.TsFileProcessor;
@@ -337,8 +338,13 @@ public class StorageEngine implements IService {
             if (processor == null) {
               logger.info("construct a processor instance, the storage group is {}, Thread is {}",
                   storageGroupPath, Thread.currentThread().getId());
-              processor = new StorageGroupProcessor(systemDir, storageGroupPath.getFullPath(),
-                  fileFlushPolicy);
+              if (config.isOverlapSplit()) {
+                processor = new StorageGroupProcessor(systemDir, storageGroupPath.getFullPath(),
+                    fileFlushPolicy);
+              } else {
+                processor = new NoSplitStorageGroupProcessor(systemDir, storageGroupPath.getFullPath(),
+                    fileFlushPolicy);
+              }
               processor.setDataTTL(storageGroupMNode.getDataTTL());
               processor.setCustomFlushListeners(customFlushListeners);
               processor.setCustomCloseFileListeners(customCloseFileListeners);

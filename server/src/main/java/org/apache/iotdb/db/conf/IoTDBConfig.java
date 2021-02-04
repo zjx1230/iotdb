@@ -61,6 +61,20 @@ public class IoTDBConfig {
 
   public static final Pattern STORAGE_GROUP_PATTERN = Pattern.compile(STORAGE_GROUP_MATCHER);
 
+  // vldb related configuration setter and getter
+  public boolean isOverlapSplit() {
+    return overlapSplit;
+  }
+
+  public void setOverlapSplit(boolean overlapSplit) {
+    this.overlapSplit = overlapSplit;
+  }
+
+  /**
+   * storage engine configurations
+   */
+  private boolean overlapSplit = true;
+
   /**
    * Port which the metrics service listens to.
    */

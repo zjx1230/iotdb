@@ -174,6 +174,9 @@ public class IoTDBDescriptor {
         logger.info("The stat_monitor_retain_interval_sec value is smaller than default,"
             + " use default value");
       }
+      // storage engine configuration
+      conf.setOverlapSplit(Boolean.parseBoolean(properties.
+          getProperty("overlap_split", Boolean.toString(conf.isOverlapSplit()))));
 
       conf.setEnableMetricService(Boolean.parseBoolean(properties
           .getProperty("enable_metric_service", Boolean.toString(conf.isEnableMetricService()))));
