@@ -26,10 +26,19 @@ import static org.apache.iotdb.tsfile.common.constant.TsFileConstant.TSFILE_SUFF
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.cache.ChunkCache;
 import org.apache.iotdb.db.engine.cache.ChunkMetadataCache;
@@ -54,6 +63,17 @@ public abstract class TsFileManagement {
   private static final Logger logger = LoggerFactory.getLogger(TsFileManagement.class);
   protected String storageGroupName;
   protected String storageGroupDir;
+  public static final String RESOURCE_SUFFIX = ".resource";
+
+  protected IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
+  protected final int seqLevelNum = Math
+      .max(IoTDBDescriptor.getInstance().getConfig().getSeqLevelNum(), 1);
+
+  // First map is partition list; Second list is level list; Third list is file list in level;
+  protected final Map<Long, List<SortedSet<TsFileResource>>> sequenceTsFileResources = new ConcurrentSkipListMap<>();
+  protected final Map<Long, List<List<TsFileResource>>> unSequenceTsFileResources = new ConcurrentSkipListMap<>();
+  protected final List<List<TsFileResource>> forkedSequenceTsFileResources = new ArrayList<>();
+  protected final List<List<TsFileResource>> forkedUnSequenceTsFileResources = new ArrayList<>();
 
   /**
    * Serialize queries, delete resource files, compaction cleanup files
@@ -131,7 +151,64 @@ public abstract class TsFileManagement {
   /**
    * fork current TsFile list (call this before merge)
    */
-  public abstract void forkCurrentFileList(long timePartition) throws IOException;
+  public void forkCurrentFileList(long timePartition) throws IOException {
+    synchronized (sequenceTsFileResources) {
+      forkTsFileList(
+          forkedSequenceTsFileResources,
+          sequenceTsFileResources.computeIfAbsent(timePartition, this::newSequenceTsFileResources),
+          seqLevelNum);
+    }
+    synchronized (unSequenceTsFileResources) {
+      forkTsFileList(
+          forkedUnSequenceTsFileResources,
+          unSequenceTsFileResources
+              .computeIfAbsent(timePartition, this::newUnSequenceTsFileResources), 2);
+    }
+  }
+
+  protected List<SortedSet<TsFileResource>> newSequenceTsFileResources(Long k) {
+    List<SortedSet<TsFileResource>> newSequenceTsFileResources = new CopyOnWriteArrayList<>();
+    for (int i = 0; i < seqLevelNum; i++) {
+      newSequenceTsFileResources.add(Collections.synchronizedSortedSet(new TreeSet<>(
+          (o1, o2) -> {
+            try {
+              int rangeCompare = Long
+                  .compare(Long.parseLong(o1.getTsFile().getParentFile().getName()),
+                      Long.parseLong(o2.getTsFile().getParentFile().getName()));
+              return rangeCompare == 0 ? compareFileName(o1.getTsFile(), o2.getTsFile())
+                  : rangeCompare;
+            } catch (NumberFormatException e) {
+              return compareFileName(o1.getTsFile(), o2.getTsFile());
+            }
+          })));
+    }
+    return newSequenceTsFileResources;
+  }
+
+  protected List<List<TsFileResource>> newUnSequenceTsFileResources(Long k) {
+    List<List<TsFileResource>> newUnSequenceTsFileResources = new CopyOnWriteArrayList<>();
+    for (int i = 0; i < 1; i++) {
+      newUnSequenceTsFileResources.add(new CopyOnWriteArrayList<>());
+    }
+    return newUnSequenceTsFileResources;
+  }
+
+  private void forkTsFileList(
+      List<List<TsFileResource>> forkedTsFileResources,
+      List rawTsFileResources, int currMaxLevel) {
+    forkedTsFileResources.clear();
+    for (int i = 0; i < currMaxLevel - 1; i++) {
+      List<TsFileResource> forkedLevelTsFileResources = new ArrayList<>();
+      Collection<TsFileResource> levelRawTsFileResources = (Collection<TsFileResource>) rawTsFileResources
+          .get(i);
+      for (TsFileResource tsFileResource : levelRawTsFileResources) {
+        if (tsFileResource.isClosed()) {
+          forkedLevelTsFileResources.add(tsFileResource);
+        }
+      }
+      forkedTsFileResources.add(forkedLevelTsFileResources);
+    }
+  }
 
   public void readLock() {
     compactionMergeLock.readLock().lock();
@@ -153,7 +230,12 @@ public abstract class TsFileManagement {
     return compactionMergeLock.writeLock().tryLock();
   }
 
+  protected abstract Map<Long, Map<Long, List<TsFileResource>>> selectMergeFile(long timePartition);
+
   protected abstract void merge(long timePartition);
+
+  protected abstract void mergeFiles(
+      Map<Long, Map<Long, List<TsFileResource>>> resources, long timePartition);
 
   public class CompactionMergeTask implements Runnable {
 

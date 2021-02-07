@@ -322,6 +322,15 @@ public class IoTDBDescriptor {
           properties.getProperty("enable_unseq_compaction",
               Boolean.toString(conf.isEnableUnseqCompaction()))));
 
+      conf.setFirstLevelFileNum(Integer.parseInt(properties.getProperty("first_level_file_num",
+          Integer.toString(conf.getFirstLevelFileNum()))));
+
+      conf.setSizeRatio(Integer.parseInt(properties.getProperty("size_ratio",
+          Integer.toString(conf.getSizeRatio()))));
+
+      conf.setLevelNum(Integer.parseInt(properties.getProperty("level_num",
+          Integer.toString(conf.getLevelNum()))));
+
       conf.setSeqLevelNum(Integer.parseInt(properties
           .getProperty("seq_level_num",
               Integer.toString(conf.getSeqLevelNum()))));

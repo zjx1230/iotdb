@@ -325,6 +325,45 @@ public class IoTDBConfig {
    */
   private CompactionStrategy compactionStrategy = CompactionStrategy.LEVEL_COMPACTION;
 
+  public int getFirstLevelFileNum() {
+    return firstLevelFileNum;
+  }
+
+  public void setFirstLevelFileNum(int firstLevelFileNum) {
+    this.firstLevelFileNum = firstLevelFileNum;
+  }
+
+  public int getSizeRatio() {
+    return sizeRatio;
+  }
+
+  public void setSizeRatio(int sizeRatio) {
+    this.sizeRatio = sizeRatio;
+  }
+
+  public int getLevelNum() {
+    return levelNum;
+  }
+
+  public void setLevelNum(int levelNum) {
+    this.levelNum = levelNum;
+  }
+
+  /**
+   * 第一层的数据文件最大量
+   */
+  private int firstLevelFileNum = 2;
+
+  /**
+   * 层与层间的 size ratio
+   */
+  private int sizeRatio = 2;
+
+  /**
+   * The max num of level.
+   */
+  private int levelNum = 4;
+
   /**
    * Works when the compaction_strategy is LEVEL_COMPACTION.
    * Whether to merge unseq files into seq files or not.

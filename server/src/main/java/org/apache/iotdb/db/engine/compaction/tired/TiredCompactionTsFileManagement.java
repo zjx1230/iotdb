@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.iotdb.db.engine.compaction.no;
+package org.apache.iotdb.db.engine.compaction.tired;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -29,9 +29,10 @@ import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class NoCompactionTsFileManagement extends TsFileManagement {
+public class TiredCompactionTsFileManagement extends TsFileManagement {
 
-  private static final Logger logger = LoggerFactory.getLogger(NoCompactionTsFileManagement.class);
+  private static final Logger logger = LoggerFactory.getLogger(
+      TiredCompactionTsFileManagement.class);
   // includes sealed and unsealed sequence TsFiles
   private TreeSet<TsFileResource> sequenceFileTreeSet = new TreeSet<>(
       (o1, o2) -> {
@@ -47,7 +48,7 @@ public class NoCompactionTsFileManagement extends TsFileManagement {
   // includes sealed and unsealed unSequence TsFiles
   private List<TsFileResource> unSequenceFileList = new ArrayList<>();
 
-  public NoCompactionTsFileManagement(String storageGroupName, String storageGroupDir) {
+  public TiredCompactionTsFileManagement(String storageGroupName, String storageGroupDir) {
     super(storageGroupName, storageGroupDir);
   }
 
@@ -145,7 +146,7 @@ public class NoCompactionTsFileManagement extends TsFileManagement {
   }
 
   @Override
-  protected Map<Long, Map<Long, List<TsFileResource>>>selectMergeFile(long timePartition) {
+  protected Map<Long, Map<Long, List<TsFileResource>>> selectMergeFile(long timePartition) {
     return null;
   }
 

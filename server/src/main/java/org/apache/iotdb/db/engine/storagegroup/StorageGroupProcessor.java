@@ -167,6 +167,11 @@ public class StorageGroupProcessor {
    * time partition id in the storage group -> tsFileProcessor for this time partition
    */
   protected final TreeMap<Long, TsFileProcessor> workUnsequenceTsFileProcessors = new TreeMap<>();
+
+  public boolean isCompactionMergeWorking() {
+    return compactionMergeWorking;
+  }
+
   /**
    * compactionMergeWorking is used to wait for last compaction to be done.
    */

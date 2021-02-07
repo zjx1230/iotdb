@@ -41,6 +41,10 @@ public class ChunkWriterImpl implements IChunkWriter {
 
   private static final Logger logger = LoggerFactory.getLogger(ChunkWriterImpl.class);
 
+  public MeasurementSchema getMeasurementSchema() {
+    return measurementSchema;
+  }
+
   private MeasurementSchema measurementSchema;
 
   private ICompressor compressor;
