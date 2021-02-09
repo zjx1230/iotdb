@@ -40,6 +40,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.cache.ChunkCache;
 import org.apache.iotdb.db.engine.cache.ChunkMetadataCache;
 import org.apache.iotdb.db.engine.cache.TimeSeriesMetadataCache;
@@ -55,6 +56,7 @@ import org.apache.iotdb.db.engine.modification.ModificationFile;
 import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor.CloseCompactionMergeCallBack;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.exception.MergeException;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -193,7 +195,7 @@ public abstract class TsFileManagement {
     return newUnSequenceTsFileResources;
   }
 
-  private void forkTsFileList(
+  protected void forkTsFileList(
       List<List<TsFileResource>> forkedTsFileResources,
       List rawTsFileResources, int currMaxLevel) {
     forkedTsFileResources.clear();
@@ -492,5 +494,15 @@ public abstract class TsFileManagement {
     } else {
       return cmp;
     }
+  }
+
+  protected boolean isCompactionWorking() {
+    try {
+      return StorageEngine.getInstance().getProcessor(new PartialPath(storageGroupName))
+          .isCompactionMergeWorking();
+    } catch (Exception e) {
+      //TODO do nothing
+    }
+    return false;
   }
 }

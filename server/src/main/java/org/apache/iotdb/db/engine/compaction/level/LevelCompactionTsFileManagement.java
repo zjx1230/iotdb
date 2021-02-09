@@ -505,7 +505,7 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
         long seqEndTime = seqFile.getEndTime(deviceId);
         if (!(unseqEndTime < seqStartTime || unseqStartTime > seqEndTime)) {
           long level = (long) getMergeLevel(seqFile.getTsFile()) + 1;
-          if(files.containsKey(level) && files.get(level).contains(seqFile)) {
+          if (files.containsKey(level) && files.get(level).contains(seqFile)) {
             continue;
           } else {
             files.computeIfAbsent((long) getMergeLevel(seqFile.getTsFile()) + 1,
@@ -662,7 +662,7 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
           sequenceTsFileResources.get(timePartition).get((int) (res.getKey() - 1))
               .removeAll(res.getValue());
         }
-        for (TsFileResource deleteRes : res.getValue()){
+        for (TsFileResource deleteRes : res.getValue()) {
           deleteRes.delete();
         }
       }
@@ -705,6 +705,9 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
 
   @Override
   protected void merge(long timePartition) {
+    if (isCompactionWorking()) {
+      return;
+    }
     handleSpecificCase(timePartition);
     if (processUnseq()) {
       Map<Long, Map<Long, List<TsFileResource>>> selectFiles = selectMergeFile(timePartition);

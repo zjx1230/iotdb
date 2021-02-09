@@ -349,6 +349,14 @@ public class IoTDBConfig {
     this.levelNum = levelNum;
   }
 
+  public int getTiredFileNum() {
+    return tiredFileNum;
+  }
+
+  public void setTiredFileNum(int tiredFileNum) {
+    this.tiredFileNum = tiredFileNum;
+  }
+
   /**
    * 第一层的数据文件最大量
    */
@@ -383,6 +391,11 @@ public class IoTDBConfig {
    * The max num of seq level.
    */
   private int seqLevelNum = 3;
+
+  /**
+   * tired compaction size，用于 size tired 合并，指定一次合并的文件数量
+   */
+  private int tiredFileNum = 4;
 
   /**
    * Works when compaction_strategy is LEVEL_COMPACTION.

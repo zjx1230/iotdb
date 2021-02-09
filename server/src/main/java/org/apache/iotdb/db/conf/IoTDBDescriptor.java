@@ -335,6 +335,9 @@ public class IoTDBDescriptor {
           .getProperty("seq_level_num",
               Integer.toString(conf.getSeqLevelNum()))));
 
+      conf.setTiredFileNum(Integer.parseInt(properties.
+          getProperty("tired_file_num", Integer.toString(conf.getTiredFileNum()))));
+
       conf.setSeqFileNumInEachLevel(Integer.parseInt(properties
           .getProperty("seq_file_num_in_each_level",
               Integer.toString(conf.getSeqFileNumInEachLevel()))));
