@@ -674,6 +674,18 @@ public class StorageEngine implements IService {
     getProcessor(storageGroupPath).loadNewTsFile(newTsFileResource);
   }
 
+  public void loadNewTsFileBySeq(TsFileResource newTsFileResource, boolean isSeq)
+      throws LoadFileException, StorageEngineException, MetadataException {
+    Map<String, Integer> deviceMap = newTsFileResource.getDeviceToIndexMap();
+    if (deviceMap == null || deviceMap.isEmpty()) {
+      throw new StorageEngineException("Can not get the corresponding storage group.");
+    }
+    String device = deviceMap.keySet().iterator().next();
+    PartialPath devicePath = new PartialPath(device);
+    PartialPath storageGroupPath = IoTDB.metaManager.getStorageGroupPath(devicePath);
+    getProcessor(storageGroupPath).loadNewTsFile(newTsFileResource, isSeq);
+  }
+
   public boolean deleteTsfileForSync(File deletedTsfile)
       throws StorageEngineException, IllegalPathException {
     return getProcessor(new PartialPath(deletedTsfile.getParentFile().getName()))

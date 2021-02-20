@@ -1935,6 +1935,66 @@ public class StorageGroupProcessor {
     }
   }
 
+  public void loadNewTsFile(TsFileResource newTsFileResource, boolean isSeq) throws LoadFileException {
+    File tsfileToBeInserted = newTsFileResource.getTsFile();
+    long newFilePartitionId = newTsFileResource.getTimePartitionWithCheck();
+    while (compactionMergeWorking) {
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+    writeLock();
+    tsFileManagement.writeLock();
+    try {
+      // loading tsfile by type
+      if (!isSeq) {
+        loadTsFileByType(LoadTsFileType.LOAD_UNSEQUENCE, tsfileToBeInserted, newTsFileResource,
+            newFilePartitionId);
+      } else {
+        loadTsFileByType(LoadTsFileType.LOAD_SEQUENCE, tsfileToBeInserted, newTsFileResource,
+            newFilePartitionId);
+      }
+
+      // update latest time map
+      updateLatestTimeMap(newTsFileResource);
+      long partitionNum = newTsFileResource.getTimePartition();
+      partitionDirectFileVersions.computeIfAbsent(partitionNum, p -> new HashSet<>())
+          .addAll(newTsFileResource.getHistoricalVersions());
+      updatePartitionFileVersion(partitionNum,
+          Collections.max(newTsFileResource.getHistoricalVersions()));
+    } catch (DiskSpaceInsufficientException e) {
+      logger.error(
+          "Failed to append the tsfile {} to storage group processor {} because the disk space is insufficient.",
+          tsfileToBeInserted.getAbsolutePath(), tsfileToBeInserted.getParentFile().getName());
+      IoTDBDescriptor.getInstance().getConfig().setReadOnly(true);
+      throw new LoadFileException(e);
+    } finally {
+      tsFileManagement.writeUnlock();
+      writeUnlock();
+    }
+    if (!compactionMergeWorking && !CompactionMergeTaskPoolManager.getInstance()
+        .isTerminated()) {
+      compactionMergeWorking = true;
+      logger.info("{} submit a compaction merge task", storageGroupName);
+      try {
+        // fork and filter current tsfile, then commit then to compaction merge
+        tsFileManagement.forkCurrentFileList(newFilePartitionId);
+        CompactionMergeTaskPoolManager.getInstance()
+            .submitTask(
+                tsFileManagement.new CompactionMergeTask(this::closeCompactionMergeCallBack,
+                    newFilePartitionId));
+      } catch (IOException | RejectedExecutionException e) {
+        this.closeCompactionMergeCallBack();
+        logger.error("{} compaction submit task failed", storageGroupName);
+      }
+    } else {
+      logger.info("{} last compaction merge task is working, skip current merge",
+          storageGroupName);
+    }
+  }
+
   /**
    * Set the version in "partition" to "version" if "version" is larger than the current version.
    */

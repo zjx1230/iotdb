@@ -20,8 +20,10 @@ package org.apache.iotdb.tsfile;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
 import org.apache.iotdb.tsfile.encoding.decoder.Decoder;
@@ -45,6 +47,7 @@ public class TsFileSequenceRead {
     if (args.length >= 1) {
       filename = args[0];
     }
+    int count = 0;
     try (TsFileSequenceReader reader = new TsFileSequenceReader(filename)) {
       System.out.println("file length: " + FSFactoryProducer.getFSFactory().getFile(filename).length());
       System.out.println("file magic head: " + reader.readHeadMagic());
@@ -60,6 +63,7 @@ public class TsFileSequenceRead {
       System.out.println("[Chunk Group]");
       System.out.println("position: " + reader.position());
       byte marker;
+      Set<Long> pagePointNum = new HashSet<>();
       while ((marker = reader.readMarker()) != MetaMarker.SEPARATOR) {
         switch (marker) {
           case MetaMarker.CHUNK_HEADER:
@@ -77,7 +81,9 @@ public class TsFileSequenceRead {
               System.out.println("\t\t[Page]\n \t\tPage head position: " + reader.position());
               PageHeader pageHeader = reader.readPageHeader(header.getDataType());
               System.out.println("\t\tPage data position: " + reader.position());
-              System.out.println("\t\tpoints in the page: " + pageHeader.getNumOfValues());
+              long pointNum = pageHeader.getNumOfValues();
+              System.out.println("\t\tpoints in the page: " + pointNum);
+              pagePointNum.add(pointNum);
               ByteBuffer pageData = reader.readPage(pageHeader, header.getCompressionType());
               System.out
                       .println("\t\tUncompressed page data size: " + pageHeader.getUncompressedSize());
@@ -85,10 +91,11 @@ public class TsFileSequenceRead {
                       defaultTimeDecoder, null);
               BatchData batchData = reader1.getAllSatisfiedPageData();
               while (batchData.hasCurrent()) {
-                System.out.println(
-                        "\t\t\ttime, value: " + batchData.currentTime() + ", " + batchData
-                                .currentValue());
+//                System.out.println(
+//                        "\t\t\ttime, value: " + batchData.currentTime() + ", " + batchData
+//                                .currentValue());
                 batchData.next();
+                count++;
               }
             }
             break;
@@ -117,6 +124,7 @@ public class TsFileSequenceRead {
           }
         }
       }
+      System.out.println("total points num:" + count);
     }
   }
 }

@@ -293,7 +293,7 @@ public class IoTDBConfig {
   /**
    * When a TsFile's file size (in byte) exceed this, the TsFile is forced closed.
    */
-  private long tsFileSizeThreshold = 1L;
+  private long tsFileSizeThreshold = 128 * 1024 * 1024L;
 
   /**
    * When a memTable's size (in byte) exceeds this, the memtable is flushed to disk.
@@ -414,7 +414,7 @@ public class IoTDBConfig {
   /**
    * whether to cache meta data(ChunkMetaData and TsFileMetaData) or not.
    */
-  private boolean metaDataCacheEnable = true;
+  private boolean metaDataCacheEnable = false;
 
   /**
    * Memory allocated for timeSeriesMetaData cache in read process

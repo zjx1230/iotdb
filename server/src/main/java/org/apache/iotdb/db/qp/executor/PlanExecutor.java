@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -61,6 +62,7 @@ import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.cache.ChunkCache;
 import org.apache.iotdb.db.engine.cache.ChunkMetadataCache;
 import org.apache.iotdb.db.engine.cache.TimeSeriesMetadataCache;
+import org.apache.iotdb.db.engine.compaction.TsFileManagement;
 import org.apache.iotdb.db.engine.flush.pool.FlushTaskPoolManager;
 import org.apache.iotdb.db.engine.merge.manage.MergeManager;
 import org.apache.iotdb.db.engine.merge.manage.MergeManager.TaskStatus;
@@ -690,10 +692,62 @@ public class PlanExecutor implements IPlanExecutor {
           String.format("File path %s doesn't exists.", file.getPath()));
     }
     if (file.isDirectory()) {
-      recursionFileDir(file, plan);
+//      recursionFileDir(file, plan);
+
+//      为了 vldb 投稿, 根据文件 version 加载数据文件
+//      数据文件夹格式 sg -- seq
+//                      -- unseq
+      loadVldbDataDir(file, plan);
     } else {
       loadFile(file, plan);
     }
+  }
+
+  private void loadVldbDataDir(File curFile, OperateFilePlan plan) throws QueryProcessException{
+    File[] files = curFile.listFiles();
+    List<File> fileList = new ArrayList<>();
+    Map<Boolean, List<File>> fileBySeq = new HashMap<>();
+    fileBySeq.put(true, new ArrayList<>());
+    fileBySeq.put(false, new ArrayList<>());
+    // 处理顺序文件
+    for (File file : files[0].listFiles()) {
+      if (file.getName().endsWith(TSFILE_SUFFIX)) {
+        fileList.add(file);
+        fileBySeq.get(true).add(file);
+      }
+    }
+    for (File file : files[1].listFiles()) {
+      if (file.getName().endsWith(TSFILE_SUFFIX)) {
+        fileList.add(file);
+        fileBySeq.get(false).add(file);
+      }
+    }
+    File maxFile = null;
+    if (!fileBySeq.get(true).isEmpty()) {
+       maxFile = fileList.remove(fileList.size() - 1);
+    }
+    Collections.sort(fileList, new Comparator<File>() {
+      @Override
+      public int compare(File o1, File o2) {
+        return TsFileManagement.compareFileName(o1, o2);
+      }
+    });
+    if (!fileBySeq.get(true).isEmpty()) {
+      fileList.add(maxFile);
+    }
+    for (File file : fileList) {
+      if (fileBySeq.get(true).contains(file)) {
+        loadFileBySeq(file, true, plan);
+      } else {
+        loadFileBySeq(file, false, plan);
+      }
+    }
+  }
+
+  public static void main(String[] args) throws Exception {
+    new PlanExecutor().loadVldbDataDir(new File(
+            "/Users/tianyu/2019秋季学期/iotdb/server/target/iotdb-server-0.11.2/data/data/sequence/root.group_1"),
+        null);
   }
 
   private void recursionFileDir(File curFile, OperateFilePlan plan) throws QueryProcessException {
@@ -749,6 +803,54 @@ public class PlanExecutor implements IPlanExecutor {
       }
 
       StorageEngine.getInstance().loadNewTsFile(tsFileResource);
+    } catch (Exception e) {
+      throw new QueryProcessException(
+          String.format("Cannot load file %s because %s", file.getAbsolutePath(), e.getMessage()));
+    }
+  }
+
+  private void loadFileBySeq(File file, boolean isSeq, OperateFilePlan plan) throws QueryProcessException {
+    if (!file.getName().endsWith(TSFILE_SUFFIX)) {
+      return;
+    }
+    TsFileResource tsFileResource = new TsFileResource(file);
+    long fileVersion =
+        Long.parseLong(
+            tsFileResource.getTsFile().getName().split(IoTDBConstant.FILE_NAME_SEPARATOR)[1]);
+    tsFileResource.setHistoricalVersions(Collections.singleton(fileVersion));
+    tsFileResource.setClosed(true);
+    try {
+      // check file
+      RestorableTsFileIOWriter restorableTsFileIOWriter = new RestorableTsFileIOWriter(file);
+      if (restorableTsFileIOWriter.hasCrashed()) {
+        restorableTsFileIOWriter.close();
+        throw new QueryProcessException(
+            String.format(
+                "Cannot load file %s because the file has crashed.", file.getAbsolutePath()));
+      }
+      Map<Path, MeasurementSchema> schemaMap = new HashMap<>();
+
+      List<Pair<Long, Long>> versionInfo = new ArrayList<>();
+
+      List<ChunkGroupMetadata> chunkGroupMetadataList = new ArrayList<>();
+      try (TsFileSequenceReader reader = new TsFileSequenceReader(file.getAbsolutePath(), false)) {
+        reader.selfCheck(schemaMap, chunkGroupMetadataList, versionInfo, false);
+      }
+
+      FileLoaderUtils.checkTsFileResource(tsFileResource);
+      if (UpgradeUtils.isNeedUpgrade(tsFileResource)) {
+        throw new QueryProcessException(
+            String.format(
+                "Cannot load file %s because the file's version is old which needs to be upgraded.",
+                file.getAbsolutePath()));
+      }
+
+      // create schemas if they doesn't exist
+      if (plan.isAutoCreateSchema()) {
+        createSchemaAutomatically(chunkGroupMetadataList, schemaMap, plan.getSgLevel());
+      }
+
+      StorageEngine.getInstance().loadNewTsFileBySeq(tsFileResource, isSeq);
     } catch (Exception e) {
       throw new QueryProcessException(
           String.format("Cannot load file %s because %s", file.getAbsolutePath(), e.getMessage()));

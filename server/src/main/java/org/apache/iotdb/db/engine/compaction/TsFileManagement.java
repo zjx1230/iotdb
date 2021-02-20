@@ -57,6 +57,7 @@ import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor.CloseCompac
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.exception.MergeException;
 import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.rescon.SystemInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -238,6 +239,11 @@ public abstract class TsFileManagement {
 
   protected abstract void mergeFiles(
       Map<Long, Map<Long, List<TsFileResource>>> resources, long timePartition);
+
+  protected void printInfo() {
+    logger.info("current compaction num: {}", SystemInfo.getInstance().getCompactionNum());
+    System.out.println("current compaction num: " + SystemInfo.getInstance().getCompactionNum());
+  }
 
   public class CompactionMergeTask implements Runnable {
 

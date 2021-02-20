@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.flush.FlushManager;
@@ -43,6 +44,7 @@ public class SystemInfo {
 
   private Map<StorageGroupInfo, Long> reportedSgMemCostMap = new HashMap<>();
 
+  private AtomicLong compactionNum = new AtomicLong(0);
   private static final double FLUSH_THERSHOLD =
       config.getAllocateMemoryForWrite() * config.getFlushProportion();
   private static final double REJECT_THERSHOLD = 
@@ -201,5 +203,14 @@ public class SystemInfo {
     }
 
     private static SystemInfo instance = new SystemInfo();
+  }
+
+  // 用于 vldb 投稿，改变 or 获取 compactionNum 的值
+  public long getCompactionNum() {
+    return compactionNum.get();
+  }
+
+  public void incrementCompactionNum(long batchSize) {
+    compactionNum.getAndAdd(batchSize);
   }
 }

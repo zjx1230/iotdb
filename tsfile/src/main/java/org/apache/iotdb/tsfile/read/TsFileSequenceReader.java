@@ -1053,6 +1053,14 @@ public class TsFileSequenceReader implements AutoCloseable {
     return chunkMetadataList;
   }
 
+  public List<ChunkMetadata> getChunkMetadataList(Path path, boolean anyway) throws IOException {
+    TimeseriesMetadata timeseriesMetaData = readTimeseriesMetadata(path);
+    if (timeseriesMetaData == null) {
+      return Collections.emptyList();
+    }
+    return readChunkMetaDataList(timeseriesMetaData);
+  }
+
   /**
    * get ChunkMetaDatas in given TimeseriesMetaData
    *

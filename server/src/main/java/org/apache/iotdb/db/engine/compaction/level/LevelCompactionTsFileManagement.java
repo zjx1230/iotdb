@@ -41,7 +41,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedSet;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.engine.cache.ChunkCache;
 import org.apache.iotdb.db.engine.cache.ChunkMetadataCache;
+import org.apache.iotdb.db.engine.cache.TimeSeriesMetadataCache;
 import org.apache.iotdb.db.engine.compaction.TsFileManagement;
 import org.apache.iotdb.db.engine.compaction.utils.CompactionLogAnalyzer;
 import org.apache.iotdb.db.engine.compaction.utils.CompactionLogger;
@@ -55,6 +57,7 @@ import org.apache.iotdb.db.metadata.mnode.MeasurementMNode;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.FileReaderManager;
 import org.apache.iotdb.db.query.reader.series.SeriesRawDataBatchReader;
+import org.apache.iotdb.db.rescon.SystemInfo;
 import org.apache.iotdb.db.utils.MergeUtils;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.common.BatchData;
@@ -423,7 +426,7 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
   // 对乱序文件第一层做特殊处理
   private boolean handleSpecificCase(long timePartition) {
     if (forkedUnSequenceTsFileResources.get(0).size() > config.getFirstLevelFileNum() &&
-        forkedSequenceTsFileResources.get(0).size() == 0) {
+        isEmpty(true)) {
       writeLock();
       try {
         TsFileResource oldResource = forkedUnSequenceTsFileResources.get(0).get(0);
@@ -601,8 +604,9 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
           newResource.setHistoricalVersions(historicalVersions);
           newResource.serialize();
           newFileWriter.endFile();
+          newResource.close();
           fileNames.remove(0);
-          newTsFilePair = createNewFileWriter(MERGE_SUFFIX, seqPath, fileNames, maxLevel);
+          newTsFilePair = createNewFileWriter(MERGE_SUFFIX, seqPath, fileNames, maxLevel - 1);
           newFileWriter = newTsFilePair.left;
           newResource = newTsFilePair.right;
           newTsResources.add(newResource);
@@ -623,6 +627,7 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
           while (tsFilesReader.hasNextBatch()) {
             BatchData batchData = tsFilesReader.nextBatch();
             currMinTime = Math.min(currMinTime, batchData.getTimeByIndex(0));
+            SystemInfo.getInstance().incrementCompactionNum(batchData.length());
             for (int i = 0; i < batchData.length(); i++) {
               writeBatchPoint(batchData, i, chunkWriter);
             }
@@ -643,7 +648,7 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
       newResource.setHistoricalVersions(historicalVersions);
       newResource.serialize();
       newFileWriter.endFile();
-
+      newResource.close();
       cleanUp(resources, newTsResources, maxLevel, timePartition);
     } catch (Exception e) {
       //TODO do nothing
@@ -663,6 +668,10 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
               .removeAll(res.getValue());
         }
         for (TsFileResource deleteRes : res.getValue()) {
+          ChunkCache.getInstance().clear();
+          ChunkMetadataCache.getInstance().clear();
+          TimeSeriesMetadataCache.getInstance().clear();
+          FileReaderManager.getInstance().closeFileAndRemoveReader(deleteRes.getTsFilePath());
           deleteRes.delete();
         }
       }
@@ -705,16 +714,16 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
 
   @Override
   protected void merge(long timePartition) {
-    if (isCompactionWorking()) {
-      return;
-    }
+//    if (isCompactionWorking()) {
+//      return;
+//    }
     handleSpecificCase(timePartition);
     if (processUnseq()) {
       Map<Long, Map<Long, List<TsFileResource>>> selectFiles = selectMergeFile(timePartition);
       mergeFiles(selectFiles, timePartition);
-    } else {
-      processSeq(timePartition);
     }
+    processSeq(timePartition);
+    printInfo();
   }
 
   @SuppressWarnings("squid:S3776")
