@@ -475,11 +475,10 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
               FSFactoryProducer.getFSFactory().getFile(oldFile + RESOURCE_SUFFIX),
               FSFactoryProducer.getFSFactory().getFile(newLevelFile + RESOURCE_SUFFIX));
 
-          oldRes.setFile(newLevelFile);
           sequenceTsFileResources.get(timePartition).get(level - 1).remove(oldRes);
-          sequenceTsFileResources.get(timePartition).get(level).add(oldRes);
-
           forkedSequenceTsFileResources.get(level - 1).remove(0);
+          oldRes.setFile(newLevelFile);
+          sequenceTsFileResources.get(timePartition).get(level).add(oldRes);
           forkedSequenceTsFileResources.get(level).add(oldRes);
         } finally {
           writeUnlock();
@@ -577,7 +576,7 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
       for (TsFileResource tsFileResource : unseqFiles) {
         historicalVersions.addAll(tsFileResource.getHistoricalVersions());
       }
-      Set<TsFileResource> newTsResources = new HashSet<>();
+      List<TsFileResource> newTsResources = new ArrayList<>();
       Set<PartialPath> devices = MManager.getInstance()
           .getDevices(new PartialPath(storageGroupName));
       Map<PartialPath, ChunkWriterImpl> chunkWriterCacheMap = new HashMap<>();
@@ -656,16 +655,18 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
   }
 
   private void cleanUp(Map<Long, Map<Long, List<TsFileResource>>> resources,
-      Set<TsFileResource> newTsResources, long level, long timePartition) {
+      List<TsFileResource> newTsResources, long level, long timePartition) {
     writeLock();
     try {
       Map<Long, List<TsFileResource>> cleanRes = resources.get(timePartition);
       for (Entry<Long, List<TsFileResource>> res : cleanRes.entrySet()) {
         if (res.getKey() == 0L) {
           unSequenceTsFileResources.get(timePartition).get(0).removeAll(res.getValue());
+          forkedUnSequenceTsFileResources.get(0).removeAll(res.getValue());
         } else {
           sequenceTsFileResources.get(timePartition).get((int) (res.getKey() - 1))
               .removeAll(res.getValue());
+          forkedSequenceTsFileResources.get((int) (res.getKey() - 1)).removeAll(res.getValue());
         }
         for (TsFileResource deleteRes : res.getValue()) {
           ChunkCache.getInstance().clear();
@@ -684,6 +685,7 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
             FSFactoryProducer.getFSFactory().getFile(newLevelFile + RESOURCE_SUFFIX));
         oldResource.setFile(newLevelFile);
         sequenceTsFileResources.get(timePartition).get((int) (level - 1)).add(oldResource);
+        forkedSequenceTsFileResources.get((int) (level - 1)).add(oldResource);
       }
     } catch (Exception e) {
       //TODO do nothing

@@ -159,7 +159,7 @@ public abstract class TsFileManagement {
       forkTsFileList(
           forkedSequenceTsFileResources,
           sequenceTsFileResources.computeIfAbsent(timePartition, this::newSequenceTsFileResources),
-          seqLevelNum);
+          seqLevelNum + 1);
     }
     synchronized (unSequenceTsFileResources) {
       forkTsFileList(
