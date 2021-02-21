@@ -38,6 +38,8 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.engine.cache.ChunkMetadataCache;
+import org.apache.iotdb.db.engine.cache.TimeSeriesMetadataCache;
 import org.apache.iotdb.db.engine.compaction.TsFileManagement;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.metadata.MManager;
@@ -45,6 +47,7 @@ import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.metadata.mnode.MNode;
 import org.apache.iotdb.db.metadata.mnode.MeasurementMNode;
 import org.apache.iotdb.db.query.context.QueryContext;
+import org.apache.iotdb.db.query.control.FileReaderManager;
 import org.apache.iotdb.db.query.reader.series.SeriesRawDataBatchReader;
 import org.apache.iotdb.db.utils.MergeUtils;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
@@ -343,9 +346,9 @@ public class TiredCompactionTsFileManagement extends TsFileManagement {
 
   @Override
   protected void merge(long timePartition) {
-    if (isCompactionWorking()) {
-      return;
-    }
+//    if (isCompactionWorking()) {
+//      return;
+//    }
     Map<Long, Map<Long, List<TsFileResource>>> selectFiles = selectMergeFile(timePartition);
     mergeFiles(selectFiles, timePartition);
   }
@@ -444,7 +447,7 @@ public class TiredCompactionTsFileManagement extends TsFileManagement {
       newResource.setHistoricalVersions(historicalVersions);
       newResource.serialize();
       newFileWriter.endFile();
-
+      newResource.close();
       cleanUp(resources, newResource, mergedLevel, timePartition, parentPath);
     } catch (Exception e) {
       //TODO do nothing
@@ -476,6 +479,10 @@ public class TiredCompactionTsFileManagement extends TsFileManagement {
               .removeAll(res.getValue());
         }
         for (TsFileResource deleteRes : res.getValue()) {
+          deleteRes.delete();
+          ChunkMetadataCache.getInstance().clear();
+          TimeSeriesMetadataCache.getInstance().clear();
+          FileReaderManager.getInstance().closeFileAndRemoveReader(deleteRes.getTsFilePath());
           deleteRes.delete();
         }
       }

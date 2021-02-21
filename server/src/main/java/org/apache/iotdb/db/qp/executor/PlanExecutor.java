@@ -697,15 +697,21 @@ public class PlanExecutor implements IPlanExecutor {
 //      为了 vldb 投稿, 根据文件 version 加载数据文件
 //      数据文件夹格式 sg -- seq
 //                      -- unseq
-      loadVldbDataDir(file, plan);
+      if (IoTDBDescriptor.getInstance().getConfig().isOverlapSplit()) {
+        loadVldbDataDir(file, plan);
+      } else {
+        loadVldbDataDirNoSplit(file, plan);
+      }
     } else {
       loadFile(file, plan);
     }
   }
 
+  // 用于处理顺序，乱序分离的情况
   private void loadVldbDataDir(File curFile, OperateFilePlan plan) throws QueryProcessException{
     File[] files = curFile.listFiles();
     List<File> fileList = new ArrayList<>();
+    List<File> unseqTmpList = new ArrayList<>();
     Map<Boolean, List<File>> fileBySeq = new HashMap<>();
     fileBySeq.put(true, new ArrayList<>());
     fileBySeq.put(false, new ArrayList<>());
@@ -718,13 +724,9 @@ public class PlanExecutor implements IPlanExecutor {
     }
     for (File file : files[1].listFiles()) {
       if (file.getName().endsWith(TSFILE_SUFFIX)) {
-        fileList.add(file);
+        unseqTmpList.add(file);
         fileBySeq.get(false).add(file);
       }
-    }
-    File maxFile = null;
-    if (!fileBySeq.get(true).isEmpty()) {
-       maxFile = fileList.remove(fileList.size() - 1);
     }
     Collections.sort(fileList, new Comparator<File>() {
       @Override
@@ -732,15 +734,48 @@ public class PlanExecutor implements IPlanExecutor {
         return TsFileManagement.compareFileName(o1, o2);
       }
     });
-    if (!fileBySeq.get(true).isEmpty()) {
-      fileList.add(maxFile);
+    Collections.sort(unseqTmpList, new Comparator<File>() {
+      @Override
+      public int compare(File o1, File o2) {
+        return TsFileManagement.compareFileName(o1, o2);
+      }
+    });
+    for (int i = 1; i < unseqTmpList.size(); i++){
+      for (int j =0; j < fileList.size() ; j++){
+        if (TsFileManagement.compareFileName(unseqTmpList.get(i), fileList.get(j)) == -1){
+          fileList.add(j - 1, unseqTmpList.get(i - 1));
+          break;
+        }
+      }
     }
+    fileList.add(unseqTmpList.get(unseqTmpList.size() - 1));
     for (File file : fileList) {
       if (fileBySeq.get(true).contains(file)) {
         loadFileBySeq(file, true, plan);
       } else {
         loadFileBySeq(file, false, plan);
       }
+    }
+  }
+
+  // 用于处理顺序，乱序不分离的情况
+  private void loadVldbDataDirNoSplit(File curFile, OperateFilePlan plan)
+      throws QueryProcessException {
+    File[] files = curFile.listFiles();
+    List<File> fileList = new ArrayList<>();
+    for (File file : files[1].listFiles()) {
+      if (file.getName().endsWith(TSFILE_SUFFIX)) {
+        fileList.add(file);
+      }
+    }
+    Collections.sort(fileList, new Comparator<File>() {
+      @Override
+      public int compare(File o1, File o2) {
+        return TsFileManagement.compareFileName(o1, o2);
+      }
+    });
+    for (File file : fileList) {
+      loadFileBySeq(file, false, plan);
     }
   }
 
