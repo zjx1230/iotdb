@@ -40,6 +40,7 @@ import org.apache.iotdb.db.exception.BatchProcessException;
 import org.apache.iotdb.db.exception.QueryIdNotExsitException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.UDFRegistrationException;
+import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.metadata.DeleteFailedException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
@@ -48,9 +49,7 @@ import org.apache.iotdb.db.exception.metadata.StorageGroupNotSetException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.index.IndexManager;
 import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.index.common.IndexType;
-import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.metadata.mnode.MNode;
 import org.apache.iotdb.db.metadata.mnode.MeasurementMNode;
@@ -1311,8 +1310,7 @@ public class PlanExecutor implements IPlanExecutor {
     return failedTimeseries;
   }
 
-  private boolean createIndex(CreateIndexPlan createIndexPlan)
-      throws QueryProcessException {
+  private boolean createIndex(CreateIndexPlan createIndexPlan) throws QueryProcessException {
     List<PartialPath> paths = createIndexPlan.getPaths();
     List<PartialPath> partialPaths = new ArrayList<>(paths);
     long startTime = createIndexPlan.getTime();
@@ -1340,6 +1338,7 @@ public class PlanExecutor implements IPlanExecutor {
     }
     return true;
   }
+
   private boolean alterTimeSeries(AlterTimeSeriesPlan alterTimeSeriesPlan)
       throws QueryProcessException {
     PartialPath path = alterTimeSeriesPlan.getPath();

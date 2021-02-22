@@ -82,6 +82,4 @@ public class QueryIndexPlan extends RawDataQueryPlan {
   public String toString() {
     return String.format("Query paths: %s, index type: %s, props: %s", paths, indexType, props);
   }
-
-
 }

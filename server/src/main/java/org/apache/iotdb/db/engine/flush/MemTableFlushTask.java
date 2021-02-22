@@ -73,12 +73,11 @@ public class MemTableFlushTask {
 
   /**
    * @param memTable the memTable to flush
-   * @param writer the writer where memTable will be flushed to (current tsfile writer or vm
-   * writer)
+   * @param writer the writer where memTable will be flushed to (current tsfile writer or vm writer)
    * @param storageGroup current storage group
    */
-  public MemTableFlushTask(IMemTable memTable, RestorableTsFileIOWriter writer, String storageGroup,
-      boolean sequence) {
+  public MemTableFlushTask(
+      IMemTable memTable, RestorableTsFileIOWriter writer, String storageGroup, boolean sequence) {
     this.memTable = memTable;
     this.writer = writer;
     this.storageGroup = storageGroup;
@@ -111,8 +110,7 @@ public class MemTableFlushTask {
     long sortTime = 0;
     IndexMemTableFlushTask indexFlushTask = null;
     if (enabledIndex) {
-      indexFlushTask = IndexManager.getInstance()
-          .getIndexMemFlushTask(storageGroup, sequence);
+      indexFlushTask = IndexManager.getInstance().getIndexMemFlushTask(storageGroup, sequence);
     }
 
     // for map do not use get(key) to iteratate

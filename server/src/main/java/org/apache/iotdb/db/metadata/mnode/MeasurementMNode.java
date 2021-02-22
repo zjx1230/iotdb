@@ -18,12 +18,8 @@
  */
 package org.apache.iotdb.db.metadata.mnode;
 
-import java.util.EnumMap;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
+import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.metadata.logfile.MLogWriter;
 import org.apache.iotdb.db.qp.physical.sys.MeasurementMNodePlan;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
@@ -32,9 +28,8 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.read.TimeValuePair;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 
-import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexType;
 import java.io.IOException;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -54,8 +49,13 @@ public class MeasurementMNode extends MNode {
 
   private Map<IndexType, IndexInfo> indexInfoMaps = new EnumMap<>(IndexType.class);
 
-  public MeasurementMNode(MNode parent, String name, TSDataType dataType, TSEncoding encoding,
-      CompressionType type, Map<String, String> props) {
+  public MeasurementMNode(
+      MNode parent,
+      String name,
+      TSDataType dataType,
+      TSEncoding encoding,
+      CompressionType type,
+      Map<String, String> props) {
     super(parent, name);
     this.schema = new MeasurementSchema(name, dataType, encoding, type, props);
   }
@@ -138,6 +138,7 @@ public class MeasurementMNode extends MNode {
   public void removeIndexInfo(IndexType indexType) {
     indexInfoMaps.remove(indexType);
   }
+
   public long getOffset() {
     return offset;
   }
