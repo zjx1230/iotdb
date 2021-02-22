@@ -1213,6 +1213,13 @@ public class StorageGroupProcessor {
       updateEndTimeMap(tsFileProcessor);
       tsFileProcessor.asyncClose();
 
+      if (!config.isEnableSlidingMemTable()) {
+        workSequenceTsFileProcessors.remove(tsFileProcessor.getTimeRangeId());
+        // if unsequence files don't contain this time range id, we should remove it's version controller
+        if (!workUnsequenceTsFileProcessors.containsKey(tsFileProcessor.getTimeRangeId())) {
+          timePartitionIdVersionControllerMap.remove(tsFileProcessor.getTimeRangeId());
+        }
+      }
       logger.info("close a sequence tsfile processor {}", storageGroupName);
     } else {
       closingUnSequenceTsFileProcessor.add(tsFileProcessor);
