@@ -242,7 +242,10 @@ public abstract class TsFileManagement {
 
   protected void printInfo() {
     logger.info("current compaction num: {}", SystemInfo.getInstance().getCompactionNum());
-    System.out.println("current compaction num: " + SystemInfo.getInstance().getCompactionNum());
+    logger.info("current compaction time: {}", SystemInfo.getInstance().getCompactionTime());
+    System.out.println(
+        "current compaction num: " + SystemInfo.getInstance().getCompactionNum() + ", time: "
+            + SystemInfo.getInstance().getCompactionTime());
   }
 
   public class CompactionMergeTask implements Runnable {

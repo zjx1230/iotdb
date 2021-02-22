@@ -45,6 +45,7 @@ public class SystemInfo {
   private Map<StorageGroupInfo, Long> reportedSgMemCostMap = new HashMap<>();
 
   private AtomicLong compactionNum = new AtomicLong(0);
+  private AtomicLong compactionTime = new AtomicLong(0);
   private static final double FLUSH_THERSHOLD =
       config.getAllocateMemoryForWrite() * config.getFlushProportion();
   private static final double REJECT_THERSHOLD = 
@@ -212,5 +213,13 @@ public class SystemInfo {
 
   public void incrementCompactionNum(long batchSize) {
     compactionNum.getAndAdd(batchSize);
+  }
+
+  public long getCompactionTime() {
+    return compactionTime.get();
+  }
+
+  public void incrementCompactionTime(long latency) {
+    compactionTime.getAndAdd(latency);
   }
 }

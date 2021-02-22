@@ -49,6 +49,7 @@ import org.apache.iotdb.db.metadata.mnode.MeasurementMNode;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.FileReaderManager;
 import org.apache.iotdb.db.query.reader.series.SeriesRawDataBatchReader;
+import org.apache.iotdb.db.rescon.SystemInfo;
 import org.apache.iotdb.db.utils.MergeUtils;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.common.BatchData;
@@ -349,8 +350,11 @@ public class TiredCompactionTsFileManagement extends TsFileManagement {
 //    if (isCompactionWorking()) {
 //      return;
 //    }
+    long startTime = System.currentTimeMillis();
     Map<Long, Map<Long, List<TsFileResource>>> selectFiles = selectMergeFile(timePartition);
     mergeFiles(selectFiles, timePartition);
+    SystemInfo.getInstance().incrementCompactionTime(System.currentTimeMillis() - startTime);
+    printInfo();
   }
 
   @Override

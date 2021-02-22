@@ -719,12 +719,14 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
 //    if (isCompactionWorking()) {
 //      return;
 //    }
+    long startTime = System.currentTimeMillis();
     handleSpecificCase(timePartition);
     if (processUnseq()) {
       Map<Long, Map<Long, List<TsFileResource>>> selectFiles = selectMergeFile(timePartition);
       mergeFiles(selectFiles, timePartition);
     }
     processSeq(timePartition);
+    SystemInfo.getInstance().incrementCompactionTime(System.currentTimeMillis() - startTime);
     printInfo();
   }
 
