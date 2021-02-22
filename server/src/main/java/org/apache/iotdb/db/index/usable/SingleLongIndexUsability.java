@@ -43,7 +43,7 @@ public class SingleLongIndexUsability implements IIndexUsable {
     this.initAllUsable = initAllUsable;
     unusableRanges = new RangeNode(Long.MIN_VALUE, Long.MAX_VALUE, null);
     size = 1;
-    if(initAllUsable){
+    if (initAllUsable) {
       addUsableRange(null, 0, Long.MAX_VALUE - 1);
     }
   }
@@ -269,10 +269,10 @@ public class SingleLongIndexUsability implements IIndexUsable {
   }
 
   public boolean hasUnusableRange() {
-    if(initAllUsable){
-      return  !(unusableRanges.end == 0 && unusableRanges.next != null
+    if (initAllUsable) {
+      return !(unusableRanges.end == 0 && unusableRanges.next != null
           && unusableRanges.next.start == Long.MAX_VALUE - 1 && unusableRanges.next.next == null);
-    }else{
+    } else {
       return size > 1;
     }
   }

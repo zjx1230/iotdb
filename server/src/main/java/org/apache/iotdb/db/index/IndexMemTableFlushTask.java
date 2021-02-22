@@ -23,8 +23,7 @@ public class IndexMemTableFlushTask {
   /**
    * it should be immutable.
    */
-  public IndexMemTableFlushTask(IIndexRouter router, boolean sequence
-  ) {
+  IndexMemTableFlushTask(IIndexRouter router, boolean sequence) {
     // check all processors
     this.router = router;
     this.sequence = sequence;
@@ -37,7 +36,7 @@ public class IndexMemTableFlushTask {
   }
 
   public void buildIndexForOneSeries(PartialPath path, TVList tvList) {
-    // in current version, we don't build index for unsequence block
+    // in current version, we don't build index for unsequence block, but only update the index usability range.
     if (sequence) {
       router.getIndexProcessorByPath(path).forEach(p -> p.buildIndexForOneSeries(path, tvList));
     } else {
@@ -50,7 +49,7 @@ public class IndexMemTableFlushTask {
    */
   public void endFlush() {
     if (sequence) {
-      router.getAllIndexProcessorsAndInfo().forEach(p->p.processor.endFlushMemTable());
+      router.getAllIndexProcessorsAndInfo().forEach(p -> p.processor.endFlushMemTable());
     }
   }
 }
