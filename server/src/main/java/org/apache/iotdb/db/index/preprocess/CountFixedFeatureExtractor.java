@@ -17,8 +17,6 @@
  */
 package org.apache.iotdb.db.index.preprocess;
 
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
@@ -26,13 +24,16 @@ import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * COUNT_FIXED is very popular in the preprocessing phase. Most previous researches build indexes on
  * sequences with the same length (a.k.a. COUNT_FIXED). The timestamp is very important for time
- * series, although a rich line of researches ignore the time information directly.<p>
+ * series, although a rich line of researches ignore the time information directly.
  *
- * Note that, in real scenarios, the time series could be variable-frequency, traditional distance
- * metrics (e.g., Euclidean distance) may not make sense for COUNT_FIXED.
+ * <p>Note that, in real scenarios, the time series could be variable-frequency, traditional
+ * distance metrics (e.g., Euclidean distance) may not make sense for COUNT_FIXED.
  */
 public class CountFixedFeatureExtractor extends IndexFeatureExtractor {
 
@@ -43,18 +44,14 @@ public class CountFixedFeatureExtractor extends IndexFeatureExtractor {
    * = 1
    */
   protected int sliceNum;
-  /**
-   * the amount of sliding windows in srcData
-   */
+  /** the amount of sliding windows in srcData */
   protected int totalProcessedCount;
-
 
   protected PrimitiveList identifierList;
   private PrimitiveList alignedList;
-  /**
-   * the position in srcData of the first data point of the current sliding window
-   */
+  /** the position in srcData of the first data point of the current sliding window */
   protected int currentStartTimeIdx;
+
   private long currentStartTime;
   private long currentEndTime;
   /**
@@ -64,6 +61,7 @@ public class CountFixedFeatureExtractor extends IndexFeatureExtractor {
    * currentProcessedIdx}.
    */
   protected int flushedOffset = 0;
+
   private long chunkStartTime = -1;
   private long chunkEndTime = -1;
   private int processedStartTimeIdx = -1;
@@ -76,27 +74,36 @@ public class CountFixedFeatureExtractor extends IndexFeatureExtractor {
    * @param slideStep the update size
    * @param storeIdentifier true if we need to store all identifiers. The cost will be counted.
    */
-  public CountFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
-      boolean storeIdentifier, boolean storeAligned, boolean inQueryMode) {
+  public CountFixedFeatureExtractor(
+      TSDataType tsDataType,
+      int windowRange,
+      int slideStep,
+      boolean storeIdentifier,
+      boolean storeAligned,
+      boolean inQueryMode) {
     super(tsDataType, WindowType.COUNT_FIXED, windowRange, slideStep, inQueryMode);
     this.storeIdentifier = storeIdentifier;
     this.storeAligned = storeAligned;
   }
 
-  public CountFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
-      boolean storeIdentifier, boolean storeAligned) {
+  public CountFixedFeatureExtractor(
+      TSDataType tsDataType,
+      int windowRange,
+      int slideStep,
+      boolean storeIdentifier,
+      boolean storeAligned) {
     this(tsDataType, windowRange, slideStep, storeIdentifier, storeAligned, false);
-//    this.storeIdentifier = storeIdentifier;
-//    this.storeAligned = storeAligned;
+    //    this.storeIdentifier = storeIdentifier;
+    //    this.storeAligned = storeAligned;
   }
 
-//  public CountFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep) {
-//    this(tsDataType, windowRange, slideStep, true, true);
-//  }
-//
-//  public CountFixedFeatureExtractor(TSDataType tsDataType, int windowRange) {
-//    this(tsDataType, windowRange, 1, true, true);
-//  }
+  //  public CountFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep) {
+  //    this(tsDataType, windowRange, slideStep, true, true);
+  //  }
+  //
+  //  public CountFixedFeatureExtractor(TSDataType tsDataType, int windowRange) {
+  //    this(tsDataType, windowRange, 1, true, true);
+  //  }
 
   @Override
   protected void initParams() {
@@ -108,7 +115,7 @@ public class CountFixedFeatureExtractor extends IndexFeatureExtractor {
     if (storeIdentifier) {
       this.identifierList = PrimitiveList.newList(TSDataType.INT64);
     }
-    //init L2
+    // init L2
     if (storeAligned) {
       this.alignedList = PrimitiveList.newList(TSDataType.INT32);
     }
@@ -150,7 +157,8 @@ public class CountFixedFeatureExtractor extends IndexFeatureExtractor {
     chunkEndTime = currentEndTime;
 
     // calculate the newest aligned sequence
-//    System.out.println(String.format("write ELB: %d - %d, %d", currentStartTime, currentEndTime, windowRange));
+    //    System.out.println(String.format("write ELB: %d - %d, %d", currentStartTime,
+    // currentEndTime, windowRange));
     if (storeIdentifier) {
       // it's a naive identifier, we can refine it in the future.
       identifierList.putLong(currentStartTime);
@@ -172,33 +180,33 @@ public class CountFixedFeatureExtractor extends IndexFeatureExtractor {
     return sliceNum - flushedOffset;
   }
 
-//  @Override
-//  public List<Identifier> getLatestN_L1_Identifiers(int latestN) {
-//    latestN = Math.min(getCurrentChunkSize(), latestN);
-//    List<Identifier> res = new ArrayList<>(latestN);
-//    if (latestN == 0) {
-//      return res;
-//    }
-//    if (storeIdentifier) {
-//      int startIdx = sliceNum - latestN;
-//      for (int i = startIdx; i < sliceNum; i++) {
-//        int actualIdx = i - flushedOffset;
-//        Identifier identifier = new Identifier(
-//            identifierList.getLong(actualIdx * 3),
-//            identifierList.getLong(actualIdx * 3 + 1),
-//            (int) identifierList.getLong(actualIdx * 3 + 2));
-//        res.add(identifier);
-//      }
-//      return res;
-//    }
-//    int startIdxPastN = currentStartTimeIdx - (latestN - 1) * slideStep;
-//    while (startIdxPastN >= 0 && startIdxPastN <= currentStartTimeIdx) {
-//      res.add(new Identifier(srcData.getTime(startIdxPastN),
-//          srcData.getTime(startIdxPastN + windowRange - 1), windowRange));
-//      startIdxPastN += slideStep;
-//    }
-//    return res;
-//  }
+  //  @Override
+  //  public List<Identifier> getLatestN_L1_Identifiers(int latestN) {
+  //    latestN = Math.min(getCurrentChunkSize(), latestN);
+  //    List<Identifier> res = new ArrayList<>(latestN);
+  //    if (latestN == 0) {
+  //      return res;
+  //    }
+  //    if (storeIdentifier) {
+  //      int startIdx = sliceNum - latestN;
+  //      for (int i = startIdx; i < sliceNum; i++) {
+  //        int actualIdx = i - flushedOffset;
+  //        Identifier identifier = new Identifier(
+  //            identifierList.getLong(actualIdx * 3),
+  //            identifierList.getLong(actualIdx * 3 + 1),
+  //            (int) identifierList.getLong(actualIdx * 3 + 2));
+  //        res.add(identifier);
+  //      }
+  //      return res;
+  //    }
+  //    int startIdxPastN = currentStartTimeIdx - (latestN - 1) * slideStep;
+  //    while (startIdxPastN >= 0 && startIdxPastN <= currentStartTimeIdx) {
+  //      res.add(new Identifier(srcData.getTime(startIdxPastN),
+  //          srcData.getTime(startIdxPastN + windowRange - 1), windowRange));
+  //      startIdxPastN += slideStep;
+  //    }
+  //    return res;
+  //  }
 
   @Override
   public List<Object> getLatestN_L2_AlignedSequences(int latestN) {
@@ -291,7 +299,7 @@ public class CountFixedFeatureExtractor extends IndexFeatureExtractor {
   public int nextUnprocessedWindowStartIdx() {
     int next = processedStartTimeIdx + slideStep;
     if (next > srcData.size()) {
-//      next = srcData.size();
+      //      next = srcData.size();
       next = processedStartTimeIdx;
     }
     return next;
@@ -300,5 +308,4 @@ public class CountFixedFeatureExtractor extends IndexFeatureExtractor {
   public int getSliceNum() {
     return sliceNum;
   }
-
 }

@@ -18,24 +18,25 @@
  */
 package org.apache.iotdb.db.index.it;
 
-import static org.apache.iotdb.db.index.IndexTestUtils.getArrayRange;
-import static org.apache.iotdb.db.index.common.IndexType.RTREE_PAA;
-import static org.junit.Assert.fail;
+import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.index.IndexManager;
+import org.apache.iotdb.db.utils.EnvironmentUtils;
+import org.apache.iotdb.jdbc.Config;
+
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
-import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.index.IndexManager;
-import org.apache.iotdb.db.index.common.math.Randomwalk;
-import org.apache.iotdb.db.utils.EnvironmentUtils;
-import org.apache.iotdb.jdbc.Config;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+
+import static org.apache.iotdb.db.index.IndexTestUtils.getArrayRange;
+import static org.apache.iotdb.db.index.common.IndexType.RTREE_PAA;
+import static org.junit.Assert.fail;
 
 public class RTreeIndexReadIT {
 
@@ -69,11 +70,12 @@ public class RTreeIndexReadIT {
 
   private void insertSQL() throws ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
-//    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
-    try (Connection connection = DriverManager.getConnection
-        (Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
-        Statement statement = connection.createStatement();) {
-//      statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupSub));
+    //    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
+    try (Connection connection =
+            DriverManager.getConnection(
+                Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
+        Statement statement = connection.createStatement(); ) {
+      //      statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupSub));
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
       System.out.println(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
 
@@ -84,29 +86,33 @@ public class RTreeIndexReadIT {
         statement.execute(
             String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
       }
-      statement.execute(String.format(
-          "CREATE INDEX ON %s WITH INDEX=%s, SERIES_LENGTH=%d, FEATURE_DIM=%d, MAX_ENTRIES=%d, MIN_ENTRIES=%d",
-          indexWhole, RTREE_PAA, wholeDim, PAA_Dim, 10, 2));
-//      System.out.println(String.format(
-//          "CREATE INDEX ON %s WITH INDEX=%s, SERIES_LENGTH=%d, FEATURE_DIM=%d, MAX_ENTRIES=%d, MIN_ENTRIES=%d",
-//          indexWhole, RTREE_PAA, wholeDim, PAA_Dim, 10, 2));
+      statement.execute(
+          String.format(
+              "CREATE INDEX ON %s WITH INDEX=%s, SERIES_LENGTH=%d, FEATURE_DIM=%d, MAX_ENTRIES=%d, MIN_ENTRIES=%d",
+              indexWhole, RTREE_PAA, wholeDim, PAA_Dim, 10, 2));
+      //      System.out.println(String.format(
+      //          "CREATE INDEX ON %s WITH INDEX=%s, SERIES_LENGTH=%d, FEATURE_DIM=%d,
+      // MAX_ENTRIES=%d, MIN_ENTRIES=%d",
+      //          indexWhole, RTREE_PAA, wholeDim, PAA_Dim, 10, 2));
 
-//      TVList wholeInput = Randomwalk.generateRanWalkTVList(wholeDim * wholeSize);
-//      TVList wholeInput = IndexUtils.;
+      //      TVList wholeInput = Randomwalk.generateRanWalkTVList(wholeDim * wholeSize);
+      //      TVList wholeInput = IndexUtils.;
       for (int i = 0; i < wholeSize; i++) {
         String device = String.format(directionDevicePattern, i);
         for (int j = 0; j < wholeDim; j++) {
-          String insertSQL = String.format(insertPattern,
-              device, directionSensor, j, (i * wholeDim + j) * 1d);
+          String insertSQL =
+              String.format(insertPattern, device, directionSensor, j, (i * wholeDim + j) * 1d);
           System.out.println(insertSQL);
           statement.execute(insertSQL);
         }
       }
       statement.execute("flush");
       System.out.println(IndexManager.getInstance().getRouter());
-//      Assert.assertEquals(
-//          "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {BLOCK_SIZE=10}]},root.wind1.azq01.speed: {ELB_INDEX=[0-9:45.00, 10-19:145.00, 20-29:245.00, 30-39:345.00, 40-49:445.00]}>",
-//          IndexManager.getInstance().getRouter().toString());
+      //      Assert.assertEquals(
+      //          "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props:
+      // {BLOCK_SIZE=10}]},root.wind1.azq01.speed: {ELB_INDEX=[0-9:45.00, 10-19:145.00,
+      // 20-29:245.00, 30-39:345.00, 40-49:445.00]}>",
+      //          IndexManager.getInstance().getRouter().toString());
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -120,37 +126,38 @@ public class RTreeIndexReadIT {
     IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
   }
 
-
   @Test
   public void checkRead() throws ClassNotFoundException {
 
     Class.forName(Config.JDBC_DRIVER_NAME);
-    try (Connection connection = DriverManager.
-        getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
+    try (Connection connection =
+            DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
 
-      String querySQL = String
-          .format("SELECT TOP 2 direction FROM root.wind2.* WHERE direction LIKE (%s)",
+      String querySQL =
+          String.format(
+              "SELECT TOP 2 direction FROM root.wind2.* WHERE direction LIKE (%s)",
               getArrayRange(121, 121 + wholeDim));
 
       System.out.println(querySQL);
       boolean hasIndex = statement.execute(querySQL);
-      String gt = "Time,root.wind2.8.direction.(D=3.87),root.wind2.9.direction.(D=54.22),\n"
-          + "0,120.0,135.0,\n"
-          + "1,121.0,136.0,\n"
-          + "2,122.0,137.0,\n"
-          + "3,123.0,138.0,\n"
-          + "4,124.0,139.0,\n"
-          + "5,125.0,140.0,\n"
-          + "6,126.0,141.0,\n"
-          + "7,127.0,142.0,\n"
-          + "8,128.0,143.0,\n"
-          + "9,129.0,144.0,\n"
-          + "10,130.0,145.0,\n"
-          + "11,131.0,146.0,\n"
-          + "12,132.0,147.0,\n"
-          + "13,133.0,148.0,\n"
-          + "14,134.0,149.0,\n";
+      String gt =
+          "Time,root.wind2.8.direction.(D=3.87),root.wind2.9.direction.(D=54.22),\n"
+              + "0,120.0,135.0,\n"
+              + "1,121.0,136.0,\n"
+              + "2,122.0,137.0,\n"
+              + "3,123.0,138.0,\n"
+              + "4,124.0,139.0,\n"
+              + "5,125.0,140.0,\n"
+              + "6,126.0,141.0,\n"
+              + "7,127.0,142.0,\n"
+              + "8,128.0,143.0,\n"
+              + "9,129.0,144.0,\n"
+              + "10,130.0,145.0,\n"
+              + "11,131.0,146.0,\n"
+              + "12,132.0,147.0,\n"
+              + "13,133.0,148.0,\n"
+              + "14,134.0,149.0,\n";
       Assert.assertTrue(hasIndex);
       try (ResultSet resultSet = statement.getResultSet()) {
         ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
@@ -173,5 +180,4 @@ public class RTreeIndexReadIT {
       fail(e.getMessage());
     }
   }
-
 }

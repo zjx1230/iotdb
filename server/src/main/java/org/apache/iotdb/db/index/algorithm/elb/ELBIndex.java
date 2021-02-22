@@ -17,29 +17,6 @@
  */
 package org.apache.iotdb.db.index.algorithm.elb;
 
-import static org.apache.iotdb.db.index.common.IndexConstant.BLOCK_SIZE;
-import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_BLOCK_SIZE;
-import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_DISTANCE;
-import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_ELB_TYPE;
-import static org.apache.iotdb.db.index.common.IndexConstant.DISTANCE;
-import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE;
-import static org.apache.iotdb.db.index.common.IndexConstant.MAX_RETURN_SET;
-import static org.apache.iotdb.db.index.common.IndexConstant.MISSING_PARAM_ERROR_MESSAGE;
-import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
-import static org.apache.iotdb.db.index.common.IndexConstant.THRESHOLD;
-import static org.apache.iotdb.db.index.common.IndexType.ELB_INDEX;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
@@ -69,36 +46,55 @@ import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.apache.iotdb.tsfile.read.reader.IBatchReader;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import static org.apache.iotdb.db.index.common.IndexConstant.BLOCK_SIZE;
+import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_BLOCK_SIZE;
+import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_DISTANCE;
+import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_ELB_TYPE;
+import static org.apache.iotdb.db.index.common.IndexConstant.DISTANCE;
+import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE;
+import static org.apache.iotdb.db.index.common.IndexConstant.MAX_RETURN_SET;
+import static org.apache.iotdb.db.index.common.IndexConstant.MISSING_PARAM_ERROR_MESSAGE;
+import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
+import static org.apache.iotdb.db.index.common.IndexConstant.THRESHOLD;
+import static org.apache.iotdb.db.index.common.IndexType.ELB_INDEX;
+
 /**
- * <p>Use ELB to represent a pattern, and slide the pattern over a long time series to find
- * sliding windows whose distance is less than the given threshold. Considering the original setting
- * in the paper, the sliding step is limited to 1. We will extend the work to the case of arbitrary
- * sliding step in the future.
- * </p>
+ * Use ELB to represent a pattern, and slide the pattern over a long time series to find sliding
+ * windows whose distance is less than the given threshold. Considering the original setting in the
+ * paper, the sliding step is limited to 1. We will extend the work to the case of arbitrary sliding
+ * step in the future.
  *
- * <p>Parameters for Creating ELB-Match:
- * Window Range,
- * </p>
+ * <p>Parameters for Creating ELB-Match: Window Range,
  *
- * <p>Parameters for Querying ELB-Match</p>
+ * <p>Parameters for Querying ELB-Match
  *
+ * <p>Query Parameters:
  *
- * <p>Query Parameters:</p>
  * <ul>
- *   <li>PATTERN: pattern series,</li>
- *   <li>THRESHOLD: [eps_1, eps_2, ..., eps_b];</li>
- *   <li>BORDER: [left_1, left_2, ..., left_b]; where left_1 is always 0</li>
+ *   <li>PATTERN: pattern series,
+ *   <li>THRESHOLD: [eps_1, eps_2, ..., eps_b];
+ *   <li>BORDER: [left_1, left_2, ..., left_b]; where left_1 is always 0
  * </ul>
  *
- * <p>
- * The above borders indicate the subpattern borders.
- * For example, the range of the i-th subpattern is [left_i, left_{i+1}) with threshold eps_i.
- * </p>
+ * <p>The above borders indicate the subpattern borders. For example, the range of the i-th
+ * subpattern is [left_i, left_{i+1}) with threshold eps_i.
  */
-
 public class ELBIndex extends IoTDBIndex {
 
   private final Logger logger = LoggerFactory.getLogger(ELBIndex.class);
@@ -106,13 +102,12 @@ public class ELBIndex extends IoTDBIndex {
 
   private ELBMatchFeatureExtractor elbMatchPreprocessor;
   private List<ELBWindowBlockFeature> windowBlockFeatures;
-//  private PrimitiveList usableBlocks;
+  //  private PrimitiveList usableBlocks;
 
   private int blockWidth;
   private File featureFile;
 
-  public ELBIndex(PartialPath path, TSDataType tsDataType,
-      String indexDir, IndexInfo indexInfo) {
+  public ELBIndex(PartialPath path, TSDataType tsDataType, String indexDir, IndexInfo indexInfo) {
     super(path, tsDataType, indexInfo);
     windowBlockFeatures = new ArrayList<>();
     featureFile = IndexUtils.getIndexFile(indexDir + File.separator + "feature");
@@ -125,14 +120,16 @@ public class ELBIndex extends IoTDBIndex {
     }
     // ELB always variable query length, so it's needed windowRange
     windowRange = -1;
-//    usableBlocks = PrimitiveList.newList(TSDataType.BOOLEAN);
+    //    usableBlocks = PrimitiveList.newList(TSDataType.BOOLEAN);
     initELBParam();
   }
 
   private void initELBParam() {
     elbType = ELBType.valueOf(props.getOrDefault(ELB_TYPE, DEFAULT_ELB_TYPE));
-    this.blockWidth = props.containsKey(BLOCK_SIZE) ? Integer.parseInt(props.get(BLOCK_SIZE))
-        : DEFAULT_BLOCK_SIZE;
+    this.blockWidth =
+        props.containsKey(BLOCK_SIZE)
+            ? Integer.parseInt(props.get(BLOCK_SIZE))
+            : DEFAULT_BLOCK_SIZE;
   }
 
   @Override
@@ -140,16 +137,16 @@ public class ELBIndex extends IoTDBIndex {
     if (this.indexFeatureExtractor != null) {
       this.indexFeatureExtractor.clear();
     }
-    this.elbMatchPreprocessor = new ELBMatchFeatureExtractor(tsDataType, windowRange, blockWidth,
-        elbType, inQueryMode);
+    this.elbMatchPreprocessor =
+        new ELBMatchFeatureExtractor(tsDataType, windowRange, blockWidth, elbType, inQueryMode);
     this.indexFeatureExtractor = elbMatchPreprocessor;
     indexFeatureExtractor.deserializePrevious(previous);
   }
 
   @Override
   public boolean buildNext() {
-    ELBWindowBlockFeature block = (ELBWindowBlockFeature) elbMatchPreprocessor
-        .getCurrent_L3_Feature();
+    ELBWindowBlockFeature block =
+        (ELBWindowBlockFeature) elbMatchPreprocessor.getCurrent_L3_Feature();
     windowBlockFeatures.add(block);
     return true;
   }
@@ -157,25 +154,24 @@ public class ELBIndex extends IoTDBIndex {
   @Override
   public void flush() {
     // we need to do nothing when a batch of memtable flush out.
-//    if (indexFeatureExtractor.getCurrentChunkSize() == 0) {
-//      logger.warn("Nothing to be flushed, directly return null");
-//      System.out.println("Nothing to be flushed, directly return null");
-//      return;
-//    }
-//    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-//    // serialize window block features
-//    try {
-//      elbMatchPreprocessor.serializeFeatures(outputStream);
-//    } catch (IOException e) {
-//      logger.error("flush failed", e);
-//      return;
-//    }
-//    long st = indexFeatureExtractor.getChunkStartTime();
-//    long end = indexFeatureExtractor.getChunkEndTime();
-//    return new IndexFlushChunk(path, indexType, outputStream, st, end);
-//    elbMatchPreprocessor.serializeFeatures(outputStream);
+    //    if (indexFeatureExtractor.getCurrentChunkSize() == 0) {
+    //      logger.warn("Nothing to be flushed, directly return null");
+    //      System.out.println("Nothing to be flushed, directly return null");
+    //      return;
+    //    }
+    //    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+    //    // serialize window block features
+    //    try {
+    //      elbMatchPreprocessor.serializeFeatures(outputStream);
+    //    } catch (IOException e) {
+    //      logger.error("flush failed", e);
+    //      return;
+    //    }
+    //    long st = indexFeatureExtractor.getChunkStartTime();
+    //    long end = indexFeatureExtractor.getChunkEndTime();
+    //    return new IndexFlushChunk(path, indexType, outputStream, st, end);
+    //    elbMatchPreprocessor.serializeFeatures(outputStream);
   }
-
 
   private void deserializeFeatures() {
     if (!featureFile.exists()) {
@@ -193,7 +189,6 @@ public class ELBIndex extends IoTDBIndex {
     } catch (IOException e) {
       logger.error("Error when deserialize ELB features. Given up.", e);
     }
-
   }
 
   @Override
@@ -205,7 +200,7 @@ public class ELBIndex extends IoTDBIndex {
         ReadWriteIOUtils.write(features.endTime, outputStream);
         ReadWriteIOUtils.write(features.feature, outputStream);
       }
-//      usableBlocks.clearAndRelease();
+      //      usableBlocks.clearAndRelease();
     } catch (IOException e) {
       logger.error("Error when serialize router. Given up.", e);
     }
@@ -216,10 +211,13 @@ public class ELBIndex extends IoTDBIndex {
     throw new UnsupportedOperationException();
   }
 
-
   @Override
-  public QueryDataSet query(Map<String, Object> queryProps, IIndexUsable iIndexUsable,
-      QueryContext context, IIndexRefinePhaseOptimize refinePhaseOptimizer, boolean alignedByTime)
+  public QueryDataSet query(
+      Map<String, Object> queryProps,
+      IIndexUsable iIndexUsable,
+      QueryContext context,
+      IIndexRefinePhaseOptimize refinePhaseOptimizer,
+      boolean alignedByTime)
       throws QueryIndexException {
     ELBQueryStruct struct = new ELBQueryStruct();
 
@@ -228,15 +226,24 @@ public class ELBIndex extends IoTDBIndex {
     List<DistSeries> res = new ArrayList<>();
     try {
       for (Filter timeFilter : filterList) {
-        QueryDataSource queryDataSource = QueryResourceManager.getInstance()
-            .getQueryDataSource(indexSeries, context, timeFilter);
+        QueryDataSource queryDataSource =
+            QueryResourceManager.getInstance().getQueryDataSource(indexSeries, context, timeFilter);
         timeFilter = queryDataSource.updateFilterUsingTTL(timeFilter);
 
-        IBatchReader reader = new SeriesRawDataBatchReader(indexSeries,
-            Collections.singleton(indexSeries.getMeasurement()), tsDataType, context,
-            queryDataSource, timeFilter, null, null, true);
-        ELBMatchFeatureExtractor featureExtractor = new ELBMatchFeatureExtractor(tsDataType,
-            struct.pattern.length, blockWidth, elbType, true);
+        IBatchReader reader =
+            new SeriesRawDataBatchReader(
+                indexSeries,
+                Collections.singleton(indexSeries.getMeasurement()),
+                tsDataType,
+                context,
+                queryDataSource,
+                timeFilter,
+                null,
+                null,
+                true);
+        ELBMatchFeatureExtractor featureExtractor =
+            new ELBMatchFeatureExtractor(
+                tsDataType, struct.pattern.length, blockWidth, elbType, true);
         while (reader.hasNextBatch()) {
           BatchData batch = reader.nextBatch();
           featureExtractor.appendNewSrcData(batch);
@@ -260,7 +267,6 @@ public class ELBIndex extends IoTDBIndex {
     return constructSearchDataset(res, alignedByTime, MAX_RETURN_SET);
   }
 
-
   private static class ELBQueryStruct {
 
     double[] thresholds;
@@ -273,18 +279,16 @@ public class ELBIndex extends IoTDBIndex {
     // leaf: upper bounds, right: lower bounds
     private Pair<double[], double[]> patternFeatures;
     private ELB elb;
-
   }
 
   //  @Deprecated
-//  @Override
+  //  @Override
   @SuppressWarnings("unchecked")
   private void initQuery(ELBQueryStruct struct, Map<String, Object> queryProps) {
     struct.distance = Distance.getDistance(props.getOrDefault(DISTANCE, DEFAULT_DISTANCE));
 
     if (!queryProps.containsKey(THRESHOLD)) {
-      throw new IllegalIndexParamException(
-          String.format(MISSING_PARAM_ERROR_MESSAGE, THRESHOLD));
+      throw new IllegalIndexParamException(String.format(MISSING_PARAM_ERROR_MESSAGE, THRESHOLD));
     }
 
     if (!queryProps.containsKey(PATTERN)) {
@@ -303,7 +307,6 @@ public class ELBIndex extends IoTDBIndex {
       patternLength += pattern.length;
       struct.thresholds[i] = thresholdList.get(i);
       struct.borders[i + 1] = patternLength;
-
     }
     struct.pattern = new double[patternLength];
     int l = 0;
@@ -312,16 +315,17 @@ public class ELBIndex extends IoTDBIndex {
       l += p.length;
     }
 
-    // calculate ELB upper/lower bounds of the given pattern according to given segmentation and threshold.
+    // calculate ELB upper/lower bounds of the given pattern according to given segmentation and
+    // threshold.
 
     struct.elb = new ELB(struct.distance, struct.pattern.length, blockWidth, elbType);
-    struct.patternFeatures = struct.elb
-        .calcELBFeature(struct.pattern, 0, struct.thresholds, struct.borders);
+    struct.patternFeatures =
+        struct.elb.calcELBFeature(struct.pattern, 0, struct.thresholds, struct.borders);
     struct.blockNum = struct.patternFeatures.left.length;
   }
 
   private List<Filter> queryByIndex(ELBQueryStruct struct, SingleLongIndexUsability indexUsable) {
-    if(indexUsable.hasUnusableRange()){
+    if (indexUsable.hasUnusableRange()) {
       logger.warn("In current version, ELB will ignore the out-of-order data");
     }
     IIndexUsable cannotPruned = IIndexUsable.Factory.createEmptyIndexUsability(indexSeries);
@@ -329,14 +333,16 @@ public class ELBIndex extends IoTDBIndex {
     int wbfSize = windowBlockFeatures.size();
     if (wbfSize >= struct.blockNum) {
       // in the best cases, [wbf[0].start, wbf[wbfSize-featureDim].end] can be pruned
-      cannotPruned.addUsableRange(indexSeries, windowBlockFeatures.get(0).startTime,
+      cannotPruned.addUsableRange(
+          indexSeries,
+          windowBlockFeatures.get(0).startTime,
           windowBlockFeatures.get(wbfSize - struct.blockNum).endTime);
       // pruning
       for (int i = 0; i <= windowBlockFeatures.size() - struct.blockNum; i++) {
         boolean canBePruned = false;
         for (int j = 0; j < struct.blockNum; j++) {
-          if ((struct.patternFeatures.left[j] <= windowBlockFeatures.get(i + j).feature ||
-                  struct.patternFeatures.right[j] >= windowBlockFeatures.get(i + j).feature)) {
+          if ((struct.patternFeatures.left[j] <= windowBlockFeatures.get(i + j).feature
+              || struct.patternFeatures.right[j] >= windowBlockFeatures.get(i + j).feature)) {
             canBePruned = true;
             break;
           }
@@ -345,32 +351,31 @@ public class ELBIndex extends IoTDBIndex {
           // update range
           long startTime = windowBlockFeatures.get(i).startTime;
           int endIdx = i + struct.blockNum + (struct.pattern.length % blockWidth == 0 ? 0 : 1);
-          long endTime = endIdx >= wbfSize ?
-              Long.MAX_VALUE : windowBlockFeatures.get(endIdx).endTime;
+          long endTime =
+              endIdx >= wbfSize ? Long.MAX_VALUE : windowBlockFeatures.get(endIdx).endTime;
           cannotPruned.minusUsableRange(indexSeries, startTime, endTime);
         }
       }
     }
-    return  ((SingleLongIndexUsability) cannotPruned).getUnusableRange();
+    return ((SingleLongIndexUsability) cannotPruned).getUnusableRange();
   }
 
   @Deprecated
-//  @Override
-//  private int postProcessNext(List<IndexFuncResult> funcResult) throws QueryIndexException {
-//    TVList aligned = (TVList) indexFeatureExtractor.getCurrent_L2_AlignedSequence();
-//    int reminding = funcResult.size();
-////    if (elbFeatureExtractor.exactDistanceCalc(aligned)) {
-////      for (IndexFuncResult result : funcResult) {
-////        IndexFuncFactory.basicSimilarityCalc(result, indexFeatureExtractor, pattern);
-////      }
-////    }
-//    TVListAllocator.getInstance().release(aligned);
-//    return reminding;
-//  }
+  //  @Override
+  //  private int postProcessNext(List<IndexFuncResult> funcResult) throws QueryIndexException {
+  //    TVList aligned = (TVList) indexFeatureExtractor.getCurrent_L2_AlignedSequence();
+  //    int reminding = funcResult.size();
+  ////    if (elbFeatureExtractor.exactDistanceCalc(aligned)) {
+  ////      for (IndexFuncResult result : funcResult) {
+  ////        IndexFuncFactory.basicSimilarityCalc(result, indexFeatureExtractor, pattern);
+  ////      }
+  ////    }
+  //    TVListAllocator.getInstance().release(aligned);
+  //    return reminding;
+  //  }
 
   @Override
   public String toString() {
     return windowBlockFeatures.toString();
   }
-
 }

@@ -17,8 +17,6 @@
  */
 package org.apache.iotdb.db.index.algorithm.paa;
 
-import java.nio.ByteBuffer;
-import java.util.List;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
@@ -28,12 +26,15 @@ import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 
+import java.nio.ByteBuffer;
+import java.util.List;
+
 /**
  * For PAA feature in the whole matching. A simplified version all PAA PAA (Piecewise Aggregate
- * Approximation), a classical feature in time series. <p>
+ * Approximation), a classical feature in time series.
  *
- * Refer to: Keogh Eamonn, et al. "Dimensionality reduction for fast similarity search in large time
- * series databases." Knowledge and information Systems 3.3 (2001): 263-286.
+ * <p>Refer to: Keogh Eamonn, et al. "Dimensionality reduction for fast similarity search in large
+ * time series databases." Knowledge and information Systems 3.3 (2001): 263-286.
  */
 public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
 
@@ -44,14 +45,19 @@ public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
   private final int paaWidth;
   private boolean hasNewData;
 
-  public PAAWholeFeatureExtractor(TSDataType dataType, int alignedLength, int featureDim,
-      boolean inQueryMode, float[] featureArray) {
+  public PAAWholeFeatureExtractor(
+      TSDataType dataType,
+      int alignedLength,
+      int featureDim,
+      boolean inQueryMode,
+      float[] featureArray) {
     super(dataType, WindowType.WHOLE_MATCH, alignedLength, -1, inQueryMode);
     this.alignedLength = alignedLength;
     this.featureDim = featureDim;
     if (!inQueryMode && featureArray.length != featureDim) {
       throw new IllegalIndexParamException(
-          String.format("the featureDim (%d) doesn't match the length of feature array (%d)",
+          String.format(
+              "the featureDim (%d) doesn't match the length of feature array (%d)",
               featureDim, featureArray.length));
     }
     this.featureArray = featureArray;
@@ -67,7 +73,7 @@ public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
 
   @Override
   public void deserializePrevious(ByteBuffer byteBuffer) {
-    //whole matching has nothing to deserialize.
+    // whole matching has nothing to deserialize.
   }
 
   @Override
@@ -85,9 +91,7 @@ public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
     throw new UnsupportedOperationException(NON_SUPPORT_MSG);
   }
 
-  /**
-   * For Whole mathing, it's will deep copy
-   */
+  /** For Whole mathing, it's will deep copy */
   @Override
   public TVList getCurrent_L2_AlignedSequence() {
     TVList res = TVListAllocator.getInstance().allocate(TSDataType.DOUBLE);
@@ -101,9 +105,7 @@ public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
     return res;
   }
 
-  /**
-   * 两件事：长度为aligned_len，不足补齐，多了不管
-   */
+  /** 两件事：长度为aligned_len，不足补齐，多了不管 */
   private void fillGivenFeatureArray() {
     //    featureArray
     for (int i = 0; i < featureDim; i++) {
@@ -142,7 +144,6 @@ public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
       fillGivenFeatureArray();
     }
     hasNewData = false;
-
   }
 
   @Override
@@ -159,7 +160,6 @@ public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
   public List<Object> getLatestN_L2_AlignedSequences(int latestN) {
     throw new UnsupportedOperationException(NON_SUPPORT_MSG);
   }
-
 
   @Override
   public long getChunkStartTime() {
@@ -190,5 +190,4 @@ public class PAAWholeFeatureExtractor extends IndexFeatureExtractor {
   public void clearProcessedSrcData() {
     this.srcData.clear();
   }
-
 }

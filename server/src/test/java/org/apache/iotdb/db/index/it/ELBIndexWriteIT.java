@@ -18,24 +18,25 @@
  */
 package org.apache.iotdb.db.index.it;
 
-import static org.apache.iotdb.db.index.common.IndexType.ELB_INDEX;
-import static org.junit.Assert.fail;
-
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.Statement;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.index.IndexManager;
-import org.apache.iotdb.db.index.common.math.Randomwalk;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.jdbc.Config;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
+
+import static org.apache.iotdb.db.index.common.IndexType.ELB_INDEX;
+import static org.junit.Assert.fail;
 
 public class ELBIndexWriteIT {
 
@@ -65,21 +66,20 @@ public class ELBIndexWriteIT {
     EnvironmentUtils.envSetUp();
   }
 
-
   @After
   public void tearDown() throws Exception {
     EnvironmentUtils.cleanEnv();
     IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
   }
 
-
   @Test
   public void checkWrite() throws ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
-//    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
-    try (Connection connection = DriverManager.getConnection
-        (Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
-        Statement statement = connection.createStatement();) {
+    //    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
+    try (Connection connection =
+            DriverManager.getConnection(
+                Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
+        Statement statement = connection.createStatement(); ) {
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupSub));
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
 
@@ -90,7 +90,8 @@ public class ELBIndexWriteIT {
 
       for (int i = 0; i < wholeSize; i++) {
         String wholePath = String.format(directionPattern, i);
-//        System.out.println(String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
+        //        System.out.println(String.format("CREATE TIMESERIES %s WITH
+        // DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
         statement.execute(
             String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
       }
@@ -98,19 +99,25 @@ public class ELBIndexWriteIT {
           String.format("CREATE INDEX ON %s WITH INDEX=%s, BLOCK_SIZE=10", indexSub, ELB_INDEX));
 
       System.out.println(IndexManager.getInstance().getRouter());
-//      Assert.assertEquals(
-//          "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind2.*.direction: {}>;"
-//              + "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind1.azq01.speed: {}>;",
-//          IndexManager.getInstance().getRouter().toString());
+      //      Assert.assertEquals(
+      //          "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind2.*.direction: {}>;"
+      //              + "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind1.azq01.speed:
+      // {}>;",
+      //          IndexManager.getInstance().getRouter().toString());
 
-//      TVList subInput = Randomwalk.generateRanWalkTVList(subLength);
+      //      TVList subInput = Randomwalk.generateRanWalkTVList(subLength);
       TVList subInput = TVListAllocator.getInstance().allocate(TSDataType.DOUBLE);
       for (int i = 0; i < subLength; i++) {
         subInput.putDouble(i, i * 10);
       }
       for (int i = 0; i < 23; i++) {
-        statement.execute(String.format(insertPattern,
-            speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
+        statement.execute(
+            String.format(
+                insertPattern,
+                speed1Device,
+                speed1Sensor,
+                subInput.getTime(i),
+                subInput.getDouble(i)));
       }
       statement.execute("flush");
       System.out.println("insert finish for subsequence case");
@@ -122,8 +129,13 @@ public class ELBIndexWriteIT {
           IndexManager.getInstance().getRouter().toString());
 
       for (int i = 23; i < 37; i++) {
-        statement.execute(String.format(insertPattern,
-            speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
+        statement.execute(
+            String.format(
+                insertPattern,
+                speed1Device,
+                speed1Sensor,
+                subInput.getTime(i),
+                subInput.getDouble(i)));
       }
       statement.execute("flush");
       System.out.println(IndexManager.getInstance().getRouter());
@@ -140,8 +152,13 @@ public class ELBIndexWriteIT {
               + "root.wind1.azq01.speed: {ELB_INDEX=[0-9:450.00, 10-19:1450.00, 20-29:2450.00]}>\n",
           IndexManager.getInstance().getRouter().toString());
       for (int i = 37; i < subLength; i++) {
-        statement.execute(String.format(insertPattern,
-            speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
+        statement.execute(
+            String.format(
+                insertPattern,
+                speed1Device,
+                speed1Sensor,
+                subInput.getTime(i),
+                subInput.getDouble(i)));
       }
       statement.execute("flush");
       System.out.println(IndexManager.getInstance().getRouter());
@@ -150,11 +167,9 @@ public class ELBIndexWriteIT {
               + "root.wind1.azq01.speed: {ELB_INDEX=[0-9:450.00, 10-19:1450.00, 20-29:2450.00, 30-39:3450.00, 40-49:4450.00]}>\n",
           IndexManager.getInstance().getRouter().toString());
 
-
     } catch (Exception e) {
       e.printStackTrace();
       fail(e.getMessage());
     }
   }
-
 }

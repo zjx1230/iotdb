@@ -1,7 +1,7 @@
 package org.apache.iotdb.db.index;
 
-import org.apache.iotdb.db.index.router.IIndexRouter;
 import org.apache.iotdb.db.index.common.IndexProcessorStruct;
+import org.apache.iotdb.db.index.router.IIndexRouter;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 
@@ -12,7 +12,7 @@ import org.apache.iotdb.db.utils.datastructure.TVList;
  * detect whether one or more indexes have been created on this series, and pass its data to
  * corresponding IndexProcessors and insert it into the corresponding indexes.
  *
- * IndexMemTableFlushTask involves some index processors. It aims to improve the concurrency by
+ * <p>IndexMemTableFlushTask involves some index processors. It aims to improve the concurrency by
  * partition the index processors.
  */
 public class IndexMemTableFlushTask {
@@ -20,9 +20,7 @@ public class IndexMemTableFlushTask {
   private final IIndexRouter router;
   private final boolean sequence;
 
-  /**
-   * it should be immutable.
-   */
+  /** it should be immutable. */
   IndexMemTableFlushTask(IIndexRouter router, boolean sequence) {
     // check all processors
     this.router = router;
@@ -36,7 +34,8 @@ public class IndexMemTableFlushTask {
   }
 
   public void buildIndexForOneSeries(PartialPath path, TVList tvList) {
-    // in current version, we don't build index for unsequence block, but only update the index usability range.
+    // in current version, we don't build index for unsequence block, but only update the index
+    // usability range.
     if (sequence) {
       router.getIndexProcessorByPath(path).forEach(p -> p.buildIndexForOneSeries(path, tvList));
     } else {
@@ -44,9 +43,7 @@ public class IndexMemTableFlushTask {
     }
   }
 
-  /**
-   * wait for all index processors to finish building indexes.
-   */
+  /** wait for all index processors to finish building indexes. */
   public void endFlush() {
     if (sequence) {
       router.getAllIndexProcessorsAndInfo().forEach(p -> p.processor.endFlushMemTable());

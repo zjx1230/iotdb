@@ -18,22 +18,24 @@
  */
 package org.apache.iotdb.db.index.it;
 
-import static org.apache.iotdb.db.index.common.IndexType.NO_INDEX;
-import static org.junit.Assert.fail;
-
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.Statement;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.index.IndexManager;
 import org.apache.iotdb.db.index.common.math.Randomwalk;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.jdbc.Config;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
+
+import static org.apache.iotdb.db.index.common.IndexType.NO_INDEX;
+import static org.junit.Assert.fail;
 
 public class NoIndexWriteIT {
 
@@ -63,21 +65,20 @@ public class NoIndexWriteIT {
     EnvironmentUtils.envSetUp();
   }
 
-
   @After
   public void tearDown() throws Exception {
     EnvironmentUtils.cleanEnv();
     IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
   }
 
-
   @Test
   public void checkWrite() throws ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
-//    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
-    try (Connection connection = DriverManager.getConnection
-        (Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
-        Statement statement = connection.createStatement();) {
+    //    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
+    try (Connection connection =
+            DriverManager.getConnection(
+                Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
+        Statement statement = connection.createStatement(); ) {
       long start = System.currentTimeMillis();
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupSub));
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
@@ -89,7 +90,8 @@ public class NoIndexWriteIT {
 
       for (int i = 0; i < wholeSize; i++) {
         String wholePath = String.format(directionPattern, i);
-//        System.out.println(String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
+        //        System.out.println(String.format("CREATE TIMESERIES %s WITH
+        // DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
         statement.execute(
             String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
       }
@@ -107,9 +109,15 @@ public class NoIndexWriteIT {
       TVList subInput = Randomwalk.generateRanWalkTVList(subLength);
       long startInsertSub = System.currentTimeMillis();
       for (int i = 0; i < subInput.size(); i++) {
-//        System.out.println(String.format(insertPattern, speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
-        statement.execute(String.format(insertPattern,
-            speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
+        //        System.out.println(String.format(insertPattern, speed1Device, speed1Sensor,
+        // subInput.getTime(i), subInput.getDouble(i)));
+        statement.execute(
+            String.format(
+                insertPattern,
+                speed1Device,
+                speed1Sensor,
+                subInput.getTime(i),
+                subInput.getDouble(i)));
       }
       statement.execute("flush");
       System.out.println("insert finish for subsequence case");
@@ -125,9 +133,15 @@ public class NoIndexWriteIT {
       TVList wholeInput = Randomwalk.generateRanWalkTVList(wholeDim * wholeSize);
       for (int i = 0; i < wholeSize; i++) {
         String device = String.format(directionDevicePattern, i);
-//        System.out.println(String.format(insertPattern, device, directionSensor, wholeInput.getTime(i), wholeInput.getDouble(i)));
-        statement.execute(String.format(insertPattern,
-            device, directionSensor, wholeInput.getTime(i), wholeInput.getDouble(i)));
+        //        System.out.println(String.format(insertPattern, device, directionSensor,
+        // wholeInput.getTime(i), wholeInput.getDouble(i)));
+        statement.execute(
+            String.format(
+                insertPattern,
+                device,
+                directionSensor,
+                wholeInput.getTime(i),
+                wholeInput.getDouble(i)));
       }
       statement.execute("flush");
       long end = System.currentTimeMillis();
@@ -140,10 +154,10 @@ public class NoIndexWriteIT {
           IndexManager.getInstance().getRouter().toString());
       System.out.println("insert finish for subsequence case");
       System.out.println(String.format("create series use %d ms", (startCreateIndex - start)));
-      System.out
-          .println(String.format("create index  use %d ms", (startInsertSub - startCreateIndex)));
-      System.out
-          .println(String.format("insert sub    use %d ms", (startInsertWhole - startInsertSub)));
+      System.out.println(
+          String.format("create index  use %d ms", (startInsertSub - startCreateIndex)));
+      System.out.println(
+          String.format("insert sub    use %d ms", (startInsertWhole - startInsertSub)));
       System.out.println(String.format("insert whole  use %d ms", (end - startInsertWhole)));
 
     } catch (Exception e) {
@@ -151,5 +165,4 @@ public class NoIndexWriteIT {
       fail(e.getMessage());
     }
   }
-
 }

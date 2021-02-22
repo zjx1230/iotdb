@@ -17,13 +17,11 @@
  */
 package org.apache.iotdb.db.index.common.distance;
 
-import static org.apache.iotdb.db.index.common.IndexConstant.L_INFINITY;
-
 import org.apache.iotdb.db.utils.datastructure.TVList;
 
-/**
- * Measure distance between two doubles or two series.
- */
+import static org.apache.iotdb.db.index.common.IndexConstant.L_INFINITY;
+
+/** Measure distance between two doubles or two series. */
 public interface Distance {
 
   double distWithoutSqrt(double a, double b);
@@ -40,18 +38,18 @@ public interface Distance {
 
   int distEarlyAbandon(double[] a, int aOffset, double[] b, int bOffset, int length, double thres);
 
-  int distEarlyAbandonDetail(double[] a, int aOffset, double[] b, int bOffset, int length,
-      double threshold);
+  int distEarlyAbandonDetail(
+      double[] a, int aOffset, double[] b, int bOffset, int length, double threshold);
 
   double getThresholdNoRoot(double threshold);
 
   double getP();
 
-  int distEarlyAbandonDetailNoRoot(double[] a, int aOffset, TVList b, int bOffset, int length,
-      double thresholdPow);
+  int distEarlyAbandonDetailNoRoot(
+      double[] a, int aOffset, TVList b, int bOffset, int length, double thresholdPow);
 
-  int distEarlyAbandonDetailNoRoot(double[] a, int aOffset, double[] b, int bOffset, int length,
-      double thresholdPow);
+  int distEarlyAbandonDetailNoRoot(
+      double[] a, int aOffset, double[] b, int bOffset, int length, double thresholdPow);
 
   static Distance getDistance(String distance) {
     if (L_INFINITY.equals(distance)) {

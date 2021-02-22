@@ -17,15 +17,12 @@
  */
 package org.apache.iotdb.db.index.common.distance;
 
-import static org.apache.iotdb.db.index.common.IndexUtils.getDoubleFromAnyType;
-
 import org.apache.iotdb.db.utils.datastructure.TVList;
 
-/**
- * L∞-norm Euclidean distance
- */
-public class LInfinityNormdouble implements Distance {
+import static org.apache.iotdb.db.index.common.IndexUtils.getDoubleFromAnyType;
 
+/** L∞-norm Euclidean distance */
+public class LInfinityNormdouble implements Distance {
 
   @Override
   public double distWithoutSqrt(double a, double b) {
@@ -37,9 +34,9 @@ public class LInfinityNormdouble implements Distance {
     double max = 0;
     for (int i = 0; i < a.length; i++) {
       double dis = Math.abs(a[i] - b[i]);
-        if (dis > max) {
-            max = dis;
-        }
+      if (dis > max) {
+        max = dis;
+      }
     }
     return max;
   }
@@ -50,9 +47,9 @@ public class LInfinityNormdouble implements Distance {
     double max = 0;
     for (int i = 0; i < length; i++) {
       double dis = Math.abs(a[i + aOffset] - getDoubleFromAnyType(b, i + bOffset));
-        if (dis > max) {
-            max = dis;
-        }
+      if (dis > max) {
+        max = dis;
+      }
     }
     return max;
   }
@@ -73,27 +70,27 @@ public class LInfinityNormdouble implements Distance {
   }
 
   @Override
-  public int distEarlyAbandon(double[] a, int aOffset, double[] b, int bOffset, int length,
-      double threshold) {
+  public int distEarlyAbandon(
+      double[] a, int aOffset, double[] b, int bOffset, int length, double threshold) {
     assert a.length >= aOffset + length && a.length >= bOffset + length;
     for (int i = length - 1; i >= 0; i--) {
       double dis = Math.abs(a[i + aOffset] - b[i + bOffset]);
-        if (dis > threshold) {
-            return i;
-        }
+      if (dis > threshold) {
+        return i;
+      }
     }
     return -1;
   }
 
   @Override
-  public int distEarlyAbandonDetail(double[] a, int aOffset, double[] b, int bOffset, int length,
-      double threshold) {
+  public int distEarlyAbandonDetail(
+      double[] a, int aOffset, double[] b, int bOffset, int length, double threshold) {
     assert a.length >= aOffset + length && a.length >= bOffset + length;
     for (int i = 0; i < length; i++) {
       double dis = Math.abs(a[i + aOffset] - b[i + bOffset]);
-        if (dis > threshold) {
-            return (i + 1);
-        }
+      if (dis > threshold) {
+        return (i + 1);
+      }
     }
     return -length;
   }
@@ -109,14 +106,14 @@ public class LInfinityNormdouble implements Distance {
   }
 
   @Override
-  public int distEarlyAbandonDetailNoRoot(double[] a, int aOffset, TVList b, int bOffset,
-      int length, double thresPow) {
+  public int distEarlyAbandonDetailNoRoot(
+      double[] a, int aOffset, TVList b, int bOffset, int length, double thresPow) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public int distEarlyAbandonDetailNoRoot(double[] a, int aOffset, double[] b, int bOffset,
-      int length, double thresholdPow) {
+  public int distEarlyAbandonDetailNoRoot(
+      double[] a, int aOffset, double[] b, int bOffset, int length, double thresholdPow) {
     return 0;
   }
 
@@ -125,5 +122,3 @@ public class LInfinityNormdouble implements Distance {
     return "LNorm_Inf";
   }
 }
-
-

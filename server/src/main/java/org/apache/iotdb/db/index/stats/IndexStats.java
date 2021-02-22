@@ -23,8 +23,6 @@ package org.apache.iotdb.db.index.stats;
  * functions for monitoring some measures commonly concerned in index research, such as disk access
  * count, cache hit ratio, index pruning ratio, index memory footprint and size, etc.
  *
- * TODO To be completed
+ * <p>TODO To be completed
  */
-public class IndexStats {
-
-}
+public class IndexStats {}

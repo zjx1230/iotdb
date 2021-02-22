@@ -18,32 +18,28 @@
  */
 package org.apache.iotdb.db.index.it;
 
-import static org.apache.iotdb.db.index.IndexTestUtils.funcForm;
-import static org.apache.iotdb.db.index.IndexTestUtils.getArrayRange;
-import static org.apache.iotdb.db.index.common.IndexFunc.ED;
-import static org.apache.iotdb.db.index.common.IndexFunc.SIM_ET;
-import static org.apache.iotdb.db.index.common.IndexFunc.SIM_ST;
-import static org.apache.iotdb.db.index.common.IndexType.ELB_INDEX;
-import static org.junit.Assert.fail;
+import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.index.IndexManager;
+import org.apache.iotdb.db.rescon.TVListAllocator;
+import org.apache.iotdb.db.utils.EnvironmentUtils;
+import org.apache.iotdb.db.utils.datastructure.TVList;
+import org.apache.iotdb.jdbc.Config;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
-import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.exception.metadata.IllegalPathException;
-import org.apache.iotdb.db.index.IndexManager;
-import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.db.rescon.TVListAllocator;
-import org.apache.iotdb.db.utils.EnvironmentUtils;
-import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.jdbc.Config;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+
+import static org.apache.iotdb.db.index.IndexTestUtils.getArrayRange;
+import static org.apache.iotdb.db.index.common.IndexType.ELB_INDEX;
+import static org.junit.Assert.fail;
 
 public class ELBIndexReadIT {
 
@@ -74,7 +70,6 @@ public class ELBIndexReadIT {
     insertSQL();
   }
 
-
   @After
   public void tearDown() throws Exception {
     EnvironmentUtils.cleanEnv();
@@ -84,10 +79,11 @@ public class ELBIndexReadIT {
   private static void insertSQL() throws ClassNotFoundException {
 
     Class.forName(Config.JDBC_DRIVER_NAME);
-//    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
-    try (Connection connection = DriverManager.getConnection
-        (Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
-        Statement statement = connection.createStatement();) {
+    //    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
+    try (Connection connection =
+            DriverManager.getConnection(
+                Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
+        Statement statement = connection.createStatement(); ) {
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupSub));
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
 
@@ -96,7 +92,8 @@ public class ELBIndexReadIT {
 
       for (int i = 0; i < wholeSize; i++) {
         String wholePath = String.format(directionPattern, i);
-//        System.out.println(String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
+        //        System.out.println(String.format("CREATE TIMESERIES %s WITH
+        // DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
         statement.execute(
             String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
       }
@@ -108,37 +105,67 @@ public class ELBIndexReadIT {
         subInput.putDouble(i, i * 10);
       }
       for (int i = 0; i < 20; i++) {
-        statement.execute(String.format(insertPattern,
-            speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
-        System.out.println(String.format(insertPattern,
-            speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
+        statement.execute(
+            String.format(
+                insertPattern,
+                speed1Device,
+                speed1Sensor,
+                subInput.getTime(i),
+                subInput.getDouble(i)));
+        System.out.println(
+            String.format(
+                insertPattern,
+                speed1Device,
+                speed1Sensor,
+                subInput.getTime(i),
+                subInput.getDouble(i)));
       }
       statement.execute("flush");
-//      System.out.println("==========================");
-//      System.out.println(IndexManager.getInstance().getRouter());
+      //      System.out.println("==========================");
+      //      System.out.println(IndexManager.getInstance().getRouter());
 
       for (int i = 25; i < 30; i++) {
-        statement.execute(String.format(insertPattern,
-            speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
-        System.out.println(String.format(insertPattern,
-            speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
+        statement.execute(
+            String.format(
+                insertPattern,
+                speed1Device,
+                speed1Sensor,
+                subInput.getTime(i),
+                subInput.getDouble(i)));
+        System.out.println(
+            String.format(
+                insertPattern,
+                speed1Device,
+                speed1Sensor,
+                subInput.getTime(i),
+                subInput.getDouble(i)));
       }
       statement.execute("flush");
-//      System.out.println("==========================");
-//      System.out.println(IndexManager.getInstance().getRouter());
+      //      System.out.println("==========================");
+      //      System.out.println(IndexManager.getInstance().getRouter());
 
       IndexManager.getInstance().stop();
       IndexManager.getInstance().start();
 
       for (int i = 40; i < subLength; i++) {
-        statement.execute(String.format(insertPattern,
-            speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
-        System.out.println(String.format(insertPattern,
-            speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
+        statement.execute(
+            String.format(
+                insertPattern,
+                speed1Device,
+                speed1Sensor,
+                subInput.getTime(i),
+                subInput.getDouble(i)));
+        System.out.println(
+            String.format(
+                insertPattern,
+                speed1Device,
+                speed1Sensor,
+                subInput.getTime(i),
+                subInput.getDouble(i)));
       }
       statement.execute("flush");
-//      System.out.println("==========================");
-//      System.out.println(IndexManager.getInstance().getRouter());
+      //      System.out.println("==========================");
+      //      System.out.println(IndexManager.getInstance().getRouter());
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -149,28 +176,30 @@ public class ELBIndexReadIT {
   @Test
   public void checkRead() throws ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
-    try (Connection connection = DriverManager.
-        getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
+    try (Connection connection =
+            DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
 
-      String querySQL = "SELECT speed.* FROM root.wind1.azq01 WHERE Speed "
-          + String.format("CONTAIN (%s) WITH TOLERANCE 0 ", getArrayRange(170, 200, 10))
-          + String.format("CONCAT (%s) WITH TOLERANCE 0 ", getArrayRange(250, 300, 10))
-          + String.format("CONCAT (%s) WITH TOLERANCE 0 ", getArrayRange(400, 430, 10));
+      String querySQL =
+          "SELECT speed.* FROM root.wind1.azq01 WHERE Speed "
+              + String.format("CONTAIN (%s) WITH TOLERANCE 0 ", getArrayRange(170, 200, 10))
+              + String.format("CONCAT (%s) WITH TOLERANCE 0 ", getArrayRange(250, 300, 10))
+              + String.format("CONCAT (%s) WITH TOLERANCE 0 ", getArrayRange(400, 430, 10));
       System.out.println(querySQL);
       boolean hasIndex = statement.execute(querySQL);
-      String gt = "Time,root.wind1.azq01.speed.17,\n"
-          + "0,170.0,\n"
-          + "1,180.0,\n"
-          + "2,190.0,\n"
-          + "3,250.0,\n"
-          + "4,260.0,\n"
-          + "5,270.0,\n"
-          + "6,280.0,\n"
-          + "7,290.0,\n"
-          + "8,400.0,\n"
-          + "9,410.0,\n"
-          + "10,420.0,\n";
+      String gt =
+          "Time,root.wind1.azq01.speed.17,\n"
+              + "0,170.0,\n"
+              + "1,180.0,\n"
+              + "2,190.0,\n"
+              + "3,250.0,\n"
+              + "4,260.0,\n"
+              + "5,270.0,\n"
+              + "6,280.0,\n"
+              + "7,290.0,\n"
+              + "8,400.0,\n"
+              + "9,410.0,\n"
+              + "10,420.0,\n";
       Assert.assertTrue(hasIndex);
       try (ResultSet resultSet = statement.getResultSet()) {
         ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
@@ -193,5 +222,4 @@ public class ELBIndexReadIT {
       fail(e.getMessage());
     }
   }
-
 }

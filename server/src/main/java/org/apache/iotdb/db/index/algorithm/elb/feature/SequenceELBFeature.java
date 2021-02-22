@@ -17,8 +17,6 @@
  */
 package org.apache.iotdb.db.index.algorithm.elb.feature;
 
-
-import java.util.Arrays;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.ELBFeature;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.MilesPattern;
 import org.apache.iotdb.db.index.common.distance.Distance;
@@ -26,9 +24,9 @@ import org.apache.iotdb.db.index.common.distance.LInfinityNormdouble;
 import org.apache.iotdb.db.index.common.distance.LNormDouble;
 import org.apache.iotdb.tsfile.utils.Pair;
 
-/**
- * SEQ-ELB
- */
+import java.util.Arrays;
+
+/** SEQ-ELB */
 public class SequenceELBFeature extends ELBFeature {
 
   private final Distance distance;
@@ -40,18 +38,15 @@ public class SequenceELBFeature extends ELBFeature {
     this.distance = distance;
   }
 
-
-  /**
-   * refresh and calculate new SEQ-ELB
-   */
+  /** refresh and calculate new SEQ-ELB */
   @Override
-  public Pair<double[], double[]> calcPatternFeature(MilesPattern pattern, int blockNum,
-      PatternEnvelope envelope) {
+  public Pair<double[], double[]> calcPatternFeature(
+      MilesPattern pattern, int blockNum, PatternEnvelope envelope) {
     checkAndExpandArrays(blockNum);
     int windowBlockSize = (int) Math.floor(((double) pattern.sequenceLen) / blockNum);
 
     for (int i = 1; i < blockNum; i++) {
-      //get the largest tolerances in this pttNode windows
+      // get the largest tolerances in this pttNode windows
       if (sumLowers == null || sumLowers.length < windowBlockSize) {
         sumLowers = new double[windowBlockSize];
         sumValues = new double[windowBlockSize];
@@ -68,7 +63,7 @@ public class SequenceELBFeature extends ELBFeature {
       for (int j = (i - 1) * windowBlockSize + 1; j <= i * windowBlockSize; j++) {
         int end = j + windowBlockSize - 1;
         int startIndex = j - ((i - 1) * windowBlockSize + 1);
-        //get sum of ε^p
+        // get sum of ε^p
         double interval = getEpsilonSum(pattern, distance, j, end, windowBlockSize);
 
         for (int l = j; l <= end; l++) {
@@ -76,7 +71,7 @@ public class SequenceELBFeature extends ELBFeature {
         }
         sumLowers[startIndex] = sumValues[startIndex] - interval;
         sumUppers[startIndex] = sumValues[startIndex] + interval;
-        //update
+        // update
         if (sumUppers[startIndex] > upperLines[i]) {
           upperLines[i] = sumUppers[startIndex];
         }
@@ -101,11 +96,11 @@ public class SequenceELBFeature extends ELBFeature {
    *
    * @param start i.e. ws
    */
-  private static double getEpsilonSum(MilesPattern pattern, Distance distance, int start, int end,
-      int windowBlockSize) {
+  private static double getEpsilonSum(
+      MilesPattern pattern, Distance distance, int start, int end, int windowBlockSize) {
     double p = distance.getP();
     double interval = 0;
-    //Line2~Line3，calculate m and n
+    // Line2~Line3，calculate m and n
     int m;
     int n;
     for (m = 0; m < pattern.subpatternCount; m++) {
@@ -122,16 +117,18 @@ public class SequenceELBFeature extends ELBFeature {
       System.out.println();
     }
     if (distance instanceof LNormDouble) {
-      //Line 4，left
-      double sum = (pattern.maxLeftBorders[m - 1] - pattern.minLeftBorders[m - 1]) *
-          distance.getThresholdNoRoot(pattern.thresholdsArray[m - 1]);
-      //Line 5~7，middle
+      // Line 4，left
+      double sum =
+          (pattern.maxLeftBorders[m - 1] - pattern.minLeftBorders[m - 1])
+              * distance.getThresholdNoRoot(pattern.thresholdsArray[m - 1]);
+      // Line 5~7，middle
       for (int i = pattern.maxLeftBorders[m - 1]; i < pattern.minLeftBorders[n + 1] - 1; i++) {
         sum += distance.getThresholdNoRoot(getAldMax(pattern, i));
       }
-      //Line 8，right
-      sum += (pattern.maxLeftBorders[n + 1] - pattern.minLeftBorders[n + 1]) * distance
-          .getThresholdNoRoot(pattern.thresholdsArray[n]);
+      // Line 8，right
+      sum +=
+          (pattern.maxLeftBorders[n + 1] - pattern.minLeftBorders[n + 1])
+              * distance.getThresholdNoRoot(pattern.thresholdsArray[n]);
       interval = Math.pow(sum / windowBlockSize, 1 / p) * windowBlockSize;
     } else if (distance instanceof LInfinityNormdouble) {
       double maxThreshold = -Double.MAX_VALUE;
@@ -154,11 +151,11 @@ public class SequenceELBFeature extends ELBFeature {
       }
     }
     if (i < pattern.maxLeftBorders[k])
-    //Equation 6 in paper，Line1
+    // Equation 6 in paper，Line1
     {
       return Math.max(pattern.thresholdsArray[k - 1], pattern.thresholdsArray[k]);
     } else
-    //Equation 6 in paper，Line2
+    // Equation 6 in paper，Line2
     {
       return pattern.thresholdsArray[k];
     }

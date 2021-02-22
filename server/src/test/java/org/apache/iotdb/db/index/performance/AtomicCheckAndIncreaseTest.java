@@ -1,4 +1,4 @@
-///*
+/// *
 // * Licensed to the Apache Software Foundation (ASF) under one
 // * or more contributor license agreements.  See the NOTICE file
 // * distributed with this work for additional information
@@ -15,19 +15,19 @@
 // * See the License for the specific language governing permissions and
 // * limitations under the License.
 // */
-//package org.apache.iotdb.db.index.performance;
+// package org.apache.iotdb.db.index.performance;
 //
-//import java.util.Random;
-//import java.util.concurrent.ExecutorService;
-//import java.util.concurrent.Executors;
-//import java.util.concurrent.atomic.AtomicInteger;
-//import org.apache.iotdb.db.index.IndexProcessor;
+// import java.util.Random;
+// import java.util.concurrent.ExecutorService;
+// import java.util.concurrent.Executors;
+// import java.util.concurrent.atomic.AtomicInteger;
+// import org.apache.iotdb.db.index.IndexProcessor;
 //
-///**
+/// **
 // * check the correctness of flushRunTask in {@linkplain IndexProcessor} in parallel
 // *
 // */
-//public class AtomicCheckAndIncreaseTest {
+// public class AtomicCheckAndIncreaseTest {
 //
 //  final Object waitingSymbol = new Object();
 //  int memoryThreshold;
@@ -54,12 +54,14 @@
 //          }
 //          System.out.println(String
 //              .format(
-//                  "Flush Thread consume %d, total consume %d, from %d to %d < threshold, wait all and keep minus",
+//                  "Flush Thread consume %d, total consume %d, from %d to %d < threshold, wait all
+// and keep minus",
 //                  delta, totalConsum, curMem, after));
 //        } else {
 //          System.out.println(String
 //              .format(
-//                  "Flush Thread consume %d, total consume %d, from %d to %d > threshold, keep minus",
+//                  "Flush Thread consume %d, total consume %d, from %d to %d > threshold, keep
+// minus",
 //                  delta, totalConsum, curMem, after));
 //        }
 //      }
@@ -117,7 +119,8 @@
 //        int toAdd = target - current >= 10 ? r.nextInt(10) : target - current;
 //        if (aaa.syncAllocateSize(toAdd)) {
 //          System.out.println(String
-//              .format("Thread %d increase %d, from %d to %d", id, toAdd, current, current + toAdd));
+//              .format("Thread %d increase %d, from %d to %d", id, toAdd, current, current +
+// toAdd));
 //          current += toAdd;
 //        } else {
 //          System.out.println(String.format("Thread %d error break, current: %d", id, current));
@@ -138,4 +141,4 @@
 //      executor.submit(inc);
 //    }
 //  }
-//}
+// }

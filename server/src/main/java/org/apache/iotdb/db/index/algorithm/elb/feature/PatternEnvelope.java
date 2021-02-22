@@ -17,9 +17,9 @@
  */
 package org.apache.iotdb.db.index.algorithm.elb.feature;
 
+import org.apache.iotdb.db.index.algorithm.elb.pattern.MilesPattern;
 
 import java.util.Arrays;
-import org.apache.iotdb.db.index.algorithm.elb.pattern.MilesPattern;
 
 /**
  * Calculate the upper and lower envelope. Actually, it's only used by {@linkplain
@@ -46,7 +46,7 @@ public class PatternEnvelope {
   private void refreshPattern(MilesPattern pattern) {
     int i;
     double tol;
-    //i, i.e. k in the paper.
+    // i, i.e. k in the paper.
     // region of variable border，[s_k,e_k)
     for (i = 0; i < pattern.subpatternCount; i++) {
       for (int j = pattern.minLeftBorders[i]; j < pattern.maxLeftBorders[i]; j++) {
@@ -70,9 +70,9 @@ public class PatternEnvelope {
   }
 
   private double mtt(MilesPattern pattern, int k) {
-    return Math.pow((double) pattern.maxLeftBorders[k + 1] - pattern.minLeftBorders[k],
-        1 / pattern.distanceMetric.getP())
+    return Math.pow(
+            (double) pattern.maxLeftBorders[k + 1] - pattern.minLeftBorders[k],
+            1 / pattern.distanceMetric.getP())
         * pattern.thresholdsArray[k];
   }
-
 }

@@ -18,9 +18,6 @@
  */
 package org.apache.iotdb;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 import org.apache.iotdb.db.index.common.math.Randomwalk;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.rpc.IoTDBConnectionException;
@@ -29,6 +26,10 @@ import org.apache.iotdb.session.pool.SessionPool;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class IndexCompareExperiment {
 
@@ -40,7 +41,6 @@ public class IndexCompareExperiment {
   private static final int MEASUREMENT_NUM = 50000;
   private static final int TOTAL_POINTS = 100_000_000;
 
-
   public static void main(String[] args) throws InterruptedException {
     totalPoints = new AtomicLong();
     list = Randomwalk.generateRanWalk(TOTAL_POINTS);
@@ -51,12 +51,15 @@ public class IndexCompareExperiment {
       for (int j = 0; j < MEASUREMENT_NUM; j++) {
         try {
           // create timeseries
-          sessionPool.createTimeseries("root.sg1.d" + i + ".s" + j, TSDataType.DOUBLE,
-              TSEncoding.GORILLA, CompressionType.SNAPPY);
+          sessionPool.createTimeseries(
+              "root.sg1.d" + i + ".s" + j,
+              TSDataType.DOUBLE,
+              TSEncoding.GORILLA,
+              CompressionType.SNAPPY);
 
           // create index
-          sessionPool.executeNonQueryStatement("CREATE INDEX ON root.sg1.d" + i + ".s" + j
-              + " WITH INDEX=ELB_INDEX, BLOCK_SIZE=5");
+          sessionPool.executeNonQueryStatement(
+              "CREATE INDEX ON root.sg1.d" + i + ".s" + j + " WITH INDEX=ELB_INDEX, BLOCK_SIZE=5");
         } catch (IoTDBConnectionException | StatementExecutionException e) {
           e.printStackTrace();
         }
@@ -112,8 +115,12 @@ public class IndexCompareExperiment {
         totalPoints.getAndAdd(MEASUREMENT_NUM);
 
         System.out.println(
-            Thread.currentThread().getName() + " write " + MEASUREMENT_NUM + " cost: "
-                + (System.nanoTime() - start) / 1000_000 + "ms");
+            Thread.currentThread().getName()
+                + " write "
+                + MEASUREMENT_NUM
+                + " cost: "
+                + (System.nanoTime() - start) / 1000_000
+                + "ms");
       }
     }
   }

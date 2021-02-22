@@ -17,26 +17,22 @@
  */
 package org.apache.iotdb.db.index.algorithm.elb.pattern;
 
-import java.util.Arrays;
 import org.apache.iotdb.db.index.algorithm.elb.feature.PatternEnvelope;
-import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.tsfile.utils.Pair;
 
-/**
- * Pattern ELB feature.
- */
+import java.util.Arrays;
+
+/** Pattern ELB feature. */
 public abstract class ELBFeature {
 
-  /**
-   * upper and lower bounds without calculating the threshold
-   */
+  /** upper and lower bounds without calculating the threshold */
   protected double[] actualUppers;
+
   protected double[] actualLowers;
 
-  /**
-   * upper and lower bounds considering the threshold. They are what we use in query.
-   */
+  /** upper and lower bounds considering the threshold. They are what we use in query. */
   protected double[] upperLines;
+
   protected double[] lowerLines;
 
   public boolean contains(double value, int i) {
@@ -58,14 +54,12 @@ public abstract class ELBFeature {
 
   /**
    * calculate pattern block features.
+   *
    * @param pattern the pattern
    * @param blockNum specified block number
    * @param envelope calculated envelope
    * @return left: upper bounds, right: lower bounds
    */
-  public abstract Pair<double[], double[]> calcPatternFeature(MilesPattern pattern, int blockNum,
-      PatternEnvelope envelope);
-
-
-
+  public abstract Pair<double[], double[]> calcPatternFeature(
+      MilesPattern pattern, int blockNum, PatternEnvelope envelope);
 }

@@ -17,5 +17,4 @@ public interface IIndexRefinePhaseOptimize {
       return new NoRefinePhaseOptimizer();
     }
   }
-
 }

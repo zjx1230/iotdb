@@ -17,10 +17,6 @@
  */
 package org.apache.iotdb.db.index.preprocess;
 
-import static org.apache.iotdb.db.index.common.IndexUtils.getDataTypeSize;
-
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
@@ -28,14 +24,19 @@ import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.apache.iotdb.db.index.common.IndexUtils.getDataTypeSize;
+
 /**
- * In TIME_FIXED, the sliding window always has a fixed time range.  However, since the time series
+ * In TIME_FIXED, the sliding window always has a fixed time range. However, since the time series
  * may be frequency-variable, it’s not fixed for the distribution and number of real data points in
  * each sliding window. For indexes processing data with the same dimension, they need to calculate
  * L2_aligned_sequence, whose dimension is specified by the input parameter {@code alignedDim}. Up
  * to now, we adopt the nearest-point alignment rule.
  *
- * TIME_FIXED preprocessor need set {@code baseTime}. For arbitrary window, the startTime is
+ * <p>TIME_FIXED preprocessor need set {@code baseTime}. For arbitrary window, the startTime is
  * divisible by {@code timeAnchor}
  */
 public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
@@ -45,16 +46,14 @@ public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
    * timeAnchor on {@code slideStep}
    */
   private final long timeAnchor;
+
   protected final boolean storeIdentifier;
   protected final boolean storeAligned;
-  /**
-   * The dimension of the aligned subsequence. -1 means not aligned.
-   */
+  /** The dimension of the aligned subsequence. -1 means not aligned. */
   protected final int alignedDim;
-  /**
-   * how many subsequences we have pre-processed
-   */
+  /** how many subsequences we have pre-processed */
   private int sliceNum;
+
   private int scanIdx;
   protected PrimitiveList identifierList;
   protected long currentStartTime;
@@ -69,6 +68,7 @@ public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
    * features, we should carefully subtract {@code lastFlushIdx} from {@code currentProcessedIdx}.
    */
   protected int flushedOffset;
+
   private long chunkStartTime = -1;
   private long chunkEndTime = -1;
   private long processedStartTime;
@@ -83,8 +83,15 @@ public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
    * @param storeIdentifier true if we need to store all identifiers. The cost will be counted.
    * @param storeAligned true if we need to store all aligned sequences. The cost will be counted.
    */
-  public TimeFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
-      int alignedDim, long timeAnchor, boolean storeIdentifier, boolean storeAligned, boolean inQueryMode) {
+  public TimeFixedFeatureExtractor(
+      TSDataType tsDataType,
+      int windowRange,
+      int slideStep,
+      int alignedDim,
+      long timeAnchor,
+      boolean storeIdentifier,
+      boolean storeAligned,
+      boolean inQueryMode) {
     super(tsDataType, WindowType.COUNT_FIXED, windowRange, slideStep, inQueryMode);
     this.storeIdentifier = storeIdentifier;
     this.storeAligned = storeAligned;
@@ -92,12 +99,27 @@ public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
     this.timeAnchor = timeAnchor;
   }
 
-  public TimeFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
-      int alignedDim, long timeAnchor, boolean storeIdentifier, boolean storeAligned) {
-    this(tsDataType, windowRange, slideStep, alignedDim, timeAnchor, storeIdentifier, storeAligned, false);
+  public TimeFixedFeatureExtractor(
+      TSDataType tsDataType,
+      int windowRange,
+      int slideStep,
+      int alignedDim,
+      long timeAnchor,
+      boolean storeIdentifier,
+      boolean storeAligned) {
+    this(
+        tsDataType,
+        windowRange,
+        slideStep,
+        alignedDim,
+        timeAnchor,
+        storeIdentifier,
+        storeAligned,
+        false);
   }
-  public TimeFixedFeatureExtractor(TSDataType tsDataType, int windowRange, int alignedDim,
-      int slideStep, long timeAnchor) {
+
+  public TimeFixedFeatureExtractor(
+      TSDataType tsDataType, int windowRange, int alignedDim, int slideStep, long timeAnchor) {
     this(tsDataType, windowRange, slideStep, alignedDim, timeAnchor, true, true, false);
   }
 
@@ -122,12 +144,12 @@ public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
     // init the L2 aligned sequence
     if (alignedDim != -1 && storeAligned) {
       /*
-       We assume that in most cases, since multiple indexes are built in parallel, the building of
-       each index will be divided into several parts. If the memory is enough, ArrayList only needs
-       to be expanded once.
-       */
-      int estimateTotal = (int) (
-          (srcData.getLastTime() - startTime + 1 - this.windowRange) / slideStep + 1);
+      We assume that in most cases, since multiple indexes are built in parallel, the building of
+      each index will be divided into several parts. If the memory is enough, ArrayList only needs
+      to be expanded once.
+      */
+      int estimateTotal =
+          (int) ((srcData.getLastTime() - startTime + 1 - this.windowRange) / slideStep + 1);
       this.alignedList = new ArrayList<>(estimateTotal / 2 + 1);
     } else {
       this.alignedList = new ArrayList<>(1);
@@ -167,10 +189,10 @@ public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
   }
 
   protected boolean isDataInRange(int idx, long startTime, long endTime) {
-    return idx < srcData.size() && srcData.getTime(idx) >= startTime
+    return idx < srcData.size()
+        && srcData.getTime(idx) >= startTime
         && srcData.getTime(idx) <= endTime;
   }
-
 
   @Override
   public void processNext() {
@@ -182,7 +204,8 @@ public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
     chunkEndTime = currentEndTime;
     // calculate the newest aligned sequence
 
-//    System.out.println(String.format("write PAA: %d - %d, %d", currentStartTime, currentEndTime, alignedDim));
+    //    System.out.println(String.format("write PAA: %d - %d, %d", currentStartTime,
+    // currentEndTime, alignedDim));
     if (storeIdentifier) {
       // it's a naive identifier, we can refine it in the future.
       identifierList.putLong(currentStartTime);
@@ -218,8 +241,8 @@ public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
   }
 
   /**
-   * Find the idx of the minimum timestamp greater than or equal to {@code targetTimestamp}.  If
-   * not, return the idx of the timestamp closest to {@code targetTimestamp}.
+   * Find the idx of the minimum timestamp greater than or equal to {@code targetTimestamp}. If not,
+   * return the idx of the timestamp closest to {@code targetTimestamp}.
    *
    * @param curIdx the idx to start scanning
    * @param targetTimestamp the target
@@ -274,36 +297,36 @@ public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
     return seq;
   }
 
-//  @Override
-//  public List<Identifier> getLatestN_L1_Identifiers(int latestN) {
-//    latestN = Math.min(getCurrentChunkSize(), latestN);
-//    List<Identifier> res = new ArrayList<>(latestN);
-//    if (latestN == 0) {
-//      return res;
-//    }
-//    if (storeIdentifier) {
-//      int startIdx = sliceNum - latestN;
-//      for (int i = startIdx; i < sliceNum; i++) {
-//        int actualIdx = i - flushedOffset;
-//        Identifier identifier = new Identifier(
-//            identifierList.getLong(actualIdx * 3),
-//            identifierList.getLong(actualIdx * 3 + 1),
-//            (int) identifierList.getLong(actualIdx * 3 + 2));
-//        res.add(identifier);
-//      }
-//      return res;
-//    }
-//    long startTimePastN = currentStartTime - (latestN - 1) * slideStep;
-//    while (startTimePastN <= currentStartTime) {
-//      int startTimePastNIdx = locatedIdxToTimestamp(0, startTimePastN);
-//      int pointSize = locatedIdxToTimestamp(startTimePastNIdx, startTimePastN + windowRange)
-//          - startTimePastNIdx;
-//      res.add(new Identifier(startTimePastN, startTimePastN + windowRange - 1,
-//          pointSize));
-//      startTimePastN += slideStep;
-//    }
-//    return res;
-//  }
+  //  @Override
+  //  public List<Identifier> getLatestN_L1_Identifiers(int latestN) {
+  //    latestN = Math.min(getCurrentChunkSize(), latestN);
+  //    List<Identifier> res = new ArrayList<>(latestN);
+  //    if (latestN == 0) {
+  //      return res;
+  //    }
+  //    if (storeIdentifier) {
+  //      int startIdx = sliceNum - latestN;
+  //      for (int i = startIdx; i < sliceNum; i++) {
+  //        int actualIdx = i - flushedOffset;
+  //        Identifier identifier = new Identifier(
+  //            identifierList.getLong(actualIdx * 3),
+  //            identifierList.getLong(actualIdx * 3 + 1),
+  //            (int) identifierList.getLong(actualIdx * 3 + 2));
+  //        res.add(identifier);
+  //      }
+  //      return res;
+  //    }
+  //    long startTimePastN = currentStartTime - (latestN - 1) * slideStep;
+  //    while (startTimePastN <= currentStartTime) {
+  //      int startTimePastNIdx = locatedIdxToTimestamp(0, startTimePastN);
+  //      int pointSize = locatedIdxToTimestamp(startTimePastNIdx, startTimePastN + windowRange)
+  //          - startTimePastNIdx;
+  //      res.add(new Identifier(startTimePastN, startTimePastN + windowRange - 1,
+  //          pointSize));
+  //      startTimePastN += slideStep;
+  //    }
+  //    return res;
+  //  }
 
   @Override
   public List<Object> getLatestN_L2_AlignedSequences(int latestN) {
@@ -339,7 +362,6 @@ public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
   public long getChunkEndTime() {
     return chunkEndTime;
   }
-
 
   @Override
   public long clear() {
@@ -381,5 +403,4 @@ public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
     }
     return next;
   }
-
 }

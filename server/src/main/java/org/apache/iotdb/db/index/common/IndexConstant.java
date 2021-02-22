@@ -22,7 +22,6 @@ public class IndexConstant {
   // SQL show
   public static final String ID = "ID";
 
-
   public static final String ROUTER_DIR = "router";
   public static final String META_DIR_NAME = "meta";
   public static final String INDEX_DATA_DIR_NAME = "index_data";
@@ -32,7 +31,6 @@ public class IndexConstant {
   public static final String INDEXING_SUFFIX = ".indexing";
   public static final String INDEXED_SUFFIX = ".index";
   public static final int MAX_RETURN_SET = 5;
-
 
   // whole matching
   public static final int NON_SET_TOP_K = -1;
@@ -68,7 +66,7 @@ public class IndexConstant {
   // Distance
   public static final String DISTANCE = "DISTANCE";
   public static final String L_INFINITY = "L_INFINITY";
-//  public static final String DEFAULT_DISTANCE = "L_INFINITY";
+  //  public static final String DEFAULT_DISTANCE = "L_INFINITY";
   public static final String DEFAULT_DISTANCE = "2";
 
   // ELB Type
@@ -78,7 +76,7 @@ public class IndexConstant {
   public static final String DEFAULT_ELB_TYPE = "SEQ";
   public static final int DEFAULT_BLOCK_SIZE = 20;
 
-  //ELB: calc param
+  // ELB: calc param
   public static final String BLOCK_SIZE = "BLOCK_SIZE";
   public static final String ELB_CALC_PARAM = "ELB_CALC_PARAM";
   public static final String DEFAULT_ELB_CALC_PARAM = "SINGLE";
@@ -89,6 +87,5 @@ public class IndexConstant {
 
   public static final String MISSING_PARAM_ERROR_MESSAGE = "missing parameter: %s";
 
-  private IndexConstant() {
-  }
+  private IndexConstant() {}
 }

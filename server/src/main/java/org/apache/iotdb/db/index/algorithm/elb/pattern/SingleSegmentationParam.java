@@ -17,9 +17,9 @@
  */
 package org.apache.iotdb.db.index.algorithm.elb.pattern;
 
-import static org.apache.iotdb.db.index.common.IndexUtils.getValueRange;
-
 import org.apache.iotdb.db.utils.datastructure.TVList;
+
+import static org.apache.iotdb.db.index.common.IndexUtils.getValueRange;
 
 /**
  * It's the special and simplest case where a complex pattern contains only one subpattern. We only
@@ -28,14 +28,11 @@ import org.apache.iotdb.db.utils.datastructure.TVList;
 public class SingleSegmentationParam implements CalcParam {
 
   private final double[] thresholdsArray;
-  /**
-   * -1 means Ratio mode
-   */
+  /** -1 means Ratio mode */
   private double thresholdBase;
-  /**
-   * -1 means Absolute mode
-   */
+  /** -1 means Absolute mode */
   private double thresholdRatio;
+
   private final Object[] res;
 
   /**
@@ -52,16 +49,16 @@ public class SingleSegmentationParam implements CalcParam {
     this.res = new Object[4];
     int subpatternCount = 1;
     thresholdsArray = new double[subpatternCount];
-    int[] minLeftBorders = new int[]{0, windowRange};
-    int[] maxLeftBorders = new int[]{0, windowRange};
+    int[] minLeftBorders = new int[] {0, windowRange};
+    int[] maxLeftBorders = new int[] {0, windowRange};
     res[0] = subpatternCount;
     res[1] = thresholdsArray;
     res[2] = minLeftBorders;
     res[3] = maxLeftBorders;
   }
 
-  public SingleSegmentationParam createInstanceByAbsoluteThreshold(float threshold,
-      int windowRange) {
+  public SingleSegmentationParam createInstanceByAbsoluteThreshold(
+      float threshold, int windowRange) {
     return new SingleSegmentationParam(threshold, -1, windowRange);
   }
 
@@ -69,9 +66,7 @@ public class SingleSegmentationParam implements CalcParam {
     return new SingleSegmentationParam(-1, thresholdRatio, windowRange);
   }
 
-  /**
-   * In SinglePattern, only threshold will be modified. We reuse the Array as much as possible.
-   */
+  /** In SinglePattern, only threshold will be modified. We reuse the Array as much as possible. */
   @Override
   public Object[] calculateParam(TVList tvList, int offset, int length) {
 
@@ -82,5 +77,4 @@ public class SingleSegmentationParam implements CalcParam {
     }
     return res;
   }
-
 }

@@ -17,14 +17,13 @@
  */
 package org.apache.iotdb.db.index.common;
 
-import java.util.Objects;
 import java.util.function.Function;
 
 /**
  * Represents a function that accepts three arguments and produces a result.
  *
- * <p>This is a <a href="package-summary.html">functional interface</a>
- * whose functional method is {@link #apply(Object, Object, Object)}.
+ * <p>This is a <a href="package-summary.html">functional interface</a> whose functional method is
+ * {@link #apply(Object, Object, Object)}.
  *
  * @param <A> the type of the first argument to the function
  * @param <B> the type of the second argument to the function
@@ -46,4 +45,3 @@ public interface TriFunction<A, B, C, R> {
    */
   R apply(A a, B b, C c);
 }
-

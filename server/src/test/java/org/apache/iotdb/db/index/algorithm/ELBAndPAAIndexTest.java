@@ -1,4 +1,4 @@
-///*
+/// *
 // * Licensed to the Apache Software Foundation (ASF) under one
 // * or more contributor license agreements.  See the NOTICE file
 // * distributed with this work for additional information
@@ -16,53 +16,53 @@
 // * specific language governing permissions and limitations
 // * under the License.
 // */
-//package org.apache.iotdb.db.index.algorithm;
+// package org.apache.iotdb.db.index.algorithm;
 //
-//import static org.apache.iotdb.db.index.IndexTestUtils.deserializeIndexChunk;
-//import static org.apache.iotdb.db.index.common.IndexConstant.DISTANCE;
-//import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE;
-//import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE_ELE;
-//import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_SLIDE_STEP;
-//import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
-//import static org.apache.iotdb.db.index.common.IndexConstant.L_INFINITY;
-//import static org.apache.iotdb.db.index.common.IndexType.ELB;
-//import static org.apache.iotdb.db.index.common.IndexType.RTREE_PAA;
+// import static org.apache.iotdb.db.index.IndexTestUtils.deserializeIndexChunk;
+// import static org.apache.iotdb.db.index.common.IndexConstant.DISTANCE;
+// import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE;
+// import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE_ELE;
+// import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_SLIDE_STEP;
+// import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
+// import static org.apache.iotdb.db.index.common.IndexConstant.L_INFINITY;
+// import static org.apache.iotdb.db.index.common.IndexType.ELB;
+// import static org.apache.iotdb.db.index.common.IndexType.RTREE_PAA;
 //
-//import java.io.IOException;
-//import java.nio.ByteBuffer;
-//import java.util.ArrayList;
-//import java.util.Collections;
-//import java.util.HashMap;
-//import java.util.List;
-//import java.util.Map;
-//import java.util.concurrent.ExecutionException;
-//import org.apache.iotdb.db.conf.IoTDBDescriptor;
-//import org.apache.iotdb.db.exception.metadata.MetadataException;
-//import org.apache.iotdb.db.index.IndexProcessor;
-//import org.apache.iotdb.db.index.IndexManager;
-//import org.apache.iotdb.db.index.IndexTestUtils;
-//import org.apache.iotdb.db.index.IndexTestUtils.Validation;
-//import org.apache.iotdb.db.index.common.IndexInfo;
-//import org.apache.iotdb.db.index.common.IndexType;
-//import org.apache.iotdb.db.index.io.IndexChunkMeta;
-//import org.apache.iotdb.db.index.io.IndexIOReader;
-//import org.apache.iotdb.db.metadata.MManager;
-//import org.apache.iotdb.db.metadata.PartialPath;
-//import org.apache.iotdb.db.rescon.TVListAllocator;
-//import org.apache.iotdb.db.utils.EnvironmentUtils;
-//import org.apache.iotdb.db.utils.datastructure.TVList;
-//import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
-//import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-//import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-//import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
-//import org.apache.iotdb.tsfile.read.common.Path;
-//import org.apache.iotdb.tsfile.utils.Pair;
-//import org.junit.After;
-//import org.junit.Assert;
-//import org.junit.Before;
-//import org.junit.Test;
+// import java.io.IOException;
+// import java.nio.ByteBuffer;
+// import java.util.ArrayList;
+// import java.util.Collections;
+// import java.util.HashMap;
+// import java.util.List;
+// import java.util.Map;
+// import java.util.concurrent.ExecutionException;
+// import org.apache.iotdb.db.conf.IoTDBDescriptor;
+// import org.apache.iotdb.db.exception.metadata.MetadataException;
+// import org.apache.iotdb.db.index.IndexProcessor;
+// import org.apache.iotdb.db.index.IndexManager;
+// import org.apache.iotdb.db.index.IndexTestUtils;
+// import org.apache.iotdb.db.index.IndexTestUtils.Validation;
+// import org.apache.iotdb.db.index.common.IndexInfo;
+// import org.apache.iotdb.db.index.common.IndexType;
+// import org.apache.iotdb.db.index.io.IndexChunkMeta;
+// import org.apache.iotdb.db.index.io.IndexIOReader;
+// import org.apache.iotdb.db.metadata.MManager;
+// import org.apache.iotdb.db.metadata.PartialPath;
+// import org.apache.iotdb.db.rescon.TVListAllocator;
+// import org.apache.iotdb.db.utils.EnvironmentUtils;
+// import org.apache.iotdb.db.utils.datastructure.TVList;
+// import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
+// import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+// import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+// import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
+// import org.apache.iotdb.tsfile.read.common.Path;
+// import org.apache.iotdb.tsfile.utils.Pair;
+// import org.junit.After;
+// import org.junit.Assert;
+// import org.junit.Before;
+// import org.junit.Test;
 //
-//public class ELBAndPAAIndexTest {
+// public class ELBAndPAAIndexTest {
 //
 //  private static final String storageGroup = "root.v";
 //  private static final String p1 = "root.v.p1";
@@ -135,7 +135,8 @@
 //        + "(0,[0-18,10])(1,[20-38,10])(2,[40-58,10])(3,[60-78,10])"
 //        + "(4,[80-98,10])(5,[100-118,10])(6,[120-138,10])(7,[140-158,10])"
 //        + "(8,[160-178,10])(9,[180-198,10])";
-//    String gtStrP1PAA = "(0,[0-9,5])(1,[10-19,5])(2,[20-29,5])(3,[30-39,5])(4,[40-49,5])(5,[50-59,5])(6,[60-69,5])(7,[70-79,5])(8,[80-89,5])(9,[90-99,5])(10,[100-109,5])(11,[110-119,5])(12,[120-129,5])(13,[130-139,5])(14,[140-149,5])(15,[150-159,5])(16,[160-169,5])(17,[170-179,5])(18,[180-189,5])";
+//    String gtStrP1PAA =
+// "(0,[0-9,5])(1,[10-19,5])(2,[20-29,5])(3,[30-39,5])(4,[40-49,5])(5,[50-59,5])(6,[60-69,5])(7,[70-79,5])(8,[80-89,5])(9,[90-99,5])(10,[100-109,5])(11,[110-119,5])(12,[120-129,5])(13,[130-139,5])(14,[140-149,5])(15,[150-159,5])(16,[160-169,5])(17,[170-179,5])(18,[180-189,5])";
 //    String gtStrP2ELB = ""
 //        + "(0,[0-27,10])(1,[30-57,10])(2,[60-87,10])(3,[90-117,10])"
 //        + "(4,[120-147,10])(5,[150-177,10])(6,[180-207,10])(7,[210-237,10])"
@@ -190,4 +191,4 @@
 //    }
 //  }
 //
-//}
+// }

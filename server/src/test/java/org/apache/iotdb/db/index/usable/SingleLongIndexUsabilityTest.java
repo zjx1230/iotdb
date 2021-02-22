@@ -1,13 +1,15 @@
 package org.apache.iotdb.db.index.usable;
 
+import org.apache.iotdb.tsfile.read.filter.basic.Filter;
+
+import org.junit.Assert;
+import org.junit.Test;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
-import org.apache.iotdb.tsfile.read.filter.basic.Filter;
-import org.junit.Assert;
-import org.junit.Test;
 
 public class SingleLongIndexUsabilityTest {
 
@@ -114,7 +116,8 @@ public class SingleLongIndexUsabilityTest {
     System.out.println(usability);
     Assert.assertEquals("size:4,[MIN,60],[80,100],[110,150],[260,MAX],", usability.toString());
 
-    // an isolate range but the segmentation number reaches the upper bound, thus merge the range with a closer neighbor.
+    // an isolate range but the segmentation number reaches the upper bound, thus merge the range
+    // with a closer neighbor.
     usability.minusUsableRange(null, 200, 220);
     System.out.println(usability);
     Assert.assertEquals("size:4,[MIN,60],[80,100],[110,150],[200,MAX],", usability.toString());
@@ -158,7 +161,6 @@ public class SingleLongIndexUsabilityTest {
     Assert.assertEquals(
         "[(time >= -9223372036854775808 && time <= 30), (time >= 40 && time <= 60), (time >= 90 && time <= 9223372036854775807)]",
         res.toString());
-
   }
 
   @Test
@@ -171,5 +173,4 @@ public class SingleLongIndexUsabilityTest {
     Assert.assertTrue(usability.hasUnusableRange());
     System.out.println(usability.toString());
   }
-
 }

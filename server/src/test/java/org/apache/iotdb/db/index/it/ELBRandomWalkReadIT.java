@@ -18,24 +18,25 @@
  */
 package org.apache.iotdb.db.index.it;
 
-import static org.apache.iotdb.db.index.IndexTestUtils.getArrayRange;
-import static org.apache.iotdb.db.index.common.IndexType.ELB_INDEX;
-import static org.junit.Assert.fail;
+import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.index.common.math.Randomwalk;
+import org.apache.iotdb.db.utils.EnvironmentUtils;
+import org.apache.iotdb.db.utils.datastructure.TVList;
+import org.apache.iotdb.jdbc.Config;
+
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
-import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.index.common.math.Randomwalk;
-import org.apache.iotdb.db.utils.EnvironmentUtils;
-import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.jdbc.Config;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+
+import static org.apache.iotdb.db.index.common.IndexType.ELB_INDEX;
+import static org.junit.Assert.fail;
 
 public class ELBRandomWalkReadIT {
 
@@ -66,7 +67,6 @@ public class ELBRandomWalkReadIT {
     insertSQL();
   }
 
-
   @After
   public void tearDown() throws Exception {
     EnvironmentUtils.cleanEnv();
@@ -76,10 +76,11 @@ public class ELBRandomWalkReadIT {
   private static void insertSQL() throws ClassNotFoundException {
 
     Class.forName(Config.JDBC_DRIVER_NAME);
-//    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
-    try (Connection connection = DriverManager.getConnection
-        (Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
-        Statement statement = connection.createStatement();) {
+    //    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
+    try (Connection connection =
+            DriverManager.getConnection(
+                Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
+        Statement statement = connection.createStatement(); ) {
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupSub));
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
 
@@ -92,9 +93,15 @@ public class ELBRandomWalkReadIT {
       TVList subInput = Randomwalk.generateRanWalkTVList(200);
       long startInsertSub = System.currentTimeMillis();
       for (int i = 0; i < subInput.size(); i++) {
-//        System.out.println(String.format(insertPattern, speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
-        statement.execute(String.format(insertPattern,
-            speed1Device, speed1Sensor, subInput.getTime(i), subInput.getDouble(i)));
+        //        System.out.println(String.format(insertPattern, speed1Device, speed1Sensor,
+        // subInput.getTime(i), subInput.getDouble(i)));
+        statement.execute(
+            String.format(
+                insertPattern,
+                speed1Device,
+                speed1Sensor,
+                subInput.getTime(i),
+                subInput.getDouble(i)));
       }
       statement.execute("flush");
 
@@ -104,7 +111,6 @@ public class ELBRandomWalkReadIT {
     }
   }
 
-
   private String getSubPa(TVList tvList, int offset, int length) {
     StringBuilder sb = new StringBuilder(String.format("%.3f", tvList.getDouble(offset)));
     for (int i = 1; i < length; i++) {
@@ -113,21 +119,22 @@ public class ELBRandomWalkReadIT {
     return sb.toString();
   }
 
-
   @Test
   public void checkRead() throws ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
-    try (Connection connection = DriverManager.
-        getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
+    try (Connection connection =
+            DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
 
       TVList subInput = Randomwalk.generateRanWalkTVList(200);
       int offset = 0;
-      String querySQL = "SELECT speed.* FROM root.wind1.azq01 WHERE Speed "
-          + String.format("CONTAIN (%s) WITH TOLERANCE 0.6 ", getSubPa(subInput, offset, 10))
-          + String.format("CONCAT (%s) WITH TOLERANCE 1.3 ", getSubPa(subInput, offset + 10, 30))
-          + String
-          .format("CONCAT (%s) WITH TOLERANCE 0.9", getSubPa(subInput, offset + 40, 10));
+      String querySQL =
+          "SELECT speed.* FROM root.wind1.azq01 WHERE Speed "
+              + String.format("CONTAIN (%s) WITH TOLERANCE 0.6 ", getSubPa(subInput, offset, 10))
+              + String.format(
+                  "CONCAT (%s) WITH TOLERANCE 1.3 ", getSubPa(subInput, offset + 10, 30))
+              + String.format(
+                  "CONCAT (%s) WITH TOLERANCE 0.9", getSubPa(subInput, offset + 40, 10));
       System.out.println(querySQL);
       boolean hasIndex = statement.execute(querySQL);
       String[] gt = {"0,0,50210,0,50219,0,0.0"};
@@ -141,7 +148,7 @@ public class ELBRandomWalkReadIT {
             sb.append(resultSet.getString(i)).append(",");
           }
           System.out.println(sb);
-//          Assert.assertEquals(gt[cnt], builder.toString());
+          //          Assert.assertEquals(gt[cnt], builder.toString());
           cnt++;
         }
       }
@@ -150,6 +157,4 @@ public class ELBRandomWalkReadIT {
       fail(e.getMessage());
     }
   }
-
-
 }

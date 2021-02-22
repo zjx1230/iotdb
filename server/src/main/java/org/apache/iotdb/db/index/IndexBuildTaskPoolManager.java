@@ -22,6 +22,7 @@ import org.apache.iotdb.db.concurrent.IoTDBThreadPoolFactory;
 import org.apache.iotdb.db.concurrent.ThreadName;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.flush.pool.AbstractPoolManager;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,8 +53,8 @@ public class IndexBuildTaskPoolManager extends AbstractPoolManager {
   public void start() {
     if (pool == null) {
       int threadCnt = IoTDBDescriptor.getInstance().getConfig().getConcurrentIndexBuildThread();
-      pool = IoTDBThreadPoolFactory
-              .newFixedThreadPool(threadCnt, ThreadName.INDEX_SERVICE.getName());
+      pool =
+          IoTDBThreadPoolFactory.newFixedThreadPool(threadCnt, ThreadName.INDEX_SERVICE.getName());
     }
   }
 
@@ -68,7 +69,7 @@ public class IndexBuildTaskPoolManager extends AbstractPoolManager {
   private static class InstanceHolder {
 
     private InstanceHolder() {
-      //allowed to do nothing
+      // allowed to do nothing
     }
 
     private static IndexBuildTaskPoolManager instance = new IndexBuildTaskPoolManager();

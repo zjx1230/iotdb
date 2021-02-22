@@ -21,18 +21,17 @@ import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.metadata.PartialPath;
 
 /**
- * <p>The DSTree approach uses the EAPCA representation technique, which allows, during node
- * splitting, the resolution of a representation to increase along two dimensions: vertically and
- * horizontally. (Instead, SAX-based indexes allow horizontal splitting by adding a breakpoint to
- * the y-axis, and SFA allows vertical splitting by adding a new DFT coefficient.) In addition to a
- * lower bounding distance, the DSTree also supports an upper bounding distance. It uses both
- * distances to determine the optimal splitting policy for each node.
- * </p>
+ * The DSTree approach uses the EAPCA representation technique, which allows, during node splitting,
+ * the resolution of a representation to increase along two dimensions: vertically and horizontally.
+ * (Instead, SAX-based indexes allow horizontal splitting by adding a breakpoint to the y-axis, and
+ * SFA allows vertical splitting by adding a new DFT coefficient.) In addition to a lower bounding
+ * distance, the DSTree also supports an upper bounding distance. It uses both distances to
+ * determine the optimal splitting policy for each node.
  *
  * <p>The Lernaean Hydra of Data Series Similarity Search: An Experimental Evaluation of the State
- * of the Art Echihabi et al. VLDB2018</p>
+ * of the Art Echihabi et al. VLDB2018 TODO To be implemented.
  *
- * TODO To be implemented.<p>
+ * <p>
  */
 public abstract class DSTreeIndex extends IoTDBIndex {
 

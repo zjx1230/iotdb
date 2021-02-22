@@ -17,19 +17,19 @@
  */
 package org.apache.iotdb.db.index.algorithm.elb.feature;
 
-import static org.junit.Assert.assertEquals;
-
-import java.util.Arrays;
 import org.apache.iotdb.db.index.algorithm.elb.pattern.MilesPattern;
 import org.apache.iotdb.db.index.common.distance.Distance;
 import org.apache.iotdb.db.index.common.distance.LInfinityNormdouble;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+
 import org.junit.Test;
 
-/**
- * Test ELB-ELE envelope
- */
+import java.util.Arrays;
+
+import static org.junit.Assert.assertEquals;
+
+/** Test ELB-ELE envelope */
 public class PatternEnvelopeTest {
 
   @Test
@@ -48,16 +48,21 @@ public class PatternEnvelopeTest {
     double[] thresholdsArray = {2, 1, 2};
     int[] minLeftBorders = {0, 5, 7, seriesLength};
     int[] maxLeftBorders = {0, 5, 7, seriesLength};
-    pattern.initPattern(dataPoints, 0, seriesLength, subpatternCount, thresholdsArray, minLeftBorders,
+    pattern.initPattern(
+        dataPoints,
+        0,
+        seriesLength,
+        subpatternCount,
+        thresholdsArray,
+        minLeftBorders,
         maxLeftBorders);
     envelope.refresh(pattern);
 
-    assertEquals("[3.0, 6.0, 4.0, 5.0, 6.0, 8.0, 6.0, 6.0, 4.0]",
-        Arrays.toString(envelope.upperLine));
-    assertEquals("[1.0, 4.0, 2.0, 3.0, 4.0, 7.0, 5.0, 4.0, 2.0]",
-        Arrays.toString(envelope.valueLine));
-    assertEquals("[-1.0, 2.0, 0.0, 1.0, 2.0, 6.0, 4.0, 2.0, 0.0]",
-        Arrays.toString(envelope.lowerLine));
+    assertEquals(
+        "[3.0, 6.0, 4.0, 5.0, 6.0, 8.0, 6.0, 6.0, 4.0]", Arrays.toString(envelope.upperLine));
+    assertEquals(
+        "[1.0, 4.0, 2.0, 3.0, 4.0, 7.0, 5.0, 4.0, 2.0]", Arrays.toString(envelope.valueLine));
+    assertEquals(
+        "[-1.0, 2.0, 0.0, 1.0, 2.0, 6.0, 4.0, 2.0, 0.0]", Arrays.toString(envelope.lowerLine));
   }
-
 }

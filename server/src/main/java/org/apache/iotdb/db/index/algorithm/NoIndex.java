@@ -17,9 +17,6 @@
  */
 package org.apache.iotdb.db.index.algorithm;
 
-import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.Map;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.read.IndexQueryDataSet;
 import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
@@ -29,18 +26,19 @@ import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 
+import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.Map;
+
 /**
  * NoIndex do nothing on feature extracting and data pruning. Its index-available range is always
  * empty.
  */
-
 public class NoIndex extends IoTDBIndex {
 
-  public NoIndex(PartialPath path, TSDataType tsDataType,
-      String indexDir, IndexInfo indexInfo) {
+  public NoIndex(PartialPath path, TSDataType tsDataType, String indexDir, IndexInfo indexInfo) {
     super(path, tsDataType, indexInfo);
   }
-
 
   @Override
   public void initPreprocessor(ByteBuffer previous, boolean inQueryMode) {
@@ -52,9 +50,7 @@ public class NoIndex extends IoTDBIndex {
     return true;
   }
 
-  /**
-   * convert the L1 identifiers to byteArray
-   */
+  /** convert the L1 identifiers to byteArray */
   @Override
   public void flush() {
     // NoIndex does nothing
@@ -87,9 +83,7 @@ public class NoIndex extends IoTDBIndex {
     throw new UnsupportedOperationException();
   }
 
-  /**
-   * All it needs depends on its preprocessor. Just for explain.
-   */
+  /** All it needs depends on its preprocessor. Just for explain. */
   @Override
   @SuppressWarnings("squid:S1185")
   public int getAmortizedSize() {
@@ -97,11 +91,13 @@ public class NoIndex extends IoTDBIndex {
   }
 
   @Override
-  public QueryDataSet query(Map<String, Object> queryProps, IIndexUsable iIndexUsable,
-      QueryContext context, IIndexRefinePhaseOptimize refinePhaseOptimizer, boolean alignedByTime) {
-    return new IndexQueryDataSet(Collections.emptyList(), Collections.emptyList(),
-        Collections.emptyMap());
+  public QueryDataSet query(
+      Map<String, Object> queryProps,
+      IIndexUsable iIndexUsable,
+      QueryContext context,
+      IIndexRefinePhaseOptimize refinePhaseOptimizer,
+      boolean alignedByTime) {
+    return new IndexQueryDataSet(
+        Collections.emptyList(), Collections.emptyList(), Collections.emptyMap());
   }
-
-
 }

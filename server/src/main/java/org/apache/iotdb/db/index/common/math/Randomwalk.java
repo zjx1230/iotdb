@@ -1,24 +1,20 @@
 package org.apache.iotdb.db.index.common.math;
 
-import java.util.Random;
 import org.apache.iotdb.db.index.common.math.probability.UniformProba;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 
-/**
- * Created by kangrong on 17/1/8.
- */
+import java.util.Random;
+
+/** Created by kangrong on 17/1/8. */
 public class Randomwalk {
 
-//  private static double randWalkR = 0;
-//  private static double randWalkMiu = 1;
+  //  private static double randWalkR = 0;
+  //  private static double randWalkMiu = 1;
 
-
-  /**
-   * 按照random walk model生成数据：
-   */
+  /** 按照random walk model生成数据： */
   public static PrimitiveList generateRanWalk(long length, long seed, float R, float miu) {
     PrimitiveList res = PrimitiveList.newList(TSDataType.DOUBLE);
     double lastPoint = R;
@@ -52,10 +48,10 @@ public class Randomwalk {
   }
 
   public static void main(String[] args) {
-//    System.out.println(generateRanWalk(10));
+    //    System.out.println(generateRanWalk(10));
     System.out.println(generateRanWalk(10));
 
-//    System.out.println(IndexTestUtils.tvListToString(generateRanWalkTVList(10)));
-//    System.out.println(generateRanWalkTVList(10));
+    //    System.out.println(IndexTestUtils.tvListToString(generateRanWalkTVList(10)));
+    //    System.out.println(generateRanWalkTVList(10));
   }
 }

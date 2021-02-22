@@ -17,8 +17,6 @@
  */
 package org.apache.iotdb.db.index.read;
 
-import java.util.List;
-import java.util.Map;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.index.IndexManager;
@@ -28,6 +26,9 @@ import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.physical.crud.QueryIndexPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
+
+import java.util.List;
+import java.util.Map;
 
 public class QueryIndexExecutor {
 
@@ -46,11 +47,9 @@ public class QueryIndexExecutor {
     this.context = context;
   }
 
-
   public QueryDataSet executeIndexQuery() throws StorageEngineException, QueryIndexException {
     // get all related storage group
     return IndexManager.getInstance()
         .queryIndex(paths, indexType, queryProps, context, alignedByTime);
   }
-
 }

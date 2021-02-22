@@ -1,5 +1,23 @@
 package org.apache.iotdb.db.index.router;
 
+import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
+import org.apache.iotdb.db.exception.index.QueryIndexException;
+import org.apache.iotdb.db.exception.metadata.MetadataException;
+import org.apache.iotdb.db.index.IndexProcessor;
+import org.apache.iotdb.db.index.common.IndexInfo;
+import org.apache.iotdb.db.index.common.IndexProcessorStruct;
+import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.index.common.func.CreateIndexProcessorFunc;
+import org.apache.iotdb.db.metadata.MManager;
+import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.metadata.mnode.StorageGroupMNode;
+import org.apache.iotdb.db.query.context.QueryContext;
+import org.apache.iotdb.tsfile.utils.Pair;
+import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -18,34 +36,15 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
-import org.apache.iotdb.db.exception.index.QueryIndexException;
-import org.apache.iotdb.db.exception.metadata.MetadataException;
-import org.apache.iotdb.db.index.IndexProcessor;
-import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexProcessorStruct;
-import org.apache.iotdb.db.index.common.IndexType;
-import org.apache.iotdb.db.index.common.func.CreateIndexProcessorFunc;
-import org.apache.iotdb.db.metadata.MManager;
-import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.db.metadata.mnode.StorageGroupMNode;
-import org.apache.iotdb.db.query.context.QueryContext;
-import org.apache.iotdb.tsfile.utils.Pair;
-import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-/**
- * The index involve
- */
+/** The index involve */
 public class ProtoIndexRouter implements IIndexRouter {
 
   private static final Logger logger = LoggerFactory.getLogger(ProtoIndexRouter.class);
 
-  /**
-   * index series path -> index processor
-   */
+  /** index series path -> index processor */
   private Map<String, IndexProcessorStruct> fullPathProcessorMap;
+
   private Map<PartialPath, IndexProcessorStruct> wildCardProcessorMap;
   private Map<String, Set<String>> sgToFullPathMap;
   private Map<String, Set<PartialPath>> sgToWildCardPathMap;
@@ -58,7 +57,6 @@ public class ProtoIndexRouter implements IIndexRouter {
     this(false);
     this.routerFile = SystemFileFactory.INSTANCE.getFile(routerFileDir + File.separator + "router");
     mManager = MManager.getInstance();
-
   }
 
   private ProtoIndexRouter(boolean unmodifiable) {
@@ -67,7 +65,6 @@ public class ProtoIndexRouter implements IIndexRouter {
     sgToFullPathMap = new ConcurrentHashMap<>();
     sgToWildCardPathMap = new ConcurrentHashMap<>();
     wildCardProcessorMap = new ConcurrentHashMap<>();
-
   }
 
   @Override
@@ -170,9 +167,9 @@ public class ProtoIndexRouter implements IIndexRouter {
   }
 
   @Override
-  public IndexProcessorStruct startQueryAndCheck(PartialPath partialPath,
-      IndexType indexType,
-      QueryContext context) throws QueryIndexException {
+  public IndexProcessorStruct startQueryAndCheck(
+      PartialPath partialPath, IndexType indexType, QueryContext context)
+      throws QueryIndexException {
     lock.readLock().lock();
     try {
       IndexProcessorStruct struct;
@@ -203,24 +200,28 @@ public class ProtoIndexRouter implements IIndexRouter {
     // do nothing.
   }
 
-//  @Override
-//  public boolean hasIndexProcessor(PartialPath indexSeriesPath) {
-//    if (fullPathProcessorMap.containsKey(indexSeriesPath.getFullPath())) {
-//      return true;
-//    }
-//    for (Entry<PartialPath, IndexProcessorStruct> entry : wildCardProcessorMap
-//        .entrySet()) {
-//      PartialPath k = entry.getKey();
-//      if (k.matchFullPath(indexSeriesPath)) {
-//        return true;
-//      }
-//    }
-//    return false;
-//  }
+  //  @Override
+  //  public boolean hasIndexProcessor(PartialPath indexSeriesPath) {
+  //    if (fullPathProcessorMap.containsKey(indexSeriesPath.getFullPath())) {
+  //      return true;
+  //    }
+  //    for (Entry<PartialPath, IndexProcessorStruct> entry : wildCardProcessorMap
+  //        .entrySet()) {
+  //      PartialPath k = entry.getKey();
+  //      if (k.matchFullPath(indexSeriesPath)) {
+  //        return true;
+  //      }
+  //    }
+  //    return false;
+  //  }
 
   @Override
-  public boolean addIndexIntoRouter(PartialPath partialPath, IndexInfo indexInfo,
-      CreateIndexProcessorFunc func, boolean doSerialize) throws MetadataException {
+  public boolean addIndexIntoRouter(
+      PartialPath partialPath,
+      IndexInfo indexInfo,
+      CreateIndexProcessorFunc func,
+      boolean doSerialize)
+      throws MetadataException {
     if (unmodifiable) {
       throw new MetadataException("cannot add index to unmodifiable router");
     }
@@ -239,8 +240,8 @@ public class ProtoIndexRouter implements IIndexRouter {
           Map<IndexType, IndexInfo> infoMap = new EnumMap<>(IndexType.class);
           infoMap.put(indexType, indexInfo);
           IndexProcessor processor = func.act(partialPath, infoMap);
-          fullPathProcessorMap.put(fullPath,
-              new IndexProcessorStruct(processor, partialPath, infoMap));
+          fullPathProcessorMap.put(
+              fullPath, new IndexProcessorStruct(processor, partialPath, infoMap));
         } else {
           fullPathProcessorMap.get(fullPath).infos.put(indexType, indexInfo);
         }
@@ -260,8 +261,8 @@ public class ProtoIndexRouter implements IIndexRouter {
           infoMap.put(indexType, indexInfo);
           IndexProcessor processor = func.act(partialPath, infoMap);
           PartialPath representativePath = getRepresentativePath(partialPath);
-          wildCardProcessorMap.put(partialPath,
-              new IndexProcessorStruct(processor, representativePath, infoMap));
+          wildCardProcessorMap.put(
+              partialPath, new IndexProcessorStruct(processor, representativePath, infoMap));
         } else {
           wildCardProcessorMap.get(partialPath).infos.put(indexType, indexInfo);
         }
@@ -275,7 +276,7 @@ public class ProtoIndexRouter implements IIndexRouter {
           indexSeriesSet = preSet;
         }
         indexSeriesSet.add(partialPath);
-        if(doSerialize){
+        if (doSerialize) {
           serialize(false);
         }
       }
@@ -286,8 +287,8 @@ public class ProtoIndexRouter implements IIndexRouter {
   }
 
   private PartialPath getRepresentativePath(PartialPath wildcardPath) throws MetadataException {
-    Pair<List<PartialPath>, Integer> paths = mManager
-        .getAllTimeseriesPathWithAlias(wildcardPath, 1, 0);
+    Pair<List<PartialPath>, Integer> paths =
+        mManager.getAllTimeseriesPathWithAlias(wildcardPath, 1, 0);
     if (paths.left.isEmpty()) {
       throw new MetadataException("Please create at least one series before create index");
     } else {
@@ -351,8 +352,8 @@ public class ProtoIndexRouter implements IIndexRouter {
         return Collections.unmodifiableMap(wildCardProcessorMap.get(indexSeries).infos);
       }
       if (fullPathProcessorMap.containsKey(indexSeries.getFullPath())) {
-        return Collections
-            .unmodifiableMap(fullPathProcessorMap.get(indexSeries.getFullPath()).infos);
+        return Collections.unmodifiableMap(
+            fullPathProcessorMap.get(indexSeries.getFullPath()).infos);
       }
     } finally {
       lock.readLock().unlock();
@@ -363,8 +364,8 @@ public class ProtoIndexRouter implements IIndexRouter {
   @Override
   public Iterable<IndexProcessorStruct> getAllIndexProcessorsAndInfo() {
     lock.readLock().lock();
-    List<IndexProcessorStruct> res = new ArrayList<>(
-        wildCardProcessorMap.size() + fullPathProcessorMap.size());
+    List<IndexProcessorStruct> res =
+        new ArrayList<>(wildCardProcessorMap.size() + fullPathProcessorMap.size());
     try {
       wildCardProcessorMap.forEach((k, v) -> res.add(v));
       fullPathProcessorMap.forEach((k, v) -> res.add(v));
@@ -374,7 +375,6 @@ public class ProtoIndexRouter implements IIndexRouter {
     return res;
   }
 
-
   @Override
   public Iterable<IndexProcessor> getIndexProcessorByPath(PartialPath path) {
     lock.readLock().lock();
@@ -383,11 +383,12 @@ public class ProtoIndexRouter implements IIndexRouter {
       if (fullPathProcessorMap.containsKey(path.getFullPath())) {
         res.add(fullPathProcessorMap.get(path.getFullPath()).processor);
       } else {
-        wildCardProcessorMap.forEach((k, v) -> {
-          if (k.matchFullPath(path)) {
-            res.add(v.processor);
-          }
-        });
+        wildCardProcessorMap.forEach(
+            (k, v) -> {
+              if (k.matchFullPath(path)) {
+                res.add(v.processor);
+              }
+            });
       }
     } finally {
       lock.readLock().unlock();

@@ -17,10 +17,6 @@
  */
 package org.apache.iotdb.db.index.algorithm.paa;
 
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.BiFunction;
 import org.apache.iotdb.db.index.algorithm.RTreeIndex;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexUtils;
@@ -30,13 +26,16 @@ import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * <p>Use PAA as the feature of MBRIndex.</p>
- */
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.BiFunction;
 
+/** Use PAA as the feature of MBRIndex. */
 public class RTreePAAIndex extends RTreeIndex {
 
   private static final Logger logger = LoggerFactory.getLogger(RTreePAAIndex.class);
@@ -47,12 +46,10 @@ public class RTreePAAIndex extends RTreeIndex {
   // Only for query
   private Map<Integer, Identifier> identifierMap = new HashMap<>();
 
-  public RTreePAAIndex(PartialPath path,
-      TSDataType tsDataType, String indexDir,
-      IndexInfo indexInfo) {
+  public RTreePAAIndex(
+      PartialPath path, TSDataType tsDataType, String indexDir, IndexInfo indexInfo) {
     super(path, tsDataType, indexDir, indexInfo, true);
     paaWidth = seriesLength / featureDim;
-
   }
 
   @Override
@@ -60,8 +57,9 @@ public class RTreePAAIndex extends RTreeIndex {
     if (this.indexFeatureExtractor != null) {
       this.indexFeatureExtractor.clear();
     }
-    this.paaWholeFeatureExtractor = new PAAWholeFeatureExtractor(tsDataType, seriesLength,
-        featureDim, false, currentLowerBounds);
+    this.paaWholeFeatureExtractor =
+        new PAAWholeFeatureExtractor(
+            tsDataType, seriesLength, featureDim, false, currentLowerBounds);
     paaWholeFeatureExtractor.deserializePrevious(previous);
     this.indexFeatureExtractor = paaWholeFeatureExtractor;
   }
@@ -78,43 +76,40 @@ public class RTreePAAIndex extends RTreeIndex {
     // PAA extractor will directly calculate and update the passed-in currentCorners.
   }
 
-//  @Override
-//  protected BiConsumer<Integer, OutputStream> getSerializeFunc() {
-//    return (idx, outputStream) -> {
-//      try {
-//        paaWholeFeatureExtractor.serializeIdentifier(idx, outputStream);
-//      } catch (IOException e) {
-//        logger.error("serialized error.", e);
-//      }
-//    };
-//  }
-//
-//
-//  @Override
-//  protected BiConsumer<Integer, InputStream> getDeserializeFunc() {
-//    return (idx, input) -> {
-//      Identifier identifier = null;
-//      try {
-//        identifier = Identifier.deserialize(input);
-//      } catch (IOException e) {
-//        e.printStackTrace();
-//      }
-//      identifierMap.put(idx, identifier);
-//    };
-//  }
+  //  @Override
+  //  protected BiConsumer<Integer, OutputStream> getSerializeFunc() {
+  //    return (idx, outputStream) -> {
+  //      try {
+  //        paaWholeFeatureExtractor.serializeIdentifier(idx, outputStream);
+  //      } catch (IOException e) {
+  //        logger.error("serialized error.", e);
+  //      }
+  //    };
+  //  }
+  //
+  //
+  //  @Override
+  //  protected BiConsumer<Integer, InputStream> getDeserializeFunc() {
+  //    return (idx, input) -> {
+  //      Identifier identifier = null;
+  //      try {
+  //        identifier = Identifier.deserialize(input);
+  //      } catch (IOException e) {
+  //        e.printStackTrace();
+  //      }
+  //      identifierMap.put(idx, identifier);
+  //    };
+  //  }
 
-//  @Override
-//  protected List<Identifier> getQueryCandidates(List<Integer> candidateIds) {
-//    List<Identifier> res = new ArrayList<>(candidateIds.size());
-//    candidateIds.forEach(i -> res.add(identifierMap.get(i)));
-//    this.identifierMap.clear();
-//    return res;
-//  }
+  //  @Override
+  //  protected List<Identifier> getQueryCandidates(List<Integer> candidateIds) {
+  //    List<Identifier> res = new ArrayList<>(candidateIds.size());
+  //    candidateIds.forEach(i -> res.add(identifierMap.get(i)));
+  //    this.identifierMap.clear();
+  //    return res;
+  //  }
 
-
-  /**
-   * PAA has lower bounding property.
-   */
+  /** PAA has lower bounding property. */
   @Override
   protected double calcLowerBoundThreshold(double queryThreshold) {
     return queryThreshold;
@@ -163,10 +158,7 @@ public class RTreePAAIndex extends RTreeIndex {
     };
   }
 
-
   protected IndexFeatureExtractor createQueryFeatureExtractor() {
-    return new PAAWholeFeatureExtractor(tsDataType, seriesLength,
-        featureDim, true, null);
+    return new PAAWholeFeatureExtractor(tsDataType, seriesLength, featureDim, true, null);
   }
-
 }

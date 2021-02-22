@@ -18,15 +18,16 @@
  */
 package org.apache.iotdb.db.index.common;
 
+import org.apache.iotdb.db.metadata.MetadataOperationType;
+import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.iotdb.db.metadata.MetadataOperationType;
-import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
-public class IndexInfo implements Cloneable{
+public class IndexInfo implements Cloneable {
 
   private Map<String, String> props;
   private long time;
@@ -65,8 +66,9 @@ public class IndexInfo implements Cloneable{
   @Deprecated
   public String serializeCreateIndex(String path) {
     StringBuilder res = new StringBuilder();
-    res.append(String.format("%s,%s,%s,%s", MetadataOperationType.CREATE_INDEX,
-        path, indexType.serialize(), time));
+    res.append(
+        String.format(
+            "%s,%s,%s,%s", MetadataOperationType.CREATE_INDEX, path, indexType.serialize(), time));
     if (props != null && !props.isEmpty()) {
       for (Map.Entry entry : props.entrySet()) {
         res.append(String.format(",%s=%s", entry.getKey(), entry.getValue()));

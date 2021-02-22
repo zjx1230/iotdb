@@ -18,21 +18,23 @@
  */
 package org.apache.iotdb.db.metadata;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.tsfile.common.constant.TsFileConstant;
 import org.apache.iotdb.tsfile.read.common.Path;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 /**
- * A prefix path, suffix path or fullPath generated from SQL.
- * Usually used in the IoTDB server module
+ * A prefix path, suffix path or fullPath generated from SQL. Usually used in the IoTDB server
+ * module
  */
 public class PartialPath extends Path implements Comparable<Path> {
 
@@ -45,9 +47,8 @@ public class PartialPath extends Path implements Comparable<Path> {
   private String tsAlias = "";
 
   /**
-   * Construct the PartialPath using a String, will split the given String into String[]
-   * E.g., path = "root.sg.\"d.1\".\"s.1\""
-   * nodes = {"root", "sg", "\"d.1\"", "\"s.1\""}
+   * Construct the PartialPath using a String, will split the given String into String[] E.g., path
+   * = "root.sg.\"d.1\".\"s.1\"" nodes = {"root", "sg", "\"d.1\"", "\"s.1\""}
    *
    * @param path a full String of a time series path
    * @throws IllegalPathException
@@ -62,16 +63,15 @@ public class PartialPath extends Path implements Comparable<Path> {
     this.nodes = MetaUtils.splitPathToDetachedPath(fullPath);
   }
 
-  /**
-   * @param partialNodes nodes of a time series path
-   */
+  /** @param partialNodes nodes of a time series path */
   public PartialPath(String[] partialNodes) {
     nodes = partialNodes;
   }
 
   /**
    * @param path path
-   * @param needSplit needSplit is basically false, whether need to be split to device and measurement, doesn't support escape character yet.
+   * @param needSplit needSplit is basically false, whether need to be split to device and
+   *     measurement, doesn't support escape character yet.
    */
   public PartialPath(String path, boolean needSplit) {
     super(path, needSplit);
@@ -125,6 +125,7 @@ public class PartialPath extends Path implements Comparable<Path> {
 
   /**
    * Construct a new PartialPath by resetting the prefix nodes to prefixPath
+   *
    * @param prefixPath the prefix path used to replace current nodes
    * @return A new PartialPath with altered prefix
    */
@@ -136,9 +137,9 @@ public class PartialPath extends Path implements Comparable<Path> {
 
   /**
    * Test if this PartialPath matches a full path. rPath is supposed to be a full timeseries path
-   * without wildcards.
-   * e.g. "root.sg.device.*" matches path "root.sg.device.s1"
-   * whereas it does not match "root.sg.device" and "root.sg.vehicle.s1"
+   * without wildcards. e.g. "root.sg.device.*" matches path "root.sg.device.s1" whereas it does not
+   * match "root.sg.device" and "root.sg.vehicle.s1"
+   *
    * @param rPath a plain full path of a timeseries
    * @return true if a successful match, otherwise return false
    */
@@ -196,6 +197,7 @@ public class PartialPath extends Path implements Comparable<Path> {
     return true;
   }
 
+  @Override
   public boolean equals(String obj) {
     return this.getFullPath().equals(obj);
   }
@@ -240,7 +242,7 @@ public class PartialPath extends Path implements Comparable<Path> {
     this.measurementAlias = measurementAlias;
   }
 
-  public boolean isMeasurementAliasExists(){
+  public boolean isMeasurementAliasExists() {
     return measurementAlias != null && !measurementAlias.isEmpty();
   }
 
@@ -300,6 +302,7 @@ public class PartialPath extends Path implements Comparable<Path> {
 
   /**
    * Convert a list of Strings to a list of PartialPaths, ignoring all illegal paths
+   *
    * @param pathList
    * @return
    */
@@ -319,26 +322,21 @@ public class PartialPath extends Path implements Comparable<Path> {
     return ret;
   }
 
-  public void toLowerCase(){
+  public void toLowerCase() {
     for (int i = 0; i < nodes.length; i++) {
       nodes[i] = nodes[i].toLowerCase();
     }
     fullPath = String.join(TsFileConstant.PATH_SEPARATOR, nodes);
-    if (measurementAlias != null)
-      measurementAlias = measurementAlias.toLowerCase();
-    if (tsAlias != null)
-      tsAlias = tsAlias.toLowerCase();
+    if (measurementAlias != null) measurementAlias = measurementAlias.toLowerCase();
+    if (tsAlias != null) tsAlias = tsAlias.toLowerCase();
   }
 
-  public void toUpperCase(){
+  public void toUpperCase() {
     for (int i = 0; i < nodes.length; i++) {
       nodes[i] = nodes[i].toUpperCase();
     }
     fullPath = String.join(TsFileConstant.PATH_SEPARATOR, nodes);
-    if (measurementAlias != null)
-      measurementAlias = measurementAlias.toLowerCase();
-    if (tsAlias != null)
-      tsAlias = tsAlias.toLowerCase();
+    if (measurementAlias != null) measurementAlias = measurementAlias.toLowerCase();
+    if (tsAlias != null) tsAlias = tsAlias.toLowerCase();
   }
-
 }

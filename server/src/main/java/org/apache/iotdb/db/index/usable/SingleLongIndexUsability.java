@@ -1,32 +1,31 @@
 package org.apache.iotdb.db.index.usable;
 
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.tsfile.read.filter.TimeFilter;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.apache.iotdb.tsfile.read.filter.factory.FilterFactory;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * This class is to record the index usable range for a single long series, which corresponds to the
  * subsequence matching scenario.
  *
- * The series path in the initialized parameters must be a full path (without wildcard characters).
+ * <p>The series path in the initialized parameters must be a full path (without wildcard
+ * characters).
  *
- * Specified a series, this class updates the usable and unusable ranges.
+ * <p>Specified a series, this class updates the usable and unusable ranges.
  *
- * It's not thread-safe.
+ * <p>It's not thread-safe.
  */
 public class SingleLongIndexUsability implements IIndexUsable {
 
-  /**
-   * TODO it will be moved to configuration.
-   */
+  /** TODO it will be moved to configuration. */
   private static final int defaultSizeOfUsableSegments = 20;
 
   private int maxSizeOfUsableSegments;
@@ -108,7 +107,6 @@ public class SingleLongIndexUsability implements IIndexUsable {
     }
   }
 
-
   @Override
   public void minusUsableRange(PartialPath fullPath, long startTime, long endTime) {
     // simplify the problem
@@ -179,10 +177,10 @@ public class SingleLongIndexUsability implements IIndexUsable {
     return res;
   }
 
-//  @Override
-//  public Set<PartialPath> getAllUnusableSeriesForWholeMatching() {
-//    throw new UnsupportedOperationException();
-//  }
+  //  @Override
+  //  public Set<PartialPath> getAllUnusableSeriesForWholeMatching() {
+  //    throw new UnsupportedOperationException();
+  //  }
 
   /**
    * Find the latest node whose start time is less than {@code timestamp} A naive scanning search
@@ -219,39 +217,39 @@ public class SingleLongIndexUsability implements IIndexUsable {
     unusableRanges = RangeNode.deserialize(inputStream);
   }
 
-//  /**
-//   * It's a inefficient implementation
-//   */
-//  @Override
-//  public void updateELBBlocksForSeriesMatching(PrimitiveList unusableBlocks,
-//      List<ELBWindowBlockFeature> windowBlocks) {
-//    for (int i = 0; i < windowBlocks.size(); i++) {
-//      ELBWindowBlockFeature block = windowBlocks.get(i);
-//      RangeNode node = locateIdxByTime(block.startTime);
-//      if (node.end < block.startTime && block.endTime < node.next.start) {
-//        unusableBlocks.setBoolean(i, true);
-//      }
-//    }
-//  }
+  //  /**
+  //   * It's a inefficient implementation
+  //   */
+  //  @Override
+  //  public void updateELBBlocksForSeriesMatching(PrimitiveList unusableBlocks,
+  //      List<ELBWindowBlockFeature> windowBlocks) {
+  //    for (int i = 0; i < windowBlocks.size(); i++) {
+  //      ELBWindowBlockFeature block = windowBlocks.get(i);
+  //      RangeNode node = locateIdxByTime(block.startTime);
+  //      if (node.end < block.startTime && block.endTime < node.next.start) {
+  //        unusableBlocks.setBoolean(i, true);
+  //      }
+  //    }
+  //  }
 
-//  @Override
-//  public IIndexUsable deepCopy() {
-//    SingleLongIndexUsability res = new SingleLongIndexUsability(indexSeries,
-//        defaultSizeOfUsableSegments);
-//    res.size = this.size;
-//    if (this.unusableRanges == null) {
-//      return res;
-//    }
-//    res.unusableRanges = new RangeNode(this.unusableRanges);
-//    RangeNode pThis = this.unusableRanges;
-//    RangeNode pRes = res.unusableRanges;
-//    while (pThis.next != null) {
-//      pRes.next = new RangeNode(pThis.next);
-//      pRes = pRes.next;
-//      pThis = pThis.next;
-//    }
-//    return res;
-//  }
+  //  @Override
+  //  public IIndexUsable deepCopy() {
+  //    SingleLongIndexUsability res = new SingleLongIndexUsability(indexSeries,
+  //        defaultSizeOfUsableSegments);
+  //    res.size = this.size;
+  //    if (this.unusableRanges == null) {
+  //      return res;
+  //    }
+  //    res.unusableRanges = new RangeNode(this.unusableRanges);
+  //    RangeNode pThis = this.unusableRanges;
+  //    RangeNode pRes = res.unusableRanges;
+  //    while (pThis.next != null) {
+  //      pRes.next = new RangeNode(pThis.next);
+  //      pRes = pRes.next;
+  //      pThis = pThis.next;
+  //    }
+  //    return res;
+  //  }
 
   @Override
   public String toString() {
@@ -270,8 +268,10 @@ public class SingleLongIndexUsability implements IIndexUsable {
 
   public boolean hasUnusableRange() {
     if (initAllUsable) {
-      return !(unusableRanges.end == 0 && unusableRanges.next != null
-          && unusableRanges.next.start == Long.MAX_VALUE - 1 && unusableRanges.next.next == null);
+      return !(unusableRanges.end == 0
+          && unusableRanges.next != null
+          && unusableRanges.next.start == Long.MAX_VALUE - 1
+          && unusableRanges.next.next == null);
     } else {
       return size > 1;
     }
@@ -289,16 +289,19 @@ public class SingleLongIndexUsability implements IIndexUsable {
       this.next = next;
     }
 
-//    RangeNode(RangeNode unusableRanges) {
-//      this.start = unusableRanges.start;
-//      this.end = unusableRanges.end;
-//      this.next = unusableRanges.next;
-//    }
+    //    RangeNode(RangeNode unusableRanges) {
+    //      this.start = unusableRanges.start;
+    //      this.end = unusableRanges.end;
+    //      this.next = unusableRanges.next;
+    //    }
 
     @Override
     public String toString() {
-      return "[" + (start == Long.MIN_VALUE ? "MIN" : start) + "," +
-          (end == Long.MAX_VALUE ? "MAX" : end) + "],";
+      return "["
+          + (start == Long.MIN_VALUE ? "MIN" : start)
+          + ","
+          + (end == Long.MAX_VALUE ? "MAX" : end)
+          + "],";
     }
 
     public static void serialize(RangeNode head, OutputStream outputStream) throws IOException {

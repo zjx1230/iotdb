@@ -18,12 +18,13 @@
  */
 package org.apache.iotdb.db.utils.datastructure.primitive;
 
-import static org.apache.iotdb.db.rescon.PrimitiveArrayManager.ARRAY_SIZE;
+import org.apache.iotdb.db.rescon.PrimitiveArrayManager;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.iotdb.db.rescon.PrimitiveArrayManager;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+
+import static org.apache.iotdb.db.rescon.PrimitiveArrayManager.ARRAY_SIZE;
 
 public class IntPrimitiveList extends PrimitiveList {
 
@@ -84,5 +85,4 @@ public class IntPrimitiveList extends PrimitiveList {
     System.arraycopy(array, 0, cloneArray, 0, array.length);
     return cloneArray;
   }
-
 }

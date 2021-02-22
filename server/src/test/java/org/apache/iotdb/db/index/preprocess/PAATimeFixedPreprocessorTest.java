@@ -1,4 +1,4 @@
-///*
+/// *
 // * Licensed to the Apache Software Foundation (ASF) under one
 // * or more contributor license agreements.  See the NOTICE file
 // * distributed with this work for additional information
@@ -15,21 +15,21 @@
 // * See the License for the specific language governing permissions and
 // * limitations under the License.
 // */
-//package org.apache.iotdb.db.index.preprocess;
+// package org.apache.iotdb.db.index.preprocess;
 //
-//import static org.apache.iotdb.tsfile.file.metadata.enums.TSDataType.INT32;
+// import static org.apache.iotdb.tsfile.file.metadata.enums.TSDataType.INT32;
 //
-//import java.io.IOException;
-//import java.nio.ByteBuffer;
-//import java.util.List;
-//import org.apache.iotdb.db.index.IndexTestUtils;
-//import org.apache.iotdb.db.rescon.TVListAllocator;
-//import org.apache.iotdb.db.utils.datastructure.TVList;
-//import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-//import org.junit.Assert;
-//import org.junit.Test;
+// import java.io.IOException;
+// import java.nio.ByteBuffer;
+// import java.util.List;
+// import org.apache.iotdb.db.index.IndexTestUtils;
+// import org.apache.iotdb.db.rescon.TVListAllocator;
+// import org.apache.iotdb.db.utils.datastructure.TVList;
+// import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+// import org.junit.Assert;
+// import org.junit.Test;
 //
-//public class PAATimeFixedPreprocessorTest {
+// public class PAATimeFixedPreprocessorTest {
 //
 //  @Test
 //  public void testCreateAlignedSequence() throws IOException {
@@ -55,7 +55,8 @@
 //    int alignedSequenceLength = 4;
 //    int slideStep = 5;
 //
-//    PAATimeFixedFeatureExtractor timeFixedWithoutStored = new PAATimeFixedFeatureExtractor(TSDataType.INT32,
+//    PAATimeFixedFeatureExtractor timeFixedWithoutStored = new
+// PAATimeFixedFeatureExtractor(TSDataType.INT32,
 //        windowRange, slideStep, alignedSequenceLength, 0, false, false);
 //    timeFixedWithoutStored.appendNewSrcData(srcData);
 //    assertL1AndL2(timeFixedWithoutStored, groundTruthL1, groundTruthL2);
@@ -71,13 +72,15 @@
 //    int windowRange = 20;
 //    int alignedSequenceLength = 4;
 //    int slideStep = 5;
-//    PAATimeFixedFeatureExtractor timeFixed = new PAATimeFixedFeatureExtractor(TSDataType.INT32, windowRange,
+//    PAATimeFixedFeatureExtractor timeFixed = new PAATimeFixedFeatureExtractor(TSDataType.INT32,
+// windowRange,
 //        slideStep, alignedSequenceLength, 0, true, true);
 //    timeFixed.appendNewSrcData(srcData);
 //    Assert.assertFalse(timeFixed.hasNext());
 //    timeFixed.clear();
 //    System.out.println();
-//    PAATimeFixedFeatureExtractor timeFixedWithoutStored = new PAATimeFixedFeatureExtractor(TSDataType.INT32,
+//    PAATimeFixedFeatureExtractor timeFixedWithoutStored = new
+// PAATimeFixedFeatureExtractor(TSDataType.INT32,
 //        windowRange, slideStep, alignedSequenceLength, 3, false, false);
 //    timeFixedWithoutStored.appendNewSrcData(srcData);
 //    Assert.assertFalse(timeFixedWithoutStored.hasNext());
@@ -122,7 +125,8 @@
 //      for (int i = 0; i <= idx; i++) {
 //        System.out.println(IndexTestUtils.tvListToString((TVList) L2s.get(i)));
 //        if (toAssert) {
-//          Assert.assertEquals(groundTruthL2[i], IndexTestUtils.tvListToString((TVList) L2s.get(i)));
+//          Assert.assertEquals(groundTruthL2[i], IndexTestUtils.tvListToString((TVList)
+// L2s.get(i)));
 //        }
 //      }
 //      //release
@@ -155,7 +159,8 @@
 //    int windowRange = 20;
 //    int alignedSequenceLength = 4;
 //    int slideStep = 5;
-//    PAATimeFixedFeatureExtractor timeFixed = new PAATimeFixedFeatureExtractor(TSDataType.INT32, windowRange,
+//    PAATimeFixedFeatureExtractor timeFixed = new PAATimeFixedFeatureExtractor(TSDataType.INT32,
+// windowRange,
 //        slideStep, alignedSequenceLength, 2, true, true);
 //    timeFixed.appendNewSrcData(srcData);
 //
@@ -213,7 +218,8 @@
 //    int alignedSequenceLength = 4;
 //    int slideStep = 5;
 //    int timeAnchor = 2;
-//    PAATimeFixedFeatureExtractor timeFixed = new PAATimeFixedFeatureExtractor(TSDataType.INT32, windowRange,
+//    PAATimeFixedFeatureExtractor timeFixed = new PAATimeFixedFeatureExtractor(TSDataType.INT32,
+// windowRange,
 //        slideStep, alignedSequenceLength, timeAnchor, true, true);
 //    timeFixed.appendNewSrcData(srcData);
 //    while (timeFixed.hasNext()) {
@@ -358,7 +364,8 @@
 //    int alignedSequenceLength = 6;
 //    int slideStep = 5;
 //    int timeAnchor = 2;
-//    PAATimeFixedFeatureExtractor timeFixed = new PAATimeFixedFeatureExtractor(TSDataType.INT32, windowRange,
+//    PAATimeFixedFeatureExtractor timeFixed = new PAATimeFixedFeatureExtractor(TSDataType.INT32,
+// windowRange,
 //        slideStep, alignedSequenceLength, timeAnchor, false, false);
 //    timeFixed.appendNewSrcData(srcData);
 //    while (timeFixed.hasNext()) {
@@ -389,4 +396,4 @@
 //    timeFixed3.closeAndRelease();
 //  }
 //
-//}
+// }

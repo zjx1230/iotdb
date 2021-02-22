@@ -17,6 +17,15 @@
  */
 package org.apache.iotdb.db.index.algorithm.rtree;
 
+import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
+import org.apache.iotdb.db.exception.index.IndexRuntimeException;
+import org.apache.iotdb.db.index.common.DistSeries;
+import org.apache.iotdb.db.index.common.TriFunction;
+import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.utils.datastructure.TVList;
+import org.apache.iotdb.tsfile.utils.Pair;
+import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -31,14 +40,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
-import org.apache.iotdb.db.exception.index.IndexRuntimeException;
-import org.apache.iotdb.db.index.common.DistSeries;
-import org.apache.iotdb.db.index.common.TriFunction;
-import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.tsfile.utils.Pair;
-import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 /**
  * A simple implementation of R-Tree, referring to the article: Guttman, Antonin. "R-trees: A
@@ -111,7 +112,6 @@ public class RTree<T> {
     }
     return chooseLeaf(bsf, item);
   }
-
 
   private void tightenBound(RNode node) {
     if (node.children.isEmpty()) {
@@ -205,7 +205,7 @@ public class RTree<T> {
         addNodesToChildrenList(lessNode, candidates);
         candidates.clear();
         tightenBound(lessNode); // Not sure this is required.
-        return new RNode[]{node, newNode};
+        return new RNode[] {node, newNode};
       }
       // classical R-Tree insert rule.
       RNode nextNode = seedsPicker.next(candidates);
@@ -236,12 +236,10 @@ public class RTree<T> {
       addNodeToChildrenList(chosen, nextNode);
       tightenBound(chosen);
     }
-    return new RNode[]{node, newNode};
+    return new RNode[] {node, newNode};
   }
 
-  /**
-   * Clear the RTree
-   */
+  /** Clear the RTree */
   public void clear() {
     root = initRoot(true);
   }
@@ -256,9 +254,7 @@ public class RTree<T> {
     insert(cs, cs, v);
   }
 
-  /**
-   * Insert a rectangle into RTree.
-   */
+  /** Insert a rectangle into RTree. */
   @SuppressWarnings("unchecked")
   public void insert(float[] lbs, float[] ubs, final T v) {
     if (lbs.length != dim || ubs.length != dim) {
@@ -337,7 +333,6 @@ public class RTree<T> {
     }
   }
 
-
   private double mbrED(RNode a, RNode b) {
     float dist = 0;
     for (int i = 0; i < a.children.size(); i++) {
@@ -354,10 +349,7 @@ public class RTree<T> {
     return Math.sqrt(dist);
   }
 
-
-  /**
-   * Returns the increase in area necessary for the given rectangle to cover the given entry.
-   */
+  /** Returns the increase in area necessary for the given rectangle to cover the given entry. */
   private float calcExpandingArea(RNode oriNode, RNode newNode) {
     float oriArea = calcArea(oriNode);
     float expandArea = 1.0f;
@@ -379,8 +371,7 @@ public class RTree<T> {
 
   private boolean isIntersect(RNode n1, RNode n2) {
     for (int i = 0; i < dim; i++) {
-      if ((n2.lbs[i] - n1.ubs[i] > VAGUE_ERROR) ||
-          (n1.lbs[i] - n2.ubs[i] > VAGUE_ERROR)) {
+      if ((n2.lbs[i] - n1.ubs[i] > VAGUE_ERROR) || (n1.lbs[i] - n2.ubs[i] > VAGUE_ERROR)) {
         return false;
       }
     }
@@ -423,7 +414,7 @@ public class RTree<T> {
     if (node instanceof Item) {
       T value = ((Item<T>) node).v;
       ReadWriteIOUtils.write(value.toString(), outputStream);
-//      biConsumer.accept(value, outputStream);
+      //      biConsumer.accept(value, outputStream);
     } else {
       // write child
       ReadWriteIOUtils.write(node.getChildren().size(), outputStream);
@@ -433,8 +424,8 @@ public class RTree<T> {
     }
   }
 
-
-  public static RTree<PartialPath> deserializePartialPath(InputStream inputStream) throws IOException {
+  public static RTree<PartialPath> deserializePartialPath(InputStream inputStream)
+      throws IOException {
     int dim = ReadWriteIOUtils.readInt(inputStream);
     int nMaxPerNode = ReadWriteIOUtils.readInt(inputStream);
     int nMinPerNode = ReadWriteIOUtils.readInt(inputStream);
@@ -463,7 +454,7 @@ public class RTree<T> {
     RNode node;
     if (nodeType == ITEM) {
       String value = ReadWriteIOUtils.readString(inputStream);
-//      T value = biConsumer.accept(inputStream);
+      //      T value = biConsumer.accept(inputStream);
       node = new Item<>(lbs, ubs, value);
     } else {
       node = new RNode(lbs, ubs, nodeType == LEAF_NODE);
@@ -478,7 +469,6 @@ public class RTree<T> {
       addNodeToChildrenList(parent, node);
     }
   }
-
 
   @Override
   public String toString() {
@@ -548,13 +538,15 @@ public class RTree<T> {
 
     @Override
     public String toString() {
-      return "RNode{" +
-          "LB=" + Arrays.toString(lbs) +
-          ", UB=" + Arrays.toString(ubs) +
-          ", leaf=" + isLeaf +
-          '}';
+      return "RNode{"
+          + "LB="
+          + Arrays.toString(lbs)
+          + ", UB="
+          + Arrays.toString(ubs)
+          + ", leaf="
+          + isLeaf
+          + '}';
     }
-
   }
 
   private static class Item<T> extends RNode {
@@ -566,16 +558,15 @@ public class RTree<T> {
       this.v = v;
     }
 
-//    public T getValue() {
-//      return v;
-//    }
+    //    public T getValue() {
+    //      return v;
+    //    }
 
     @Override
     public String toString() {
       return "Item: " + v + "," + super.toString();
     }
   }
-
 
   public enum SeedsPicker {
     LINEAR {
@@ -649,9 +640,7 @@ public class RTree<T> {
       return Short.BYTES;
     }
 
-    /**
-     * @return the integer used to determine index type
-     */
+    /** @return the integer used to determine index type */
     public short serialize() {
       switch (this) {
         case LINEAR:
@@ -666,39 +655,44 @@ public class RTree<T> {
     public abstract RNode next(LinkedList<RNode> candidates);
   }
 
-
-  /**
-   * A disturbing function with so many interface functions!
-   */
-  public List<DistSeries> exactTopKSearch(int topK, double[] queryTs, float[] patternFeatures,
+  /** A disturbing function with so many interface functions! */
+  public List<DistSeries> exactTopKSearch(
+      int topK,
+      double[] queryTs,
+      float[] patternFeatures,
       Set<PartialPath> modifiedPaths,
       TriFunction<float[], float[], float[], Double> calcLowerBoundDistFunc,
       BiFunction<double[], TVList, Double> calcRealDistFunc,
-      Function<PartialPath, TVList> loadSeriesFunc
-  ) {
+      Function<PartialPath, TVList> loadSeriesFunc) {
     RNode approxNode = approximateSearch(patternFeatures);
-    Pair<List<PartialPath>, List<TVList>> pairs = readSeriesFromBinaryFileAtOnceWithIdx(approxNode,
-        loadSeriesFunc, modifiedPaths, Double.MAX_VALUE, calcLowerBoundDistFunc, patternFeatures);
+    Pair<List<PartialPath>, List<TVList>> pairs =
+        readSeriesFromBinaryFileAtOnceWithIdx(
+            approxNode,
+            loadSeriesFunc,
+            modifiedPaths,
+            Double.MAX_VALUE,
+            calcLowerBoundDistFunc,
+            patternFeatures);
     PqItem bsfAnswer = new PqItem();
     PriorityQueue<DistSeries> topKPQ = new PriorityQueue<>(topK, new DistSeriesComparator());
-    bsfAnswer.dist = minTopKDistOfNode(pairs.right, pairs.left, queryTs, topKPQ, calcRealDistFunc,
-        topK);
+    bsfAnswer.dist =
+        minTopKDistOfNode(pairs.right, pairs.left, queryTs, topKPQ, calcRealDistFunc, topK);
 
     // initialize priority queue
     Comparator<PqItem> comparator = new DistComparator();
     PriorityQueue<PqItem> pq = new PriorityQueue<>(comparator);
 
-    //initialize the priority queue
+    // initialize the priority queue
     PqItem tempItem = new PqItem();
     tempItem.node = root;
     tempItem.dist = calcLowerBoundDistFunc.apply(root.lbs, root.ubs, patternFeatures);
     pq.add(tempItem);
-//    int lastMislstone = 100000;
-    //process the priority queue
-//    int leafCount = 1;
-//    int calcDistCount = bsfAnswer.node.size();
-//    int processTerminalCount = 1;
-//    int processInnerCount = 0;
+    //    int lastMislstone = 100000;
+    // process the priority queue
+    //    int leafCount = 1;
+    //    int calcDistCount = bsfAnswer.node.size();
+    //    int processTerminalCount = 1;
+    //    int processInnerCount = 0;
     PqItem minPqItem;
     while (!pq.isEmpty()) {
       minPqItem = pq.remove();
@@ -710,18 +704,24 @@ public class RTree<T> {
           continue;
         }
 
-//        leafCount++;
-        //verify the true distance,replace the estimate with the true dist
-//        calcDistCount += minPqItem.node.size();
-//        processTerminalCount++;
+        //        leafCount++;
+        // verify the true distance,replace the estimate with the true dist
+        //        calcDistCount += minPqItem.node.size();
+        //        processTerminalCount++;
 
-        pairs = readSeriesFromBinaryFileAtOnceWithIdx(minPqItem.node, loadSeriesFunc,
-            modifiedPaths, bsfAnswer.dist, calcLowerBoundDistFunc, patternFeatures);
-        bsfAnswer.dist = minTopKDistOfNode(pairs.right, pairs.left, queryTs, topKPQ,
-            calcRealDistFunc, topK);
+        pairs =
+            readSeriesFromBinaryFileAtOnceWithIdx(
+                minPqItem.node,
+                loadSeriesFunc,
+                modifiedPaths,
+                bsfAnswer.dist,
+                calcLowerBoundDistFunc,
+                patternFeatures);
+        bsfAnswer.dist =
+            minTopKDistOfNode(pairs.right, pairs.left, queryTs, topKPQ, calcRealDistFunc, topK);
 
       } else {
-//        processInnerCount++;
+        //        processInnerCount++;
         // minPqItem is internal
         // for left
         for (RNode child : minPqItem.node.children) {
@@ -737,12 +737,18 @@ public class RTree<T> {
     }
     // merge modified parts
     List<TVList> modifiedSeries = readModifiedSeries(modifiedPaths, loadSeriesFunc);
-    bsfAnswer.dist = minTopKDistOfNode(modifiedSeries, new ArrayList<>(modifiedPaths), queryTs,
-        topKPQ, calcRealDistFunc, topK);
+    bsfAnswer.dist =
+        minTopKDistOfNode(
+            modifiedSeries,
+            new ArrayList<>(modifiedPaths),
+            queryTs,
+            topKPQ,
+            calcRealDistFunc,
+            topK);
 
-    if(topKPQ.isEmpty()){
+    if (topKPQ.isEmpty()) {
       return Collections.emptyList();
-    }else{
+    } else {
       int retSize = Math.min(topK, topKPQ.size());
       DistSeries[] res = new DistSeries[retSize];
       int idx = retSize - 1;
@@ -754,31 +760,33 @@ public class RTree<T> {
     }
   }
 
-
   private RNode approximateSearch(float[] patterns) {
     Item item = new Item<>(patterns, patterns, null);
     return chooseLeaf(root, item);
   }
 
-  private double minTopKDistOfNode(List<TVList> tss, List<PartialPath> paths, double[] queryTs,
+  private double minTopKDistOfNode(
+      List<TVList> tss,
+      List<PartialPath> paths,
+      double[] queryTs,
       PriorityQueue<DistSeries> topKPQ,
       BiFunction<double[], TVList, Double> calcRealDistFunc,
       final int K) {
     double kthMinDist =
         (topKPQ.size() < K || topKPQ.peek() == null) ? Double.MAX_VALUE : topKPQ.peek().dist;
     double tempDist;
-//    double sumExactDist = 0;
-//    double minExactDist = Double.MAX_VALUE;
+    //    double sumExactDist = 0;
+    //    double minExactDist = Double.MAX_VALUE;
     int acceptCount = 0;
     for (int i = 0; i < tss.size(); i++) {
       TVList ts = tss.get(i);
       PartialPath partialPath = paths.get(i);
 
       tempDist = calcRealDistFunc.apply(queryTs, ts);
-//      sumExactDist += tempDist;
-//      if (tempDist < minExactDist) {
-//        minExactDist = tempDist;
-//      }
+      //      sumExactDist += tempDist;
+      //      if (tempDist < minExactDist) {
+      //        minExactDist = tempDist;
+      //      }
       if (topKPQ.size() < K || tempDist < kthMinDist) {
         if (topKPQ.size() == K) {
           topKPQ.poll();
@@ -791,8 +799,8 @@ public class RTree<T> {
     return kthMinDist;
   }
 
-  private List<TVList> readModifiedSeries(Set<PartialPath> partialPaths,
-      Function<PartialPath, TVList> loadSeriesFunc) {
+  private List<TVList> readModifiedSeries(
+      Set<PartialPath> partialPaths, Function<PartialPath, TVList> loadSeriesFunc) {
     List<TVList> tvs = new ArrayList<>();
     for (PartialPath partialPath : partialPaths) {
       tvs.add(loadSeriesFunc.apply(partialPath));
@@ -800,9 +808,12 @@ public class RTree<T> {
     return tvs;
   }
 
-  private Pair<List<PartialPath>, List<TVList>> readSeriesFromBinaryFileAtOnceWithIdx(RNode node,
-      Function<PartialPath, TVList> loadSeriesFunc, Set<PartialPath> modifiedPaths,
-      double bsfDist, TriFunction<float[], float[], float[], Double> calcLowerBoundDistFunc,
+  private Pair<List<PartialPath>, List<TVList>> readSeriesFromBinaryFileAtOnceWithIdx(
+      RNode node,
+      Function<PartialPath, TVList> loadSeriesFunc,
+      Set<PartialPath> modifiedPaths,
+      double bsfDist,
+      TriFunction<float[], float[], float[], Double> calcLowerBoundDistFunc,
       float[] patternFeatures) {
     List<PartialPath> ps = new ArrayList<>();
     List<TVList> tvs = new ArrayList<>();
@@ -810,7 +821,7 @@ public class RTree<T> {
       PartialPath p = (PartialPath) ((Item) rNode).v;
       if (!modifiedPaths.contains(p)) {
         double tempDist = calcLowerBoundDistFunc.apply(node.lbs, node.ubs, patternFeatures);
-        if(tempDist < bsfDist){
+        if (tempDist < bsfDist) {
           ps.add(p);
           tvs.add(loadSeriesFunc.apply(p));
         }
@@ -818,7 +829,6 @@ public class RTree<T> {
     }
     return new Pair<>(ps, tvs);
   }
-
 
   private static class PqItem {
 

@@ -18,12 +18,13 @@
  */
 package org.apache.iotdb.db.utils.datastructure.primitive;
 
-import static org.apache.iotdb.db.rescon.PrimitiveArrayManager.ARRAY_SIZE;
+import org.apache.iotdb.db.rescon.PrimitiveArrayManager;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.iotdb.db.rescon.PrimitiveArrayManager;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+
+import static org.apache.iotdb.db.rescon.PrimitiveArrayManager.ARRAY_SIZE;
 
 public class DoublePrimitiveList extends PrimitiveList {
 
@@ -52,7 +53,6 @@ public class DoublePrimitiveList extends PrimitiveList {
     int elementIndex = index % ARRAY_SIZE;
     return values.get(arrayIndex)[elementIndex];
   }
-
 
   @Override
   public void putAllDouble(PrimitiveList src) {

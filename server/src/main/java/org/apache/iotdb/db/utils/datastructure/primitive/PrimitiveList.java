@@ -22,7 +22,6 @@ package org.apache.iotdb.db.utils.datastructure.primitive;
 import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.read.TimeValuePair;
 
 public abstract class PrimitiveList {
 
@@ -33,7 +32,6 @@ public abstract class PrimitiveList {
   protected int size;
   protected final TSDataType tsDataType;
   protected int capacity;
-
 
   public TSDataType getTsDataType() {
     return tsDataType;
@@ -95,13 +93,11 @@ public abstract class PrimitiveList {
 
   public void putBoolean(boolean value) {
     throw new UnsupportedOperationException(ERR_PRIMITIVE_DATATYPE_NOT_MATCH);
-
   }
 
   public void setBoolean(int i, boolean b) {
     throw new UnsupportedOperationException(ERR_PRIMITIVE_DATATYPE_NOT_MATCH);
   }
-
 
   protected abstract void expandValues();
 
@@ -126,7 +122,6 @@ public abstract class PrimitiveList {
   protected void cloneAs(PrimitiveList cloneList) {
     cloneList.size = size;
   }
-
 
   protected void checkExpansion() {
     if (size == capacity) {
@@ -181,6 +176,4 @@ public abstract class PrimitiveList {
     sb.append("}");
     return sb.toString();
   }
-
-
 }

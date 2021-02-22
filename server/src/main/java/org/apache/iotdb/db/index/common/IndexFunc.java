@@ -17,6 +17,14 @@
  */
 package org.apache.iotdb.db.index.common;
 
+import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.read.common.Path;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import static org.apache.iotdb.db.index.common.IndexFunc.FeatureLayer.ALIGNED;
 import static org.apache.iotdb.db.index.common.IndexFunc.FeatureLayer.IDENTIFIER;
 import static org.apache.iotdb.db.index.common.IndexFunc.FeatureLayer.UNKNOWN_LAYER;
@@ -24,17 +32,15 @@ import static org.apache.iotdb.tsfile.file.metadata.enums.TSDataType.DOUBLE;
 import static org.apache.iotdb.tsfile.file.metadata.enums.TSDataType.INT32;
 import static org.apache.iotdb.tsfile.file.metadata.enums.TSDataType.INT64;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.read.common.Path;
-
 public enum IndexFunc {
-  TIME_RANGE(INT64), SERIES_LEN(INT32), SIM_ST(INT64), SIM_ET(INT64),
-  ED(DOUBLE), DTW(DOUBLE),
-  CATEGORY, UNKNOWN;
+  TIME_RANGE(INT64),
+  SERIES_LEN(INT32),
+  SIM_ST(INT64),
+  SIM_ET(INT64),
+  ED(DOUBLE),
+  DTW(DOUBLE),
+  CATEGORY,
+  UNKNOWN;
 
   private static final Map<IndexFunc, FeatureLayer> funcLayers = new HashMap<>();
 
@@ -70,7 +76,6 @@ public enum IndexFunc {
     this.type = TSDataType.TEXT;
   }
 
-
   public static List<TSDataType> getSeriesByFunc(List<Path> paths, List<String> aggregations) {
     List<TSDataType> tsDataTypes = new ArrayList<>();
     for (int i = 0; i < paths.size(); i++) {
@@ -85,9 +90,11 @@ public enum IndexFunc {
   }
 
   public enum FeatureLayer {
-    IDENTIFIER, ALIGNED, FEATURE, UNKNOWN_LAYER
+    IDENTIFIER,
+    ALIGNED,
+    FEATURE,
+    UNKNOWN_LAYER
   }
-
 
   public static FeatureLayer getFuncNeedFeatureLayer(IndexFunc func) {
     return funcLayers.getOrDefault(func, FeatureLayer.UNKNOWN_LAYER);

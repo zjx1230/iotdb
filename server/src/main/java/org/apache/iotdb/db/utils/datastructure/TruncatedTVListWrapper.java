@@ -1,11 +1,11 @@
-//package org.apache.iotdb.db.utils.datastructure;
+// package org.apache.iotdb.db.utils.datastructure;
 //
-//import org.apache.iotdb.tsfile.exception.NotImplementedException;
-//import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-//import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-//import org.apache.iotdb.tsfile.read.TimeValuePair;
+// import org.apache.iotdb.tsfile.exception.NotImplementedException;
+// import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+// import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+// import org.apache.iotdb.tsfile.read.TimeValuePair;
 //
-//public class TruncatedTVListWrapper extends TVList {
+// public class TruncatedTVListWrapper extends TVList {
 //
 //  private final TVList srcData;
 //  private static final String UNMODIFIED_ERROR_MSG = "TVListUnmodifiedWrapper is read-only";
@@ -138,7 +138,8 @@
 //          sb.append(String.format("[%d,%.2f],", pair.getTimestamp(), pair.getValue().getFloat()));
 //          break;
 //        case DOUBLE:
-//          sb.append(String.format("[%d,%.2f],", pair.getTimestamp(), pair.getValue().getDouble()));
+//          sb.append(String.format("[%d,%.2f],", pair.getTimestamp(),
+// pair.getValue().getDouble()));
 //          break;
 //        default:
 //          throw new NotImplementedException(getDataType().toString());
@@ -147,4 +148,4 @@
 //    sb.append("}");
 //    return sb.toString();
 //  }
-//}
+// }

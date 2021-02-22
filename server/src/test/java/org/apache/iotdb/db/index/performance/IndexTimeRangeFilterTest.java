@@ -17,13 +17,15 @@
  */
 package org.apache.iotdb.db.index.performance;
 
-import java.io.IOException;
 import org.apache.iotdb.db.index.IndexTestUtils;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+
 import org.junit.Test;
+
+import java.io.IOException;
 
 public class IndexTimeRangeFilterTest {
 
@@ -36,16 +38,17 @@ public class IndexTimeRangeFilterTest {
 
   @Test
   public void testFilter() throws IOException {
-//    TimeFilter.TimeGt timeGt = TimeFilter.gt(500);
-//    TimeFilter.TimeLt timeLt = TimeFilter.lt(1000);
-//    AndFilter a = FilterFactory.and(timeGt, timeLt);
+    //    TimeFilter.TimeGt timeGt = TimeFilter.gt(500);
+    //    TimeFilter.TimeLt timeLt = TimeFilter.lt(1000);
+    //    AndFilter a = FilterFactory.and(timeGt, timeLt);
     long minTime = 100;
     long maxTime = 200;
-//    System.out.println(TimeFilter.gt(99L).satisfyStartEndTime(minTime, maxTime));
+    //    System.out.println(TimeFilter.gt(99L).satisfyStartEndTime(minTime, maxTime));
 
-//    Filter time = FilterFactory.or(TimeFilter.gtEq(201L), FilterFactory.and(TimeFilter.ltEq(99L), TimeFilter.gt(90L)));
-//
-//    System.out.println(time.satisfyStartEndTime(minTime, maxTime));
+    //    Filter time = FilterFactory.or(TimeFilter.gtEq(201L),
+    // FilterFactory.and(TimeFilter.ltEq(99L), TimeFilter.gt(90L)));
+    //
+    //    System.out.println(time.satisfyStartEndTime(minTime, maxTime));
     TVList src = TVListAllocator.getInstance().allocate(TSDataType.INT32);
     for (int i = 0; i < 10; i++) {
       src.putInt(10 * i, i);
@@ -65,8 +68,5 @@ public class IndexTimeRangeFilterTest {
     src.putInt(90, 8);
     res = IndexUtils.alignUniform(src, 10);
     System.out.println(IndexTestUtils.tvListToString(res));
-
-
   }
-
 }

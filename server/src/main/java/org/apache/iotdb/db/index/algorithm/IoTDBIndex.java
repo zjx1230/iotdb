@@ -17,17 +17,7 @@
  */
 package org.apache.iotdb.db.index.algorithm;
 
-import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_SLIDE_STEP;
-import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.index.IndexProcessor;
@@ -46,6 +36,16 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.common.RowRecord;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_SLIDE_STEP;
+import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
+
 /**
  * Each StorageGroupProcessor contains a IndexProcessor, and each IndexProcessor can contain more
  * than one IIndex. Each type of Index corresponds one IIndex.
@@ -62,7 +62,6 @@ public abstract class IoTDBIndex {
   protected int slideStep;
   protected IndexFeatureExtractor indexFeatureExtractor;
 
-
   public IoTDBIndex(PartialPath indexSeries, TSDataType tsDataType, IndexInfo indexInfo) {
     this.indexSeries = indexSeries;
     this.indexType = indexInfo.getIndexType();
@@ -78,13 +77,16 @@ public abstract class IoTDBIndex {
 
   private void parsePropsAndInit(Map<String, String> props) {
     // Strategy
-    //WindowRange
+    // WindowRange
     this.windowRange =
-        props.containsKey(INDEX_WINDOW_RANGE) ? Integer.parseInt(props.get(INDEX_WINDOW_RANGE))
+        props.containsKey(INDEX_WINDOW_RANGE)
+            ? Integer.parseInt(props.get(INDEX_WINDOW_RANGE))
             : IoTDBDescriptor.getInstance().getConfig().getDefaultIndexWindowRange();
     // SlideRange
-    this.slideStep = props.containsKey(INDEX_SLIDE_STEP) ?
-        Integer.parseInt(props.get(INDEX_SLIDE_STEP)) : this.windowRange;
+    this.slideStep =
+        props.containsKey(INDEX_SLIDE_STEP)
+            ? Integer.parseInt(props.get(INDEX_SLIDE_STEP))
+            : this.windowRange;
   }
 
   /**
@@ -100,48 +102,44 @@ public abstract class IoTDBIndex {
     return indexFeatureExtractor;
   }
 
-//  /**
-//   * Sorry but this method is ugly.
-//   */
-//  public IndexFeatureExtractor startFlushTask(BatchData batchData) {
-//    this.indexFeatureExtractor.appendNewSrcData(batchData);
-//    return indexFeatureExtractor;
-//  }
+  //  /**
+  //   * Sorry but this method is ugly.
+  //   */
+  //  public IndexFeatureExtractor startFlushTask(BatchData batchData) {
+  //    this.indexFeatureExtractor.appendNewSrcData(batchData);
+  //    return indexFeatureExtractor;
+  //  }
 
   /**
    * An index should determine which preprocessor it uses and hook it to {@linkplain
    * IoTDBIndex}.indexProcessor. An index should determine which preprocessor it uses and connect to
    * the IndexProcessor.
    *
-   * This method is called when IoTDBIndex is created and accept the previous overlapped data in
+   * <p>This method is called when IoTDBIndex is created and accept the previous overlapped data in
    * type of {@code ByteBuffer}.
    *
-   * Note that, the implementation should call {@code deserializePrevious(ByteBuffer byteBuffer)}
+   * <p>Note that, the implementation should call {@code deserializePrevious(ByteBuffer byteBuffer)}
    * after initialize the preprocessor.
    */
   public abstract void initPreprocessor(ByteBuffer previous, boolean inQueryMode);
 
-
-
   /**
-   * When this function is called, it means that a new point has been pre-processed.  The index can
+   * When this function is called, it means that a new point has been pre-processed. The index can
    * organize the newcomer in real time, or delay to build it until {@linkplain #flush}
    */
   public abstract boolean buildNext() throws IndexManagerException;
 
-  /**
-   * flush
-   */
+  /** flush */
   public abstract void flush() throws IndexManagerException;
 
   /**
    * clear and release the occupied memory. The preprocessor has been cleared in IoTDBIndex, so
    * remember invoke {@code super.clear()} and then add yourself.
    *
-   * This method is called when completing a sub-flush.  Note that one flush task will trigger
+   * <p>This method is called when completing a sub-flush. Note that one flush task will trigger
    * multiple sub-brush tasks due to the memory control.
    *
-   * clear和其他的区别：哦，上一个版本中，索引会定时刷出去，所以还可以理解，现在似乎没有这个必要了， TODO 删掉这个？不用，因为现在他不会在被调用了，仅在flush的时候才会被调用
+   * <p>clear和其他的区别：哦，上一个版本中，索引会定时刷出去，所以还可以理解，现在似乎没有这个必要了， TODO 删掉这个？不用，因为现在他不会在被调用了，仅在flush的时候才会被调用
    *
    * @return how much memory was freed.
    */
@@ -160,9 +158,7 @@ public abstract class IoTDBIndex {
     serializeIndexAndFlush();
   }
 
-  /**
-   * 索引将自己的东西刷出去
-   */
+  /** 索引将自己的东西刷出去 */
   protected abstract void serializeIndexAndFlush();
 
   /**
@@ -174,9 +170,7 @@ public abstract class IoTDBIndex {
     return indexFeatureExtractor.serializePrevious();
   }
 
-  /**
-   * This method is called when a flush task totally finished.
-   */
+  /** This method is called when a flush task totally finished. */
   public void endFlushTask() {
     indexFeatureExtractor.clearProcessedSrcData();
   }
@@ -190,8 +184,12 @@ public abstract class IoTDBIndex {
     return indexFeatureExtractor == null ? 0 : indexFeatureExtractor.getAmortizedSize();
   }
 
-  public abstract QueryDataSet query(Map<String, Object> queryProps, IIndexUsable iIndexUsable,
-      QueryContext context, IIndexRefinePhaseOptimize refinePhaseOptimizer, boolean alignedByTime)
+  public abstract QueryDataSet query(
+      Map<String, Object> queryProps,
+      IIndexUsable iIndexUsable,
+      QueryContext context,
+      IIndexRefinePhaseOptimize refinePhaseOptimizer,
+      boolean alignedByTime)
       throws QueryIndexException;
 
   /**
@@ -200,8 +198,8 @@ public abstract class IoTDBIndex {
    * @param queryConditions query conditions
    * @throws IllegalIndexParamException when conditions or funcs are not supported
    */
-//  public abstract void initQuery(Map<String, Object> queryConditions,
-//      List<IndexFuncResult> indexFuncResults) throws UnsupportedIndexFuncException;
+  //  public abstract void initQuery(Map<String, Object> queryConditions,
+  //      List<IndexFuncResult> indexFuncResults) throws UnsupportedIndexFuncException;
 
   /**
    * query on path with parameters, return the candidate list. return null is regarded as Nothing to
@@ -209,27 +207,26 @@ public abstract class IoTDBIndex {
    *
    * @return null means nothing to be pruned
    */
-//  public abstract List<Identifier> queryByIndex(ByteBuffer indexChunkData)
-//      throws IndexManagerException;
+  //  public abstract List<Identifier> queryByIndex(ByteBuffer indexChunkData)
+  //      throws IndexManagerException;
 
   /**
    * IndexPreprocessor has preprocess a new sequence, produce L1, L2 or L3 features as user's
    * configuration. Calculates functions you support and fill into {@code funcResult}.
    *
-   * Returns {@code true} if all calculations of this function have been completed. If so, this
+   * <p>Returns {@code true} if all calculations of this function have been completed. If so, this
    * AggregateResult will not be called next time.
    *
    * @throws UnsupportedOperationException If you meet an unsupported AggregateResult
    */
-//  public abstract int postProcessNext(List<IndexFuncResult> indexFuncResults)
-//      throws QueryIndexException;
+  //  public abstract int postProcessNext(List<IndexFuncResult> indexFuncResults)
+  //      throws QueryIndexException;
 
   /**
    * the file is no more needed. Stop ongoing construction and flush operations, clear memory
    * directly and delete the index file.
    */
   public abstract void delete();
-
 
   public IndexType getIndexType() {
     return indexType;
@@ -268,8 +265,8 @@ public abstract class IoTDBIndex {
     return indexType.toString();
   }
 
-  protected QueryDataSet constructSearchDataset(List<DistSeries> res,
-      boolean alignedByTime, int nMaxReturnSeries)
+  protected QueryDataSet constructSearchDataset(
+      List<DistSeries> res, boolean alignedByTime, int nMaxReturnSeries)
       throws QueryIndexException {
     if (alignedByTime) {
       throw new QueryIndexException("Unsupported alignedByTime result");
@@ -303,5 +300,4 @@ public abstract class IoTDBIndex {
     }
     return dataSet;
   }
-
 }

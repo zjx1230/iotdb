@@ -18,9 +18,6 @@
  */
 package org.apache.iotdb.db.index.common;
 
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
 import org.apache.iotdb.db.exception.index.UnsupportedIndexTypeException;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.algorithm.NoIndex;
@@ -30,13 +27,15 @@ import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 
-public enum IndexType {
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
 
+public enum IndexType {
   NO_INDEX,
   RTREE_PAA,
   ELB_INDEX,
-  KV_INDEX,
-  ;
+  KV_INDEX;
 
   /**
    * judge the index type.
@@ -90,11 +89,14 @@ public enum IndexType {
       return IndexType.valueOf(normalized);
     } catch (IllegalArgumentException e) {
       throw new UnsupportedIndexTypeException(indexTypeString);
-
     }
   }
 
-  private static IoTDBIndex newIndexByType(PartialPath path, TSDataType tsDataType, String indexDir, IndexType indexType,
+  private static IoTDBIndex newIndexByType(
+      PartialPath path,
+      TSDataType tsDataType,
+      String indexDir,
+      IndexType indexType,
       IndexInfo indexInfo) {
     switch (indexType) {
       case NO_INDEX:
@@ -109,8 +111,13 @@ public enum IndexType {
     }
   }
 
-  public static IoTDBIndex constructIndex(PartialPath indexSeries, TSDataType tsDataType, String indexDir, IndexType indexType,
-      IndexInfo indexInfo, ByteBuffer previous) {
+  public static IoTDBIndex constructIndex(
+      PartialPath indexSeries,
+      TSDataType tsDataType,
+      String indexDir,
+      IndexType indexType,
+      IndexInfo indexInfo,
+      ByteBuffer previous) {
     indexInfo.setProps(uppercaseStringProps(indexInfo.getProps()));
     IoTDBIndex index = newIndexByType(indexSeries, tsDataType, indexDir, indexType, indexInfo);
     index.initPreprocessor(previous, false);
@@ -122,5 +129,4 @@ public enum IndexType {
     props.forEach((k, v) -> uppercase.put(k.toUpperCase(), v.toUpperCase()));
     return uppercase;
   }
-
 }

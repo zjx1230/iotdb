@@ -17,23 +17,24 @@
  */
 package org.apache.iotdb.db.index.algorithm.elb.pattern;
 
-import java.util.Arrays;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.index.common.distance.Distance;
 import org.apache.iotdb.db.index.common.distance.LNormDouble;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 
+import java.util.Arrays;
+
 /**
- * <p> Multiple Indefinite-LEngth Sub-Pattern，MILES-pattern is composed of multiple
- * consecutive sub-patterns with different thresholds. The breakpoints between sub-patterns are
- * indefinite within a small range, i.e. subpattern lengths are somewhat variable.</p>
+ * Multiple Indefinite-LEngth Sub-Pattern，MILES-pattern is composed of multiple consecutive
+ * sub-patterns with different thresholds. The breakpoints between sub-patterns are indefinite
+ * within a small range, i.e. subpattern lengths are somewhat variable.
  *
- * <p> The indefinite breakpoint can be regard as a "wildcard character", representing one or more
+ * <p>The indefinite breakpoint can be regard as a "wildcard character", representing one or more
  * subpattern case. It could expand your return results and somewhat alleviate the false dismissals
- * caused by outlier and changing trend. </p>
+ * caused by outlier and changing trend.
  *
- * <p> Format example:</p>
- * For pattern dataPoints：[1,2,3,4,5,6,7,8]
+ * <p>Format example: For pattern dataPoints：[1,2,3,4,5,6,7,8]
+ *
  * <pre>
  * startTolIndex: [0,3,7]
  * endTolIndex: [0,5,8]
@@ -46,14 +47,11 @@ import org.apache.iotdb.db.utils.datastructure.TVList;
 public class MilesPattern {
   public int[] minLeftBorders;
   public int[] maxLeftBorders;
-  /**
-   * the number of points in the sliding window
-   */
+  /** the number of points in the sliding window */
   public int sequenceLen;
-  /**
-   * the number of subpatterns specified by user
-   */
+  /** the number of subpatterns specified by user */
   public int subpatternCount;
+
   public double[] thresholdsArray;
 
   public double[] tvList;
@@ -67,9 +65,15 @@ public class MilesPattern {
     this.distanceMetric = distanceMetric;
   }
 
-  public void initPattern(double[] tvList, int tvListOffset, int length, int subpatternCount,
-      double[] thresholdsArray, int[] minLeftBorders, int[] maxLeftBorders) {
-//    this.tvList = tvList;
+  public void initPattern(
+      double[] tvList,
+      int tvListOffset,
+      int length,
+      int subpatternCount,
+      double[] thresholdsArray,
+      int[] minLeftBorders,
+      int[] maxLeftBorders) {
+    //    this.tvList = tvList;
     this.tvList = tvList;
     this.tvListOffset = tvListOffset;
     this.sequenceLen = length;
@@ -80,7 +84,7 @@ public class MilesPattern {
 
     checkBorder();
 
-    //the maximal potential variable range, to avoid frequently allocating memory
+    // the maximal potential variable range, to avoid frequently allocating memory
     int maxRadius = -1;
     for (int i = 0; i < this.subpatternCount; i++) {
       if (this.maxLeftBorders[i] - this.minLeftBorders[i] > maxRadius) {
@@ -111,13 +115,15 @@ public class MilesPattern {
     for (int i = 0; i < subpatternCount; i++) {
       if (minLeftBorders[i] > maxLeftBorders[i]) {
         throw new IllegalIndexParamException(
-            String.format("ELB border error: minLeftBorders[%d]=%d > maxLeftBorders[%d]=%d", i,
-                minLeftBorders[i], i, maxLeftBorders[i]));
+            String.format(
+                "ELB border error: minLeftBorders[%d]=%d > maxLeftBorders[%d]=%d",
+                i, minLeftBorders[i], i, maxLeftBorders[i]));
       }
       if (maxLeftBorders[i] >= minLeftBorders[i + 1]) {
         throw new IllegalIndexParamException(
-            String.format("ELB border error: maxLeftBorders[%d]=%d > minLeftBorders[%d+1]=%d", i,
-                maxLeftBorders[i], i, minLeftBorders[i + 1]));
+            String.format(
+                "ELB border error: maxLeftBorders[%d]=%d > minLeftBorders[%d+1]=%d",
+                i, maxLeftBorders[i], i, minLeftBorders[i + 1]));
       }
     }
   }
@@ -145,14 +151,12 @@ public class MilesPattern {
       int j;
       for (j = this.maxLeftBorders[i - 1]; j < this.minLeftBorders[i] - 1; j++) {
         leftSum +=
-            normdouble.pow(
-                Math.abs(tvList[tvListOffset + j] - stream[j + offset]))
+            normdouble.pow(Math.abs(tvList[tvListOffset + j] - stream[j + offset]))
                 - normdouble.pow(this.thresholdsArray[i - 1]);
       }
       int k = 0;
       for (; j < this.maxLeftBorders[i]; j++, k++) {
-        diff[k] = normdouble
-            .pow(Math.abs(tvList[j + tvListOffset] - stream[j + offset]));
+        diff[k] = normdouble.pow(Math.abs(tvList[j + tvListOffset] - stream[j + offset]));
         leftSum += diff[k] - thresholdPowers[i - 1];
         if (leftSum <= 0) {
           idxSet[k] = j;
@@ -179,16 +183,14 @@ public class MilesPattern {
       leftSum = minSum;
     }
     for (int j = this.maxLeftBorders[i - 1]; j < this.sequenceLen; j++) {
-      leftSum += normdouble
-          .pow(Math.abs(tvList[j + tvListOffset] - stream[j + offset]))
-          - normdouble.pow(this.thresholdsArray[i - 1]);
+      leftSum +=
+          normdouble.pow(Math.abs(tvList[j + tvListOffset] - stream[j + offset]))
+              - normdouble.pow(this.thresholdsArray[i - 1]);
     }
     return (leftSum <= 0) ? -1 : 1;
   }
 
-
   /**
-   *
    * @param disMetric
    * @param stream
    * @param offset
@@ -200,7 +202,9 @@ public class MilesPattern {
     int len;
     for (int i = 0; i < subpatternCount; i++) {
       len = bps[i + 1] - bps[i];
-      int count = disMetric.distEarlyAbandonDetailNoRoot(stream, offset + bps[i], tvList, bps[i], len, thresholdPowers[i] * len);
+      int count =
+          disMetric.distEarlyAbandonDetailNoRoot(
+              stream, offset + bps[i], tvList, bps[i], len, thresholdPowers[i] * len);
       if (count > 0) {
         return ret + count;
       } else {
@@ -227,7 +231,9 @@ public class MilesPattern {
   }
 
   /**
-   * calculate the exact distance between this pattern and the given sliding window, return whether it is a matched result.
+   * calculate the exact distance between this pattern and the given sliding window, return whether
+   * it is a matched result.
+   *
    * @param slidingWindow to be calculated
    * @return true if slidingWindow is a matched result.
    */
@@ -235,7 +241,9 @@ public class MilesPattern {
     int len;
     for (int i = 0; i < subpatternCount; i++) {
       len = minLeftBorders[i + 1] - minLeftBorders[i];
-      double dist = distanceMetric.distPower(slidingWindow, offset + minLeftBorders[i], tvList, minLeftBorders[i], len);
+      double dist =
+          distanceMetric.distPower(
+              slidingWindow, offset + minLeftBorders[i], tvList, minLeftBorders[i], len);
       if (dist > thresholdPowers[i] * len) {
         return false;
       }
@@ -243,7 +251,7 @@ public class MilesPattern {
     return true;
   }
 
-//  public double getDoubleFromRelativeIdx(int idx) {
-//    return getDoubleFromAnyType(tvList, tvListOffset + idx);
-//  }
+  //  public double getDoubleFromRelativeIdx(int idx) {
+  //    return getDoubleFromAnyType(tvList, tvListOffset + idx);
+  //  }
 }

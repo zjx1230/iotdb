@@ -18,17 +18,6 @@
  */
 package org.apache.iotdb.db.utils;
 
-import static org.junit.Assert.fail;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.util.concurrent.TimeUnit;
-import javax.management.remote.JMXConnector;
-import javax.management.remote.JMXConnectorFactory;
-import javax.management.remote.JMXServiceURL;
-import org.apache.commons.io.FileUtils;
 import org.apache.iotdb.db.auth.AuthException;
 import org.apache.iotdb.db.auth.authorizer.BasicAuthorizer;
 import org.apache.iotdb.db.conf.IoTDBConfig;
@@ -42,7 +31,7 @@ import org.apache.iotdb.db.engine.cache.TimeSeriesMetadataCache;
 import org.apache.iotdb.db.engine.compaction.CompactionMergeTaskPoolManager;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.UDFRegistrationException;
-import org.apache.iotdb.db.exception.query.QueryProcessException;
+import org.apache.iotdb.db.index.IndexManager;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.FileReaderManager;
 import org.apache.iotdb.db.query.control.QueryResourceManager;
@@ -51,19 +40,27 @@ import org.apache.iotdb.db.query.udf.service.UDFRegistrationService;
 import org.apache.iotdb.db.rescon.PrimitiveArrayManager;
 import org.apache.iotdb.db.rescon.SystemInfo;
 import org.apache.iotdb.db.service.IoTDB;
+
+import org.apache.commons.io.FileUtils;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.iotdb.db.index.IndexManager;
 
+import javax.management.remote.JMXConnector;
+import javax.management.remote.JMXConnectorFactory;
+import javax.management.remote.JMXServiceURL;
 
-/**
- * <p>
- * This class is used for cleaning test environment in unit test and integration test
- * </p>
- */
+import java.io.File;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.Assert.fail;
+
+/** This class is used for cleaning test environment in unit test and integration test */
 public class EnvironmentUtils {
 
   private static final Logger logger = LoggerFactory.getLogger(EnvironmentUtils.class);
@@ -80,8 +77,8 @@ public class EnvironmentUtils {
 
   private static IoTDB daemon;
 
-  public static boolean examinePorts = Boolean
-      .parseBoolean(System.getProperty("test.port.closed", "false"));
+  public static boolean examinePorts =
+      Boolean.parseBoolean(System.getProperty("test.port.closed", "false"));
 
   public static void cleanEnv() throws IOException, StorageEngineException {
     // wait all compaction finished
@@ -107,11 +104,11 @@ public class EnvironmentUtils {
       // TODO: this is just too slow, especially on Windows, consider a better way
       boolean closed = examinePorts();
       if (!closed) {
-        //sleep 10 seconds
+        // sleep 10 seconds
         try {
           TimeUnit.SECONDS.sleep(10);
         } catch (InterruptedException e) {
-          //do nothing
+          // do nothing
         }
 
         if (!examinePorts()) {
@@ -127,7 +124,7 @@ public class EnvironmentUtils {
     }
 
     // clean index
-    if(config.isEnableIndex()){
+    if (config.isEnableIndex()) {
       IndexManager.getInstance().deleteAll();
     }
 
@@ -159,7 +156,6 @@ public class EnvironmentUtils {
     config.setMemtableSizeThreshold(oldGroupSizeInByte);
   }
 
-
   private static boolean examinePorts() {
     TTransport transport = new TSocket("127.0.0.1", 6667, 100);
     if (!transport.isOpen()) {
@@ -169,10 +165,10 @@ public class EnvironmentUtils {
         transport.close();
         return false;
       } catch (TTransportException e) {
-        //do nothing
+        // do nothing
       }
     }
-    //try sync service
+    // try sync service
     transport = new TSocket("127.0.0.1", 5555, 100);
     if (!transport.isOpen()) {
       try {
@@ -181,32 +177,30 @@ public class EnvironmentUtils {
         transport.close();
         return false;
       } catch (TTransportException e) {
-        //do nothing
+        // do nothing
       }
     }
-    //try jmx connection
+    // try jmx connection
     try {
-      JMXServiceURL url =
-          new JMXServiceURL("service:jmx:rmi:///jndi/rmi://localhost:31999/jmxrmi");
+      JMXServiceURL url = new JMXServiceURL("service:jmx:rmi:///jndi/rmi://localhost:31999/jmxrmi");
       JMXConnector jmxConnector = JMXConnectorFactory.connect(url);
       logger.error("stop JMX failed. 31999 can be connected now.");
       jmxConnector.close();
       return false;
     } catch (IOException e) {
-      //do nothing
+      // do nothing
     }
-    //try MetricService
+    // try MetricService
     try (Socket socket = new Socket()) {
       socket.connect(new InetSocketAddress("127.0.0.1", 8181), 100);
       logger.error("stop MetricService failed. 8181 can be connected now.");
       return false;
     } catch (Exception e) {
-      //do nothing
+      // do nothing
     }
-    //do nothing
+    // do nothing
     return true;
   }
-
 
   public static void cleanAllDir() throws IOException {
     // delete sequential files
@@ -237,20 +231,16 @@ public class EnvironmentUtils {
     FileUtils.deleteDirectory(new File(dir));
   }
 
-  /**
-   * disable the system monitor</br> this function should be called before all code in the setup
-   */
+  /** disable the system monitor</br> this function should be called before all code in the setup */
   public static void closeStatMonitor() {
     config.setEnableStatMonitor(false);
   }
 
-  /**
-   * disable memory control</br> this function should be called before all code in the setup
-   */
+  /** disable memory control</br> this function should be called before all code in the setup */
   public static void envSetUp() {
     logger.warn("EnvironmentUtil setup...");
     IoTDBDescriptor.getInstance().getConfig().setThriftServerAwaitTimeForStopService(0);
-    //we do not start 8181 port in test.
+    // we do not start 8181 port in test.
     IoTDBDescriptor.getInstance().getConfig().setEnableMetricService(false);
     IoTDBDescriptor.getInstance().getConfig().setAvgSeriesPointNumberThreshold(Integer.MAX_VALUE);
     if (daemon == null) {
@@ -324,7 +314,7 @@ public class EnvironmentUtils {
     for (String dataDir : config.getDataDirs()) {
       createDir(dataDir);
     }
-    //create user and roles folder
+    // create user and roles folder
     try {
       BasicAuthorizer.getInstance().reset();
     } catch (AuthException e) {

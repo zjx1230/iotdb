@@ -17,10 +17,6 @@
  */
 package org.apache.iotdb.db.index;
 
-import static org.apache.iotdb.db.index.common.IndexConstant.INDEXED_SUFFIX;
-import static org.apache.iotdb.db.index.common.IndexConstant.INDEXING_SUFFIX;
-
-import java.util.List;
 import org.apache.iotdb.db.index.common.IndexFunc;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.utils.datastructure.TVList;
@@ -28,6 +24,11 @@ import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.TimeValuePair;
 import org.apache.iotdb.tsfile.utils.Pair;
+
+import java.util.List;
+
+import static org.apache.iotdb.db.index.common.IndexConstant.INDEXED_SUFFIX;
+import static org.apache.iotdb.db.index.common.IndexConstant.INDEXING_SUFFIX;
 
 public class IndexTestUtils {
 
@@ -42,7 +43,6 @@ public class IndexTestUtils {
     }
     return String.format("%s(%s)", funcStr, path);
   }
-
 
   public static String TEST_INDEX_FILE_NAME = "test_index";
 
@@ -107,9 +107,10 @@ public class IndexTestUtils {
     StringBuilder sb = new StringBuilder();
     sb.append("{");
     for (double[] mbr : mbrs) {
-      sb.append(String.format("[%s,%s],",
-          doubleToFormatStringCoverInf(mbr[0]),
-          doubleToFormatStringCoverInf(mbr[1])));
+      sb.append(
+          String.format(
+              "[%s,%s],",
+              doubleToFormatStringCoverInf(mbr[0]), doubleToFormatStringCoverInf(mbr[1])));
     }
     sb.append("}");
     return sb.toString();
@@ -128,27 +129,27 @@ public class IndexTestUtils {
     }
   }
 
-//  public static String deserializeIndexChunk(IndexType indexType, ByteBuffer byteBuffer) {
-//    StringBuilder sb = new StringBuilder();
-//    switch (indexType) {
-//      case NO_INDEX:
-//        int size = ReadWriteIOUtils.readInt(byteBuffer);
-//        for (int i = 0; i < size; i++) {
-//          sb.append(Identifier.deserialize(byteBuffer));
-//        }
-//        return sb.toString();
-//      case RTREE_PAA:
-//      case ELB:
-//        BiConsumer<Integer, ByteBuffer> deserial = (i, b) -> {
-//          Identifier id = Identifier.deserialize(b);
-//          sb.append(String.format("(%d,%s)", i, id.toString()));
-//        };
-//        RTree.deserialize(byteBuffer, deserial);
-//        return sb.toString();
-//      case KV_INDEX:
-//      default:
-//        throw new UnsupportedOperationException();
-//    }
-//  }
+  //  public static String deserializeIndexChunk(IndexType indexType, ByteBuffer byteBuffer) {
+  //    StringBuilder sb = new StringBuilder();
+  //    switch (indexType) {
+  //      case NO_INDEX:
+  //        int size = ReadWriteIOUtils.readInt(byteBuffer);
+  //        for (int i = 0; i < size; i++) {
+  //          sb.append(Identifier.deserialize(byteBuffer));
+  //        }
+  //        return sb.toString();
+  //      case RTREE_PAA:
+  //      case ELB:
+  //        BiConsumer<Integer, ByteBuffer> deserial = (i, b) -> {
+  //          Identifier id = Identifier.deserialize(b);
+  //          sb.append(String.format("(%d,%s)", i, id.toString()));
+  //        };
+  //        RTree.deserialize(byteBuffer, deserial);
+  //        return sb.toString();
+  //      case KV_INDEX:
+  //      default:
+  //        throw new UnsupportedOperationException();
+  //    }
+  //  }
 
 }
