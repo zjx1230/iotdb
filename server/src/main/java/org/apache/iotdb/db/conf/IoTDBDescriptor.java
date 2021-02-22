@@ -322,6 +322,14 @@ public class IoTDBDescriptor {
           properties.getProperty("enable_unseq_compaction",
               Boolean.toString(conf.isEnableUnseqCompaction()))));
 
+      conf.setEnableSlidingMemTable(Boolean.parseBoolean(properties
+          .getProperty("enable_sliding_mem_table",
+              Boolean.toString(conf.isEnableSlidingMemTable()))));
+
+      conf.setSlidingWindowThreshold(Integer.parseInt(properties
+          .getProperty("sliding_window_threshold",
+              Integer.toString(conf.getSlidingWindowThreshold()))));
+
       conf.setFirstLevelFileNum(Integer.parseInt(properties.getProperty("first_level_file_num",
           Integer.toString(conf.getFirstLevelFileNum()))));
 

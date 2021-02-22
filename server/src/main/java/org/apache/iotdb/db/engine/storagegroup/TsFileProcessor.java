@@ -421,7 +421,24 @@ public class TsFileProcessor {
           workMemTable.memSize(), tsFileResource.getTsFile().getAbsolutePath());
       return true;
     }
-    if (!enableMemControl && workMemTable.memSize() >= getMemtableSizeThresholdBasedOnSeriesNum()) {
+    if (workMemTable.memSize() >= getMemtableSizeThresholdBasedOnSeriesNum()) {
+      logger.info("The memtable size {} of tsfile {} reaches the threshold",
+          workMemTable.memSize(), tsFileResource.getTsFile().getAbsolutePath());
+      return true;
+    }
+    return false;
+  }
+
+  public boolean shouldCloseFlushing() {
+    if (workMemTable == null) {
+      return false;
+    }
+    if (shouldFlush) {
+      logger.info("The memtable size {} of tsfile {} reaches the mem control threshold",
+          workMemTable.memSize(), tsFileResource.getTsFile().getAbsolutePath());
+      return true;
+    }
+    if (workMemTable.memSize() >= config.getSlidingWindowThreshold()) {
       logger.info("The memtable size {} of tsfile {} reaches the threshold",
           workMemTable.memSize(), tsFileResource.getTsFile().getAbsolutePath());
       return true;

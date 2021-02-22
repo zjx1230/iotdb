@@ -164,6 +164,10 @@ public class StorageGroupProcessor {
    */
   protected final TreeMap<Long, TsFileProcessor> workSequenceTsFileProcessors = new TreeMap<>();
   /**
+   * time partition id in the storage group -> flushingTsFileProcessor for this time partition
+   */
+  protected final TreeMap<Long, TsFileProcessor> flushingSequenceTsFileProcessors = new TreeMap<>();
+  /**
    * time partition id in the storage group -> tsFileProcessor for this time partition
    */
   protected final TreeMap<Long, TsFileProcessor> workUnsequenceTsFileProcessors = new TreeMap<>();
@@ -201,6 +205,12 @@ public class StorageGroupProcessor {
    */
   protected Map<Long, Map<String, Long>> partitionLatestFlushedTimeForEachDevice = new HashMap<>();
 
+  /*
+   * time partition id -> map, when a memory table is marked as to be flush, use latestTimeForEachDevice
+   * to update the flushingLatestTimeForEachDevice, and is used to update partitionLatestFlushedTimeForEachDevice
+   * when a flush is actually issued.
+   */
+  protected Map<Long, Map<String, Long>> flushingLatestTimeForEachDevice = new HashMap<>();
   /**
    * used to record the latest flush time while upgrading and inserting
    */
@@ -692,6 +702,10 @@ public class StorageGroupProcessor {
       partitionLatestFlushedTimeForEachDevice
           .computeIfAbsent(timePartitionId, id -> new HashMap<>());
 
+      if (config.isEnableSlidingMemTable()) {
+        flushingLatestTimeForEachDevice.computeIfAbsent(timePartitionId, l -> new HashMap<>());
+      }
+
       boolean isSequence =
           insertRowPlan.getTime() > partitionLatestFlushedTimeForEachDevice.get(timePartitionId)
               .getOrDefault(insertRowPlan.getDeviceId().getFullPath(), Long.MIN_VALUE);
@@ -913,7 +927,18 @@ public class StorageGroupProcessor {
       return;
     }
 
-    tsFileProcessor.insert(insertRowPlan);
+    TsFileProcessor flushingProcessor = flushingSequenceTsFileProcessors.get(timePartitionId);
+    boolean toFlushingProcessor = false;
+
+    if (config.isEnableSlidingMemTable() && sequence && isInsertToFlushingMemTable(timePartitionId,
+        insertRowPlan)) {
+      toFlushingProcessor = true;
+    }
+    if (toFlushingProcessor) {
+      flushingProcessor.insert(insertRowPlan);
+    } else {
+      tsFileProcessor.insert(insertRowPlan);
+    }
 
     // try to update the latest time of the device of this tsRecord
     if (latestTimeForEachDevice.get(timePartitionId)
@@ -928,10 +953,50 @@ public class StorageGroupProcessor {
 
     tryToUpdateInsertLastCache(insertRowPlan, globalLatestFlushTime);
 
+    if (config.isEnableSlidingMemTable() && sequence) {
+      if (flushingProcessor == null && tsFileProcessor.shouldFlush()) {
+        flushingSequenceTsFileProcessors.put(timePartitionId, tsFileProcessor);
+        Map<String, Long> curPartitionDeviceLatestTime = latestTimeForEachDevice
+            .get(timePartitionId);
+        if (curPartitionDeviceLatestTime != null) {
+          for (Entry<String, Long> entry : curPartitionDeviceLatestTime.entrySet()) {
+            flushingLatestTimeForEachDevice
+                .computeIfAbsent(timePartitionId, id -> new HashMap<>())
+                .put(entry.getKey(), entry.getValue());
+          }
+        }
+        workSequenceTsFileProcessors.remove(tsFileProcessor.getTimeRangeId());
+        // if unsequence files don't contain this time range id, we should remove it's version controller
+        if (!workUnsequenceTsFileProcessors.containsKey(tsFileProcessor.getTimeRangeId())) {
+          timePartitionIdVersionControllerMap.remove(tsFileProcessor.getTimeRangeId());
+        }
+      } else if (flushingProcessor != null && tsFileProcessor.shouldCloseFlushing()) {
+        fileFlushPolicy.apply(this, flushingProcessor, sequence);
+        flushingSequenceTsFileProcessors.put(timePartitionId, null);
+        Map<String, Long> curPartitionDeviceLatestTime = flushingLatestTimeForEachDevice
+            .get(timePartitionId);
+        if (curPartitionDeviceLatestTime != null) {
+          for (Entry<String, Long> entry : curPartitionDeviceLatestTime.entrySet()) {
+            partitionLatestFlushedTimeForEachDevice
+                .computeIfAbsent(timePartitionId, id -> new HashMap<>())
+                .put(entry.getKey(), entry.getValue());
+          }
+        }
+      }
+      return;
+    }
     // check memtable size and may asyncTryToFlush the work memtable
     if (tsFileProcessor.shouldFlush()) {
       fileFlushPolicy.apply(this, tsFileProcessor, sequence);
     }
+  }
+
+  /**
+   * judge whether a insert plan should be inserted into the flushingMemtable
+   */
+  private boolean isInsertToFlushingMemTable(long timePartitionId, InsertRowPlan insertRowPlan){
+    return flushingLatestTimeForEachDevice.get(timePartitionId).
+        getOrDefault(insertRowPlan.getDeviceId().getFullPath(), Long.MIN_VALUE) >= insertRowPlan.getTime();
   }
 
   protected void tryToUpdateInsertLastCache(InsertRowPlan plan, Long latestFlushedTime) {
@@ -1148,11 +1213,6 @@ public class StorageGroupProcessor {
       updateEndTimeMap(tsFileProcessor);
       tsFileProcessor.asyncClose();
 
-      workSequenceTsFileProcessors.remove(tsFileProcessor.getTimeRangeId());
-      // if unsequence files don't contain this time range id, we should remove it's version controller
-      if (!workUnsequenceTsFileProcessors.containsKey(tsFileProcessor.getTimeRangeId())) {
-        timePartitionIdVersionControllerMap.remove(tsFileProcessor.getTimeRangeId());
-      }
       logger.info("close a sequence tsfile processor {}", storageGroupName);
     } else {
       closingUnSequenceTsFileProcessor.add(tsFileProcessor);

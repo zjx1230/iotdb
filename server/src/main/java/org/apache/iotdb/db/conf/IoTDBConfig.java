@@ -70,10 +70,34 @@ public class IoTDBConfig {
     this.overlapSplit = overlapSplit;
   }
 
+  public boolean isEnableSlidingMemTable() {
+    return enableSlidingMemTable;
+  }
+
+  public void setEnableSlidingMemTable(boolean enableSlidingMemTable) {
+    this.enableSlidingMemTable = enableSlidingMemTable;
+  }
+
+  public int getSlidingWindowThreshold() {
+    return slidingWindowThreshold;
+  }
+
+  public void setSlidingWindowThreshold(int slidingWindowThreshold) {
+    this.slidingWindowThreshold = slidingWindowThreshold;
+  }
+
   /**
    * storage engine configurations
    */
   private boolean overlapSplit = true;
+  /**
+   * Whether to enable sliding memory table
+   */
+  private boolean enableSlidingMemTable = true;
+  /**
+   * Sliding window threshold, default, 16 MB
+   */
+  private int slidingWindowThreshold = 16 * 1024 * 1024;
 
   /**
    * Port which the metrics service listens to.
