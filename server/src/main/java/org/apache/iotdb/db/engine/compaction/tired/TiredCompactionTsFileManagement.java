@@ -431,6 +431,7 @@ public class TiredCompactionTsFileManagement extends TsFileManagement {
           while (tsFilesReader.hasNextBatch()) {
             BatchData batchData = tsFilesReader.nextBatch();
             currMinTime = Math.min(currMinTime, batchData.getTimeByIndex(0));
+            SystemInfo.getInstance().incrementCompactionNum(batchData.length());
             for (int i = 0; i < batchData.length(); i++) {
               writeBatchPoint(batchData, i, chunkWriter);
             }
