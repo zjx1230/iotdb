@@ -17,7 +17,6 @@
  */
 package org.apache.iotdb.db.index.algorithm;
 
-import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.index.IndexProcessor;
@@ -43,9 +42,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_SLIDE_STEP;
-import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
-
 /**
  * Each StorageGroupProcessor contains a IndexProcessor, and each IndexProcessor can contain more
  * than one IIndex. Each type of Index corresponds one IIndex.
@@ -54,12 +50,13 @@ public abstract class IoTDBIndex {
 
   protected final PartialPath indexSeries;
   protected final IndexType indexType;
-  protected final long confIndexStartTime;
-  protected final Map<String, String> props;
   protected final TSDataType tsDataType;
-  protected int windowRange;
-  protected int slideStep;
+
+  protected final Map<String, String> props;
   protected IndexFeatureExtractor indexFeatureExtractor;
+
+  /** Only build index for data later than this timestamp. Not used yet. */
+  protected final long confIndexStartTime;
 
   public IoTDBIndex(PartialPath indexSeries, TSDataType tsDataType, IndexInfo indexInfo) {
     this.indexSeries = indexSeries;
@@ -67,37 +64,6 @@ public abstract class IoTDBIndex {
     this.confIndexStartTime = indexInfo.getTime();
     this.props = indexInfo.getProps();
     this.tsDataType = tsDataType;
-    parsePropsAndInit(this.props);
-  }
-
-  public TSDataType getTsDataType() {
-    return tsDataType;
-  }
-
-  private void parsePropsAndInit(Map<String, String> props) {
-    // WindowRange
-    this.windowRange =
-        props.containsKey(INDEX_WINDOW_RANGE)
-            ? Integer.parseInt(props.get(INDEX_WINDOW_RANGE))
-            : IoTDBDescriptor.getInstance().getConfig().getDefaultIndexWindowRange();
-    // SlideRange
-    this.slideStep =
-        props.containsKey(INDEX_SLIDE_STEP)
-            ? Integer.parseInt(props.get(INDEX_SLIDE_STEP))
-            : this.windowRange;
-  }
-
-  /**
-   * Each index has its own preprocessor. Through the preprocessor provided by this index,
-   * {@linkplain IndexProcessor IndexFileProcessor} can control the its data process, memory
-   * occupation and triggers forceFlush.
-   *
-   * @param tvList tvList in current FlushTask.
-   * @return Preprocessor with new data.
-   */
-  public IndexFeatureExtractor startFlushTask(PartialPath partialPath, TVList tvList) {
-    this.indexFeatureExtractor.appendNewSrcData(tvList);
-    return indexFeatureExtractor;
   }
 
   /**
@@ -113,52 +79,50 @@ public abstract class IoTDBIndex {
    */
   public abstract void initPreprocessor(ByteBuffer previous, boolean inQueryMode);
 
-  /**
-   * When this function is called, it means that a new point has been pre-processed.
-   */
+  /** When this function is called, it means that a new point has been pre-processed. */
   public abstract boolean buildNext() throws IndexManagerException;
 
-  /**
-   * clear and release the occupied memory. The preprocessor has been cleared in IoTDBIndex, so
-   * remember invoke {@code super.clear()} and then add yourself.
-   *
-   * <p>This method is called when completing a sub-flush. Note that one flush task will trigger
-   * multiple sub-brush tasks due to the memory control.
-   *
-   * <p>clear和其他的区别：哦，上一个版本中，索引会定时刷出去，所以还可以理解，现在似乎没有这个必要了， TODO 删掉这个？不用，因为现在他不会在被调用了，仅在flush的时候才会被调用
-   *
-   * @return how much memory was freed.
-   */
-  protected long clearFeatureExtractor() {
-    return indexFeatureExtractor == null ? 0 : indexFeatureExtractor.clear();
-  }
-
-  /**
-   * Not that, this method will remove all data and feature. If this method is called, all other
-   * methods will be invalid.
-   */
-  public void closeAndRelease() {
-    if (indexFeatureExtractor != null) {
-      indexFeatureExtractor.closeAndRelease();
-    }
-    serializeIndexAndFlush();
-  }
-
   /** 索引将自己的东西刷出去 */
-  protected abstract void serializeIndexAndFlush();
+  protected abstract void flushIndex();
+
+  public abstract QueryDataSet query(
+      Map<String, Object> queryProps,
+      IIndexUsable iIndexUsable,
+      QueryContext context,
+      IIndexRefinePhaseOptimize refinePhaseOptimizer,
+      boolean alignedByTime)
+      throws QueryIndexException;
 
   /**
-   * This method serialize information of index and preprocessor into an {@code OutputStream}. It's
-   * called when the index file will be close. The information will be back in type of {@code
-   * ByteBuffer} when next creation.
+   * Each index has its own preprocessor. Through the preprocessor provided by this index,
+   * {@linkplain IndexProcessor IndexFileProcessor} can control the its data process, memory
+   * occupation and triggers forceFlush.
+   *
+   * @param tvList tvList in current FlushTask.
+   * @return Preprocessor with new data.
    */
-  public ByteBuffer serializeFeatureExtractor() throws IOException {
-    return indexFeatureExtractor.serializePrevious();
+  public IndexFeatureExtractor startFlushTask(PartialPath partialPath, TVList tvList) {
+    this.indexFeatureExtractor.appendNewSrcData(tvList);
+    return indexFeatureExtractor;
   }
 
   /** This method is called when a flush task totally finished. */
   public void endFlushTask() {
     indexFeatureExtractor.clearProcessedSrcData();
+  }
+
+  /**
+   * Not that, this method will remove all data and feature. If this method is called, all other
+   * methods will be invalid.
+   * @return
+   */
+  public ByteBuffer closeAndRelease() throws IOException {
+    flushIndex();
+    if (indexFeatureExtractor != null) {
+      return indexFeatureExtractor.closeAndRelease();
+    }else{
+      return ByteBuffer.allocate(0);
+    }
   }
 
   /**
@@ -170,44 +134,9 @@ public abstract class IoTDBIndex {
     return indexFeatureExtractor == null ? 0 : indexFeatureExtractor.getAmortizedSize();
   }
 
-  public abstract QueryDataSet query(
-      Map<String, Object> queryProps,
-      IIndexUsable iIndexUsable,
-      QueryContext context,
-      IIndexRefinePhaseOptimize refinePhaseOptimizer,
-      boolean alignedByTime)
-      throws QueryIndexException;
-
-  /**
-   * Initial parameters by query, check if all query conditions and function types are supported
-   *
-   * @param queryConditions query conditions
-   * @throws IllegalIndexParamException when conditions or funcs are not supported
-   */
-  //  public abstract void initQuery(Map<String, Object> queryConditions,
-  //      List<IndexFuncResult> indexFuncResults) throws UnsupportedIndexFuncException;
-
-  /**
-   * query on path with parameters, return the candidate list. return null is regarded as Nothing to
-   * be pruned.
-   *
-   * @return null means nothing to be pruned
-   */
-  //  public abstract List<Identifier> queryByIndex(ByteBuffer indexChunkData)
-  //      throws IndexManagerException;
-
-  /**
-   * IndexPreprocessor has preprocess a new sequence, produce L1, L2 or L3 features as user's
-   * configuration. Calculates functions you support and fill into {@code funcResult}.
-   *
-   * <p>Returns {@code true} if all calculations of this function have been completed. If so, this
-   * AggregateResult will not be called next time.
-   *
-   * @throws UnsupportedOperationException If you meet an unsupported AggregateResult
-   */
-  //  public abstract int postProcessNext(List<IndexFuncResult> indexFuncResults)
-  //      throws QueryIndexException;
-
+  public TSDataType getTsDataType() {
+    return tsDataType;
+  }
 
   public IndexType getIndexType() {
     return indexType;

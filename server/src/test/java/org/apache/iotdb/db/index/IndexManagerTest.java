@@ -79,7 +79,7 @@ public class IndexManagerTest {
 
   @Test
   public void testRecoverData() throws MetadataException, IOException {
-//    prepareMManager();
+    //    prepareMManager();
     // create file
     //    String indexDataSeqDir =
     //        DirectoryManager.getInstance().getIndexRootFolder() + File.separator +

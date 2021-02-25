@@ -135,7 +135,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
   }
 
   @Override
-  protected void serializeIndexAndFlush() {
+  protected void flushIndex() {
     try (OutputStream outputStream = new FileOutputStream(featureFile)) {
       rTree.serialize(outputStream);
       rTree.clear();

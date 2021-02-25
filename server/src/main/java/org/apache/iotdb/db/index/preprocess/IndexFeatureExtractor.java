@@ -300,10 +300,13 @@ public abstract class IndexFeatureExtractor {
   /**
    * Not that, this method will remove all data and feature. If this method is called, all other
    * methods will be invalid like {@linkplain #serializePrevious()} and {@linkplain #processNext()}
+   * @return
    */
-  public void closeAndRelease() {
+  public ByteBuffer closeAndRelease() throws IOException {
+    ByteBuffer res = serializePrevious();
     clear();
     TVListAllocator.getInstance().release(srcData);
+    return res;
   }
 
   /**

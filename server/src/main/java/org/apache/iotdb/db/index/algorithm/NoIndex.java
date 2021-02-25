@@ -50,27 +50,11 @@ public class NoIndex extends IoTDBIndex {
     return true;
   }
 
-  /**
-   * Nothing to be cleared, no more memory is released. Thus, we call the super method directly.
-   * Just for explain.
-   *
-   * @return 0
-   */
   @Override
-  @SuppressWarnings("squid:S1185")
-  public long clearFeatureExtractor() {
-    return super.clearFeatureExtractor();
-  }
-
-  @Override
-  protected void serializeIndexAndFlush() {
+  protected void flushIndex() {
     // NoIndex does nothing
   }
 
-  @Override
-  public ByteBuffer serializeFeatureExtractor() {
-    return ByteBuffer.allocate(0);
-  }
 
   /** All it needs depends on its preprocessor. Just for explain. */
   @Override

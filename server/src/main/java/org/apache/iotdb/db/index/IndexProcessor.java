@@ -87,12 +87,18 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
 
   private static final Logger logger = LoggerFactory.getLogger(IndexProcessor.class);
 
-  /** 索引序列 */
+  /**
+   * 索引序列
+   */
   private PartialPath indexSeries;
-  /** 索引实例调度器的文件夹路径。 */
+  /**
+   * 索引实例调度器的文件夹路径。
+   */
   private final String indexSeriesDirPath;
 
-  /** 被索引序列数据的类型。如果索引序列IndexSeries涉及到一组时间序列（在全序列场景下），则其下的所有序列类型均需相同。 */
+  /**
+   * 被索引序列数据的类型。如果索引序列IndexSeries涉及到一组时间序列（在全序列场景下），则其下的所有序列类型均需相同。
+   */
   private TSDataType tsDataType;
 
   private final IndexBuildTaskPoolManager indexBuildPoolManager;
@@ -105,13 +111,19 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
    */
   private Map<IndexType, ReadWriteLock> indexLockMap;
 
-  /** 记录本IndexProcessor下，当前有多少索引正在写入数据. 如果为0，则则没有索引在写入，即当前不处于flushing状态 */
+  /**
+   * 记录本IndexProcessor下，当前有多少索引正在写入数据. 如果为0，则则没有索引在写入，即当前不处于flushing状态
+   */
   private AtomicInteger numIndexBuildTasks;
 
-  /** whether the processor has been closed */
+  /**
+   * whether the processor has been closed
+   */
   private volatile boolean closed;
 
-  /** 每个IndexProcessor下包含多种索引。每个IoTDBIndex是一个索引实例 */
+  /**
+   * 每个IndexProcessor下包含多种索引。每个IoTDBIndex是一个索引实例
+   */
   private Map<IndexType, IoTDBIndex> allPathsIndexMap;
 
   /**
@@ -123,12 +135,13 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
    */
   private final Map<IndexType, ByteBuffer> previousDataBufferMap;
 
-  /** 过往状态量的文件名 */
+  /**
+   * 过往状态量的文件名
+   */
   private final String previousDataBufferFile;
 
   /**
-   * IoTDB已经刷出到磁盘的数据可能会面临更改和删除。其中更改的一个重要原因是乱序数据：已经刷出的数据覆盖了一段区间，
-   * 而乱序数据的时间戳可能落在已刷出数据的区间内，相当于已刷出的序列（已写入索引）被更新了。
+   * IoTDB已经刷出到磁盘的数据可能会面临更改和删除。其中更改的一个重要原因是乱序数据：已经刷出的数据覆盖了一段区间， 而乱序数据的时间戳可能落在已刷出数据的区间内，相当于已刷出的序列（已写入索引）被更新了。
    *
    * <p>由于不能假设所有索引都支持删除和更新，因此索引框架引入了"可用区间"的概念。可用区间内数据的索引是有效的，
    * 而对于非可用区间，索引的剪枝或返回均没有保证，因此，非可用区间内的数据需要直接进入索引的"精化阶段"进行精确计算。
@@ -136,10 +149,14 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
    * <p>每个索引实例对应一个可用区间管理器，调度器下所有实例的区间管理器放置在一个文件中，称之为可用区间文件。
    */
   private Map<IndexType, IIndexUsable> usableMap;
-  /** 可用区间管理器的文件名 */
+  /**
+   * 可用区间管理器的文件名
+   */
   private final String usableFile;
 
-  /** 后处理阶段（精化阶段）的优化器。目前并未用到。未来设计详见{@link IIndexRefinePhaseOptimize}. */
+  /**
+   * 后处理阶段（精化阶段）的优化器。目前并未用到。未来设计详见{@link IIndexRefinePhaseOptimize}.
+   */
   private final IIndexRefinePhaseOptimize refinePhaseOptimizer;
 
   public IndexProcessor(PartialPath indexSeries, String indexSeriesDirPath) {
@@ -166,8 +183,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   }
 
   /**
-   * 确定索引的数据类型。无论是针对单一序列的子序列检索，或多条序列的全序列检索，均要求类型相同。
-   * 对于全序列检索，在索引数据写入时，如果输入序列的数据类型与本IndexProcessor的类型不符，则会被忽略。
+   * 确定索引的数据类型。无论是针对单一序列的子序列检索，或多条序列的全序列检索，均要求类型相同。 对于全序列检索，在索引数据写入时，如果输入序列的数据类型与本IndexProcessor的类型不符，则会被忽略。
    *
    * @return tsDataType of current IndexProcessor
    */
@@ -260,7 +276,9 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     }
   }
 
-  /** 将除了NoIndex之外的所有索引实例刷出磁盘 */
+  /**
+   * 将除了NoIndex之外的所有索引实例刷出磁盘
+   */
   @SuppressWarnings("squid:S2589")
   public synchronized void close(boolean deleteFiles) throws IOException {
     if (closed) {
@@ -277,9 +295,12 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
                 continue;
               }
               IoTDBIndex index = entry.getValue();
-              previousDataBufferMap.put(entry.getKey(), index.serializeFeatureExtractor());
+              previousDataBufferMap.put(entry.getKey(), index.closeAndRelease());
             }
-            closeAndRelease();
+            logger.info("close and release index processor: {}", indexSeries);
+            allPathsIndexMap.clear();
+            serializeUsable();
+            serializePreviousBuffer();
             closed = true;
             if (deleteFiles) {
               File dir = IndexUtils.getIndexFile(indexSeriesDirPath);
@@ -291,13 +312,6 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
         });
   }
 
-  private void closeAndRelease() {
-    logger.info("close and release index processor: {}", indexSeries);
-    allPathsIndexMap.forEach((indexType, index) -> index.closeAndRelease());
-    allPathsIndexMap.clear();
-    serializeUsable();
-    serializePreviousBuffer();
-  }
 
   private void waitingFlushEndAndDo(IndexNaiveFunc indexNaiveAction) throws IOException {
     // wait the flushing end.
@@ -318,10 +332,6 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
           waitingInterval = 1000;
           if (logger.isWarnEnabled()) {
             logger.warn(
-                String.format(
-                    "IndexFileProcessor %s: wait-close time %d ms is too long.",
-                    indexSeries, waitingTime));
-            System.out.println(
                 String.format(
                     "IndexFileProcessor %s: wait-close time %d ms is too long.",
                     indexSeries, waitingTime));
@@ -441,10 +451,8 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
                     // Give up the following data, but the previously serialized chunk will not be
                     // affected.
                     logger.error("build index failed", e);
-                    System.out.println("Error: build index failed" + e);
                   } catch (RuntimeException e) {
                     logger.error("RuntimeException", e);
-                    System.out.println("RuntimeException: " + e);
                   } finally {
                     numIndexBuildTasks.decrementAndGet();
                     indexLockMap.get(indexType).writeLock().unlock();
@@ -457,11 +465,14 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     }
   }
 
-  /** 需要等待索引全部刷写完才会返回。 */
+  /**
+   * 需要等待索引全部刷写完才会返回。
+   */
   public void endFlushMemTable() {
     // wait until all flushing tasks end.
     try {
-      waitingFlushEndAndDo(() -> {});
+      waitingFlushEndAndDo(() -> {
+      });
     } catch (IOException ignored) {
     }
   }
@@ -470,7 +481,8 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
    * 根据传入的 {@code indexInfoMap} 刷新当前IndexProcessor中的索引实例。在 IndexProcessor 创建之后，
    * 用户进行创建或删除索引，则IndexProcessor中维护的索引实例就是过期的，因此需要刷新。
    *
-   * <p>刷新的时刻包括： 1. IndexProcessor创建时，此时是对 IndexProcessor 的初始化 2. 索引刷写时 {@code startFlushMemTable} 。
+   * <p>刷新的时刻包括： 1. IndexProcessor创建时，此时是对 IndexProcessor 的初始化 2. 索引刷写时 {@code startFlushMemTable}
+   * 。
    *
    * @param indexInfoMap 从 {@link IIndexRouter} 中传入。
    */
@@ -500,7 +512,12 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
       // remove indexes that are removed from the previous map
       for (IndexType indexType : new ArrayList<>(allPathsIndexMap.keySet())) {
         if (!indexInfoMap.containsKey(indexType)) {
-          allPathsIndexMap.get(indexType).closeAndRelease();
+          try {
+            allPathsIndexMap.get(indexType).closeAndRelease();
+          } catch (IOException e) {
+            logger.warn("Meet error when close {} before removing index, {}", indexType,
+                e.getMessage());
+          }
           // remove index file directories
           File dir = IndexUtils.getIndexFile(getIndexDir(indexType));
           dir.delete();
@@ -520,9 +537,6 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
 
   /**
    * 对于乱序数据，目前的设计中直接将数据标记为"索引不可用"
-   *
-   * @param path
-   * @param tvList
    */
   void updateUnsequenceData(PartialPath path, TVList tvList) {
     this.usableMap.forEach(

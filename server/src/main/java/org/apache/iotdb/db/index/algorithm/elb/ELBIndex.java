@@ -119,7 +119,6 @@ public class ELBIndex extends IoTDBIndex {
       indexDirFile.mkdirs();
     }
     // ELB always variable query length, so it's needed windowRange
-    windowRange = -1;
     //    usableBlocks = PrimitiveList.newList(TSDataType.BOOLEAN);
     initELBParam();
   }
@@ -138,7 +137,7 @@ public class ELBIndex extends IoTDBIndex {
       this.indexFeatureExtractor.clear();
     }
     this.elbMatchPreprocessor =
-        new ELBMatchFeatureExtractor(tsDataType, windowRange, blockWidth, elbType, inQueryMode);
+        new ELBMatchFeatureExtractor(tsDataType, -1, blockWidth, elbType, inQueryMode);
     this.indexFeatureExtractor = elbMatchPreprocessor;
     indexFeatureExtractor.deserializePrevious(previous);
   }
@@ -170,7 +169,7 @@ public class ELBIndex extends IoTDBIndex {
   }
 
   @Override
-  protected void serializeIndexAndFlush() {
+  protected void flushIndex() {
     try (OutputStream outputStream = new FileOutputStream(featureFile)) {
       ReadWriteIOUtils.write(windowBlockFeatures.size(), outputStream);
       for (ELBWindowBlockFeature features : windowBlockFeatures) {
