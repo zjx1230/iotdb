@@ -428,13 +428,9 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
                   try {
                     indexLockMap.get(indexType).writeLock().lock();
                     IndexFeatureExtractor extractor = index.startFlushTask(path, tvList);
-                    int previousOffset = Integer.MIN_VALUE;
                     while (extractor.hasNext()) {
                       extractor.processNext();
                       index.buildNext();
-                    }
-                    if (extractor.getCurrentChunkSize() > 0) {
-                      index.flush();
                     }
                     index.endFlushTask();
                     // we don't update usable ranges. It's a pretty critical decision.

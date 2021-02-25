@@ -151,28 +151,6 @@ public class ELBIndex extends IoTDBIndex {
     return true;
   }
 
-  @Override
-  public void flush() {
-    // we need to do nothing when a batch of memtable flush out.
-    //    if (indexFeatureExtractor.getCurrentChunkSize() == 0) {
-    //      logger.warn("Nothing to be flushed, directly return null");
-    //      System.out.println("Nothing to be flushed, directly return null");
-    //      return;
-    //    }
-    //    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    //    // serialize window block features
-    //    try {
-    //      elbMatchPreprocessor.serializeFeatures(outputStream);
-    //    } catch (IOException e) {
-    //      logger.error("flush failed", e);
-    //      return;
-    //    }
-    //    long st = indexFeatureExtractor.getChunkStartTime();
-    //    long end = indexFeatureExtractor.getChunkEndTime();
-    //    return new IndexFlushChunk(path, indexType, outputStream, st, end);
-    //    elbMatchPreprocessor.serializeFeatures(outputStream);
-  }
-
   private void deserializeFeatures() {
     if (!featureFile.exists()) {
       return;
@@ -204,11 +182,6 @@ public class ELBIndex extends IoTDBIndex {
     } catch (IOException e) {
       logger.error("Error when serialize router. Given up.", e);
     }
-  }
-
-  @Override
-  public void delete() {
-    throw new UnsupportedOperationException();
   }
 
   @Override

@@ -52,7 +52,6 @@ import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_WINDOW_RANGE;
  */
 public abstract class IoTDBIndex {
 
-  //  protected final String path;
   protected final PartialPath indexSeries;
   protected final IndexType indexType;
   protected final long confIndexStartTime;
@@ -76,7 +75,6 @@ public abstract class IoTDBIndex {
   }
 
   private void parsePropsAndInit(Map<String, String> props) {
-    // Strategy
     // WindowRange
     this.windowRange =
         props.containsKey(INDEX_WINDOW_RANGE)
@@ -102,14 +100,6 @@ public abstract class IoTDBIndex {
     return indexFeatureExtractor;
   }
 
-  //  /**
-  //   * Sorry but this method is ugly.
-  //   */
-  //  public IndexFeatureExtractor startFlushTask(BatchData batchData) {
-  //    this.indexFeatureExtractor.appendNewSrcData(batchData);
-  //    return indexFeatureExtractor;
-  //  }
-
   /**
    * An index should determine which preprocessor it uses and hook it to {@linkplain
    * IoTDBIndex}.indexProcessor. An index should determine which preprocessor it uses and connect to
@@ -124,13 +114,9 @@ public abstract class IoTDBIndex {
   public abstract void initPreprocessor(ByteBuffer previous, boolean inQueryMode);
 
   /**
-   * When this function is called, it means that a new point has been pre-processed. The index can
-   * organize the newcomer in real time, or delay to build it until {@linkplain #flush}
+   * When this function is called, it means that a new point has been pre-processed.
    */
   public abstract boolean buildNext() throws IndexManagerException;
-
-  /** flush */
-  public abstract void flush() throws IndexManagerException;
 
   /**
    * clear and release the occupied memory. The preprocessor has been cleared in IoTDBIndex, so
@@ -222,42 +208,9 @@ public abstract class IoTDBIndex {
   //  public abstract int postProcessNext(List<IndexFuncResult> indexFuncResults)
   //      throws QueryIndexException;
 
-  /**
-   * the file is no more needed. Stop ongoing construction and flush operations, clear memory
-   * directly and delete the index file.
-   */
-  public abstract void delete();
 
   public IndexType getIndexType() {
     return indexType;
-  }
-
-  public boolean newTsFileCreated() {
-    return false;
-  }
-
-  public boolean storageGroupLoaded() {
-    return false;
-  }
-
-  public boolean newOrderedDataPoint() {
-    return false;
-  }
-
-  public boolean newOutOfOrderedDataPoint() {
-    return false;
-  }
-
-  public boolean memDataFlushed() {
-    return false;
-  }
-
-  public boolean TsFileClosed() {
-    return false;
-  }
-
-  public boolean mergeFinished() {
-    return false;
   }
 
   @Override

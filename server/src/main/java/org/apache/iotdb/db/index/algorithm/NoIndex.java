@@ -50,12 +50,6 @@ public class NoIndex extends IoTDBIndex {
     return true;
   }
 
-  /** convert the L1 identifiers to byteArray */
-  @Override
-  public void flush() {
-    // NoIndex does nothing
-  }
-
   /**
    * Nothing to be cleared, no more memory is released. Thus, we call the super method directly.
    * Just for explain.
@@ -76,11 +70,6 @@ public class NoIndex extends IoTDBIndex {
   @Override
   public ByteBuffer serializeFeatureExtractor() {
     return ByteBuffer.allocate(0);
-  }
-
-  @Override
-  public void delete() {
-    throw new UnsupportedOperationException();
   }
 
   /** All it needs depends on its preprocessor. Just for explain. */

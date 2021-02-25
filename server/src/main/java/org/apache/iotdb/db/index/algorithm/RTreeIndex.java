@@ -252,12 +252,6 @@ public abstract class RTreeIndex extends IoTDBIndex {
   /** */
   protected abstract float[] calcQueryFeature(double[] patterns);
 
-  @Override
-  public void flush() {
-    // we need to do nothing when a batch of memtable flush out.
-    // maybe we can take a serialization?
-  }
-
   public static class RTreeQueryStruct {
 
     /** features is represented by float array */
@@ -478,11 +472,6 @@ public abstract class RTreeIndex extends IoTDBIndex {
   //  }
 
   protected abstract double calcLowerBoundThreshold(double queryThreshold);
-
-  @Override
-  public void delete() {
-    throw new UnsupportedOperationException();
-  }
 
   @Override
   public String toString() {
