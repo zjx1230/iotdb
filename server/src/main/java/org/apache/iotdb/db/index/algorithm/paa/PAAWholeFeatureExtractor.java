@@ -19,7 +19,7 @@ package org.apache.iotdb.db.index.algorithm.paa;
 
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.index.common.IndexUtils;
-import org.apache.iotdb.db.index.preprocess.WholeMatchFeatureExtractor;
+import org.apache.iotdb.db.index.feature.WholeMatchFeatureExtractor;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;

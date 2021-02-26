@@ -21,7 +21,7 @@ import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBType;
 import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBWindowBlockFeature;
-import org.apache.iotdb.db.index.preprocess.CountFixedFeatureExtractor;
+import org.apache.iotdb.db.index.feature.CountFixedFeatureExtractor;
 import org.apache.iotdb.db.index.read.TVListPointer;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 

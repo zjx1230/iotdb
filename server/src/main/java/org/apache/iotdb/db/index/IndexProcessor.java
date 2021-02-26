@@ -29,7 +29,7 @@ import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.common.func.IndexNaiveFunc;
-import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
+import org.apache.iotdb.db.index.feature.IndexFeatureExtractor;
 import org.apache.iotdb.db.index.read.optimize.IIndexCandidateOrderOptimize;
 import org.apache.iotdb.db.index.router.IIndexRouter;
 import org.apache.iotdb.db.index.usable.IIndexUsable;

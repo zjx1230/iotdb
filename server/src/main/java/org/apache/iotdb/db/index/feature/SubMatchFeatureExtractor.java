@@ -1,4 +1,4 @@
-package org.apache.iotdb.db.index.preprocess;
+package org.apache.iotdb.db.index.feature;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

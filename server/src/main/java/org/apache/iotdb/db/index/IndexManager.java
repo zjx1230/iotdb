@@ -18,6 +18,15 @@
  */
 package org.apache.iotdb.db.index;
 
+import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_DATA_DIR_NAME;
+import static org.apache.iotdb.db.index.common.IndexConstant.META_DIR_NAME;
+import static org.apache.iotdb.db.index.common.IndexConstant.ROUTER_DIR;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
@@ -29,7 +38,6 @@ import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.common.IndexInfo;
-import org.apache.iotdb.db.index.common.IndexMessageType;
 import org.apache.iotdb.db.index.common.IndexProcessorStruct;
 import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.common.IndexUtils;
@@ -43,21 +51,12 @@ import org.apache.iotdb.db.service.ServiceType;
 import org.apache.iotdb.db.utils.FileUtils;
 import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-
-import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_DATA_DIR_NAME;
-import static org.apache.iotdb.db.index.common.IndexConstant.META_DIR_NAME;
-import static org.apache.iotdb.db.index.common.IndexConstant.ROUTER_DIR;
-
-/** 目前每个索引都可以与一条序列名对应。全序列索引包含通配符，而子序列索引仅支持一条序列名创建。 */
+/**
+ * 目前每个索引都可以与一条序列名对应。全序列索引包含通配符，而子序列索引仅支持一条序列名创建。
+ */
 public class IndexManager implements IndexManagerMBean, IService {
 
   private static final Logger logger = LoggerFactory.getLogger(IndexManager.class);
@@ -67,18 +66,39 @@ public class IndexManager implements IndexManagerMBean, IService {
    * <p>遵循WAL，调用 {@link DirectoryManager#getIndexRootFolder} 方法
    */
   private final String indexRootDirPath;
-  /** 索引元数据文件目录，在构造函数中指定。 */
+  /**
+   * 索引元数据文件目录，在构造函数中指定。
+   */
   private final String indexMetaDirPath;
-  /** 路由器文件目录，在构造函数中指定。 */
+  /**
+   * 路由器文件目录，在构造函数中指定。
+   */
   private final String indexRouterDir;
-  /** 索引实例文件的目录。在构造函数中指定。 */
+  /**
+   * 索引实例文件的目录。在构造函数中指定。
+   */
   private final String indexDataDirPath;
-  /** 索引实例管理器的构造方法接口（function Interface），在构造函数中指定。在创建索引和系统启动时传入。 */
+  /**
+   * 索引实例管理器的构造方法接口（function Interface），在构造函数中指定。在创建索引和系统启动时传入。
+   */
   private CreateIndexProcessorFunc createIndexProcessorFunc;
-  /** 索引路由器。在构造函数中指定。 */
+  /**
+   * 索引路由器。在构造函数中指定。
+   */
   private final IIndexRouter router;
 
   private IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
+
+  private IndexManager() {
+    indexRootDirPath = DirectoryManager.getInstance().getIndexRootFolder();
+    indexMetaDirPath = indexRootDirPath + File.separator + META_DIR_NAME;
+    indexRouterDir = indexMetaDirPath + File.separator + ROUTER_DIR;
+    indexDataDirPath = indexRootDirPath + File.separator + INDEX_DATA_DIR_NAME;
+    createIndexProcessorFunc =
+        (indexSeries, indexInfoMap) ->
+            new IndexProcessor(indexSeries, indexDataDirPath + File.separator + indexSeries);
+    router = IIndexRouter.Factory.getIndexRouter(indexRouterDir);
+  }
 
   /**
    * 给定创建索引的序列名，返回该索引的特征文件路径（目前未使用）。
@@ -106,8 +126,7 @@ public class IndexManager implements IndexManagerMBean, IService {
    * 执行创建索引命令。由于IoTDB的序列与索引之间存在多对多的复杂映射关系，我们将索引元数据信息交给路由器 {@link IIndexRouter}
    * 来创建和维护。这样IndexManager可以保证代码的稳定。
    *
-   * @param indexSeriesList
-   *     也许未来会支持在多路径上创建索引，但目前我们仅支持单序列创建。对于全序列索引，是一条包含通配符的路径，对于子序列索引，是一条无通配符的全路径（fullPath）。
+   * @param indexSeriesList 也许未来会支持在多路径上创建索引，但目前我们仅支持单序列创建。对于全序列索引，是一条包含通配符的路径，对于子序列索引，是一条无通配符的全路径（fullPath）。
    * @param indexInfo 索引信息
    */
   public void createIndex(List<PartialPath> indexSeriesList, IndexInfo indexInfo)
@@ -131,23 +150,6 @@ public class IndexManager implements IndexManagerMBean, IService {
   }
 
   /**
-   * For index techniques which are deeply optimized for IoTDB, the index framework provides a
-   * finer-grained interface to inform the index when some IoTDB events occur. Other modules can
-   * call this function to pass the specified index message type and other parameters. Indexes can
-   * selectively implement these interfaces and register with the index manager for listening. When
-   * these events occur, the index manager passes the messages to corresponding indexes.
-   *
-   * <p>Note that, this function will hack into other modules.
-   *
-   * @param path where events occur
-   * @param indexMsgType the type of index message
-   * @param params variable length of parameters
-   */
-  public void tellIndexMessage(PartialPath path, IndexMessageType indexMsgType, Object... params) {
-    throw new UnsupportedOperationException("Not support the advanced Index Messages");
-  }
-
-  /**
    * 从代码设计原则上来说，路由器仅负责"寻找" {@link IndexProcessor} 和管理索引信息， 我们应该使用类似 {@code getAllProcessors}
    * 的方法获取所有IndexProcessors并关闭。 然而目前IndexManager并没有任何其他操作，因此我们将 {@link IndexProcessor}
    * 的关闭操作也放在router中。
@@ -156,7 +158,9 @@ public class IndexManager implements IndexManagerMBean, IService {
     router.serialize(true);
   }
 
-  /** 系统启动时，IndexManager检查目录是否创建完整，然后将router反序列化到内存。 */
+  /**
+   * 系统启动时，IndexManager检查目录是否创建完整，然后将router反序列化到内存。
+   */
   @Override
   public void start() throws StartupException {
     if (!config.isEnableIndex()) {
@@ -187,16 +191,6 @@ public class IndexManager implements IndexManagerMBean, IService {
     JMXService.deregisterMBean(ServiceType.INDEX_SERVICE.getJmxName());
   }
 
-  private IndexManager() {
-    indexRootDirPath = DirectoryManager.getInstance().getIndexRootFolder();
-    indexMetaDirPath = indexRootDirPath + File.separator + META_DIR_NAME;
-    indexRouterDir = indexMetaDirPath + File.separator + ROUTER_DIR;
-    indexDataDirPath = indexRootDirPath + File.separator + INDEX_DATA_DIR_NAME;
-    createIndexProcessorFunc =
-        (indexSeries, indexInfoMap) ->
-            new IndexProcessor(indexSeries, indexDataDirPath + File.separator + indexSeries);
-    router = IIndexRouter.Factory.getIndexRouter(indexRouterDir);
-  }
 
   public static IndexManager getInstance() {
     return InstanceHolder.instance;
@@ -262,7 +256,9 @@ public class IndexManager implements IndexManagerMBean, IService {
     }
   }
 
-  /** 如果索引的各种目录不存在，则创建。 */
+  /**
+   * 如果索引的各种目录不存在，则创建。
+   */
   private void prepareDirectory() {
     File rootDir = IndexUtils.getIndexFile(indexRootDirPath);
     if (!rootDir.exists()) {
@@ -326,7 +322,8 @@ public class IndexManager implements IndexManagerMBean, IService {
 
   private static class InstanceHolder {
 
-    private InstanceHolder() {}
+    private InstanceHolder() {
+    }
 
     private static IndexManager instance = new IndexManager();
   }

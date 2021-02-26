@@ -1,10 +1,9 @@
-package org.apache.iotdb.db.index.preprocess;
+package org.apache.iotdb.db.index.feature;
 
 import static org.apache.iotdb.db.index.common.IndexConstant.NON_IMPLEMENTED_MSG;
 
 import java.nio.ByteBuffer;
 import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.common.BatchData;
 
 public abstract class WholeMatchFeatureExtractor extends IndexFeatureExtractor {

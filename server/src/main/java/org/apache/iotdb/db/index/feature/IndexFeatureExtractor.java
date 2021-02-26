@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.iotdb.db.index.preprocess;
+package org.apache.iotdb.db.index.feature;
 
 import static org.apache.iotdb.db.index.common.IndexConstant.NON_IMPLEMENTED_MSG;
 
