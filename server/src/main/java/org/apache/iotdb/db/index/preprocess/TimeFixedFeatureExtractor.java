@@ -17,6 +17,7 @@
  */
 package org.apache.iotdb.db.index.preprocess;
 
+import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
@@ -39,8 +40,14 @@ import static org.apache.iotdb.db.index.common.IndexUtils.getDataTypeSize;
  * <p>TIME_FIXED preprocessor need set {@code baseTime}. For arbitrary window, the startTime is
  * divisible by {@code timeAnchor}
  */
-public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
-
+public class TimeFixedFeatureExtractor extends SubMatchFeatureExtractor {
+  /** the window range, it depends on the window type. */
+  protected final int windowRange;
+  /**
+   * the the offset between two adjacent subsequences (a.k.a. the update size), depending on the the
+   * window type.
+   */
+  protected final int slideStep;
   /**
    * To anchor the start time of sliding window. Any window start time should be congruence with
    * timeAnchor on {@code slideStep}
@@ -73,6 +80,7 @@ public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
   private long chunkEndTime = -1;
   private long processedStartTime;
 
+
   /**
    * Create TimeFixedPreprocessor
    *
@@ -92,11 +100,18 @@ public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
       boolean storeIdentifier,
       boolean storeAligned,
       boolean inQueryMode) {
-    super(tsDataType, WindowType.COUNT_FIXED, windowRange, slideStep, inQueryMode);
+    super(tsDataType, inQueryMode);
     this.storeIdentifier = storeIdentifier;
     this.storeAligned = storeAligned;
     this.alignedDim = alignedDim;
     this.timeAnchor = timeAnchor;
+    if (slideStep > windowRange) {
+      throw new IllegalIndexParamException(
+          "Sorry, We do not yet support the slide step larger than the window range. "
+              + "It may miss the information of some data points");
+    }
+    this.windowRange = windowRange;
+    this.slideStep = slideStep;
   }
 
   public TimeFixedFeatureExtractor(
@@ -226,17 +241,7 @@ public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
     }
   }
 
-  @Override
-  public int getCurrentChunkOffset() {
-    return flushedOffset;
-  }
-
-  public int getSliceNum() {
-    return sliceNum;
-  }
-
-  @Override
-  public int getCurrentChunkSize() {
+  private int getCurrentChunkSize() {
     return sliceNum - flushedOffset;
   }
 
@@ -248,7 +253,7 @@ public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
    * @param targetTimestamp the target
    * @return the idx of the minimum timestamp >= {@code targetTimestamp}
    */
-  protected int locatedIdxToTimestamp(int curIdx, long targetTimestamp) {
+  private int locatedIdxToTimestamp(int curIdx, long targetTimestamp) {
     while (curIdx < srcData.size() && srcData.getTime(curIdx) < targetTimestamp) {
       curIdx++;
     }
@@ -353,15 +358,15 @@ public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
     return res;
   }
 
-  @Override
-  public long getChunkStartTime() {
-    return chunkStartTime;
-  }
-
-  @Override
-  public long getChunkEndTime() {
-    return chunkEndTime;
-  }
+//  @Override
+//  public long getChunkStartTime() {
+//    return chunkStartTime;
+//  }
+//
+//  @Override
+//  public long getChunkEndTime() {
+//    return chunkEndTime;
+//  }
 
   @Override
   public long clear() {
@@ -381,18 +386,6 @@ public class TimeFixedFeatureExtractor extends IndexFeatureExtractor {
       alignedList.clear();
     }
     return toBeReleased;
-  }
-
-  @Override
-  public int getAmortizedSize() {
-    int res = 0;
-    if (storeIdentifier) {
-      res += 3 * Long.BYTES;
-    }
-    if (alignedDim != -1 && storeAligned) {
-      res += getDataTypeSize(srcData.getDataType()) * alignedDim;
-    }
-    return res;
   }
 
   @Override

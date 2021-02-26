@@ -37,6 +37,7 @@ import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.QueryResourceManager;
 import org.apache.iotdb.db.query.reader.series.SeriesRawDataBatchReader;
+import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.common.BatchData;
@@ -393,10 +394,12 @@ public abstract class RTreeIndex extends IoTDBIndex {
                 null,
                 null,
                 true);
+        TVList tvList = TVListAllocator.getInstance().allocate(tsDataType);
         while (reader.hasNextBatch()) {
           BatchData batch = reader.nextBatch();
-          featureExtractor.appendNewSrcData(batch);
+          TVList.appendAll(tvList, batch);
         }
+        featureExtractor.appendNewSrcData(tvList);
         reader.close();
         if (featureExtractor.hasNext()) {
           featureExtractor.processNext();

@@ -139,7 +139,7 @@ public class ELBIndex extends IoTDBIndex {
     this.elbMatchPreprocessor =
         new ELBMatchFeatureExtractor(tsDataType, -1, blockWidth, elbType, inQueryMode);
     this.indexFeatureExtractor = elbMatchPreprocessor;
-    indexFeatureExtractor.deserializePrevious(previous);
+    elbMatchPreprocessor.deserializePrevious(previous);
   }
 
   @Override

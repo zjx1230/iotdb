@@ -125,15 +125,6 @@ public abstract class IoTDBIndex {
     }
   }
 
-  /**
-   * return how much memory is increased for each point processed. It's an amortized estimation,
-   * which should consider both {@linkplain IndexFeatureExtractor#getAmortizedSize()} and the
-   * <b>index expansion rate</b>.
-   */
-  public int getAmortizedSize() {
-    return indexFeatureExtractor == null ? 0 : indexFeatureExtractor.getAmortizedSize();
-  }
-
   public TSDataType getTsDataType() {
     return tsDataType;
   }

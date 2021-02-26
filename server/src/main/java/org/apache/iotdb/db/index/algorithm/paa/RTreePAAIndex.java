@@ -60,7 +60,6 @@ public class RTreePAAIndex extends RTreeIndex {
     this.paaWholeFeatureExtractor =
         new PAAWholeFeatureExtractor(
             tsDataType, seriesLength, featureDim, false, currentLowerBounds);
-    paaWholeFeatureExtractor.deserializePrevious(previous);
     this.indexFeatureExtractor = paaWholeFeatureExtractor;
   }
 

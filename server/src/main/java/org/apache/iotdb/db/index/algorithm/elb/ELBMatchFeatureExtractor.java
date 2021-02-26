@@ -114,26 +114,5 @@ public class ELBMatchFeatureExtractor extends CountFixedFeatureExtractor {
   public Object getCurrent_L3_Feature() {
     return new ELBWindowBlockFeature(currentBlockFeature);
   }
-  //  /**
-  //   * custom for {@linkplain ELBIndexNotGood}
-  //   *
-  //   * @param idx the idx-th identifiers
-  //   * @param outputStream to output
-  //   */
-  //  void serializeIdentifier(Integer idx, OutputStream outputStream) throws IOException {
-  //    int actualIdx = idx - flushedOffset;
-  //    if (actualIdx * 3 + 2 >= identifierList.size()) {
-  //      throw new IOException(String.format("ELB serialize: idx %d*3+2 > identifiers size %d",
-  // idx,
-  //          identifierList.size()));
-  //    }
-  //    if (!storeIdentifier) {
-  //      throw new IOException("In ELB index, must store the identifier list");
-  //    }
-  //    Identifier identifier = new Identifier(identifierList.getLong(actualIdx * 3),
-  //        identifierList.getLong(actualIdx * 3 + 1),
-  //        (int) identifierList.getLong(actualIdx * 3 + 2));
-  //    identifier.serialize(outputStream);
-  //  }
-  //
+
 }

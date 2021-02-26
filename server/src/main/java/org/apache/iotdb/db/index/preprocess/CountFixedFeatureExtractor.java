@@ -17,6 +17,7 @@
  */
 package org.apache.iotdb.db.index.preprocess;
 
+import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
@@ -35,7 +36,15 @@ import java.util.List;
  * <p>Note that, in real scenarios, the time series could be variable-frequency, traditional
  * distance metrics (e.g., Euclidean distance) may not make sense for COUNT_FIXED.
  */
-public class CountFixedFeatureExtractor extends IndexFeatureExtractor {
+public class CountFixedFeatureExtractor extends SubMatchFeatureExtractor {
+
+  /** the window range, it depends on the window type. */
+  protected int windowRange;
+  /**
+   * the the offset between two adjacent subsequences (a.k.a. the update size), depending on the the
+   * window type.
+   */
+  protected int slideStep;
 
   protected final boolean storeIdentifier;
   protected final boolean storeAligned;
@@ -81,9 +90,16 @@ public class CountFixedFeatureExtractor extends IndexFeatureExtractor {
       boolean storeIdentifier,
       boolean storeAligned,
       boolean inQueryMode) {
-    super(tsDataType, WindowType.COUNT_FIXED, windowRange, slideStep, inQueryMode);
+    super(tsDataType, inQueryMode);
     this.storeIdentifier = storeIdentifier;
     this.storeAligned = storeAligned;
+    if (slideStep > windowRange) {
+      throw new IllegalIndexParamException(
+          "Sorry, We do not yet support the slide step larger than the window range. "
+              + "It may miss the information of some data points");
+    }
+    this.windowRange = windowRange;
+    this.slideStep = slideStep;
   }
 
   public CountFixedFeatureExtractor(
@@ -122,10 +138,6 @@ public class CountFixedFeatureExtractor extends IndexFeatureExtractor {
   }
 
   @Override
-  public boolean hasNext() {
-    return hasNext(null);
-  }
-
   public boolean hasNext(Filter timeFilter) {
     int startIdx = currentStartTimeIdx;
     int endIdx = startIdx + windowRange - 1;
@@ -170,13 +182,7 @@ public class CountFixedFeatureExtractor extends IndexFeatureExtractor {
     }
   }
 
-  @Override
-  public int getCurrentChunkOffset() {
-    return flushedOffset;
-  }
-
-  @Override
-  public int getCurrentChunkSize() {
+  private int getCurrentChunkSize() {
     return sliceNum - flushedOffset;
   }
 
@@ -223,15 +229,15 @@ public class CountFixedFeatureExtractor extends IndexFeatureExtractor {
     return res;
   }
 
-  @Override
-  public long getChunkStartTime() {
-    return chunkStartTime;
-  }
-
-  @Override
-  public long getChunkEndTime() {
-    return chunkEndTime;
-  }
+//  @Override
+//  public long getChunkStartTime() {
+//    return chunkStartTime;
+//  }
+//
+//  @Override
+//  public long getChunkEndTime() {
+//    return chunkEndTime;
+//  }
 
   /**
    * For COUNT-FIXED preprocessor, given the original data and the window range, we can determine an
@@ -281,18 +287,6 @@ public class CountFixedFeatureExtractor extends IndexFeatureExtractor {
       alignedList.clearAndRelease();
     }
     return toBeReleased;
-  }
-
-  @Override
-  public int getAmortizedSize() {
-    int res = 0;
-    if (storeIdentifier) {
-      res += 3 * Long.BYTES;
-    }
-    if (storeAligned) {
-      res += Integer.BYTES;
-    }
-    return res;
   }
 
   @Override

@@ -56,13 +56,6 @@ public class NoIndex extends IoTDBIndex {
   }
 
 
-  /** All it needs depends on its preprocessor. Just for explain. */
-  @Override
-  @SuppressWarnings("squid:S1185")
-  public int getAmortizedSize() {
-    return super.getAmortizedSize();
-  }
-
   @Override
   public QueryDataSet query(
       Map<String, Object> queryProps,

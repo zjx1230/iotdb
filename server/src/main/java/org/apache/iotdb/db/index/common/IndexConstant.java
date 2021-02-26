@@ -21,6 +21,7 @@ public class IndexConstant {
 
   // SQL show
   public static final String ID = "ID";
+  public static final String NON_IMPLEMENTED_MSG = "Not implemented yet";
 
   public static final String ROUTER_DIR = "router";
   public static final String META_DIR_NAME = "meta";
