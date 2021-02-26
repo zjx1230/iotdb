@@ -41,12 +41,11 @@ public class PAAWholeFeatureExtractor extends WholeMatchFeatureExtractor {
   private final int paaWidth;
 
   public PAAWholeFeatureExtractor(
-      TSDataType dataType,
       int alignedLength,
       int featureDim,
       boolean inQueryMode,
       float[] featureArray) {
-    super(dataType, inQueryMode);
+    super(inQueryMode);
     this.alignedLength = alignedLength;
     this.featureDim = featureDim;
     if (!inQueryMode && featureArray.length != featureDim) {

@@ -13,6 +13,15 @@ import org.apache.iotdb.tsfile.read.common.BatchData;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
+/**
+ * The feature extractor for sub-matching is based on the sliding window model, which means,
+ * this class makes a time window slide over the time series by some
+ * rules and obtain a list of subsequences. The time windows may be time-fixed (Euclidean distance),
+ * count-fixed (Time Warping). It scans the sequence with a certain overlap step (a.k.a. the update
+ * size).
+ * <p>A time window may be aligned to equal interval or equal range, which is called "Aligned
+ * Sequences."
+ */
 public abstract class SubMatchFeatureExtractor extends IndexFeatureExtractor {
 
   /**
@@ -24,9 +33,8 @@ public abstract class SubMatchFeatureExtractor extends IndexFeatureExtractor {
    */
   protected TVList srcData;
 
-  public SubMatchFeatureExtractor(TSDataType dataType,
-      boolean inQueryMode) {
-    super(dataType, inQueryMode);
+  public SubMatchFeatureExtractor(TSDataType dataType, boolean inQueryMode) {
+    super(inQueryMode);
     this.srcData = TVListAllocator.getInstance().allocate(dataType);
   }
 
@@ -85,7 +93,7 @@ public abstract class SubMatchFeatureExtractor extends IndexFeatureExtractor {
    */
   public ByteBuffer closeAndRelease() throws IOException {
     ByteBuffer res = serializePrevious();
-    clear();
+//    clear();
     TVListAllocator.getInstance().release(srcData);
     return res;
   }

@@ -12,9 +12,8 @@ public abstract class WholeMatchFeatureExtractor extends IndexFeatureExtractor {
   protected TVList srcData;
   protected boolean hasNewData;
 
-  public WholeMatchFeatureExtractor(TSDataType dataType,
-      boolean inQueryMode) {
-    super(dataType, inQueryMode);
+  public WholeMatchFeatureExtractor(boolean inQueryMode) {
+    super(inQueryMode);
   }
 
   public void appendNewSrcData(TVList newData) {

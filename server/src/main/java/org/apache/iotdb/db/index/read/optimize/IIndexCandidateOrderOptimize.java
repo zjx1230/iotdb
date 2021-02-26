@@ -6,15 +6,15 @@ package org.apache.iotdb.db.index.read.optimize;
  * the file organization of TsFile, the access of the refinement phase advised by the index may be
  * inefficient. We can use this query optimizerto rearrange the candidate set access order.
  */
-public interface IIndexRefinePhaseOptimize {
+public interface IIndexCandidateOrderOptimize {
   class Factory {
 
     private Factory() {
       // hidden initializer
     }
 
-    public static IIndexRefinePhaseOptimize getOptimize() {
-      return new NoRefinePhaseOptimizer();
+    public static IIndexCandidateOrderOptimize getOptimize() {
+      return new NoCandidateOrderOptimizer();
     }
   }
 }

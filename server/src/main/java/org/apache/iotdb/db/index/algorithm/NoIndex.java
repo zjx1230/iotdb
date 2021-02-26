@@ -19,7 +19,7 @@ package org.apache.iotdb.db.index.algorithm;
 
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.read.IndexQueryDataSet;
-import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
+import org.apache.iotdb.db.index.read.optimize.IIndexCandidateOrderOptimize;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
@@ -36,7 +36,7 @@ import java.util.Map;
  */
 public class NoIndex extends IoTDBIndex {
 
-  public NoIndex(PartialPath path, TSDataType tsDataType, String indexDir, IndexInfo indexInfo) {
+  public NoIndex(PartialPath path, TSDataType tsDataType, IndexInfo indexInfo) {
     super(path, tsDataType, indexInfo);
   }
 
@@ -61,7 +61,7 @@ public class NoIndex extends IoTDBIndex {
       Map<String, Object> queryProps,
       IIndexUsable iIndexUsable,
       QueryContext context,
-      IIndexRefinePhaseOptimize refinePhaseOptimizer,
+      IIndexCandidateOrderOptimize refinePhaseOptimizer,
       boolean alignedByTime) {
     return new IndexQueryDataSet(
         Collections.emptyList(), Collections.emptyList(), Collections.emptyMap());

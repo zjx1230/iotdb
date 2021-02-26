@@ -30,7 +30,7 @@ import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.common.distance.Distance;
 import org.apache.iotdb.db.index.read.TVListPointer;
-import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
+import org.apache.iotdb.db.index.read.optimize.IIndexCandidateOrderOptimize;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.index.usable.SingleLongIndexUsability;
 import org.apache.iotdb.db.metadata.PartialPath;
@@ -134,7 +134,11 @@ public class ELBIndex extends IoTDBIndex {
   @Override
   public void initPreprocessor(ByteBuffer previous, boolean inQueryMode) {
     if (this.indexFeatureExtractor != null) {
-      this.indexFeatureExtractor.clear();
+      try {
+        this.indexFeatureExtractor.closeAndRelease();
+      } catch (IOException e) {
+        logger.warn("meet exceptions when releasing the previous extractor", e);
+      }
     }
     this.elbMatchPreprocessor =
         new ELBMatchFeatureExtractor(tsDataType, -1, blockWidth, elbType, inQueryMode);
@@ -188,7 +192,7 @@ public class ELBIndex extends IoTDBIndex {
       Map<String, Object> queryProps,
       IIndexUsable iIndexUsable,
       QueryContext context,
-      IIndexRefinePhaseOptimize refinePhaseOptimizer,
+      IIndexCandidateOrderOptimize refinePhaseOptimizer,
       boolean alignedByTime)
       throws QueryIndexException {
     ELBQueryStruct struct = new ELBQueryStruct();

@@ -26,7 +26,7 @@ import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
 import org.apache.iotdb.db.index.read.IndexQueryDataSet;
-import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
+import org.apache.iotdb.db.index.read.optimize.IIndexCandidateOrderOptimize;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
@@ -89,7 +89,7 @@ public abstract class IoTDBIndex {
       Map<String, Object> queryProps,
       IIndexUsable iIndexUsable,
       QueryContext context,
-      IIndexRefinePhaseOptimize refinePhaseOptimizer,
+      IIndexCandidateOrderOptimize refinePhaseOptimizer,
       boolean alignedByTime)
       throws QueryIndexException;
 

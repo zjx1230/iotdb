@@ -17,6 +17,7 @@
  */
 package org.apache.iotdb.db.index.algorithm.paa;
 
+import java.io.IOException;
 import org.apache.iotdb.db.index.algorithm.RTreeIndex;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexUtils;
@@ -55,11 +56,15 @@ public class RTreePAAIndex extends RTreeIndex {
   @Override
   public void initPreprocessor(ByteBuffer previous, boolean inQueryMode) {
     if (this.indexFeatureExtractor != null) {
-      this.indexFeatureExtractor.clear();
+      try {
+        this.indexFeatureExtractor.closeAndRelease();
+      } catch (IOException e) {
+        logger.warn("meet exceptions when releasing the previous extractor", e);
+      }
     }
     this.paaWholeFeatureExtractor =
         new PAAWholeFeatureExtractor(
-            tsDataType, seriesLength, featureDim, false, currentLowerBounds);
+            seriesLength, featureDim, false, currentLowerBounds);
     this.indexFeatureExtractor = paaWholeFeatureExtractor;
   }
 
@@ -158,6 +163,6 @@ public class RTreePAAIndex extends RTreeIndex {
   }
 
   protected IndexFeatureExtractor createQueryFeatureExtractor() {
-    return new PAAWholeFeatureExtractor(tsDataType, seriesLength, featureDim, true, null);
+    return new PAAWholeFeatureExtractor(seriesLength, featureDim, true, null);
   }
 }

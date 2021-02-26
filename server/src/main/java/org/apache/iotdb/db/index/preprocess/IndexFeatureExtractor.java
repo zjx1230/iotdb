@@ -36,57 +36,66 @@ import java.util.List;
 
 /**
  * For all indexes, the raw input sequence has to be pre-processed before it's organized by indexes.
- * In general, index structure needn't maintain all of original data, but only pointers to the
- * original data (e.g. The start time and the end time can uniquely determine a time sequence).
+ * In general, index structure needn't maintain all of original data, but only pointers (e.g. the
+ * identifier [start_time, end_time, series_path] can identify a time sequence uniquely).
  *
- * <p>{@linkplain IndexFeatureExtractor} makes a time window slide over the time series by some
- * rules and obtain a list of subsequences. The time windows may be time-fixed (Euclidean distance),
- * count-fixed (Time Warping). It scans the sequence with a certain overlap step (a.k.a. the update
- * size).
+ * By and large, similarity index supposes the input data are ideal: fixed dimension, equal
+ * interval, not missing values and even not outliers. However, in real scenario, the input series
+ * may contain missing values (thus it's not dimension-fixed) and the point's timestamp may contain
+ * slight offset (thus they are not equal-interval). IndexFeatureExtractor need to preprocess the
+ * series and obtain clean series to insert.
  *
- * <p>A time window may be aligned to equal interval or equal range, which is called "Aligned
- * Sequences."
+ * Many indexes will further extract features of alignment sequences, such as PAA, SAX, FFT, etc.
  *
- * <p>Many indexes will further extract features of alignment sequences, such as PAA, SAX, FFT,
- * etc.
- *
- * <p>After preprocessing, the subsequence will have three-level features:
+ * In summary, the IndexFeatureExtractor can provide three-level features:
  *
  * <ul>
- *   <li>L1: a triplet to identify a subsequence: {@code {StartTime, EndTime, Length}}
+ *   <li>L1: a triplet to identify a series: {@code {StartTime, EndTime, Length}} (not submitted in this pr)
  *   <li>L2: aligned sequence: {@code {a1, a2, ..., an}}
- *   <li>L3: customized feature: {@code {C1, C2, ..., Cm}}
+ *   <li>L3: feature: {@code {C1, C2, ..., Cm}}
  * </ul>
  */
 public abstract class IndexFeatureExtractor {
 
-  private final TSDataType dataType;
   /**
-   * In the BUILD and QUERY modes, the preprocessor works differently. in QUERY-Mode, and NoIndex
-   * does not need to generate L1 Identifier and L2 Aligned sequence in BUILD-Mode.
-   *
-   * <p>The Default is BUILD-mode, i.e., inQueryMode=false
+   * In the BUILD and QUERY modes, the IndexFeatureExtractor may work differently.
    */
   protected boolean inQueryMode;
 
-  public IndexFeatureExtractor(
-      TSDataType dataType,
-      boolean inQueryMode) {
-    this.dataType = dataType;
+  public IndexFeatureExtractor(boolean inQueryMode) {
     this.inQueryMode = inQueryMode;
   }
 
+  /**
+   * Input a list of new data into the FeatureProcessor.
+   *
+   * @param newData new coming data.
+   */
   public abstract void appendNewSrcData(TVList newData);
 
+  /**
+   * Input a list of new data into the FeatureProcessor. Due to the exist codes, IoTDB generate
+   * TVList in the insert phase, but obtain BatchData in the query phase.
+   *
+   * @param newData new coming data.
+   */
   public abstract void appendNewSrcData(BatchData newData);
 
+  /**
+   * Having done {@code appendNewSrcData}, the index framework will check {@code hasNext}.
+   */
   public abstract boolean hasNext();
 
   /**
-   * Processed the next element.
+   * If {@code hasNext} returns true, the index framework will call {@code processNext} which
+   * prepares a new series item (ready for insert).
    */
   public abstract void processNext();
 
+  /**
+   * After processing a batch of data, the index framework may call {@code clearProcessedSrcData} to
+   * clean out the processed data for releasing memory.
+   */
   public abstract void clearProcessedSrcData();
 
   /**

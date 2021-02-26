@@ -34,8 +34,7 @@ import java.util.Map;
 public enum IndexType {
   NO_INDEX,
   RTREE_PAA,
-  ELB_INDEX,
-  KV_INDEX;
+  ELB_INDEX;
 
   /**
    * judge the index type.
@@ -51,8 +50,6 @@ public enum IndexType {
         return RTREE_PAA;
       case 2:
         return ELB_INDEX;
-      case 3:
-        return KV_INDEX;
       default:
         throw new NotImplementedException("Given index is not implemented");
     }
@@ -75,8 +72,6 @@ public enum IndexType {
         return 1;
       case ELB_INDEX:
         return 2;
-      case KV_INDEX:
-        return 3;
       default:
         throw new NotImplementedException("Given index is not implemented");
     }
@@ -100,12 +95,11 @@ public enum IndexType {
       IndexInfo indexInfo) {
     switch (indexType) {
       case NO_INDEX:
-        return new NoIndex(path, tsDataType, indexDir, indexInfo);
+        return new NoIndex(path, tsDataType, indexInfo);
       case ELB_INDEX:
         return new ELBIndex(path, tsDataType, indexDir, indexInfo);
       case RTREE_PAA:
         return new RTreePAAIndex(path, tsDataType, indexDir, indexInfo);
-      case KV_INDEX:
       default:
         throw new NotImplementedException("unsupported index type:" + indexType);
     }

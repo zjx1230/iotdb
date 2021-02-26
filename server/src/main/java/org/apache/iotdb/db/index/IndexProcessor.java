@@ -30,7 +30,7 @@ import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.common.func.IndexNaiveFunc;
 import org.apache.iotdb.db.index.preprocess.IndexFeatureExtractor;
-import org.apache.iotdb.db.index.read.optimize.IIndexRefinePhaseOptimize;
+import org.apache.iotdb.db.index.read.optimize.IIndexCandidateOrderOptimize;
 import org.apache.iotdb.db.index.router.IIndexRouter;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.metadata.MManager;
@@ -155,9 +155,9 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   private final String usableFile;
 
   /**
-   * 后处理阶段（精化阶段）的优化器。目前并未用到。未来设计详见{@link IIndexRefinePhaseOptimize}.
+   * 后处理阶段（精化阶段）的优化器。目前并未用到。未来设计详见{@link IIndexCandidateOrderOptimize}.
    */
-  private final IIndexRefinePhaseOptimize refinePhaseOptimizer;
+  private final IIndexCandidateOrderOptimize refinePhaseOptimizer;
 
   public IndexProcessor(PartialPath indexSeries, String indexSeriesDirPath) {
     this.indexBuildPoolManager = IndexBuildTaskPoolManager.getInstance();
@@ -177,7 +177,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     this.previousDataBufferFile = indexSeriesDirPath + File.separator + "previousBuffer";
     this.usableFile = indexSeriesDirPath + File.separator + "usableMap";
     this.tsDataType = initSeriesType();
-    this.refinePhaseOptimizer = IIndexRefinePhaseOptimize.Factory.getOptimize();
+    this.refinePhaseOptimizer = IIndexCandidateOrderOptimize.Factory.getOptimize();
     deserializePreviousBuffer();
     deserializeUsable(indexSeries);
   }
@@ -312,7 +312,6 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
         });
   }
 
-
   private void waitingFlushEndAndDo(IndexNaiveFunc indexNaiveAction) throws IOException {
     // wait the flushing end.
     long waitingTime;
@@ -343,17 +342,6 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
       }
     }
   }
-
-  //  public synchronized void deleteAllFiles() throws IOException {
-  //    logger.info("Start deleting all files in index processor {}", indexSeries);
-  //    close();
-  //    // delete all index files in this dir.
-  //    File indexSeriesDirFile = IndexUtils.getIndexFile(indexSeriesDirPath);
-  //    if (indexSeriesDirFile.exists()) {
-  //      FileUtils.deleteDirectory(indexSeriesDirFile);
-  //    }
-  //    closeAndRelease();
-  //  }
 
   public PartialPath getIndexSeries() {
     return indexSeries;
@@ -429,6 +417,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
       }
       allPathsIndexMap.forEach(
           (indexType, index) -> {
+            // NO_INDEX doesn't involve the phase of building index
             if (indexType == IndexType.NO_INDEX) {
               numIndexBuildTasks.decrementAndGet();
               return;
