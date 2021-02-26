@@ -19,20 +19,10 @@ package org.apache.iotdb.db.index.preprocess;
 
 import static org.apache.iotdb.db.index.common.IndexConstant.NON_IMPLEMENTED_MSG;
 
-import org.apache.iotdb.db.exception.index.IndexRuntimeException;
-import org.apache.iotdb.db.rescon.TVListAllocator;
-import org.apache.iotdb.db.utils.TestOnly;
-import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.tsfile.exception.NotImplementedException;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.read.common.BatchData;
-import org.apache.iotdb.tsfile.read.filter.basic.Filter;
-import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
-
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.List;
+import org.apache.iotdb.db.utils.datastructure.TVList;
+import org.apache.iotdb.tsfile.read.common.BatchData;
 
 /**
  * For all indexes, the raw input sequence has to be pre-processed before it's organized by indexes.
@@ -47,7 +37,7 @@ import java.util.List;
  *
  * Many indexes will further extract features of alignment sequences, such as PAA, SAX, FFT, etc.
  *
- * In summary, the IndexFeatureExtractor can provide three-level features:
+ * In summary, the IndexFeatureExtractor can provide three-level information:
  *
  * <ul>
  *   <li>L1: a triplet to identify a series: {@code {StartTime, EndTime, Length}} (not submitted in this pr)
@@ -99,33 +89,23 @@ public abstract class IndexFeatureExtractor {
   public abstract void clearProcessedSrcData();
 
   /**
-   * Called when the memory reaches the threshold. This function should release all allocated array
-   * list which increases with the number of processed data pairs.
+   * close this extractor and release all allocated resources (TVList and PrimitiveList). It also
+   * returns the data saved for next open.
    *
-   * <p>Note that, after cleaning up all past store, the next {@linkplain #processNext()} will
-   * still start from the current point.
-   *
-   * <p>IndexPreprocessor releases {@code previous} but <tt>doesn't release {@code srcData}</tt>
-   * which may be still usable for next chunks, it's an important difference from {@code
-   * releaseSrcData}.
-   *
-   * <p>We do not call {@linkplain #clearProcessedSrcData} when triggering Sub-Flush, but use
-   * offset to label how many point we have processed, because Sub-Flush may be triggered frequently
-   * when the memory threshold is relatively small. If we use {@linkplain #clearProcessedSrcData},
-   * we need to move unprocessed data to position 0. The less data we flush each time, the more data
-   * we need to move. Therefore, we only use appendSrcData when starting startFlushMemTable.
+   * @return the data saved for next open.
    */
-  public abstract long clear();
-
   public abstract ByteBuffer closeAndRelease() throws IOException;
 
   /**
-   * get current L2 aligned sequences. The caller needs to release them after use.
+   * @return current L2: aligned sequence.
    */
   public Object getCurrent_L2_AlignedSequence() {
     throw new UnsupportedOperationException(NON_IMPLEMENTED_MSG);
   }
 
+  /**
+   * @return current L3: costumed feature.
+   */
   public Object getCurrent_L3_Feature() {
     throw new UnsupportedOperationException(NON_IMPLEMENTED_MSG);
   }

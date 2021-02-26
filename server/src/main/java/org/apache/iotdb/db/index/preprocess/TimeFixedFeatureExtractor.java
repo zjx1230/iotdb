@@ -369,7 +369,7 @@ public class TimeFixedFeatureExtractor extends SubMatchFeatureExtractor {
 //  }
 
   @Override
-  public long clear() {
+  protected long release() {
     long toBeReleased = 0;
     flushedOffset = sliceNum;
     chunkStartTime = -1;

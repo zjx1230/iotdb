@@ -54,7 +54,7 @@ public class RTreePAAIndex extends RTreeIndex {
   }
 
   @Override
-  public void initPreprocessor(ByteBuffer previous, boolean inQueryMode) {
+  public void initFeatureExtractor(ByteBuffer previous, boolean inQueryMode) {
     if (this.indexFeatureExtractor != null) {
       try {
         this.indexFeatureExtractor.closeAndRelease();

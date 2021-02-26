@@ -439,6 +439,11 @@ public class IoTDBDescriptor {
               properties.getProperty(
                   "concurrent_query_thread", Integer.toString(conf.getConcurrentQueryThread()))));
 
+      conf.setMaxIndexQueryResultSize(
+          Integer.parseInt(
+              properties.getProperty(
+                  "max_index_query_result_size", Integer.toString(conf.getMaxIndexQueryResultSize()))));
+
       if (conf.getConcurrentQueryThread() <= 0) {
         conf.setConcurrentQueryThread(Runtime.getRuntime().availableProcessors());
       }

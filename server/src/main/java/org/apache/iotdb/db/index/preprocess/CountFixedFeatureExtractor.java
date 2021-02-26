@@ -272,7 +272,7 @@ public class CountFixedFeatureExtractor extends SubMatchFeatureExtractor {
   }
 
   @Override
-  public long clear() {
+  protected long release() {
     long toBeReleased = 0;
     flushedOffset = sliceNum;
     chunkStartTime = -1;
@@ -293,13 +293,9 @@ public class CountFixedFeatureExtractor extends SubMatchFeatureExtractor {
   public int nextUnprocessedWindowStartIdx() {
     int next = processedStartTimeIdx + slideStep;
     if (next > srcData.size()) {
-      //      next = srcData.size();
       next = processedStartTimeIdx;
     }
     return next;
   }
 
-  public int getSliceNum() {
-    return sliceNum;
-  }
 }

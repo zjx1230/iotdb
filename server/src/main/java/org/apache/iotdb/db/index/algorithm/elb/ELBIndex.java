@@ -68,7 +68,6 @@ import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_DISTANCE;
 import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_ELB_TYPE;
 import static org.apache.iotdb.db.index.common.IndexConstant.DISTANCE;
 import static org.apache.iotdb.db.index.common.IndexConstant.ELB_TYPE;
-import static org.apache.iotdb.db.index.common.IndexConstant.MAX_RETURN_SET;
 import static org.apache.iotdb.db.index.common.IndexConstant.MISSING_PARAM_ERROR_MESSAGE;
 import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
 import static org.apache.iotdb.db.index.common.IndexConstant.THRESHOLD;
@@ -102,7 +101,6 @@ public class ELBIndex extends IoTDBIndex {
 
   private ELBMatchFeatureExtractor elbMatchPreprocessor;
   private List<ELBWindowBlockFeature> windowBlockFeatures;
-  //  private PrimitiveList usableBlocks;
 
   private int blockWidth;
   private File featureFile;
@@ -132,7 +130,7 @@ public class ELBIndex extends IoTDBIndex {
   }
 
   @Override
-  public void initPreprocessor(ByteBuffer previous, boolean inQueryMode) {
+  public void initFeatureExtractor(ByteBuffer previous, boolean inQueryMode) {
     if (this.indexFeatureExtractor != null) {
       try {
         this.indexFeatureExtractor.closeAndRelease();
@@ -192,7 +190,7 @@ public class ELBIndex extends IoTDBIndex {
       Map<String, Object> queryProps,
       IIndexUsable iIndexUsable,
       QueryContext context,
-      IIndexCandidateOrderOptimize refinePhaseOptimizer,
+      IIndexCandidateOrderOptimize candidateOrderOptimize,
       boolean alignedByTime)
       throws QueryIndexException {
     ELBQueryStruct struct = new ELBQueryStruct();
@@ -240,7 +238,7 @@ public class ELBIndex extends IoTDBIndex {
     } catch (StorageEngineException | QueryProcessException | IOException e) {
       throw new QueryIndexException(e.getMessage());
     }
-    return constructSearchDataset(res, alignedByTime, MAX_RETURN_SET);
+    return constructSearchDataset(res, alignedByTime);
   }
 
   private static class ELBQueryStruct {

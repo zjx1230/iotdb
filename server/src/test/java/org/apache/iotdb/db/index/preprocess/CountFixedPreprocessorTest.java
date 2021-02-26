@@ -53,7 +53,7 @@ public class CountFixedPreprocessorTest {
         new CountFixedFeatureExtractor(TSDataType.INT32, windowRange, slideStep, true, true);
     countFixed.appendNewSrcData(srcData);
     assertL1AndL2(countFixed, groundTruthL1, groundTruthL2);
-    countFixed.clear();
+    countFixed.closeAndRelease();
 
     System.out.println();
     //    CountFixedPreprocessor countFixedWithoutStored = new CountFixedPreprocessor(srcData,
@@ -84,7 +84,7 @@ public class CountFixedPreprocessorTest {
         new CountFixedFeatureExtractor(TSDataType.INT32, windowRange, slideStep, true, true);
     countFixed.appendNewSrcData(srcData);
     assertL1AndL2(countFixed, groundTruthL1, groundTruthL2);
-    countFixed.clear();
+    countFixed.closeAndRelease();
 
     System.out.println();
     //    CountFixedPreprocessor countFixedWithoutStored = new CountFixedPreprocessor(srcData,

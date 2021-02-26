@@ -41,7 +41,7 @@ public class NoIndex extends IoTDBIndex {
   }
 
   @Override
-  public void initPreprocessor(ByteBuffer previous, boolean inQueryMode) {
+  public void initFeatureExtractor(ByteBuffer previous, boolean inQueryMode) {
     // NoIndex does nothing
   }
 
@@ -61,7 +61,7 @@ public class NoIndex extends IoTDBIndex {
       Map<String, Object> queryProps,
       IIndexUsable iIndexUsable,
       QueryContext context,
-      IIndexCandidateOrderOptimize refinePhaseOptimizer,
+      IIndexCandidateOrderOptimize candidateOrderOptimize,
       boolean alignedByTime) {
     return new IndexQueryDataSet(
         Collections.emptyList(), Collections.emptyList(), Collections.emptyMap());

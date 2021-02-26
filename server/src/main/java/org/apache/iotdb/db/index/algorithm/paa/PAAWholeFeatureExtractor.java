@@ -123,12 +123,6 @@ public class PAAWholeFeatureExtractor extends WholeMatchFeatureExtractor {
     hasNewData = false;
   }
 
-
-  @Override
-  public long clear() {
-    return 0;
-  }
-
   @Override
   public void clearProcessedSrcData() {
     this.srcData = null;

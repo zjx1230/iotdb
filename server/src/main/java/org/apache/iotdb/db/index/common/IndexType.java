@@ -114,7 +114,7 @@ public enum IndexType {
       ByteBuffer previous) {
     indexInfo.setProps(uppercaseStringProps(indexInfo.getProps()));
     IoTDBIndex index = newIndexByType(indexSeries, tsDataType, indexDir, indexType, indexInfo);
-    index.initPreprocessor(previous, false);
+    index.initFeatureExtractor(previous, false);
     return index;
   }
 

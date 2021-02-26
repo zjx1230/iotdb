@@ -57,14 +57,14 @@ public class TimeFixedPreprocessorTest {
             INT32, windowRange, slideStep, alignedSequenceLength, 0, true, true);
     timeFixed.appendNewSrcData(srcData);
     assertL1AndL2(timeFixed, groundTruthL1, groundTruthL2);
-    timeFixed.clear();
+    timeFixed.closeAndRelease();
 
     TimeFixedFeatureExtractor timeFixedWithoutStored =
         new TimeFixedFeatureExtractor(
             INT32, windowRange, slideStep, alignedSequenceLength, 0, false, false);
     timeFixedWithoutStored.appendNewSrcData(srcData);
     assertL1AndL2(timeFixedWithoutStored, groundTruthL1, groundTruthL2);
-    timeFixedWithoutStored.clear();
+    timeFixedWithoutStored.closeAndRelease();
   }
 
   @Test
@@ -91,14 +91,14 @@ public class TimeFixedPreprocessorTest {
             INT32, windowRange, slideStep, alignedSequenceLength, 0, true, true);
     timeFixed.appendNewSrcData(srcData);
     assertL1AndL2(timeFixed, groundTruthL1, groundTruthL2, true);
-    timeFixed.clear();
+    timeFixed.closeAndRelease();
 
     TimeFixedFeatureExtractor timeFixedWithoutStored =
         new TimeFixedFeatureExtractor(
             INT32, windowRange, slideStep, alignedSequenceLength, 0, false, false);
     timeFixedWithoutStored.appendNewSrcData(srcData);
     assertL1AndL2(timeFixedWithoutStored, groundTruthL1, groundTruthL2, true);
-    timeFixedWithoutStored.clear();
+    timeFixedWithoutStored.closeAndRelease();
   }
 
   @Test
@@ -347,7 +347,6 @@ public class TimeFixedPreprocessorTest {
     timeFixed.processNext();
     timeFixed.hasNext();
     timeFixed.processNext();
-    timeFixed.clear();
     timeFixed.hasNext();
     timeFixed.processNext();
     timeFixed.hasNext();
@@ -357,7 +356,7 @@ public class TimeFixedPreprocessorTest {
     //    System.out.println(L1s.toString());
     //    Assert.assertEquals(groundTruthL1[4], L1s.toString());
 
-    List<Object> L2s = timeFixed.getLatestN_L2_AlignedSequences(4);
+    List<Object> L2s = timeFixed.getLatestN_L2_AlignedSequences(2);
     System.out.println(IndexTestUtils.tvListToString((TVList) L2s.get(0)));
     System.out.println(IndexTestUtils.tvListToString((TVList) L2s.get(1)));
     Assert.assertEquals(2, L2s.size());

@@ -65,6 +65,8 @@ public abstract class SubMatchFeatureExtractor extends IndexFeatureExtractor {
     return hasNext(null);
   }
 
+  protected abstract long release();
+
   /**
    * After a calling of {@linkplain #processNext()}, currentStartTime and currentStartIdx has been
    * updated. This method is to calculate the start idx of the next window
@@ -93,7 +95,7 @@ public abstract class SubMatchFeatureExtractor extends IndexFeatureExtractor {
    */
   public ByteBuffer closeAndRelease() throws IOException {
     ByteBuffer res = serializePrevious();
-//    clear();
+    release();
     TVListAllocator.getInstance().release(srcData);
     return res;
   }

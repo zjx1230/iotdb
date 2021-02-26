@@ -17,6 +17,8 @@
  */
 package org.apache.iotdb.db.index.algorithm;
 
+import org.apache.iotdb.db.conf.IoTDBConfig;
+import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.index.IndexProcessor;
@@ -43,8 +45,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Each StorageGroupProcessor contains a IndexProcessor, and each IndexProcessor can contain more
- * than one IIndex. Each type of Index corresponds one IIndex.
+ * For index developers, the indexing framework aims to provide a simple and friendly platform and
+ * shield the complex details in other modules.
+ *
+ * To add a new index methods, developers need inherit {@linkplain IoTDBIndex} or its subclass.
  */
 public abstract class IoTDBIndex {
 
@@ -55,72 +59,79 @@ public abstract class IoTDBIndex {
   protected final Map<String, String> props;
   protected IndexFeatureExtractor indexFeatureExtractor;
 
-  /** Only build index for data later than this timestamp. Not used yet. */
-  protected final long confIndexStartTime;
 
   public IoTDBIndex(PartialPath indexSeries, TSDataType tsDataType, IndexInfo indexInfo) {
     this.indexSeries = indexSeries;
     this.indexType = indexInfo.getIndexType();
-    this.confIndexStartTime = indexInfo.getTime();
     this.props = indexInfo.getProps();
     this.tsDataType = tsDataType;
   }
 
   /**
-   * An index should determine which preprocessor it uses and hook it to {@linkplain
-   * IoTDBIndex}.indexProcessor. An index should determine which preprocessor it uses and connect to
-   * the IndexProcessor.
+   * An index should determine which FeatureExtractor it uses and hook it to {@linkplain *
+   * IoTDBIndex}.indexFeatureExtractor. This method is called when IoTDBIndex is created.
    *
-   * <p>This method is called when IoTDBIndex is created and accept the previous overlapped data in
-   * type of {@code ByteBuffer}.
-   *
-   * <p>Note that, the implementation should call {@code deserializePrevious(ByteBuffer byteBuffer)}
-   * after initialize the preprocessor.
+   * @param previous the status data saved in the last closing of the FeatureExtractor
+   * @param inQueryMode true if it's during index query, false if it's during index building
    */
-  public abstract void initPreprocessor(ByteBuffer previous, boolean inQueryMode);
+  public abstract void initFeatureExtractor(ByteBuffer previous, boolean inQueryMode);
 
-  /** When this function is called, it means that a new point has been pre-processed. */
+  /**
+   * A new item has been pre-processed by the FeatureExtractor, now the index can insert it.
+   */
   public abstract boolean buildNext() throws IndexManagerException;
 
-  /** 索引将自己的东西刷出去 */
+  /**
+   * This index will be closed, it's time to serialize in-memory data to disk for next open.
+   */
   protected abstract void flushIndex();
 
+  /**
+   * execute index query and return the result.
+   *
+   * @param queryProps query conditions
+   * @param iIndexUsable the information of index usability
+   * @param context query context provided by IoTDB.
+   * @param candidateOrderOptimize an optimizer for the order of visiting candidates
+   * @param alignedByTime true if the result series need to aligned by timestamp, otherwise they
+   * will be aligned by their first points
+   * @return the result should be consistent with other IoTDB query result.
+   */
   public abstract QueryDataSet query(
       Map<String, Object> queryProps,
       IIndexUsable iIndexUsable,
       QueryContext context,
-      IIndexCandidateOrderOptimize refinePhaseOptimizer,
+      IIndexCandidateOrderOptimize candidateOrderOptimize,
       boolean alignedByTime)
       throws QueryIndexException;
 
   /**
-   * Each index has its own preprocessor. Through the preprocessor provided by this index,
-   * {@linkplain IndexProcessor IndexFileProcessor} can control the its data process, memory
-   * occupation and triggers forceFlush.
+   * In current design, the index building (insert data) only occurs in the memtable flush. When
+   * this method is called, a batch of raw data is coming.
    *
-   * @param tvList tvList in current FlushTask.
-   * @return Preprocessor with new data.
+   * @param tvList tvList to insert
+   * @return FeatureExtractor filled with the given raw data
    */
   public IndexFeatureExtractor startFlushTask(PartialPath partialPath, TVList tvList) {
     this.indexFeatureExtractor.appendNewSrcData(tvList);
     return indexFeatureExtractor;
   }
 
-  /** This method is called when a flush task totally finished. */
+  /**
+   * The flush task has ended.
+   */
   public void endFlushTask() {
     indexFeatureExtractor.clearProcessedSrcData();
   }
 
   /**
-   * Not that, this method will remove all data and feature. If this method is called, all other
-   * methods will be invalid.
-   * @return
+   * Close the index, release resources of the index structure and the feature extractor.
    */
   public ByteBuffer closeAndRelease() throws IOException {
     flushIndex();
     if (indexFeatureExtractor != null) {
       return indexFeatureExtractor.closeAndRelease();
-    }else{
+    } else {
       return ByteBuffer.allocate(0);
     }
   }
@@ -136,6 +147,12 @@ public abstract class IoTDBIndex {
   @Override
   public String toString() {
     return indexType.toString();
+  }
+
+  protected QueryDataSet constructSearchDataset(List<DistSeries> res, boolean alignedByTime)
+      throws QueryIndexException {
+    return constructSearchDataset(res, alignedByTime,
+        IoTDBDescriptor.getInstance().getConfig().getMaxIndexQueryResultSize());
   }
 
   protected QueryDataSet constructSearchDataset(

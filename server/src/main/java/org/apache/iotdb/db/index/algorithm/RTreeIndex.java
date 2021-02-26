@@ -63,7 +63,6 @@ import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_FEATURE_DIM
 import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_SERIES_LENGTH;
 import static org.apache.iotdb.db.index.common.IndexConstant.FEATURE_DIM;
 import static org.apache.iotdb.db.index.common.IndexConstant.MAX_ENTRIES;
-import static org.apache.iotdb.db.index.common.IndexConstant.MAX_RETURN_SET;
 import static org.apache.iotdb.db.index.common.IndexConstant.MIN_ENTRIES;
 import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
 import static org.apache.iotdb.db.index.common.IndexConstant.SEED_PICKER;
@@ -406,7 +405,6 @@ public abstract class RTreeIndex extends IoTDBIndex {
           res = (TVList) featureExtractor.getCurrent_L2_AlignedSequence();
         }
         featureExtractor.clearProcessedSrcData();
-        featureExtractor.clear();
       } catch (StorageEngineException | IOException | QueryProcessException e) {
         e.printStackTrace();
       }
@@ -431,7 +429,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
       Map<String, Object> queryProps,
       IIndexUsable iIndexUsable,
       QueryContext context,
-      IIndexCandidateOrderOptimize refinePhaseOptimizer,
+      IIndexCandidateOrderOptimize candidateOrderOptimize,
       boolean alignedByTime)
       throws QueryIndexException {
     RTreeQueryStruct struct = initQuery(queryProps);
@@ -448,7 +446,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
     for (DistSeries ds : res) {
       ds.partialPath = ds.partialPath.concatNode(String.format("(D=%.2f)", ds.dist));
     }
-    return constructSearchDataset(res, alignedByTime, MAX_RETURN_SET);
+    return constructSearchDataset(res, alignedByTime);
   }
 
   //  public int postProcessNext(List<IndexFuncResult> funcResult) throws QueryIndexException {

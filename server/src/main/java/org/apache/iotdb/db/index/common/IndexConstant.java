@@ -31,7 +31,6 @@ public class IndexConstant {
 
   public static final String INDEXING_SUFFIX = ".indexing";
   public static final String INDEXED_SUFFIX = ".index";
-  public static final int MAX_RETURN_SET = 5;
 
   // whole matching
   public static final int NON_SET_TOP_K = -1;
