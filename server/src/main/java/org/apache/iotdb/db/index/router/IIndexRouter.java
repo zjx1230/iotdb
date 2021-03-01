@@ -16,12 +16,12 @@ import java.util.Map;
 /**
  * Singleton pattern.
  *
- * Firstly, IIndexRouter is responsible for index metadata management. More importantly, it is for
- * routing the create/drop/insert/query command to corresponding index processors.
+ * <p>Firstly, IIndexRouter is responsible for index metadata management. More importantly, it is
+ * for routing the create/drop/insert/query command to corresponding index processors.
  *
- * IIndexRouter can decouple the mapping relationship, which may be re-designed in future, between
- * {@link org.apache.iotdb.db.index.algorithm.IoTDBIndex IoTDBIndex} and {@link IndexProcessor} from
- * {@link org.apache.iotdb.db.index.IndexManager IndexManager}.
+ * <p>IIndexRouter can decouple the mapping relationship, which may be re-designed in future,
+ * between {@link org.apache.iotdb.db.index.algorithm.IoTDBIndex IoTDBIndex} and {@link
+ * IndexProcessor} from {@link org.apache.iotdb.db.index.IndexManager IndexManager}.
  */
 public interface IIndexRouter {
 
@@ -64,13 +64,12 @@ public interface IIndexRouter {
    */
   void serialize(boolean doClose);
 
-  /**
-   * deserialize all index information and processors into the memory
-   */
+  /** deserialize all index information and processors into the memory */
   void deserializeAndReload(CreateIndexProcessorFunc func);
 
   /**
    * return a subset of the original IIndexRouter for accessing concurrency
+   *
    * @param storageGroupPath the path of a storageGroup
    * @return a subset of the original IIndexRouter
    */
@@ -92,6 +91,7 @@ public interface IIndexRouter {
 
   /**
    * do something when the query end
+   *
    * @param indexSeries the query path
    * @param indexType the index type
    * @param context the query context

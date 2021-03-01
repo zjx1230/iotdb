@@ -138,9 +138,7 @@ public class IoTDBDescriptor {
     }
   }
 
-  /**
-   * load an property file and set TsfileDBConfig variables.
-   */
+  /** load an property file and set TsfileDBConfig variables. */
   @SuppressWarnings("squid:S3776") // Suppress high Cognitive Complexity warning
   private void loadProps() {
     URL url = getPropsUrl();

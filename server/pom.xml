@@ -215,6 +215,10 @@
             <version>1.4.0</version>
             <scope>runtime</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.hive</groupId>
+            <artifactId>hive-exec</artifactId>
+        </dependency>
         <!-- Deep learning part end -->
     </dependencies>
     <build>

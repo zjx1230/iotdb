@@ -17,7 +17,6 @@
  */
 package org.apache.iotdb.db.index.algorithm.paa;
 
-import java.io.IOException;
 import org.apache.iotdb.db.index.algorithm.RTreeIndex;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexUtils;
@@ -31,6 +30,7 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
@@ -63,8 +63,7 @@ public class RTreePAAIndex extends RTreeIndex {
       }
     }
     this.paaWholeFeatureExtractor =
-        new PAAWholeFeatureExtractor(
-            seriesLength, featureDim, false, currentLowerBounds);
+        new PAAWholeFeatureExtractor(seriesLength, featureDim, false, currentLowerBounds);
     this.indexFeatureExtractor = paaWholeFeatureExtractor;
   }
 

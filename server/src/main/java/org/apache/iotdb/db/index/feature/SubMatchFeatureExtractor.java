@@ -1,9 +1,5 @@
 package org.apache.iotdb.db.index.feature;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.List;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
@@ -12,12 +8,17 @@ import org.apache.iotdb.tsfile.read.common.BatchData;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.List;
+
 /**
- * The feature extractor for sub-matching is based on the sliding window model, which means,
- * this class makes a time window slide over the time series by some
- * rules and obtain a list of subsequences. The time windows may be time-fixed (Euclidean distance),
- * count-fixed (Time Warping). It scans the sequence with a certain overlap step (a.k.a. the update
- * size).
+ * The feature extractor for sub-matching is based on the sliding window model, which means, this
+ * class makes a time window slide over the time series by some rules and obtain a list of
+ * subsequences. The time windows may be time-fixed (Euclidean distance), count-fixed (Time
+ * Warping). It scans the sequence with a certain overlap step (a.k.a. the update size).
+ *
  * <p>A time window may be aligned to equal interval or equal range, which is called "Aligned
  * Sequences."
  */
@@ -53,8 +54,8 @@ public abstract class SubMatchFeatureExtractor extends IndexFeatureExtractor {
    * Returns true if the pre-processor has more elements. i.e., return true if {@link #processNext}
    * would process the next data item rather than throwing an exception.)
    *
-   * <p>If there are more sequences, most {@code currentStartTime} and {@code currentEndTime} to
-   * the next one. Otherwise, don't change them.
+   * <p>If there are more sequences, most {@code currentStartTime} and {@code currentEndTime} to the
+   * next one. Otherwise, don't change them.
    *
    * @return {@code true} if there are more elements to be processed.
    */
@@ -72,9 +73,7 @@ public abstract class SubMatchFeatureExtractor extends IndexFeatureExtractor {
    */
   protected abstract int nextUnprocessedWindowStartIdx();
 
-  /**
-   * clear data which has been processed
-   */
+  /** clear data which has been processed */
   public void clearProcessedSrcData() {
     int idx = nextUnprocessedWindowStartIdx();
     if (idx > srcData.size()) {
@@ -86,7 +85,6 @@ public abstract class SubMatchFeatureExtractor extends IndexFeatureExtractor {
     TVListAllocator.getInstance().release(srcData);
     this.srcData = swap;
   }
-
 
   /**
    * Not that, this method will remove all data and feature. If this method is called, all other
@@ -105,17 +103,13 @@ public abstract class SubMatchFeatureExtractor extends IndexFeatureExtractor {
    */
   public abstract List<Object> getLatestN_L2_AlignedSequences(int latestN);
 
-  /**
-   * get current L2 aligned sequences. The caller needs to release them after use.
-   */
+  /** get current L2 aligned sequences. The caller needs to release them after use. */
   public Object getCurrent_L2_AlignedSequence() {
     List<Object> res = getLatestN_L2_AlignedSequences(1);
     return res.isEmpty() ? null : res.get(0);
   }
 
-  /**
-   * deserialize from the buffer, set the previous overlapped data
-   */
+  /** deserialize from the buffer, set the previous overlapped data */
   public void deserializePrevious(ByteBuffer byteBuffer) {
     if (byteBuffer == null) {
       return;
@@ -153,9 +147,7 @@ public abstract class SubMatchFeatureExtractor extends IndexFeatureExtractor {
     }
   }
 
-  /**
-   * serialize the previous overlapped data and output
-   */
+  /** serialize the previous overlapped data and output */
   ByteBuffer serializePrevious() throws IOException {
     int idx = 0;
     ByteArrayOutputStream baos = new ByteArrayOutputStream();

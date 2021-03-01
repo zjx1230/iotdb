@@ -55,7 +55,6 @@ public class NoIndex extends IoTDBIndex {
     // NoIndex does nothing
   }
 
-
   @Override
   public QueryDataSet query(
       Map<String, Object> queryProps,

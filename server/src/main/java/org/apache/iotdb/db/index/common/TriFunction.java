@@ -27,7 +27,6 @@ package org.apache.iotdb.db.index.common;
  * @param <B> the type of the second argument to the function
  * @param <C> the type of the third argument to the function
  * @param <R> the type of the result of the function
- *
  */
 @FunctionalInterface
 public interface TriFunction<A, B, C, R> {

@@ -17,21 +17,18 @@
  */
 package org.apache.iotdb.db.index.algorithm.rtree;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.index.algorithm.rtree.RTree.RNode;
 import org.apache.iotdb.db.index.algorithm.rtree.RTree.SeedsPicker;
-
-import org.apache.iotdb.db.index.usable.SubMatchIndexUsability;
 import org.apache.iotdb.db.metadata.PartialPath;
+
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Random;
 

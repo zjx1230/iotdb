@@ -40,6 +40,7 @@ import org.apache.iotdb.db.exception.BatchProcessException;
 import org.apache.iotdb.db.exception.QueryIdNotExsitException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.UDFRegistrationException;
+import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.metadata.PathNotExistException;
@@ -88,6 +89,7 @@ import org.apache.iotdb.db.qp.physical.sys.DataAuthPlan;
 import org.apache.iotdb.db.qp.physical.sys.DeleteStorageGroupPlan;
 import org.apache.iotdb.db.qp.physical.sys.DeleteTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.DropFunctionPlan;
+import org.apache.iotdb.db.qp.physical.sys.DropIndexPlan;
 import org.apache.iotdb.db.qp.physical.sys.DropTriggerPlan;
 import org.apache.iotdb.db.qp.physical.sys.FlushPlan;
 import org.apache.iotdb.db.qp.physical.sys.KillQueryPlan;
@@ -1762,5 +1764,34 @@ public class PlanExecutor implements IPlanExecutor {
       }
     }
     return noExistSg;
+  }
+
+  private boolean createIndex(CreateIndexPlan createIndexPlan) throws QueryProcessException {
+    List<PartialPath> paths = createIndexPlan.getPaths();
+    List<PartialPath> partialPaths = new ArrayList<>(paths);
+    long startTime = createIndexPlan.getTime();
+    IndexType indexType = createIndexPlan.getIndexType();
+    Map<String, String> props = createIndexPlan.getProps();
+    IndexInfo indexInfo = new IndexInfo(indexType, startTime, props);
+    try {
+      IndexManager.getInstance().createIndex(partialPaths, indexInfo);
+    } catch (MetadataException e) {
+      throw new IndexManagerException(e);
+    }
+    return true;
+  }
+
+  private boolean dropIndex(DropIndexPlan dropIndexPlan) throws QueryProcessException {
+    List<PartialPath> paths = dropIndexPlan.getPaths();
+    List<PartialPath> partialPaths = new ArrayList<>(paths);
+    IndexType indexType = dropIndexPlan.getIndexType();
+    try {
+      IndexManager.getInstance().dropIndex(partialPaths, indexType);
+    } catch (MetadataException e) {
+      throw new IndexManagerException(e);
+    } catch (IOException e2) {
+      throw new IndexManagerException(e2.getMessage());
+    }
+    return true;
   }
 }

@@ -12,16 +12,14 @@ import org.apache.iotdb.db.utils.datastructure.TVList;
  * detect whether one or more indexes have been created on this series, and pass its data to
  * corresponding IndexProcessors and insert it into the corresponding indexes.
  *
- * IndexMemTableFlushTask may cover more than one index processor.
+ * <p>IndexMemTableFlushTask may cover more than one index processor.
  */
 public class IndexMemTableFlushTask {
 
   private final IIndexRouter router;
   private final boolean sequence;
 
-  /**
-   * it should be immutable.
-   */
+  /** it should be immutable. */
   IndexMemTableFlushTask(IIndexRouter router, boolean sequence) {
     // check all processors
     this.router = router;
@@ -50,9 +48,7 @@ public class IndexMemTableFlushTask {
     }
   }
 
-  /**
-   * wait for all IndexProcessors to finish building indexes.
-   */
+  /** wait for all IndexProcessors to finish building indexes. */
   public void endFlush() {
     if (sequence) {
       router.getAllIndexProcessorsAndInfo().forEach(p -> p.processor.endFlushMemTable());

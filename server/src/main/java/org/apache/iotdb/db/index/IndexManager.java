@@ -18,15 +18,6 @@
  */
 package org.apache.iotdb.db.index;
 
-import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_DATA_DIR_NAME;
-import static org.apache.iotdb.db.index.common.IndexConstant.META_DIR_NAME;
-import static org.apache.iotdb.db.index.common.IndexConstant.ROUTER_DIR;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
@@ -51,8 +42,19 @@ import org.apache.iotdb.db.service.ServiceType;
 import org.apache.iotdb.db.utils.FileUtils;
 import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+import static org.apache.iotdb.db.index.common.IndexConstant.INDEX_DATA_DIR_NAME;
+import static org.apache.iotdb.db.index.common.IndexConstant.META_DIR_NAME;
+import static org.apache.iotdb.db.index.common.IndexConstant.ROUTER_DIR;
 
 /**
  * IndexManager is the global manager of index framework, which will be called by IoTDB when index
@@ -67,14 +69,13 @@ public class IndexManager implements IndexManagerMBean, IService {
    * directory.
    */
   private final String indexRootDirPath;
+
   private final String indexMetaDirPath;
   private final String indexRouterDir;
   private final String indexDataDirPath;
   private final IIndexRouter router;
 
-  /**
-   * A function interface to construct an index processor.
-   */
+  /** A function interface to construct an index processor. */
   private CreateIndexProcessorFunc createIndexProcessorFunc;
 
   private IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
@@ -140,7 +141,6 @@ public class IndexManager implements IndexManagerMBean, IService {
     }
   }
 
-
   /**
    * 当存储组刷新时，构造 {@link IndexMemTableFlushTask} 用于写入。
    *
@@ -162,12 +162,12 @@ public class IndexManager implements IndexManagerMBean, IService {
   /**
    * Index query.
    *
-   * The initial idea is that index instances only process the "pruning phase" to prune some
+   * <p>The initial idea is that index instances only process the "pruning phase" to prune some
    * negative items and return a candidate list, the framework finishes the rest (so-called
    * "post-processing phase" or "refinement phase", to query the raw time series by the candidate
    * list and then to verified which series in candidate list are real positive results).
    *
-   * The above design is common enough for all of similarity index methods. However, index
+   * <p>The above design is common enough for all of similarity index methods. However, index
    * technology has various optimizations, and enforcing the above strategy will affect the freedom
    * of index integration. The two implemented indexes (ELB index and RTree index) have their own
    * optimizations which combine the pruning phase and post-processing phase. Therefore, in current
@@ -240,9 +240,7 @@ public class IndexManager implements IndexManagerMBean, IService {
     }
   }
 
-  /**
-   * close the index manager.
-   */
+  /** close the index manager. */
   private synchronized void close() {
     router.serialize(true);
   }
@@ -278,7 +276,6 @@ public class IndexManager implements IndexManagerMBean, IService {
     JMXService.deregisterMBean(ServiceType.INDEX_SERVICE.getJmxName());
   }
 
-
   public static IndexManager getInstance() {
     return InstanceHolder.instance;
   }
@@ -290,8 +287,7 @@ public class IndexManager implements IndexManagerMBean, IService {
 
   private static class InstanceHolder {
 
-    private InstanceHolder() {
-    }
+    private InstanceHolder() {}
 
     private static IndexManager instance = new IndexManager();
   }

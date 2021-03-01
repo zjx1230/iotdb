@@ -18,21 +18,6 @@
  */
 package org.apache.iotdb.db.index;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
@@ -56,26 +41,43 @@ import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Each {@code IndexProcessor} manages all index instances under an <b>IndexSeries</b>.
  *
- * An <b>IndexSeries</b> is one series or a set of series that an index instance acts on.
+ * <p>An <b>IndexSeries</b> is one series or a set of series that an index instance acts on.
  *
  * <ul>
- *   <li> For whole matching, the IndexSeries is a set of series represented by a path with
- *   wildcard characters. For example, creating index on IndexSeries "root.steel.*.temperature"
- *   means all series belong to this IndexSeries will be inserted, such as
- *   root.steel.s1.temperature, root. steel.s2.temperature, ...
- *   <li> For subsequence matching, the IndexSeries is a full path. For example, creating index on
- *   IndexSeries "root.wind.azq01.speed" means all subsequence of this series will be inserted.
+ *   <li>For whole matching, the IndexSeries is a set of series represented by a path with wildcard
+ *       characters. For example, creating index on IndexSeries "root.steel.*.temperature" means all
+ *       series belong to this IndexSeries will be inserted, such as root.steel.s1.temperature,
+ *       root. steel.s2.temperature, ...
+ *   <li>For subsequence matching, the IndexSeries is a full path. For example, creating index on
+ *       IndexSeries "root.wind.azq01.speed" means all subsequence of this series will be inserted.
  * </ul>
  *
- * In current design。users are allowed to create more than one type of index on an IndexSeries.
- * e.g. we can create RTree and DS-Tree on "root.steel.*.temperature". New coming data will be
- * inserted into both of these two indexes.
+ * In current design。users are allowed to create more than one type of index on an IndexSeries. e.g.
+ * we can create RTree and DS-Tree on "root.steel.*.temperature". New coming data will be inserted
+ * into both of these two indexes.
  */
 public class IndexProcessor implements Comparable<IndexProcessor> {
 
@@ -94,19 +96,13 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
    */
   private AtomicInteger numIndexBuildTasks;
 
-  /**
-   * Whether the processor has been closed
-   */
+  /** Whether the processor has been closed */
   private volatile boolean closed;
 
-  /**
-   * The map of index instances.
-   */
+  /** The map of index instances. */
   private Map<IndexType, IoTDBIndex> allPathsIndexMap;
 
-  /**
-   * Some status data saved when index is closed for next open.
-   */
+  /** Some status data saved when index is closed for next open. */
   private final Map<IndexType, ByteBuffer> previousDataBufferMap;
 
   private final String previousDataBufferFile;
@@ -119,9 +115,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
 
   private final String usableFile;
 
-  /**
-   * The optimizer for the post-processing phase (refinement phase). Unused yet.
-   */
+  /** The optimizer for the post-processing phase (refinement phase). Unused yet. */
   private final IIndexCandidateOrderOptimize refinePhaseOptimizer;
 
   public IndexProcessor(PartialPath indexSeries, String indexSeriesDirPath) {
@@ -242,9 +236,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     }
   }
 
-  /**
-   * Flush all index instances to disk except NoIndex.
-   */
+  /** Flush all index instances to disk except NoIndex. */
   @SuppressWarnings("squid:S2589")
   public synchronized void close(boolean deleteFiles) throws IOException {
     if (closed) {
@@ -415,14 +407,11 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     }
   }
 
-  /**
-   * Not return until all index insertion have finished.
-   */
+  /** Not return until all index insertion have finished. */
   void endFlushMemTable() {
     // wait until all flushing tasks end.
     try {
-      waitingFlushEndAndDo(() -> {
-      });
+      waitingFlushEndAndDo(() -> {});
     } catch (IOException ignored) {
       // the exception is ignored
     }
@@ -464,8 +453,8 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
           try {
             allPathsIndexMap.get(indexType).closeAndRelease();
           } catch (IOException e) {
-            logger.warn("Meet error when close {} before removing index, {}", indexType,
-                e.getMessage());
+            logger.warn(
+                "Meet error when close {} before removing index, {}", indexType, e.getMessage());
           }
           // remove index file directories
           File dir = IndexUtils.getIndexFile(getIndexDir(indexType));
@@ -479,9 +468,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     }
   }
 
-  /**
-   * For unsequence data, mark them as "index-unusable" in corresponding IIndexUsable
-   */
+  /** For unsequence data, mark them as "index-unusable" in corresponding IIndexUsable */
   void updateUnsequenceData(PartialPath path, TVList tvList) {
     this.usableMap.forEach(
         (indexType, usable) ->

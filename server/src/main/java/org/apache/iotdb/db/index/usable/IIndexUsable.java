@@ -13,10 +13,10 @@ import java.io.OutputStream;
  * framework introduces the concept of "index usability range". In the time range which is marked as
  * "index unusable", the correctness of index's pruning phase is not guaranteed.
  *
- * A natural solution is to put the data in the "index unusable" range into the post-processing
+ * <p>A natural solution is to put the data in the "index unusable" range into the post-processing
  * phase (or called refinement phase) directly.
  *
- * TODO The IIndexUsable's update due to the "merge" finishing hasn't been taken in account.
+ * <p>TODO The IIndexUsable's update due to the "merge" finishing hasn't been taken in account.
  */
 public interface IIndexUsable {
 

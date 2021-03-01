@@ -1,10 +1,5 @@
 package org.apache.iotdb.db.index.usable;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.tsfile.read.filter.TimeFilter;
@@ -12,13 +7,20 @@ import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.apache.iotdb.tsfile.read.filter.factory.FilterFactory;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * This class is to record the index usable range for a single long series, which corresponds to the
  * subsequence matching scenario.
  *
- * The series path in the initialized parameters must be a full path (without wildcard characters).
+ * <p>The series path in the initialized parameters must be a full path (without wildcard
+ * characters).
  *
- * It's not thread-safe.
+ * <p>It's not thread-safe.
  */
 public class SubMatchIndexUsability implements IIndexUsable {
 

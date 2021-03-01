@@ -18,6 +18,4 @@
  */
 package org.apache.iotdb.db.index;
 
-public interface IndexManagerMBean {
-
-}
+public interface IndexManagerMBean {}

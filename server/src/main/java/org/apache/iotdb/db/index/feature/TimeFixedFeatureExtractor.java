@@ -80,7 +80,6 @@ public class TimeFixedFeatureExtractor extends SubMatchFeatureExtractor {
   private long chunkEndTime = -1;
   private long processedStartTime;
 
-
   /**
    * Create TimeFixedPreprocessor
    *
@@ -358,15 +357,15 @@ public class TimeFixedFeatureExtractor extends SubMatchFeatureExtractor {
     return res;
   }
 
-//  @Override
-//  public long getChunkStartTime() {
-//    return chunkStartTime;
-//  }
-//
-//  @Override
-//  public long getChunkEndTime() {
-//    return chunkEndTime;
-//  }
+  //  @Override
+  //  public long getChunkStartTime() {
+  //    return chunkStartTime;
+  //  }
+  //
+  //  @Override
+  //  public long getChunkEndTime() {
+  //    return chunkEndTime;
+  //  }
 
   @Override
   protected long release() {

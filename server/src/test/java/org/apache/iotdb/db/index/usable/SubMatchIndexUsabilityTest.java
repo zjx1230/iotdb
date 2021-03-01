@@ -205,8 +205,8 @@ public class SubMatchIndexUsabilityTest {
     SubMatchIndexUsability usability = new SubMatchIndexUsability(2, true);
     usability.addUsableRange(null, Long.MIN_VALUE, Long.MAX_VALUE);
     System.out.println(usability);
-    Assert.assertEquals("size:2,[MIN,-9223372036854775808],[9223372036854775807,MAX],",
-        usability.toString());
+    Assert.assertEquals(
+        "size:2,[MIN,-9223372036854775808],[9223372036854775807,MAX],", usability.toString());
     usability.minusUsableRange(null, Long.MIN_VALUE, Long.MAX_VALUE);
     System.out.println(usability);
     Assert.assertEquals("size:1,[MIN,MAX],", usability.toString());

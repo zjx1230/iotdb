@@ -92,7 +92,6 @@ public class ProtoIndexRouterTest {
 
   private static final String testRouterDir = "test_protoIndexRouter";
 
-
   @Before
   public void setUp() throws Exception {
     EnvironmentUtils.envSetUp();

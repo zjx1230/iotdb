@@ -1,10 +1,11 @@
 package org.apache.iotdb.db.index.feature;
 
-import static org.apache.iotdb.db.index.common.IndexConstant.NON_IMPLEMENTED_MSG;
-
-import java.nio.ByteBuffer;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.read.common.BatchData;
+
+import java.nio.ByteBuffer;
+
+import static org.apache.iotdb.db.index.common.IndexConstant.NON_IMPLEMENTED_MSG;
 
 public abstract class WholeMatchFeatureExtractor extends IndexFeatureExtractor {
 
@@ -23,7 +24,6 @@ public abstract class WholeMatchFeatureExtractor extends IndexFeatureExtractor {
   public void appendNewSrcData(BatchData newData) {
     throw new UnsupportedOperationException(NON_IMPLEMENTED_MSG);
   }
-
 
   @Override
   public boolean hasNext() {

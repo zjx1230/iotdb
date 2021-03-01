@@ -41,10 +41,7 @@ public class PAAWholeFeatureExtractor extends WholeMatchFeatureExtractor {
   private final int paaWidth;
 
   public PAAWholeFeatureExtractor(
-      int alignedLength,
-      int featureDim,
-      boolean inQueryMode,
-      float[] featureArray) {
+      int alignedLength, int featureDim, boolean inQueryMode, float[] featureArray) {
     super(inQueryMode);
     this.alignedLength = alignedLength;
     this.featureDim = featureDim;
@@ -58,15 +55,12 @@ public class PAAWholeFeatureExtractor extends WholeMatchFeatureExtractor {
     this.paaWidth = alignedLength / featureDim;
   }
 
-
   @Override
   public Object getCurrent_L3_Feature() {
     throw new UnsupportedOperationException();
   }
 
-  /**
-   * For Whole mathing, it's will deep copy
-   */
+  /** For Whole mathing, it's will deep copy */
   @Override
   public TVList getCurrent_L2_AlignedSequence() {
     TVList res = TVListAllocator.getInstance().allocate(TSDataType.DOUBLE);
@@ -80,9 +74,7 @@ public class PAAWholeFeatureExtractor extends WholeMatchFeatureExtractor {
     return res;
   }
 
-  /**
-   * 两件事：长度为aligned_len，不足补齐，多了不管
-   */
+  /** 两件事：长度为aligned_len，不足补齐，多了不管 */
   private void fillGivenFeatureArray() {
     //    featureArray
     for (int i = 0; i < featureDim; i++) {

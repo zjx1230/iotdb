@@ -229,15 +229,15 @@ public class CountFixedFeatureExtractor extends SubMatchFeatureExtractor {
     return res;
   }
 
-//  @Override
-//  public long getChunkStartTime() {
-//    return chunkStartTime;
-//  }
-//
-//  @Override
-//  public long getChunkEndTime() {
-//    return chunkEndTime;
-//  }
+  //  @Override
+  //  public long getChunkStartTime() {
+  //    return chunkStartTime;
+  //  }
+  //
+  //  @Override
+  //  public long getChunkEndTime() {
+  //    return chunkEndTime;
+  //  }
 
   /**
    * For COUNT-FIXED preprocessor, given the original data and the window range, we can determine an
@@ -297,5 +297,4 @@ public class CountFixedFeatureExtractor extends SubMatchFeatureExtractor {
     }
     return next;
   }
-
 }

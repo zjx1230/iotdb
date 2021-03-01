@@ -17,39 +17,39 @@
  */
 package org.apache.iotdb.db.index.feature;
 
-import static org.apache.iotdb.db.index.common.IndexConstant.NON_IMPLEMENTED_MSG;
+import org.apache.iotdb.db.utils.datastructure.TVList;
+import org.apache.iotdb.tsfile.read.common.BatchData;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.tsfile.read.common.BatchData;
+
+import static org.apache.iotdb.db.index.common.IndexConstant.NON_IMPLEMENTED_MSG;
 
 /**
  * For all indexes, the raw input sequence has to be pre-processed before it's organized by indexes.
  * In general, index structure needn't maintain all of original data, but only pointers (e.g. the
  * identifier [start_time, end_time, series_path] can identify a time sequence uniquely).
  *
- * By and large, similarity index supposes the input data are ideal: fixed dimension, equal
+ * <p>By and large, similarity index supposes the input data are ideal: fixed dimension, equal
  * interval, not missing values and even not outliers. However, in real scenario, the input series
  * may contain missing values (thus it's not dimension-fixed) and the point's timestamp may contain
  * slight offset (thus they are not equal-interval). IndexFeatureExtractor need to preprocess the
  * series and obtain clean series to insert.
  *
- * Many indexes will further extract features of alignment sequences, such as PAA, SAX, FFT, etc.
+ * <p>Many indexes will further extract features of alignment sequences, such as PAA, SAX, FFT, etc.
  *
- * In summary, the IndexFeatureExtractor can provide three-level information:
+ * <p>In summary, the IndexFeatureExtractor can provide three-level information:
  *
  * <ul>
- *   <li>L1: a triplet to identify a series: {@code {StartTime, EndTime, Length}} (not submitted in this pr)
+ *   <li>L1: a triplet to identify a series: {@code {StartTime, EndTime, Length}} (not submitted in
+ *       this pr)
  *   <li>L2: aligned sequence: {@code {a1, a2, ..., an}}
  *   <li>L3: feature: {@code {C1, C2, ..., Cm}}
  * </ul>
  */
 public abstract class IndexFeatureExtractor {
 
-  /**
-   * In the BUILD and QUERY modes, the IndexFeatureExtractor may work differently.
-   */
+  /** In the BUILD and QUERY modes, the IndexFeatureExtractor may work differently. */
   protected boolean inQueryMode;
 
   IndexFeatureExtractor(boolean inQueryMode) {
@@ -71,9 +71,7 @@ public abstract class IndexFeatureExtractor {
    */
   public abstract void appendNewSrcData(BatchData newData);
 
-  /**
-   * Having done {@code appendNewSrcData}, the index framework will check {@code hasNext}.
-   */
+  /** Having done {@code appendNewSrcData}, the index framework will check {@code hasNext}. */
   public abstract boolean hasNext();
 
   /**
@@ -96,16 +94,12 @@ public abstract class IndexFeatureExtractor {
    */
   public abstract ByteBuffer closeAndRelease() throws IOException;
 
-  /**
-   * @return current L2: aligned sequence.
-   */
+  /** @return current L2: aligned sequence. */
   public Object getCurrent_L2_AlignedSequence() {
     throw new UnsupportedOperationException(NON_IMPLEMENTED_MSG);
   }
 
-  /**
-   * @return current L3: costumed feature.
-   */
+  /** @return current L3: costumed feature. */
   public Object getCurrent_L3_Feature() {
     throw new UnsupportedOperationException(NON_IMPLEMENTED_MSG);
   }

@@ -114,5 +114,4 @@ public class ELBMatchFeatureExtractor extends CountFixedFeatureExtractor {
   public Object getCurrent_L3_Feature() {
     return new ELBWindowBlockFeature(currentBlockFeature);
   }
-
 }

@@ -1,23 +1,24 @@
 package org.apache.iotdb.db.index.usable;
 
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
+import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import org.apache.iotdb.db.exception.metadata.IllegalPathException;
-import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 /**
  * This class is to record the index usable range for a list of short series, which corresponds to
  * the whole matching scenario.
  *
- * The series path involves wildcard characters. One series is marked as "index-usable" or
+ * <p>The series path involves wildcard characters. One series is marked as "index-usable" or
  * "index-unusable".
  *
- * It's not thread-safe.
+ * <p>It's not thread-safe.
  */
 public class WholeMatchIndexUsability implements IIndexUsable {
 

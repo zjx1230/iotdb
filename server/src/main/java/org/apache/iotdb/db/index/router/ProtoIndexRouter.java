@@ -40,26 +40,23 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  * A proto implementation.
  *
- * The subsequence-matching index is created on a single time series, while the whole-matching index
- * is created on a group of time series with wildcards, so {@code ProtoIndexRouter} manages the two
- * cases with different Map structures.
+ * <p>The subsequence-matching index is created on a single time series, while the whole-matching
+ * index is created on a group of time series with wildcards, so {@code ProtoIndexRouter} manages
+ * the two cases with different Map structures.
  *
- * A key function of {@code IIndexRouter } is to quickly route the IndexProcessor for a given series
- * path. If the path is full-path, it can be found as O(1) in {@code fullPathProcessorMap};
+ * <p>A key function of {@code IIndexRouter } is to quickly route the IndexProcessor for a given
+ * series path. If the path is full-path, it can be found as O(1) in {@code fullPathProcessorMap};
  * Otherwise, you must traverse every key in {@code wildCardProcessorMap}.
  */
 public class ProtoIndexRouter implements IIndexRouter {
 
   private static final Logger logger = LoggerFactory.getLogger(ProtoIndexRouter.class);
 
-  /**
-   * for subsequence matching indexes
-   */
+  /** for subsequence matching indexes */
   private Map<String, IndexProcessorStruct> fullPathProcessorMap;
-  /**
-   * for whole matching indexes
-   */
+  /** for whole matching indexes */
   private Map<PartialPath, IndexProcessorStruct> wildCardProcessorMap;
+
   private Map<String, Set<String>> sgToFullPathMap;
   private Map<String, Set<PartialPath>> sgToWildCardPathMap;
   private MManager mManager;
