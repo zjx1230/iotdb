@@ -7,7 +7,6 @@ import java.util.List;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.common.BatchData;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
@@ -33,7 +32,7 @@ public abstract class SubMatchFeatureExtractor extends IndexFeatureExtractor {
    */
   protected TVList srcData;
 
-  public SubMatchFeatureExtractor(TSDataType dataType, boolean inQueryMode) {
+  SubMatchFeatureExtractor(TSDataType dataType, boolean inQueryMode) {
     super(inQueryMode);
     this.srcData = TVListAllocator.getInstance().allocate(dataType);
   }
@@ -114,27 +113,6 @@ public abstract class SubMatchFeatureExtractor extends IndexFeatureExtractor {
     return res.isEmpty() ? null : res.get(0);
   }
 
-
-  /**
-   * get the latest N of L3 Features.
-   *
-   * @throws NotImplementedException Not all preprocessors support L3 features.
-   */
-  public List<Object> getLatestN_L3_Features(int latestN) {
-    throw new NotImplementedException("This preprocessor doesn't support L3 feature");
-  }
-
-  /**
-   * get the current L3 Features.
-   *
-   * @throws NotImplementedException Not all preprocessors support L3 features.
-   */
-  public Object getCurrent_L3_Feature() {
-    List<Object> res = getLatestN_L3_Features(1);
-    return res.isEmpty() ? null : res.get(0);
-  }
-
-
   /**
    * deserialize from the buffer, set the previous overlapped data
    */
@@ -178,7 +156,7 @@ public abstract class SubMatchFeatureExtractor extends IndexFeatureExtractor {
   /**
    * serialize the previous overlapped data and output
    */
-  public ByteBuffer serializePrevious() throws IOException {
+  ByteBuffer serializePrevious() throws IOException {
     int idx = 0;
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     ReadWriteIOUtils.write(srcData.getDataType().serialize(), baos);

@@ -343,6 +343,10 @@ public class IoTDBConfig {
   private int defaultIndexWindowRange = 10;
 
   /**
+   * the default value of max size of the index unusable segments, used in SubMatchIndexUsability
+   */
+  private int defaultMaxSizeOfUnusableSegments = 20;
+  /**
    * index directory.
    */
   private String indexRootFolder = "data" + File.separator + "index";
@@ -2266,6 +2270,14 @@ public class IoTDBConfig {
 
   public void setMaxIndexQueryResultSize(int maxIndexQueryResultSize) {
     this.maxIndexQueryResultSize = maxIndexQueryResultSize;
+  }
+
+  public int getDefaultMaxSizeOfUnusableSegments() {
+    return defaultMaxSizeOfUnusableSegments;
+  }
+
+  public void setDefaultMaxSizeOfUnusableSegments(int defaultSizeOfUsableSegments) {
+    this.defaultMaxSizeOfUnusableSegments = defaultSizeOfUsableSegments;
   }
 
   public int getVirtualStorageGroupNum() {

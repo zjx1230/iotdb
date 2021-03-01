@@ -8,48 +8,41 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
- * 思考：
+ * The data which has flushed out may be updated due to the "unsequence data" or deletion. As we
+ * cannot assume that all index techniques are able to support data deletion or update, the index
+ * framework introduces the concept of "index usability range". In the time range which is marked as
+ * "index unusable", the correctness of index's pruning phase is not guaranteed.
  *
- * <p>1. 区间管理器和IndexProcessor绑定；
+ * A natural solution is to put the data in the "index unusable" range into the post-processing
+ * phase (or called refinement phase) directly.
  *
- * <p>2. 接口就是两种添加+一种提取
- *
- * <p>3. 区分全序列和子序列
- *
- * <p>4. 全序列
- *
- * <p>1. 正序的不记录，只记录乱序的序列，而不是区间
- *
- * <p>2. 无法处理更早期的数据
- *
- * <p>3. 无法处理晚期的，但不知道新时间是什么
- *
- * <p>4. 现在的device-sensor和索引的不适配，可以强行扭转，但是仍需讨论
- *
- * <p>5. 子序列
- *
- * <p>1. 记录区间：知道最早时间，最晚时间
- *
- * <p>2. 新加索引只需要更新最晚时间
- *
- * <p>3. 暂不支持merge，但可以开放接口
+ * TODO The IIndexUsable's update due to the "merge" finishing hasn't been taken in account.
  */
 public interface IIndexUsable {
 
+  /**
+   * add a range where index is usable.
+   *
+   * @param fullPath the path of time series
+   * @param start start timestamp
+   * @param end end timestamp
+   */
   void addUsableRange(PartialPath fullPath, long start, long end);
 
+  /**
+   * minus a range where index is usable.
+   *
+   * @param fullPath the path of time series
+   * @param start start timestamp
+   * @param end end timestamp
+   */
   void minusUsableRange(PartialPath fullPath, long start, long end);
 
   /**
-   * 对于全序列索引，获取下面的所有不可用；
+   * The result format depends on "sub-matching" ({@linkplain SubMatchIndexUsability}) or
+   * "whole-matching" ({@linkplain WholeMatchIndexUsability})
    *
-   * <p>对于子序列索引，基于index给出的后处理范围，结合乱序区间，返回真正的后处理区间
-   *
-   * <p>对于subsequence matching，就是区间合并过程
-   *
-   * <p>但是，对于不连续的区间，要划分为多个filter，不能连起来
-   *
-   * @return a list of full paths
+   * @return the range where index is unusable.
    */
   Object getUnusableRange();
 
@@ -65,9 +58,9 @@ public interface IIndexUsable {
 
     public static IIndexUsable createEmptyIndexUsability(PartialPath path) {
       if (path.isFullPath()) {
-        return new SingleLongIndexUsability();
+        return new SubMatchIndexUsability();
       } else {
-        return new MultiShortIndexUsability();
+        return new WholeMatchIndexUsability();
       }
     }
 
@@ -75,10 +68,10 @@ public interface IIndexUsable {
         throws IOException, IllegalPathException {
       IIndexUsable res;
       if (path.isFullPath()) {
-        res = new SingleLongIndexUsability();
+        res = new SubMatchIndexUsability();
         res.deserialize(inputStream);
       } else {
-        res = new MultiShortIndexUsability();
+        res = new WholeMatchIndexUsability();
         res.deserialize(inputStream);
       }
       return res;

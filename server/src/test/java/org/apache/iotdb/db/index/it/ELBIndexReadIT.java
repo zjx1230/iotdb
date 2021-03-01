@@ -79,7 +79,6 @@ public class ELBIndexReadIT {
   private static void insertSQL() throws ClassNotFoundException {
 
     Class.forName(Config.JDBC_DRIVER_NAME);
-    //    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
     try (Connection connection =
             DriverManager.getConnection(
                 Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
@@ -92,8 +91,6 @@ public class ELBIndexReadIT {
 
       for (int i = 0; i < wholeSize; i++) {
         String wholePath = String.format(directionPattern, i);
-        //        System.out.println(String.format("CREATE TIMESERIES %s WITH
-        // DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
         statement.execute(
             String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
       }
@@ -141,8 +138,6 @@ public class ELBIndexReadIT {
                 subInput.getDouble(i)));
       }
       statement.execute("flush");
-      //      System.out.println("==========================");
-      //      System.out.println(IndexManager.getInstance().getRouter());
 
       IndexManager.getInstance().stop();
       IndexManager.getInstance().start();

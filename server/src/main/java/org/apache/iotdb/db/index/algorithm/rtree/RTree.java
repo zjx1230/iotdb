@@ -17,8 +17,11 @@
  */
 package org.apache.iotdb.db.index.algorithm.rtree;
 
+import java.util.function.BiConsumer;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
+import org.apache.iotdb.db.index.algorithm.RTreeIndex;
 import org.apache.iotdb.db.index.common.DistSeries;
 import org.apache.iotdb.db.index.common.TriFunction;
 import org.apache.iotdb.db.metadata.PartialPath;
@@ -40,12 +43,16 @@ import java.util.Random;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A simple implementation of R-Tree, referring to the article: Guttman, Antonin. "R-trees: A
  * dynamic index structure for spatial searching." SIGMOD 1984
  */
 public class RTree<T> {
+
+  private static final Logger logger = LoggerFactory.getLogger(RTree.class);
 
   private static final int INNER_NODE = 0;
   private static final int LEAF_NODE = 1;
@@ -205,7 +212,7 @@ public class RTree<T> {
         addNodesToChildrenList(lessNode, candidates);
         candidates.clear();
         tightenBound(lessNode); // Not sure this is required.
-        return new RNode[] {node, newNode};
+        return new RNode[]{node, newNode};
       }
       // classical R-Tree insert rule.
       RNode nextNode = seedsPicker.next(candidates);
@@ -236,10 +243,12 @@ public class RTree<T> {
       addNodeToChildrenList(chosen, nextNode);
       tightenBound(chosen);
     }
-    return new RNode[] {node, newNode};
+    return new RNode[]{node, newNode};
   }
 
-  /** Clear the RTree */
+  /**
+   * Clear the RTree
+   */
   public void clear() {
     root = initRoot(true);
   }
@@ -254,7 +263,9 @@ public class RTree<T> {
     insert(cs, cs, v);
   }
 
-  /** Insert a rectangle into RTree. */
+  /**
+   * Insert a rectangle into RTree.
+   */
   @SuppressWarnings("unchecked")
   public void insert(float[] lbs, float[] ubs, final T v) {
     if (lbs.length != dim || ubs.length != dim) {
@@ -349,7 +360,9 @@ public class RTree<T> {
     return Math.sqrt(dist);
   }
 
-  /** Returns the increase in area necessary for the given rectangle to cover the given entry. */
+  /**
+   * Returns the increase in area necessary for the given rectangle to cover the given entry.
+   */
   private float calcExpandingArea(RNode oriNode, RNode newNode) {
     float oriArea = calcArea(oriNode);
     float expandArea = 1.0f;
@@ -431,7 +444,14 @@ public class RTree<T> {
     int nMinPerNode = ReadWriteIOUtils.readInt(inputStream);
     SeedsPicker seedsPicker = SeedsPicker.deserialize(ReadWriteIOUtils.readShort(inputStream));
     RTree<PartialPath> rTree = new RTree<>(nMaxPerNode, nMinPerNode, dim, seedsPicker);
-    deserialize(rTree, null, inputStream);
+    rTree.deserialize(rTree, null, inputStream, in -> {
+      try {
+        return new PartialPath(ReadWriteIOUtils.readString(inputStream));
+      } catch (IOException | IllegalPathException e) {
+        logger.error("read path error", e);
+        return null;
+      }
+    });
     return rTree;
   }
 
@@ -440,7 +460,8 @@ public class RTree<T> {
    *
    * @param inputStream deserialize from
    */
-  private static void deserialize(RTree rTree, RNode parent, InputStream inputStream)
+  private void deserialize(RTree rTree, RNode parent, InputStream inputStream,
+      Function<InputStream, T> deserializeItemFunc)
       throws IOException {
     int nodeType = ReadWriteIOUtils.readInt(inputStream);
     float[] lbs = new float[rTree.dim];
@@ -453,14 +474,14 @@ public class RTree<T> {
     }
     RNode node;
     if (nodeType == ITEM) {
-      String value = ReadWriteIOUtils.readString(inputStream);
-      //      T value = biConsumer.accept(inputStream);
+//      T value = ReadWriteIOUtils.readString(inputStream);
+      T value = deserializeItemFunc.apply(inputStream);
       node = new Item<>(lbs, ubs, value);
     } else {
       node = new RNode(lbs, ubs, nodeType == LEAF_NODE);
       int childSize = ReadWriteIOUtils.readInt(inputStream);
       for (int i = 0; i < childSize; i++) {
-        deserialize(rTree, node, inputStream);
+        deserialize(rTree, node, inputStream, deserializeItemFunc);
       }
     }
     if (parent == null) {
@@ -640,7 +661,9 @@ public class RTree<T> {
       return Short.BYTES;
     }
 
-    /** @return the integer used to determine index type */
+    /**
+     * @return the integer used to determine index type
+     */
     public short serialize() {
       switch (this) {
         case LINEAR:
@@ -655,7 +678,9 @@ public class RTree<T> {
     public abstract RNode next(LinkedList<RNode> candidates);
   }
 
-  /** A disturbing function with so many interface functions! */
+  /**
+   * A disturbing function with so many interface functions!
+   */
   public List<DistSeries> exactTopKSearch(
       int topK,
       double[] queryTs,

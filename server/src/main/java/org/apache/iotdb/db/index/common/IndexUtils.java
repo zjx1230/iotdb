@@ -162,7 +162,7 @@ public class IndexUtils {
   }
 
   @TestOnly
-  public static String tvListToStr(TVList tvList, int offset, int length) {
+  private static String tvListToStr(TVList tvList, int offset, int length) {
     StringBuilder sb = new StringBuilder();
     sb.append("{");
     for (int i = offset; i < offset + length; i++) {
@@ -243,7 +243,7 @@ public class IndexUtils {
     }
   }
 
-  public static void putAnyValue(TVList src, int srcIdx, TVList target, long time) {
+  private static void putAnyValue(TVList src, int srcIdx, TVList target, long time) {
     assert src.getDataType() == target.getDataType() && srcIdx < src.size();
     switch (src.getDataType()) {
       case BOOLEAN:
@@ -267,10 +267,6 @@ public class IndexUtils {
     }
   }
 
-  public static void breakDown() {
-    breakDown("?*===?*===?*===?*===?*===?*===?*===?*===?*===?*===?*===");
-  }
-
   public static void breakDown(String message) {
     throw new IndexRuntimeException(message);
   }
@@ -280,11 +276,6 @@ public class IndexUtils {
   }
 
   private IndexUtils() {}
-
-  public static PartialPath toLowerCasePartialPath(PartialPath partialPath)
-      throws IllegalPathException {
-    return new PartialPath(partialPath.getFullPath().toLowerCase());
-  }
 
   public static Map<String, Object> toLowerCaseProps(Map<String, Object> props) {
     Map<String, Object> uppercase = new HashMap<>(props.size());

@@ -55,10 +55,6 @@ public enum IndexType {
     }
   }
 
-  public static int getSerializedSize() {
-    return Short.BYTES;
-  }
-
   /**
    * judge the index deserialize type.
    *

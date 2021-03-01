@@ -24,7 +24,7 @@ public class IndexConstant {
   public static final String NON_IMPLEMENTED_MSG = "Not implemented yet";
 
   public static final String ROUTER_DIR = "router";
-  public static final String META_DIR_NAME = "meta";
+  public static final String META_DIR_NAME = "index_meta";
   public static final String INDEX_DATA_DIR_NAME = "index_data";
   public static final String STORAGE_GROUP_INDEXING_SUFFIX = ".sg_indexing";
   public static final String STORAGE_GROUP_INDEXED_SUFFIX = ".sg_index";
@@ -66,7 +66,6 @@ public class IndexConstant {
   // Distance
   public static final String DISTANCE = "DISTANCE";
   public static final String L_INFINITY = "L_INFINITY";
-  //  public static final String DEFAULT_DISTANCE = "L_INFINITY";
   public static final String DEFAULT_DISTANCE = "2";
 
   // ELB Type

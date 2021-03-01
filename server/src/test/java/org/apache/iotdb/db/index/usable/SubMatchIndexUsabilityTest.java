@@ -11,11 +11,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
-public class SingleLongIndexUsabilityTest {
+public class SubMatchIndexUsabilityTest {
 
   @Test
   public void addUsableRange1() throws IOException {
-    SingleLongIndexUsability usability = new SingleLongIndexUsability(4, false);
+    SubMatchIndexUsability usability = new SubMatchIndexUsability(4, false);
     Assert.assertEquals("size:1,[MIN,MAX],", usability.toString());
     // split range
     usability.addUsableRange(null, 1, 9);
@@ -40,14 +40,14 @@ public class SingleLongIndexUsabilityTest {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     usability.serialize(out);
     InputStream in = new ByteArrayInputStream(out.toByteArray());
-    SingleLongIndexUsability usability2 = new SingleLongIndexUsability();
+    SubMatchIndexUsability usability2 = new SubMatchIndexUsability();
     usability2.deserialize(in);
     Assert.assertEquals("size:4,[MIN,0],[10,13],[18,20],[50,MAX],", usability2.toString());
   }
 
   @Test
   public void addUsableRange2() throws IOException {
-    SingleLongIndexUsability usability = new SingleLongIndexUsability(4, false);
+    SubMatchIndexUsability usability = new SubMatchIndexUsability(4, false);
     usability.addUsableRange(null, 1, 19);
     usability.addUsableRange(null, 51, 59);
     usability.addUsableRange(null, 81, 99);
@@ -69,14 +69,14 @@ public class SingleLongIndexUsabilityTest {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     usability.serialize(out);
     InputStream in = new ByteArrayInputStream(out.toByteArray());
-    SingleLongIndexUsability usability2 = new SingleLongIndexUsability();
+    SubMatchIndexUsability usability2 = new SubMatchIndexUsability();
     usability2.deserialize(in);
     Assert.assertEquals("size:2,[MIN,0],[100,MAX],", usability2.toString());
   }
 
   @Test
   public void minusUsableRange() throws IOException {
-    SingleLongIndexUsability usability = new SingleLongIndexUsability(4, false);
+    SubMatchIndexUsability usability = new SubMatchIndexUsability(4, false);
 
     // merge with MIN, MAX
     usability.minusUsableRange(null, 1, 19);
@@ -141,14 +141,14 @@ public class SingleLongIndexUsabilityTest {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     usability.serialize(out);
     InputStream in = new ByteArrayInputStream(out.toByteArray());
-    SingleLongIndexUsability usability2 = new SingleLongIndexUsability();
+    SubMatchIndexUsability usability2 = new SubMatchIndexUsability();
     usability2.deserialize(in);
     Assert.assertEquals("size:1,[MIN,MAX],", usability2.toString());
   }
 
   @Test
   public void subMatchingToFilter() {
-    SingleLongIndexUsability a = new SingleLongIndexUsability(10, false);
+    SubMatchIndexUsability a = new SubMatchIndexUsability(10, false);
     Assert.assertFalse(a.hasUnusableRange());
     a.addUsableRange(null, 31, 39);
     a.addUsableRange(null, 61, 89);
@@ -165,12 +165,51 @@ public class SingleLongIndexUsabilityTest {
 
   @Test
   public void minusUsableRange2() {
-    SingleLongIndexUsability usability = new SingleLongIndexUsability(4, false);
+    SubMatchIndexUsability usability = new SubMatchIndexUsability(4, false);
     Assert.assertFalse(usability.hasUnusableRange());
     usability.addUsableRange(null, 0, 15);
     usability.minusUsableRange(null, 20, 24);
     Assert.assertEquals("size:2,[MIN,-1],[16,MAX],", usability.toString());
     Assert.assertTrue(usability.hasUnusableRange());
     System.out.println(usability.toString());
+  }
+
+  @Test
+  public void reachUpBoundAndStopSplit() {
+    SubMatchIndexUsability usability = new SubMatchIndexUsability(2, false);
+    System.out.println(usability);
+    Assert.assertEquals("size:1,[MIN,MAX],", usability.toString());
+
+    usability.addUsableRange(null, 5, 7);
+    System.out.println(usability);
+    Assert.assertEquals("size:2,[MIN,4],[8,MAX],", usability.toString());
+    usability.addUsableRange(null, 2, 3);
+    System.out.println(usability);
+    Assert.assertEquals("size:2,[MIN,4],[8,MAX],", usability.toString());
+    usability.minusUsableRange(null, 6, 6);
+    System.out.println(usability);
+    Assert.assertEquals("size:2,[MIN,4],[6,MAX],", usability.toString());
+    usability.addUsableRange(null, 6, 9);
+    System.out.println(usability);
+    Assert.assertEquals("size:2,[MIN,4],[10,MAX],", usability.toString());
+    usability.minusUsableRange(null, 6, 6);
+    System.out.println(usability);
+    Assert.assertEquals("size:2,[MIN,6],[10,MAX],", usability.toString());
+    usability.addUsableRange(null, 2, 6);
+    System.out.println(usability);
+    Assert.assertEquals("size:2,[MIN,1],[10,MAX],", usability.toString());
+  }
+
+  @Test
+  public void testBoundCase() {
+    SubMatchIndexUsability usability = new SubMatchIndexUsability(2, true);
+    usability.addUsableRange(null, Long.MIN_VALUE, Long.MAX_VALUE);
+    System.out.println(usability);
+    Assert.assertEquals("size:2,[MIN,-9223372036854775808],[9223372036854775807,MAX],",
+        usability.toString());
+    usability.minusUsableRange(null, Long.MIN_VALUE, Long.MAX_VALUE);
+    System.out.println(usability);
+    Assert.assertEquals("size:1,[MIN,MAX],", usability.toString());
+    Assert.assertTrue(usability.hasUnusableRange());
   }
 }

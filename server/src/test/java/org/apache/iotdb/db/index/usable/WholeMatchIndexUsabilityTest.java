@@ -12,11 +12,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Set;
 
-public class MultiShortIndexUsabilityTest {
+public class WholeMatchIndexUsabilityTest {
 
   @Test
   public void testMinusUsableRange() throws IllegalPathException, IOException {
-    MultiShortIndexUsability usability = new MultiShortIndexUsability();
+    WholeMatchIndexUsability usability = new WholeMatchIndexUsability();
     // do nothing for addUsableRange
     usability.addUsableRange(new PartialPath("root.sg.d.s10"), 1, 2);
     usability.addUsableRange(new PartialPath("root.sg.d.s11"), 1, 2);
@@ -29,7 +29,7 @@ public class MultiShortIndexUsabilityTest {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     usability.serialize(out);
     InputStream in = new ByteArrayInputStream(out.toByteArray());
-    MultiShortIndexUsability usable2 = new MultiShortIndexUsability();
+    WholeMatchIndexUsability usable2 = new WholeMatchIndexUsability();
     usable2.deserialize(in);
     Set<PartialPath> ret2 = usability.getUnusableRange();
     Assert.assertEquals("[root.sg.d.s3, root.sg.d.s2, root.sg.d.s1]", ret2.toString());

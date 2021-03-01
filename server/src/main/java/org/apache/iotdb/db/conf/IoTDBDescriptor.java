@@ -138,7 +138,9 @@ public class IoTDBDescriptor {
     }
   }
 
-  /** load an property file and set TsfileDBConfig variables. */
+  /**
+   * load an property file and set TsfileDBConfig variables.
+   */
   @SuppressWarnings("squid:S3776") // Suppress high Cognitive Complexity warning
   private void loadProps() {
     URL url = getPropsUrl();
@@ -439,14 +441,21 @@ public class IoTDBDescriptor {
               properties.getProperty(
                   "concurrent_query_thread", Integer.toString(conf.getConcurrentQueryThread()))));
 
-      conf.setMaxIndexQueryResultSize(
-          Integer.parseInt(
-              properties.getProperty(
-                  "max_index_query_result_size", Integer.toString(conf.getMaxIndexQueryResultSize()))));
-
       if (conf.getConcurrentQueryThread() <= 0) {
         conf.setConcurrentQueryThread(Runtime.getRuntime().availableProcessors());
       }
+
+      conf.setMaxIndexQueryResultSize(
+          Integer.parseInt(
+              properties.getProperty(
+                  "max_index_query_result_size",
+                  Integer.toString(conf.getMaxIndexQueryResultSize()))));
+
+      conf.setDefaultMaxSizeOfUnusableSegments(
+          Integer.parseInt(
+              properties.getProperty(
+                  "default_max_size_of_unusable_segments",
+                  Integer.toString(conf.getDefaultMaxSizeOfUnusableSegments()))));
 
       conf.setmManagerCacheSize(
           Integer.parseInt(
@@ -1150,7 +1159,9 @@ public class IoTDBDescriptor {
     }
   }
 
-  /** Get default encode algorithm by data type */
+  /**
+   * Get default encode algorithm by data type
+   */
   public TSEncoding getDefualtEncodingByType(TSDataType dataType) {
     switch (dataType) {
       case BOOLEAN:

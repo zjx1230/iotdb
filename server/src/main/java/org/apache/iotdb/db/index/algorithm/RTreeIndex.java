@@ -32,7 +32,7 @@ import org.apache.iotdb.db.index.common.TriFunction;
 import org.apache.iotdb.db.index.feature.IndexFeatureExtractor;
 import org.apache.iotdb.db.index.read.optimize.IIndexCandidateOrderOptimize;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
-import org.apache.iotdb.db.index.usable.MultiShortIndexUsability;
+import org.apache.iotdb.db.index.usable.WholeMatchIndexUsability;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.QueryResourceManager;
@@ -161,7 +161,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
     }
     //    this.amortizedPerInputCost = calcAmortizedCost(nMaxPerNode, nMinPerNode);
     SeedsPicker seedPicker = SeedsPicker.valueOf(props.getOrDefault(SEED_PICKER, "LINEAR"));
-    rTree = new RTree<PartialPath>(nMaxPerNode, nMinPerNode, featureDim, seedPicker);
+    rTree = new RTree<>(nMaxPerNode, nMinPerNode, featureDim, seedPicker);
     currentLowerBounds = new float[featureDim];
     currentUpperBounds = new float[featureDim];
   }
@@ -439,7 +439,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
             struct.topK,
             struct.patterns,
             struct.patternFeatures,
-            ((MultiShortIndexUsability) iIndexUsable).getUnusableRange(),
+            ((WholeMatchIndexUsability) iIndexUsable).getUnusableRange(),
             getCalcLowerDistFunc(),
             getCalcExactDistFunc(),
             getLoadSeriesFunc(context, createQueryFeatureExtractor()));

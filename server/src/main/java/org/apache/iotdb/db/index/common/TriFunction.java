@@ -17,8 +17,6 @@
  */
 package org.apache.iotdb.db.index.common;
 
-import java.util.function.Function;
-
 /**
  * Represents a function that accepts three arguments and produces a result.
  *
@@ -29,8 +27,7 @@ import java.util.function.Function;
  * @param <B> the type of the second argument to the function
  * @param <C> the type of the third argument to the function
  * @param <R> the type of the result of the function
- * @see Function
- * @since 1.8
+ *
  */
 @FunctionalInterface
 public interface TriFunction<A, B, C, R> {

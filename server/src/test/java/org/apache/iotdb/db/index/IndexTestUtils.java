@@ -36,7 +36,7 @@ public class IndexTestUtils {
     return funcForm(func, path, true);
   }
 
-  public static String funcForm(IndexFunc func, String path, boolean lowerCase) {
+  private static String funcForm(IndexFunc func, String path, boolean lowerCase) {
     String funcStr = func.toString();
     if (lowerCase) {
       funcStr = funcStr.toLowerCase();

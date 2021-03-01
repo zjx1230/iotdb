@@ -17,9 +17,18 @@
  */
 package org.apache.iotdb.db.index.algorithm.rtree;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.index.algorithm.rtree.RTree.RNode;
 import org.apache.iotdb.db.index.algorithm.rtree.RTree.SeedsPicker;
 
+import org.apache.iotdb.db.index.usable.SubMatchIndexUsability;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -29,6 +38,30 @@ import java.util.Random;
 import static org.junit.Assert.fail;
 
 public class RTreeTest {
+  @Test
+  public void testRTreeSerialization() throws IllegalPathException, IOException {
+    int dim = 2;
+    Random random = new Random(0);
+    RTree<PartialPath> rTree = new RTree<>(4, 2, 2, SeedsPicker.LINEAR);
+    for (int i = 0; i < 20; i++) {
+      float[] in = new float[2];
+      for (int j = 0; j < dim; j++) {
+        in[j] = ((float) random.nextInt(20));
+      }
+      System.out.println(String.format("add: %s, value: %d", Arrays.toString(in), i));
+      rTree.insert(in, new PartialPath("root." + i));
+      if (!checkRTree(rTree)) {
+        fail();
+      }
+    }
+    System.out.println(rTree);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    rTree.serialize(out);
+    InputStream in = new ByteArrayInputStream(out.toByteArray());
+
+    RTree<PartialPath> rTree2 = RTree.deserializePartialPath(in);
+    Assert.assertEquals(rTree.toString(), rTree2.toString());
+  }
 
   @Test
   public void testRTreeToString() {
@@ -95,7 +128,7 @@ public class RTreeTest {
    *   <li>If Node_A is Node_B's parent, Node_B.parent should point to Node_A
    * </ul>
    */
-  public boolean checkRTree(RTree rTree) {
+  private boolean checkRTree(RTree rTree) {
     return checkNode(rTree, rTree.root);
   }
 

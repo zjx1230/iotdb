@@ -75,7 +75,6 @@ public class ELBIndexWriteIT {
   @Test
   public void checkWrite() throws ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
-    //    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
     try (Connection connection =
             DriverManager.getConnection(
                 Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
@@ -90,8 +89,6 @@ public class ELBIndexWriteIT {
 
       for (int i = 0; i < wholeSize; i++) {
         String wholePath = String.format(directionPattern, i);
-        //        System.out.println(String.format("CREATE TIMESERIES %s WITH
-        // DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
         statement.execute(
             String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
       }
@@ -99,13 +96,6 @@ public class ELBIndexWriteIT {
           String.format("CREATE INDEX ON %s WITH INDEX=%s, BLOCK_SIZE=10", indexSub, ELB_INDEX));
 
       System.out.println(IndexManager.getInstance().getRouter());
-      //      Assert.assertEquals(
-      //          "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind2.*.direction: {}>;"
-      //              + "<{NO_INDEX=[type: NO_INDEX, time: 0, props: {}]},root.wind1.azq01.speed:
-      // {}>;",
-      //          IndexManager.getInstance().getRouter().toString());
-
-      //      TVList subInput = Randomwalk.generateRanWalkTVList(subLength);
       TVList subInput = TVListAllocator.getInstance().allocate(TSDataType.DOUBLE);
       for (int i = 0; i < subLength; i++) {
         subInput.putDouble(i, i * 10);

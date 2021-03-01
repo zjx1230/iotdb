@@ -90,13 +90,6 @@ public class RTreeIndexReadIT {
           String.format(
               "CREATE INDEX ON %s WITH INDEX=%s, SERIES_LENGTH=%d, FEATURE_DIM=%d, MAX_ENTRIES=%d, MIN_ENTRIES=%d",
               indexWhole, RTREE_PAA, wholeDim, PAA_Dim, 10, 2));
-      //      System.out.println(String.format(
-      //          "CREATE INDEX ON %s WITH INDEX=%s, SERIES_LENGTH=%d, FEATURE_DIM=%d,
-      // MAX_ENTRIES=%d, MIN_ENTRIES=%d",
-      //          indexWhole, RTREE_PAA, wholeDim, PAA_Dim, 10, 2));
-
-      //      TVList wholeInput = Randomwalk.generateRanWalkTVList(wholeDim * wholeSize);
-      //      TVList wholeInput = IndexUtils.;
       for (int i = 0; i < wholeSize; i++) {
         String device = String.format(directionDevicePattern, i);
         for (int j = 0; j < wholeDim; j++) {
@@ -108,11 +101,8 @@ public class RTreeIndexReadIT {
       }
       statement.execute("flush");
       System.out.println(IndexManager.getInstance().getRouter());
-      //      Assert.assertEquals(
-      //          "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props:
-      // {BLOCK_SIZE=10}]},root.wind1.azq01.speed: {ELB_INDEX=[0-9:45.00, 10-19:145.00,
-      // 20-29:245.00, 30-39:345.00, 40-49:445.00]}>",
-      //          IndexManager.getInstance().getRouter().toString());
+      IndexManager.getInstance().stop();
+      IndexManager.getInstance().start();
 
     } catch (Exception e) {
       e.printStackTrace();

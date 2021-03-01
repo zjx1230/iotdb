@@ -30,6 +30,9 @@ import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * the executor for index query
+ */
 public class QueryIndexExecutor {
 
   private final Map<String, Object> queryProps;

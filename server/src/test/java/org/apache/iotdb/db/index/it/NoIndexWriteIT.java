@@ -90,8 +90,6 @@ public class NoIndexWriteIT {
 
       for (int i = 0; i < wholeSize; i++) {
         String wholePath = String.format(directionPattern, i);
-        //        System.out.println(String.format("CREATE TIMESERIES %s WITH
-        // DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
         statement.execute(
             String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
       }
@@ -109,8 +107,6 @@ public class NoIndexWriteIT {
       TVList subInput = Randomwalk.generateRanWalkTVList(subLength);
       long startInsertSub = System.currentTimeMillis();
       for (int i = 0; i < subInput.size(); i++) {
-        //        System.out.println(String.format(insertPattern, speed1Device, speed1Sensor,
-        // subInput.getTime(i), subInput.getDouble(i)));
         statement.execute(
             String.format(
                 insertPattern,
@@ -133,8 +129,6 @@ public class NoIndexWriteIT {
       TVList wholeInput = Randomwalk.generateRanWalkTVList(wholeDim * wholeSize);
       for (int i = 0; i < wholeSize; i++) {
         String device = String.format(directionDevicePattern, i);
-        //        System.out.println(String.format(insertPattern, device, directionSensor,
-        // wholeInput.getTime(i), wholeInput.getDouble(i)));
         statement.execute(
             String.format(
                 insertPattern,

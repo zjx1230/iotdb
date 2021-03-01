@@ -22,10 +22,12 @@ import org.apache.iotdb.db.concurrent.IoTDBThreadPoolFactory;
 import org.apache.iotdb.db.concurrent.ThreadName;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.flush.pool.AbstractPoolManager;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * A pool to control the max size of concurrent threads for index insertion at the same time.
+ */
 public class IndexBuildTaskPoolManager extends AbstractPoolManager {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(IndexBuildTaskPoolManager.class);

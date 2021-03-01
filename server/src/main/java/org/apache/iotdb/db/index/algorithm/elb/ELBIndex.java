@@ -32,7 +32,7 @@ import org.apache.iotdb.db.index.common.distance.Distance;
 import org.apache.iotdb.db.index.read.TVListPointer;
 import org.apache.iotdb.db.index.read.optimize.IIndexCandidateOrderOptimize;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
-import org.apache.iotdb.db.index.usable.SingleLongIndexUsability;
+import org.apache.iotdb.db.index.usable.SubMatchIndexUsability;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.QueryResourceManager;
@@ -196,7 +196,7 @@ public class ELBIndex extends IoTDBIndex {
     ELBQueryStruct struct = new ELBQueryStruct();
 
     initQuery(struct, queryProps);
-    List<Filter> filterList = queryByIndex(struct, (SingleLongIndexUsability) iIndexUsable);
+    List<Filter> filterList = queryByIndex(struct, (SubMatchIndexUsability) iIndexUsable);
     List<DistSeries> res = new ArrayList<>();
     try {
       for (Filter timeFilter : filterList) {
@@ -298,7 +298,7 @@ public class ELBIndex extends IoTDBIndex {
     struct.blockNum = struct.patternFeatures.left.length;
   }
 
-  private List<Filter> queryByIndex(ELBQueryStruct struct, SingleLongIndexUsability indexUsable) {
+  private List<Filter> queryByIndex(ELBQueryStruct struct, SubMatchIndexUsability indexUsable) {
     if (indexUsable.hasUnusableRange()) {
       logger.warn("In current version, ELB will ignore the out-of-order data");
     }
@@ -331,7 +331,7 @@ public class ELBIndex extends IoTDBIndex {
         }
       }
     }
-    return ((SingleLongIndexUsability) cannotPruned).getUnusableRange();
+    return ((SubMatchIndexUsability) cannotPruned).getUnusableRange();
   }
 
   @Deprecated

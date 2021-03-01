@@ -13,8 +13,27 @@ import org.apache.iotdb.db.query.context.QueryContext;
 import java.io.IOException;
 import java.util.Map;
 
+/**
+ * Singleton pattern.
+ *
+ * Firstly, IIndexRouter is responsible for index metadata management. More importantly, it is for
+ * routing the create/drop/insert/query command to corresponding index processors.
+ *
+ * IIndexRouter can decouple the mapping relationship, which may be re-designed in future, between
+ * {@link org.apache.iotdb.db.index.algorithm.IoTDBIndex IoTDBIndex} and {@link IndexProcessor} from
+ * {@link org.apache.iotdb.db.index.IndexManager IndexManager}.
+ */
 public interface IIndexRouter {
 
+  /**
+   * add an new index into the router.
+   *
+   * @param prefixPath the partial path of given index series
+   * @param indexInfo the index infomation.
+   * @param func a function to create a new IndexProcessor, if it's not created before.
+   * @param doSerialize true to serialize the new information immediately.
+   * @return true if adding index information successfully
+   */
   boolean addIndexIntoRouter(
       PartialPath prefixPath,
       IndexInfo indexInfo,
@@ -22,6 +41,13 @@ public interface IIndexRouter {
       boolean doSerialize)
       throws MetadataException;
 
+  /**
+   * remove an exist index into the router.
+   *
+   * @param prefixPath the partial path of given index series
+   * @param indexType the type of index to be removed.
+   * @return true if removing index information successfully
+   */
   boolean removeIndexFromRouter(PartialPath prefixPath, IndexType indexType)
       throws MetadataException, IOException;
 
@@ -29,35 +55,48 @@ public interface IIndexRouter {
 
   Iterable<IndexProcessorStruct> getAllIndexProcessorsAndInfo();
 
-  Iterable<IndexProcessor> getIndexProcessorByPath(PartialPath path);
+  Iterable<IndexProcessor> getIndexProcessorByPath(PartialPath timeSeries);
 
+  /**
+   * serialize all index information and processors to the disk
+   *
+   * @param doClose true if close processors after serialization.
+   */
   void serialize(boolean doClose);
 
   /**
    * deserialize all index information and processors into the memory
-   *
-   * @param func
    */
   void deserializeAndReload(CreateIndexProcessorFunc func);
 
+  /**
+   * return a subset of the original IIndexRouter for accessing concurrency
+   * @param storageGroupPath the path of a storageGroup
+   * @return a subset of the original IIndexRouter
+   */
   IIndexRouter getRouterByStorageGroup(String storageGroupPath);
 
   int getIndexNum();
 
   /**
-   * Index Register validation.
+   * prepare necessary information for index query
    *
-   * @param partialPath
-   * @param indexType
-   * @param context
-   * @return
-   * @throws QueryIndexException
+   * @param partialPath the query path
+   * @param indexType the index type
+   * @param context the query context
+   * @return the necessary information for this query
    */
   IndexProcessorStruct startQueryAndCheck(
       PartialPath partialPath, IndexType indexType, QueryContext context)
       throws QueryIndexException;
 
-  void endQuery(PartialPath indexProcessor, IndexType indexType, QueryContext context);
+  /**
+   * do something when the query end
+   * @param indexSeries the query path
+   * @param indexType the index type
+   * @param context the query context
+   */
+  void endQuery(PartialPath indexSeries, IndexType indexType, QueryContext context);
 
   class Factory {
 

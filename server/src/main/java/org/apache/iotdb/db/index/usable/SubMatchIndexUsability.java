@@ -1,43 +1,43 @@
 package org.apache.iotdb.db.index.usable;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.tsfile.read.filter.TimeFilter;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.apache.iotdb.tsfile.read.filter.factory.FilterFactory;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * This class is to record the index usable range for a single long series, which corresponds to the
  * subsequence matching scenario.
  *
- * <p>The series path in the initialized parameters must be a full path (without wildcard
- * characters).
+ * The series path in the initialized parameters must be a full path (without wildcard characters).
  *
- * <p>Specified a series, this class updates the usable and unusable ranges.
- *
- * <p>It's not thread-safe.
+ * It's not thread-safe.
  */
-public class SingleLongIndexUsability implements IIndexUsable {
-
-  /** TODO it will be moved to configuration. */
-  private static final int defaultSizeOfUsableSegments = 20;
+public class SubMatchIndexUsability implements IIndexUsable {
 
   private int maxSizeOfUsableSegments;
   private final boolean initAllUsable;
   private RangeNode unusableRanges;
   private int size;
 
-  SingleLongIndexUsability() {
-    this(defaultSizeOfUsableSegments, true);
+  SubMatchIndexUsability() {
+    this(IoTDBDescriptor.getInstance().getConfig().getDefaultMaxSizeOfUnusableSegments(), true);
   }
 
-  SingleLongIndexUsability(int maxSizeOfUsableSegments, boolean initAllUsable) {
+  /**
+   * Construction
+   *
+   * @param maxSizeOfUsableSegments the max size of usable segments
+   * @param initAllUsable true if the entire time range is set to "usable".
+   */
+  SubMatchIndexUsability(int maxSizeOfUsableSegments, boolean initAllUsable) {
     this.maxSizeOfUsableSegments = maxSizeOfUsableSegments;
     this.initAllUsable = initAllUsable;
     unusableRanges = new RangeNode(Long.MIN_VALUE, Long.MAX_VALUE, null);
@@ -51,10 +51,10 @@ public class SingleLongIndexUsability implements IIndexUsable {
   public void addUsableRange(PartialPath fullPath, long startTime, long endTime) {
     // simplify the problem
     if (startTime == Long.MIN_VALUE) {
-      startTime = startTime + 10;
+      startTime = startTime + 1;
     }
     if (endTime == Long.MAX_VALUE) {
-      endTime = endTime - 10;
+      endTime = endTime - 1;
     }
     RangeNode node = locateIdxByTime(startTime);
     RangeNode prevNode = node;
@@ -177,11 +177,6 @@ public class SingleLongIndexUsability implements IIndexUsable {
     return res;
   }
 
-  //  @Override
-  //  public Set<PartialPath> getAllUnusableSeriesForWholeMatching() {
-  //    throw new UnsupportedOperationException();
-  //  }
-
   /**
    * Find the latest node whose start time is less than {@code timestamp} A naive scanning search
    * for the linked list. Further optimization is still going on. It returns a node and there is
@@ -216,40 +211,6 @@ public class SingleLongIndexUsability implements IIndexUsable {
     maxSizeOfUsableSegments = ReadWriteIOUtils.readInt(inputStream);
     unusableRanges = RangeNode.deserialize(inputStream);
   }
-
-  //  /**
-  //   * It's a inefficient implementation
-  //   */
-  //  @Override
-  //  public void updateELBBlocksForSeriesMatching(PrimitiveList unusableBlocks,
-  //      List<ELBWindowBlockFeature> windowBlocks) {
-  //    for (int i = 0; i < windowBlocks.size(); i++) {
-  //      ELBWindowBlockFeature block = windowBlocks.get(i);
-  //      RangeNode node = locateIdxByTime(block.startTime);
-  //      if (node.end < block.startTime && block.endTime < node.next.start) {
-  //        unusableBlocks.setBoolean(i, true);
-  //      }
-  //    }
-  //  }
-
-  //  @Override
-  //  public IIndexUsable deepCopy() {
-  //    SingleLongIndexUsability res = new SingleLongIndexUsability(indexSeries,
-  //        defaultSizeOfUsableSegments);
-  //    res.size = this.size;
-  //    if (this.unusableRanges == null) {
-  //      return res;
-  //    }
-  //    res.unusableRanges = new RangeNode(this.unusableRanges);
-  //    RangeNode pThis = this.unusableRanges;
-  //    RangeNode pRes = res.unusableRanges;
-  //    while (pThis.next != null) {
-  //      pRes.next = new RangeNode(pThis.next);
-  //      pRes = pRes.next;
-  //      pThis = pThis.next;
-  //    }
-  //    return res;
-  //  }
 
   @Override
   public String toString() {
@@ -288,12 +249,6 @@ public class SingleLongIndexUsability implements IIndexUsable {
       this.end = end;
       this.next = next;
     }
-
-    //    RangeNode(RangeNode unusableRanges) {
-    //      this.start = unusableRanges.start;
-    //      this.end = unusableRanges.end;
-    //      this.next = unusableRanges.next;
-    //    }
 
     @Override
     public String toString() {

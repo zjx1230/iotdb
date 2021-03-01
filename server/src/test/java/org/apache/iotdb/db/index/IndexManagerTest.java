@@ -65,8 +65,6 @@ public class IndexManagerTest {
             Collections.singletonList(new PartialPath(p1)), new IndexInfo(NO_INDEX, 0, props));
   }
 
-  private long defaultIndexBufferSize;
-
   @Before
   public void setUp() throws Exception {
     EnvironmentUtils.envSetUp();
@@ -77,40 +75,4 @@ public class IndexManagerTest {
     EnvironmentUtils.cleanEnv();
   }
 
-  @Test
-  public void testRecoverData() throws MetadataException, IOException {
-    //    prepareMManager();
-    // create file
-    //    String indexDataSeqDir =
-    //        DirectoryManager.getInstance().getIndexRootFolder() + File.separator +
-    // SEQUENCE_FLODER_NAME;
-    //    String indexDataUnSeqDir =
-    //        DirectoryManager.getInstance().getIndexRootFolder() + File.separator
-    //            + UNSEQUENCE_FLODER_NAME;
-    //    String metaDirPath =
-    //        DirectoryManager.getInstance().getIndexRootFolder() + File.separator + META_DIR_NAME;
-    //    FSFactory fsFactory = FSFactoryProducer.getFSFactory();
-    //    // create p1: legal storage groups; create p2: illegal storage groups
-    //    fsFactory.getFile(indexDataSeqDir + File.separator + p1).mkdirs();
-    //    fsFactory.getFile(indexDataSeqDir + File.separator + p2).mkdirs();
-    //    fsFactory.getFile(indexDataUnSeqDir + File.separator + p1).mkdirs();
-    //    fsFactory.getFile(indexDataUnSeqDir + File.separator + p2).mkdirs();
-    //    fsFactory.getFile(metaDirPath).mkdirs();
-    //    fsFactory
-    //        .getFile(metaDirPath + File.separator + p1 + STORAGE_GROUP_INDEXING_SUFFIX)
-    //        .createNewFile();
-    //    fsFactory
-    //        .getFile(metaDirPath + File.separator + p2 + STORAGE_GROUP_INDEXING_SUFFIX)
-    //        .createNewFile();
-    //    IndexManager.getInstance().recoverIndexData();
-    //    Assert.assertTrue(fsFactory.getFile(indexDataSeqDir + File.separator + p1).exists());
-    //    Assert.assertTrue(fsFactory.getFile(indexDataUnSeqDir + File.separator + p1).exists());
-    //    Assert.assertTrue(fsFactory
-    //        .getFile(metaDirPath + File.separator + p1 + STORAGE_GROUP_INDEXING_SUFFIX).exists());
-    //    Assert.assertFalse(fsFactory.getFile(indexDataSeqDir + File.separator + p2).exists());
-    //    Assert.assertFalse(fsFactory.getFile(indexDataUnSeqDir + File.separator + p2).exists());
-    //    Assert.assertFalse(fsFactory
-    //        .getFile(metaDirPath + File.separator + p2 + STORAGE_GROUP_INDEXING_SUFFIX).exists());
-    //    FileUtils.deleteDirectory(new File(DirectoryManager.getInstance().getIndexRootFolder()));
-  }
 }

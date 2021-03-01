@@ -37,14 +37,28 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-/** The index involve */
+/**
+ * A proto implementation.
+ *
+ * The subsequence-matching index is created on a single time series, while the whole-matching index
+ * is created on a group of time series with wildcards, so {@code ProtoIndexRouter} manages the two
+ * cases with different Map structures.
+ *
+ * A key function of {@code IIndexRouter } is to quickly route the IndexProcessor for a given series
+ * path. If the path is full-path, it can be found as O(1) in {@code fullPathProcessorMap};
+ * Otherwise, you must traverse every key in {@code wildCardProcessorMap}.
+ */
 public class ProtoIndexRouter implements IIndexRouter {
 
   private static final Logger logger = LoggerFactory.getLogger(ProtoIndexRouter.class);
 
-  /** index series path -> index processor */
+  /**
+   * for subsequence matching indexes
+   */
   private Map<String, IndexProcessorStruct> fullPathProcessorMap;
-
+  /**
+   * for whole matching indexes
+   */
   private Map<PartialPath, IndexProcessorStruct> wildCardProcessorMap;
   private Map<String, Set<String>> sgToFullPathMap;
   private Map<String, Set<PartialPath>> sgToWildCardPathMap;
@@ -196,24 +210,9 @@ public class ProtoIndexRouter implements IIndexRouter {
   }
 
   @Override
-  public void endQuery(PartialPath indexProcessor, IndexType indexType, QueryContext context) {
+  public void endQuery(PartialPath indexSeries, IndexType indexType, QueryContext context) {
     // do nothing.
   }
-
-  //  @Override
-  //  public boolean hasIndexProcessor(PartialPath indexSeriesPath) {
-  //    if (fullPathProcessorMap.containsKey(indexSeriesPath.getFullPath())) {
-  //      return true;
-  //    }
-  //    for (Entry<PartialPath, IndexProcessorStruct> entry : wildCardProcessorMap
-  //        .entrySet()) {
-  //      PartialPath k = entry.getKey();
-  //      if (k.matchFullPath(indexSeriesPath)) {
-  //        return true;
-  //      }
-  //    }
-  //    return false;
-  //  }
 
   @Override
   public boolean addIndexIntoRouter(
@@ -376,16 +375,16 @@ public class ProtoIndexRouter implements IIndexRouter {
   }
 
   @Override
-  public Iterable<IndexProcessor> getIndexProcessorByPath(PartialPath path) {
+  public Iterable<IndexProcessor> getIndexProcessorByPath(PartialPath timeSeries) {
     lock.readLock().lock();
     List<IndexProcessor> res = new ArrayList<>();
     try {
-      if (fullPathProcessorMap.containsKey(path.getFullPath())) {
-        res.add(fullPathProcessorMap.get(path.getFullPath()).processor);
+      if (fullPathProcessorMap.containsKey(timeSeries.getFullPath())) {
+        res.add(fullPathProcessorMap.get(timeSeries.getFullPath()).processor);
       } else {
         wildCardProcessorMap.forEach(
             (k, v) -> {
-              if (k.matchFullPath(path)) {
+              if (k.matchFullPath(timeSeries)) {
                 res.add(v.processor);
               }
             });

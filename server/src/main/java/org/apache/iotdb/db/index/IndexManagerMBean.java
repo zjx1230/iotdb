@@ -20,5 +20,4 @@ package org.apache.iotdb.db.index;
 
 public interface IndexManagerMBean {
 
-  int getIndexNum();
 }

@@ -52,7 +52,7 @@ public abstract class IndexFeatureExtractor {
    */
   protected boolean inQueryMode;
 
-  public IndexFeatureExtractor(boolean inQueryMode) {
+  IndexFeatureExtractor(boolean inQueryMode) {
     this.inQueryMode = inQueryMode;
   }
 

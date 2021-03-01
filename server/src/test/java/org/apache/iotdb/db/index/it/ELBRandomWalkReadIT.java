@@ -76,7 +76,6 @@ public class ELBRandomWalkReadIT {
   private static void insertSQL() throws ClassNotFoundException {
 
     Class.forName(Config.JDBC_DRIVER_NAME);
-    //    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
     try (Connection connection =
             DriverManager.getConnection(
                 Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
@@ -91,10 +90,7 @@ public class ELBRandomWalkReadIT {
           String.format("CREATE INDEX ON %s WITH INDEX=%s, BLOCK_SIZE=%d", indexSub, ELB_INDEX, 5));
 
       TVList subInput = Randomwalk.generateRanWalkTVList(200);
-      long startInsertSub = System.currentTimeMillis();
       for (int i = 0; i < subInput.size(); i++) {
-        //        System.out.println(String.format(insertPattern, speed1Device, speed1Sensor,
-        // subInput.getTime(i), subInput.getDouble(i)));
         statement.execute(
             String.format(
                 insertPattern,
@@ -148,7 +144,6 @@ public class ELBRandomWalkReadIT {
             sb.append(resultSet.getString(i)).append(",");
           }
           System.out.println(sb);
-          //          Assert.assertEquals(gt[cnt], builder.toString());
           cnt++;
         }
       }
