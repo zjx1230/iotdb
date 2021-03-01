@@ -40,8 +40,6 @@ import org.apache.iotdb.db.exception.BatchProcessException;
 import org.apache.iotdb.db.exception.QueryIdNotExsitException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.UDFRegistrationException;
-import org.apache.iotdb.db.exception.index.IndexManagerException;
-import org.apache.iotdb.db.exception.metadata.DeleteFailedException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.metadata.PathNotExistException;
@@ -71,6 +69,7 @@ import org.apache.iotdb.db.qp.physical.crud.InsertMultiTabletPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowsOfOneDevicePlan;
+import org.apache.iotdb.db.qp.physical.crud.InsertRowsPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
 import org.apache.iotdb.db.qp.physical.crud.LastQueryPlan;
 import org.apache.iotdb.db.qp.physical.crud.QueryIndexPlan;
@@ -84,11 +83,12 @@ import org.apache.iotdb.db.qp.physical.sys.CreateFunctionPlan;
 import org.apache.iotdb.db.qp.physical.sys.CreateIndexPlan;
 import org.apache.iotdb.db.qp.physical.sys.CreateMultiTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.CreateTimeSeriesPlan;
+import org.apache.iotdb.db.qp.physical.sys.CreateTriggerPlan;
 import org.apache.iotdb.db.qp.physical.sys.DataAuthPlan;
 import org.apache.iotdb.db.qp.physical.sys.DeleteStorageGroupPlan;
 import org.apache.iotdb.db.qp.physical.sys.DeleteTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.DropFunctionPlan;
-import org.apache.iotdb.db.qp.physical.sys.DropIndexPlan;
+import org.apache.iotdb.db.qp.physical.sys.DropTriggerPlan;
 import org.apache.iotdb.db.qp.physical.sys.FlushPlan;
 import org.apache.iotdb.db.qp.physical.sys.KillQueryPlan;
 import org.apache.iotdb.db.qp.physical.sys.LoadConfigurationPlan;
@@ -96,6 +96,7 @@ import org.apache.iotdb.db.qp.physical.sys.MergePlan;
 import org.apache.iotdb.db.qp.physical.sys.OperateFilePlan;
 import org.apache.iotdb.db.qp.physical.sys.SetStorageGroupPlan;
 import org.apache.iotdb.db.qp.physical.sys.SetTTLPlan;
+import org.apache.iotdb.db.qp.physical.sys.ShowChildNodesPlan;
 import org.apache.iotdb.db.qp.physical.sys.ShowChildPathsPlan;
 import org.apache.iotdb.db.qp.physical.sys.ShowDevicesPlan;
 import org.apache.iotdb.db.qp.physical.sys.ShowFunctionsPlan;
@@ -103,6 +104,9 @@ import org.apache.iotdb.db.qp.physical.sys.ShowPlan;
 import org.apache.iotdb.db.qp.physical.sys.ShowStorageGroupPlan;
 import org.apache.iotdb.db.qp.physical.sys.ShowTTLPlan;
 import org.apache.iotdb.db.qp.physical.sys.ShowTimeSeriesPlan;
+import org.apache.iotdb.db.qp.physical.sys.ShowTriggersPlan;
+import org.apache.iotdb.db.qp.physical.sys.StartTriggerPlan;
+import org.apache.iotdb.db.qp.physical.sys.StopTriggerPlan;
 import org.apache.iotdb.db.qp.physical.sys.TracingPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.QueryTimeManager;
@@ -148,13 +152,13 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_CANCELLED;
+import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_CHILD_NODES;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_CHILD_PATHS;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_COLUMN;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_COUNT;
@@ -170,6 +174,12 @@ import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_PROGRESS;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_ROLE;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_STORAGE_GROUP;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_TASK_NAME;
+import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_TRIGGER_ATTRIBUTES;
+import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_TRIGGER_CLASS;
+import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_TRIGGER_EVENT;
+import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_TRIGGER_NAME;
+import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_TRIGGER_PATH;
+import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_TRIGGER_STATUS;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_TTL;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_USER;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_VALUE;
@@ -230,6 +240,9 @@ public class PlanExecutor implements IPlanExecutor {
         return true;
       case BATCH_INSERT_ONE_DEVICE:
         insert((InsertRowsOfOneDevicePlan) plan);
+        return true;
+      case BATCH_INSERT_ROWS:
+        insert((InsertRowsPlan) plan);
         return true;
       case BATCHINSERT:
         insertTablet((InsertTabletPlan) plan);
@@ -311,6 +324,14 @@ public class PlanExecutor implements IPlanExecutor {
         return operateCreateFunction((CreateFunctionPlan) plan);
       case DROP_FUNCTION:
         return operateDropFunction((DropFunctionPlan) plan);
+      case CREATE_TRIGGER:
+        return operateCreateTrigger((CreateTriggerPlan) plan);
+      case DROP_TRIGGER:
+        return operateDropTrigger((DropTriggerPlan) plan);
+      case START_TRIGGER:
+        return operateStartTrigger((StartTriggerPlan) plan);
+      case STOP_TRIGGER:
+        return operateStopTrigger((StopTriggerPlan) plan);
       case CREATE_INDEX:
         return createIndex((CreateIndexPlan) plan);
       case DROP_INDEX:
@@ -337,6 +358,22 @@ public class PlanExecutor implements IPlanExecutor {
   private boolean operateDropFunction(DropFunctionPlan plan) throws UDFRegistrationException {
     UDFRegistrationService.getInstance().deregister(plan.getUdfName());
     return true;
+  }
+
+  private boolean operateCreateTrigger(CreateTriggerPlan plan) {
+    return false;
+  }
+
+  private boolean operateDropTrigger(DropTriggerPlan plan) {
+    return false;
+  }
+
+  private boolean operateStartTrigger(StartTriggerPlan plan) {
+    return false;
+  }
+
+  private boolean operateStopTrigger(StopTriggerPlan plan) {
+    return false;
   }
 
   private void operateMerge(MergePlan plan) throws StorageEngineException {
@@ -491,6 +528,8 @@ public class PlanExecutor implements IPlanExecutor {
         return processShowDevices((ShowDevicesPlan) showPlan);
       case CHILD_PATH:
         return processShowChildPaths((ShowChildPathsPlan) showPlan);
+      case CHILD_NODE:
+        return processShowChildNodes((ShowChildNodesPlan) showPlan);
       case COUNT_TIMESERIES:
         return processCountTimeSeries((CountPlan) showPlan);
       case COUNT_NODE_TIMESERIES:
@@ -507,6 +546,8 @@ public class PlanExecutor implements IPlanExecutor {
         return processShowQueryProcesslist();
       case FUNCTIONS:
         return processShowFunctions((ShowFunctionsPlan) showPlan);
+      case TRIGGERS:
+        return processShowTriggers((ShowTriggersPlan) showPlan);
       default:
         throw new QueryProcessException(String.format("Unrecognized show plan %s", showPlan));
     }
@@ -639,6 +680,28 @@ public class PlanExecutor implements IPlanExecutor {
 
   protected Set<String> getPathNextChildren(PartialPath path) throws MetadataException {
     return IoTDB.metaManager.getChildNodePathInNextLevel(path);
+  }
+
+  private QueryDataSet processShowChildNodes(ShowChildNodesPlan showChildNodesPlan)
+      throws MetadataException {
+    // getNodeNextChildren
+    Set<String> childNodesList = getNodeNextChildren(showChildNodesPlan.getPath());
+    ListDataSet listDataSet =
+        new ListDataSet(
+            Collections.singletonList(new PartialPath(COLUMN_CHILD_NODES, false)),
+            Collections.singletonList(TSDataType.TEXT));
+    for (String s : childNodesList) {
+      RowRecord record = new RowRecord(0);
+      Field field = new Field(TSDataType.TEXT);
+      field.setBinaryV(new Binary(s));
+      record.addField(field);
+      listDataSet.putRecord(record);
+    }
+    return listDataSet;
+  }
+
+  protected Set<String> getNodeNextChildren(PartialPath path) throws MetadataException {
+    return IoTDB.metaManager.getChildNodeInNextLevel(path);
   }
 
   protected List<PartialPath> getStorageGroupNames(PartialPath path) throws MetadataException {
@@ -821,6 +884,24 @@ public class PlanExecutor implements IPlanExecutor {
     }
   }
 
+  private QueryDataSet processShowTriggers(ShowTriggersPlan showPlan) {
+    return new ListDataSet(
+        Arrays.asList(
+            new PartialPath(COLUMN_TRIGGER_NAME, false),
+            new PartialPath(COLUMN_TRIGGER_STATUS, false),
+            new PartialPath(COLUMN_TRIGGER_EVENT, false),
+            new PartialPath(COLUMN_TRIGGER_PATH, false),
+            new PartialPath(COLUMN_TRIGGER_CLASS, false),
+            new PartialPath(COLUMN_TRIGGER_ATTRIBUTES, false)),
+        Arrays.asList(
+            TSDataType.TEXT,
+            TSDataType.TEXT,
+            TSDataType.TEXT,
+            TSDataType.TEXT,
+            TSDataType.TEXT,
+            TSDataType.TEXT));
+  }
+
   private void addRowRecordForShowQuery(
       ListDataSet listDataSet, int timestamp, String item, String value) {
     RowRecord rowRecord = new RowRecord(timestamp);
@@ -992,7 +1073,7 @@ public class PlanExecutor implements IPlanExecutor {
     try {
       IoTDB.metaManager.setTTL(plan.getStorageGroup(), plan.getDataTTL());
       StorageEngine.getInstance().setTTL(plan.getStorageGroup(), plan.getDataTTL());
-    } catch (MetadataException | StorageEngineException e) {
+    } catch (MetadataException e) {
       throw new QueryProcessException(e);
     } catch (IOException e) {
       throw new QueryProcessException(e.getMessage());
@@ -1101,6 +1182,27 @@ public class PlanExecutor implements IPlanExecutor {
 
     } catch (StorageEngineException | MetadataException e) {
       throw new QueryProcessException(e);
+    }
+  }
+
+  @Override
+  public void insert(InsertRowsPlan plan) throws QueryProcessException {
+    boolean allSuccess = true;
+    for (int i = 0; i < plan.getInsertRowPlanList().size(); i++) {
+      if (plan.getResults().containsKey(i)) {
+        allSuccess = false;
+        continue;
+      }
+      try {
+        insert(plan.getInsertRowPlanList().get(i));
+        plan.getResults().put(i, RpcUtils.getStatus(TSStatusCode.SUCCESS_STATUS));
+      } catch (QueryProcessException e) {
+        plan.getResults().put(i, RpcUtils.getStatus(e.getErrorCode(), e.getMessage()));
+        allSuccess = false;
+      }
+      if (!allSuccess) {
+        throw new BatchProcessException(plan.getResults().values().toArray(new TSStatus[0]));
+      }
     }
   }
 
@@ -1263,13 +1365,12 @@ public class PlanExecutor implements IPlanExecutor {
               multiPlan.getAlias() == null ? null : multiPlan.getAlias().get(i));
       try {
         createTimeSeries(plan);
-        multiPlan.getResults().put(i, RpcUtils.getStatus(TSStatusCode.SUCCESS_STATUS));
       } catch (QueryProcessException e) {
         multiPlan.getResults().put(i, RpcUtils.getStatus(e.getErrorCode(), e.getMessage()));
       }
     }
     if (!multiPlan.getResults().isEmpty()) {
-      throw new BatchProcessException(multiPlan.getResults().values().toArray(new TSStatus[0]));
+      throw new BatchProcessException(multiPlan.getFailingStatus());
     }
     return true;
   }
@@ -1277,64 +1378,24 @@ public class PlanExecutor implements IPlanExecutor {
   protected boolean deleteTimeSeries(DeleteTimeSeriesPlan deleteTimeSeriesPlan)
       throws QueryProcessException {
     List<PartialPath> deletePathList = deleteTimeSeriesPlan.getPaths();
-    try {
-      List<String> failedNames = new LinkedList<>();
-      List<String> nonExistPaths = new ArrayList<>();
-      for (PartialPath path : deletePathList) {
+    for (int i = 0; i < deletePathList.size(); i++) {
+      PartialPath path = deletePathList.get(i);
+      try {
         StorageEngine.getInstance().deleteTimeseries(path, deleteTimeSeriesPlan.getIndex());
-        String failedTimeseries = deleteTimeSeries(path, nonExistPaths);
-        if (failedTimeseries != null) {
-          failedNames.add(failedTimeseries);
+        String failed = IoTDB.metaManager.deleteTimeseries(path);
+        if (failed != null) {
+          deleteTimeSeriesPlan
+              .getResults()
+              .put(i, RpcUtils.getStatus(TSStatusCode.NODE_DELETE_FAILED_ERROR, failed));
         }
+      } catch (StorageEngineException | MetadataException e) {
+        deleteTimeSeriesPlan
+            .getResults()
+            .put(i, RpcUtils.getStatus(e.getErrorCode(), e.getMessage()));
       }
-      if (!nonExistPaths.isEmpty()) {
-        throw new PathNotExistException(nonExistPaths);
-      }
-      if (!failedNames.isEmpty()) {
-        throw new DeleteFailedException(String.join(",", failedNames));
-      }
-    } catch (MetadataException | StorageEngineException e) {
-      throw new QueryProcessException(e);
     }
-    return true;
-  }
-
-  private String deleteTimeSeries(PartialPath path, List<String> nonExistPaths)
-      throws MetadataException {
-    String failedTimeseries = null;
-    try {
-      failedTimeseries = IoTDB.metaManager.deleteTimeseries(path);
-    } catch (PathNotExistException e) {
-      nonExistPaths.add(path.getFullPath());
-    }
-    return failedTimeseries;
-  }
-
-  private boolean createIndex(CreateIndexPlan createIndexPlan) throws QueryProcessException {
-    List<PartialPath> paths = createIndexPlan.getPaths();
-    List<PartialPath> partialPaths = new ArrayList<>(paths);
-    long startTime = createIndexPlan.getTime();
-    IndexType indexType = createIndexPlan.getIndexType();
-    Map<String, String> props = createIndexPlan.getProps();
-    IndexInfo indexInfo = new IndexInfo(indexType, startTime, props);
-    try {
-      IndexManager.getInstance().createIndex(partialPaths, indexInfo);
-    } catch (MetadataException e) {
-      throw new IndexManagerException(e);
-    }
-    return true;
-  }
-
-  private boolean dropIndex(DropIndexPlan dropIndexPlan) throws QueryProcessException {
-    List<PartialPath> paths = dropIndexPlan.getPaths();
-    List<PartialPath> partialPaths = new ArrayList<>(paths);
-    IndexType indexType = dropIndexPlan.getIndexType();
-    try {
-      IndexManager.getInstance().dropIndex(partialPaths, indexType);
-    } catch (MetadataException e) {
-      throw new IndexManagerException(e);
-    } catch (IOException e2) {
-      throw new IndexManagerException(e2.getMessage());
+    if (!deleteTimeSeriesPlan.getResults().isEmpty()) {
+      throw new BatchProcessException(deleteTimeSeriesPlan.getFailingStatus());
     }
     return true;
   }

@@ -262,13 +262,6 @@ public class IoTDBDescriptor {
 
       conf.setWalDir(properties.getProperty("wal_dir", conf.getWalDir()));
 
-      int walBufferSize =
-          Integer.parseInt(
-              properties.getProperty("wal_buffer_size", Integer.toString(conf.getWalBufferSize())));
-      if (walBufferSize > 0) {
-        conf.setWalBufferSize(walBufferSize);
-      }
-
       int mlogBufferSize =
           Integer.parseInt(
               properties.getProperty(
@@ -833,6 +826,30 @@ public class IoTDBDescriptor {
             properties.getProperty(
                 "enable_discard_out_of_order_data",
                 Boolean.toString(conf.isEnableDiscardOutOfOrderData()))));
+
+    int walBufferSize =
+        Integer.parseInt(
+            properties.getProperty("wal_buffer_size", Integer.toString(conf.getWalBufferSize())));
+    if (walBufferSize > 0) {
+      conf.setWalBufferSize(walBufferSize);
+    }
+
+    int maxWalBytebufferNumForEachPartition =
+        Integer.parseInt(
+            properties.getProperty(
+                "max_wal_bytebuffer_num_for_each_partition",
+                Integer.toString(conf.getMaxWalBytebufferNumForEachPartition())));
+    if (maxWalBytebufferNumForEachPartition > 0) {
+      conf.setMaxWalBytebufferNumForEachPartition(maxWalBytebufferNumForEachPartition);
+    }
+
+    long poolTrimIntervalInMS =
+        Integer.parseInt(
+            properties.getProperty(
+                "wal_pool_trim_interval_ms", Long.toString(conf.getWalPoolTrimIntervalInMS())));
+    if (poolTrimIntervalInMS > 0) {
+      conf.setWalPoolTrimIntervalInMS(poolTrimIntervalInMS);
+    }
   }
 
   private void loadAutoCreateSchemaProps(Properties properties) {
@@ -1159,10 +1176,8 @@ public class IoTDBDescriptor {
     }
   }
 
-  /**
-   * Get default encode algorithm by data type
-   */
-  public TSEncoding getDefualtEncodingByType(TSDataType dataType) {
+  /** Get default encode algorithm by data type */
+  public TSEncoding getDefaultEncodingByType(TSDataType dataType) {
     switch (dataType) {
       case BOOLEAN:
         return conf.getDefaultBooleanEncoding();
