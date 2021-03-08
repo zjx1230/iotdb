@@ -672,7 +672,7 @@ public class IoTDBConfig {
   /**
    * the num of memtable in each storage group
    */
-  private int concurrentWritingTimePartition = 1;
+  private int concurrentWritingTimePartition = 2;
 
   /**
    * the default fill interval in LinearFill and PreviousFill, -1 means infinite past time
@@ -694,7 +694,7 @@ public class IoTDBConfig {
   /**
    * whether enable data partition. If disabled, all data belongs to partition 0
    */
-  private boolean enablePartition = false;
+  private boolean enablePartition = true;
 
   /**
    * whether enable MTree snapshot
@@ -715,7 +715,7 @@ public class IoTDBConfig {
   /**
    * Time range for partitioning data inside each storage group, the unit is second
    */
-  private long partitionInterval = 604800;
+  private long partitionInterval = 3600;
 
   //just for test
   //wait for 60 second by default.

@@ -96,6 +96,7 @@ public class IoTDBDescriptor {
     // If it wasn't, check if a home directory was provided (This usually contains a config)
     if (urlString == null) {
       urlString = System.getProperty(IoTDBConstant.IOTDB_HOME, null);
+//      urlString = "/Users/tianyu/2019秋季学期/iotdb/server/src/assembly/resources";
       if (urlString != null) {
         urlString =
             urlString + File.separatorChar + "conf" + File.separatorChar + IoTDBConfig.CONFIG_NAME;
@@ -417,6 +418,10 @@ public class IoTDBDescriptor {
       conf.setMtreeSnapshotThresholdTime(Integer.parseInt(properties.getProperty(
           "mtree_snapshot_threshold_time",
           Integer.toString(conf.getMtreeSnapshotThresholdTime()))));
+
+      conf.setPartitionInterval(Long.parseLong(properties.getProperty(
+          "partition_interval",
+          Long.toString(conf.getPartitionInterval()))));
 
       conf.setEnablePerformanceStat(Boolean
           .parseBoolean(properties.getProperty("enable_performance_stat",
