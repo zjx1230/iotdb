@@ -37,9 +37,12 @@ public class IndexCompareExperiment {
   private static AtomicLong totalPoints;
   private static PrimitiveList list;
 
-  private static final int DEVICE_NUM = 2;
-  private static final int MEASUREMENT_NUM = 50000;
-  private static final int TOTAL_POINTS = 100_000_000;
+  private static final int DEVICE_NUM = 1;
+//  private static final int DEVICE_NUM = 2;
+  private static final int MEASUREMENT_NUM = 5;
+//  private static final int MEASUREMENT_NUM = 50000;
+  private static final int TOTAL_POINTS = 100;
+//  private static final int TOTAL_POINTS = 100_000_000;
 
   public static void main(String[] args) throws InterruptedException {
     totalPoints = new AtomicLong();
@@ -78,7 +81,7 @@ public class IndexCompareExperiment {
     }
 
     long time = (System.nanoTime() - start) / 1000_000_000;
-    System.out.println("Average speed: " + totalPoints.get() / time);
+    System.out.println("Average speed: " + totalPoints.get() / (time+1));
   }
 
   static class WriteThread implements Runnable {
@@ -113,14 +116,23 @@ public class IndexCompareExperiment {
           e.printStackTrace();
         }
         totalPoints.getAndAdd(MEASUREMENT_NUM);
-
+        float writeRate = (float) totalPoints.get() / TOTAL_POINTS;
         System.out.println(
             Thread.currentThread().getName()
                 + " write "
                 + MEASUREMENT_NUM
                 + " cost: "
                 + (System.nanoTime() - start) / 1000_000
-                + "ms");
+                + "ms, " + String.format("finish %.1f%%", writeRate * 100));
+      }
+      try {
+        sessionPool.executeNonQueryStatement(
+            "flush");
+        System.out.println("flushed");
+      } catch (StatementExecutionException e) {
+        e.printStackTrace();
+      } catch (IoTDBConnectionException e) {
+        e.printStackTrace();
       }
     }
   }
