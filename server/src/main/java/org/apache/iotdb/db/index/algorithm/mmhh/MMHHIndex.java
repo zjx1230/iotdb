@@ -229,10 +229,11 @@ public class MMHHIndex extends IoTDBIndex {
   }
 
   private List<DistSeries> hammingSearch(Long queryCode, int topK, QueryContext context) {
+//    System.out.println(String.format("query: %d, %s", queryCode, Long.toBinaryString(queryCode)));
     List<DistSeries> res = new ArrayList<>();
     Function<PartialPath, TVList> loadRaw = RTreeIndex
         .getLoadSeriesFunc(context, tsDataType, mmhhFeatureExtractor);
-    for (int radius = 0; radius < hashLength; radius++) {
+    for (int radius = 0; radius <= hashLength; radius++) {
       boolean full = scanBucket(queryCode, 0, radius, 0, topK, loadRaw, res);
 
       if (full) {
@@ -247,8 +248,10 @@ public class MMHHIndex extends IoTDBIndex {
    */
   private boolean scanBucket(long queryCode, int doneIdx, int maxIdx, int startIdx, int topK,
       Function<PartialPath, TVList> loadSeriesFunc, List<DistSeries> res) {
-    if (doneIdx == 0) {
+    if (doneIdx == maxIdx) {
       if (hashLookupTable.containsKey(queryCode)) {
+//        System.out.println(String.format("found: %d, %s, ham dist=%d",
+//            queryCode, Long.toBinaryString(queryCode), maxIdx));
         List<Long> bucket = hashLookupTable.get(queryCode);
         for (Long seriesId : bucket) {
           res.add(readRawData(maxIdx, seriesId, loadSeriesFunc));
@@ -258,7 +261,7 @@ public class MMHHIndex extends IoTDBIndex {
         }
       }
     } else {
-      for (int doIdx = startIdx; doIdx < hashLength - (maxIdx - doneIdx); doIdx++) {
+      for (int doIdx = startIdx; doIdx <= hashLength - (maxIdx - doneIdx); doIdx++) {
         // change bit
         queryCode = reverseBit(queryCode, doIdx);
         boolean full = scanBucket(queryCode, doneIdx + 1, maxIdx, doIdx + 1, topK,

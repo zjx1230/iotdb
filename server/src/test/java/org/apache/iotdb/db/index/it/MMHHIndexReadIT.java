@@ -24,6 +24,7 @@ import static org.apache.iotdb.db.index.common.IndexType.MMHH;
 import static org.apache.iotdb.db.index.common.IndexType.RTREE_PAA;
 import static org.junit.Assert.fail;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -84,10 +85,15 @@ public class MMHHIndexReadIT {
           String.format("CREATE INDEX ON %s WITH INDEX=%s, SERIES_LENGTH=%d, HASH_LENGTH=%d, %s=%s",
               indexWhole, MMHH, wholeDim, hashLength, MODEL_PATH,
               "\"/Users/kangrong/code/github/deep-learning/hash_journal/TAH_project/src/mmhh.pt\""));
+//      String modelPath = "/Users/kangrong/code/github/deep-learning/hash_journal/TAH_project/src/mmhh.pt";
+      String modelPath = "src/test/resources/index/mmhh.pt";
+      if (!(new File(modelPath).exists())) {
+        fail("model file path is not correct!");
+      }
       statement.execute(
           String.format("CREATE INDEX ON %s WITH INDEX=%s, SERIES_LENGTH=%d, HASH_LENGTH=%d, %s=%s",
               indexWhole, MMHH, wholeDim, hashLength, MODEL_PATH,
-              "\"/Users/kangrong/code/github/deep-learning/hash_journal/TAH_project/src/mmhh.pt\""));
+              String.format("\"%s\"", modelPath)));
       for (int i = 0; i < wholeSize; i++) {
         String device = String.format(directionDevicePattern, i);
         for (int j = 0; j < wholeDim; j++) {
@@ -129,11 +135,11 @@ public class MMHHIndexReadIT {
       System.out.println(querySQL);
       boolean hasIndex = statement.execute(querySQL);
       StringBuilder gt = new StringBuilder();
-      gt.append("Time,root.wind2.1.direction.(D=0.00),root.wind2.1.direction.(D=1.00),\n");
+      gt.append("Time,root.wind2.1.direction.(D=0.00),root.wind2.4.direction.(D=1.00),\n");
       for (int i = 0; i < 100; i++) {
-        gt.append("%d,%.1f,%.1f\n");
+        gt.append(String.format("%d,%.1f,%.1f,\n", i, 100f + i, 400f + i));
       }
-//      Assert.assertTrue(hasIndex);
+      Assert.assertTrue(hasIndex);
       try (ResultSet resultSet = statement.getResultSet()) {
         ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
         StringBuilder sb = new StringBuilder();
@@ -148,7 +154,7 @@ public class MMHHIndexReadIT {
           sb.append("\n");
         }
         System.out.println(sb);
-//        Assert.assertEquals(gt, sb.toString());
+        Assert.assertEquals(gt.toString(), sb.toString());
       }
     } catch (Exception e) {
       e.printStackTrace();

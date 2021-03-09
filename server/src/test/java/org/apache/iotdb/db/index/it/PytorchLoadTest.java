@@ -18,7 +18,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /** The file is for integration test for special TorchScript input. */
-public class Test_MMHHIndex {
+public class PytorchLoadTest {
 
   public static final Translator<NDArray, NDArray> translator =
       new Translator<NDArray, NDArray>() {
