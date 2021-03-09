@@ -22,6 +22,7 @@ import org.apache.iotdb.db.exception.index.UnsupportedIndexTypeException;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.algorithm.NoIndex;
 import org.apache.iotdb.db.index.algorithm.elb.ELBIndex;
+import org.apache.iotdb.db.index.algorithm.mmhh.MMHHIndex;
 import org.apache.iotdb.db.index.algorithm.paa.RTreePAAIndex;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
@@ -34,7 +35,9 @@ import java.util.Map;
 public enum IndexType {
   NO_INDEX,
   RTREE_PAA,
-  ELB_INDEX;
+  ELB_INDEX,
+  MMHH,
+  ANY_FOR_QUERY;
 
   /**
    * judge the index type.
@@ -50,6 +53,10 @@ public enum IndexType {
         return RTREE_PAA;
       case 2:
         return ELB_INDEX;
+      case 3:
+        return MMHH;
+      case 4:
+        return ANY_FOR_QUERY;
       default:
         throw new NotImplementedException("Given index is not implemented");
     }
@@ -68,6 +75,10 @@ public enum IndexType {
         return 1;
       case ELB_INDEX:
         return 2;
+      case MMHH:
+        return 3;
+      case ANY_FOR_QUERY:
+        return 4;
       default:
         throw new NotImplementedException("Given index is not implemented");
     }
@@ -96,6 +107,10 @@ public enum IndexType {
         return new ELBIndex(path, tsDataType, indexDir, indexInfo);
       case RTREE_PAA:
         return new RTreePAAIndex(path, tsDataType, indexDir, indexInfo);
+      case MMHH:
+        return new MMHHIndex(path, tsDataType, indexDir, indexInfo);
+      case ANY_FOR_QUERY:
+        throw new NotImplementedException("ANY_FOR_QUERY is only for query that is not specified index type");
       default:
         throw new NotImplementedException("unsupported index type:" + indexType);
     }

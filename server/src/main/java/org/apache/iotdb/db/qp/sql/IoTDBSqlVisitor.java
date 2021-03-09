@@ -1297,7 +1297,7 @@ public class IoTDBSqlVisitor extends SqlBaseBaseVisitor<Operator> {
         props = new HashMap<>();
       }
       props.put(PATTERN, parseSequence(ctx.sequenceClause(0)));
-      queryOp.setIndexType(IndexType.RTREE_PAA);
+      queryOp.setIndexType(IndexType.ANY_FOR_QUERY);
     } else if (ctx.CONTAIN() != null) {
       // subsequence matching case
       List<double[]> compositePattern = new ArrayList<>();

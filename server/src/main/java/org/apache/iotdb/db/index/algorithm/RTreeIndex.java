@@ -373,8 +373,8 @@ public abstract class RTreeIndex extends IoTDBIndex {
    *
    * <p>input a path({@link PartialPath}), load and return a series ({@link TVList})
    */
-  protected Function<PartialPath, TVList> getLoadSeriesFunc(
-      QueryContext context, IndexFeatureExtractor featureExtractor) {
+  public static Function<PartialPath, TVList> getLoadSeriesFunc(
+      QueryContext context, TSDataType tsDataType, IndexFeatureExtractor featureExtractor) {
     return path -> {
       QueryDataSource queryDataSource;
       TVList res = null;
@@ -442,7 +442,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
             ((WholeMatchIndexUsability) iIndexUsable).getUnusableRange(),
             getCalcLowerDistFunc(),
             getCalcExactDistFunc(),
-            getLoadSeriesFunc(context, createQueryFeatureExtractor()));
+            getLoadSeriesFunc(context, tsDataType, createQueryFeatureExtractor()));
     for (DistSeries ds : res) {
       ds.partialPath = ds.partialPath.concatNode(String.format("(D=%.2f)", ds.dist));
     }

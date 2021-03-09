@@ -63,6 +63,11 @@ public class IndexConstant {
   public static final String DEFAULT_SERIES_LENGTH = "16";
   public static final String DEFAULT_RTREE_PAA_DISTANCE = "2";
 
+  // Maximum Hamming Hashing parameters
+  public static final String MODEL_PATH = "MODEL_PATH";
+  public static final String HASH_LENGTH = "HASH_BIT";
+  public static final String DEFAULT_HASH_LENGTH = "48";
+
   // Distance
   public static final String DISTANCE = "DISTANCE";
   public static final String L_INFINITY = "L_INFINITY";

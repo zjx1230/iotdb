@@ -18,6 +18,23 @@
  */
 package org.apache.iotdb.db.index;
 
+import static org.apache.iotdb.db.index.common.IndexType.ANY_FOR_QUERY;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
@@ -41,25 +58,8 @@ import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Each {@code IndexProcessor} manages all index instances under an <b>IndexSeries</b>.
@@ -493,6 +493,10 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     try {
       lock.readLock().lock();
       try {
+        if (indexType == ANY_FOR_QUERY){
+          // not specified the index type
+          indexType = (IndexType) indexLockMap.keySet().toArray()[0];
+        }
         if (!indexLockMap.containsKey(indexType)) {
           throw new QueryIndexException(
               String.format(
