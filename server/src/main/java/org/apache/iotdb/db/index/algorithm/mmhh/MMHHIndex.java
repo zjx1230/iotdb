@@ -1,29 +1,5 @@
 package org.apache.iotdb.db.index.algorithm.mmhh;
 
-import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_HASH_LENGTH;
-import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_SERIES_LENGTH;
-import static org.apache.iotdb.db.index.common.IndexConstant.HASH_LENGTH;
-import static org.apache.iotdb.db.index.common.IndexConstant.MODEL_PATH;
-import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
-import static org.apache.iotdb.db.index.common.IndexConstant.SERIES_LENGTH;
-import static org.apache.iotdb.db.index.common.IndexConstant.TOP_K;
-import static org.apache.iotdb.db.index.common.IndexType.MMHH;
-
-import ai.djl.MalformedModelException;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.function.Function;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
@@ -41,8 +17,34 @@ import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
+
+import ai.djl.MalformedModelException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.function.Function;
+
+import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_HASH_LENGTH;
+import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_SERIES_LENGTH;
+import static org.apache.iotdb.db.index.common.IndexConstant.HASH_LENGTH;
+import static org.apache.iotdb.db.index.common.IndexConstant.MODEL_PATH;
+import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
+import static org.apache.iotdb.db.index.common.IndexConstant.SERIES_LENGTH;
+import static org.apache.iotdb.db.index.common.IndexConstant.TOP_K;
+import static org.apache.iotdb.db.index.common.IndexType.MMHH;
 
 public class MMHHIndex extends IoTDBIndex {
 
@@ -57,8 +59,7 @@ public class MMHHIndex extends IoTDBIndex {
   private MMHHWholeFeatureExtractor mmhhFeatureExtractor;
   private PartialPath currentInsertPath;
 
-  public MMHHIndex(
-      PartialPath path, TSDataType tsDataType, String indexDir, IndexInfo indexInfo) {
+  public MMHHIndex(PartialPath path, TSDataType tsDataType, String indexDir, IndexInfo indexInfo) {
     super(path, tsDataType, indexInfo);
     itemSize = 0;
     featureFile = IndexUtils.getIndexFile(indexDir + File.separator + "mmhhLookup");
@@ -81,7 +82,6 @@ public class MMHHIndex extends IoTDBIndex {
     }
   }
 
-
   @Override
   public void initFeatureExtractor(ByteBuffer previous, boolean inQueryMode) {
     if (this.indexFeatureExtractor != null) {
@@ -92,8 +92,7 @@ public class MMHHIndex extends IoTDBIndex {
       }
     }
     try {
-      this.mmhhFeatureExtractor =
-          new MMHHWholeFeatureExtractor(modelPath, inputLength, hashLength);
+      this.mmhhFeatureExtractor = new MMHHWholeFeatureExtractor(modelPath, inputLength, hashLength);
     } catch (IOException | MalformedModelException e) {
       logger.error("meet errors when init feature extractor", e);
     }
@@ -111,9 +110,7 @@ public class MMHHIndex extends IoTDBIndex {
     return res;
   }
 
-  /**
-   * should be concise into WholeIndex or IoTDBIndex, it's duplicate
-   */
+  /** should be concise into WholeIndex or IoTDBIndex, it's duplicate */
   public void endFlushTask() {
     super.endFlushTask();
     currentInsertPath = null;
@@ -122,16 +119,15 @@ public class MMHHIndex extends IoTDBIndex {
   @Override
   public boolean buildNext() throws IndexManagerException {
     Long key = mmhhFeatureExtractor.getCurrent_L3_Feature();
-    /**
-     * TODO it's just a trick!
-     */
+    /** TODO it's just a trick! */
     Long pathId = Long.valueOf(currentInsertPath.getNodes()[currentInsertPath.getNodeLength() - 2]);
     List<Long> bucket = hashLookupTable.computeIfAbsent(key, id -> new ArrayList<>());
     bucket.add(pathId);
     itemSize++;
-//    System.out.println(String
-//        .format("Input record: %s, pathId %d, hash %d, series: %s", currentInsertPath, pathId, key,
-//            mmhhFeatureExtractor.getCurrent_L2_AlignedSequence()));
+    //    System.out.println(String
+    //        .format("Input record: %s, pathId %d, hash %d, series: %s", currentInsertPath, pathId,
+    // key,
+    //            mmhhFeatureExtractor.getCurrent_L2_AlignedSequence()));
     return true;
   }
 
@@ -166,9 +162,9 @@ public class MMHHIndex extends IoTDBIndex {
 
   private void serializeHashLookup() {
     try (OutputStream outputStream = new FileOutputStream(featureFile)) {
-//      ReadWriteIOUtils.write(modelPath, outputStream);
-//      ReadWriteIOUtils.write(inputLength, outputStream);
-//      ReadWriteIOUtils.write(hashLength, outputStream);
+      //      ReadWriteIOUtils.write(modelPath, outputStream);
+      //      ReadWriteIOUtils.write(inputLength, outputStream);
+      //      ReadWriteIOUtils.write(hashLength, outputStream);
       ReadWriteIOUtils.write(hashLookupTable.size(), outputStream);
       for (Entry<Long, List<Long>> entry : hashLookupTable.entrySet()) {
         Long k = entry.getKey();
@@ -186,15 +182,14 @@ public class MMHHIndex extends IoTDBIndex {
 
   private static class MMHHQueryStruct {
 
-    /**
-     * features is represented by float array
-     */
-//    float[] patternFeatures;
+    /** features is represented by float array */
+    //    float[] patternFeatures;
     //    TriFunction<float[], float[], float[], Double> calcLowerDistFunc;
     //
     //    BiFunction<double[], TVList, Double> calcExactDistFunc;
     //    Function<PartialPath, TVList> loadSeriesFunc;
     private double[] patterns;
+
     int topK = -1;
     double threshold = -1;
   }
@@ -216,9 +211,13 @@ public class MMHHIndex extends IoTDBIndex {
   }
 
   @Override
-  public QueryDataSet query(Map<String, Object> queryProps, IIndexUsable iIndexUsable,
-      QueryContext context, IIndexCandidateOrderOptimize candidateOrderOptimize,
-      boolean alignedByTime) throws QueryIndexException {
+  public QueryDataSet query(
+      Map<String, Object> queryProps,
+      IIndexUsable iIndexUsable,
+      QueryContext context,
+      IIndexCandidateOrderOptimize candidateOrderOptimize,
+      boolean alignedByTime)
+      throws QueryIndexException {
     MMHHQueryStruct struct = initQuery(queryProps);
     Long queryCode = mmhhFeatureExtractor.processQuery(struct.patterns);
     List<DistSeries> res = hammingSearch(queryCode, struct.topK, context);
@@ -229,10 +228,11 @@ public class MMHHIndex extends IoTDBIndex {
   }
 
   private List<DistSeries> hammingSearch(Long queryCode, int topK, QueryContext context) {
-//    System.out.println(String.format("query: %d, %s", queryCode, Long.toBinaryString(queryCode)));
+    //    System.out.println(String.format("query: %d, %s", queryCode,
+    // Long.toBinaryString(queryCode)));
     List<DistSeries> res = new ArrayList<>();
-    Function<PartialPath, TVList> loadRaw = RTreeIndex
-        .getLoadSeriesFunc(context, tsDataType, mmhhFeatureExtractor);
+    Function<PartialPath, TVList> loadRaw =
+        RTreeIndex.getLoadSeriesFunc(context, tsDataType, mmhhFeatureExtractor);
     for (int radius = 0; radius <= hashLength; radius++) {
       boolean full = scanBucket(queryCode, 0, radius, 0, topK, loadRaw, res);
 
@@ -243,15 +243,19 @@ public class MMHHIndex extends IoTDBIndex {
     return res;
   }
 
-  /**
-   * if res has reached topK
-   */
-  private boolean scanBucket(long queryCode, int doneIdx, int maxIdx, int startIdx, int topK,
-      Function<PartialPath, TVList> loadSeriesFunc, List<DistSeries> res) {
+  /** if res has reached topK */
+  private boolean scanBucket(
+      long queryCode,
+      int doneIdx,
+      int maxIdx,
+      int startIdx,
+      int topK,
+      Function<PartialPath, TVList> loadSeriesFunc,
+      List<DistSeries> res) {
     if (doneIdx == maxIdx) {
       if (hashLookupTable.containsKey(queryCode)) {
-//        System.out.println(String.format("found: %d, %s, ham dist=%d",
-//            queryCode, Long.toBinaryString(queryCode), maxIdx));
+        //        System.out.println(String.format("found: %d, %s, ham dist=%d",
+        //            queryCode, Long.toBinaryString(queryCode), maxIdx));
         List<Long> bucket = hashLookupTable.get(queryCode);
         for (Long seriesId : bucket) {
           res.add(readRawData(maxIdx, seriesId, loadSeriesFunc));
@@ -264,8 +268,8 @@ public class MMHHIndex extends IoTDBIndex {
       for (int doIdx = startIdx; doIdx <= hashLength - (maxIdx - doneIdx); doIdx++) {
         // change bit
         queryCode = reverseBit(queryCode, doIdx);
-        boolean full = scanBucket(queryCode, doneIdx + 1, maxIdx, doIdx + 1, topK,
-            loadSeriesFunc, res);
+        boolean full =
+            scanBucket(queryCode, doneIdx + 1, maxIdx, doIdx + 1, topK, loadSeriesFunc, res);
         if (full) {
           return true;
         }
@@ -287,8 +291,8 @@ public class MMHHIndex extends IoTDBIndex {
     }
   }
 
-  private DistSeries readRawData(int hammingDist, Long seriesId,
-      Function<PartialPath, TVList> loadSeriesFunc) {
+  private DistSeries readRawData(
+      int hammingDist, Long seriesId, Function<PartialPath, TVList> loadSeriesFunc) {
     int len = indexSeries.getNodeLength();
     String[] nodes = Arrays.copyOf(indexSeries.getNodes(), len);
     nodes[len - 2] = seriesId.toString();
@@ -299,7 +303,8 @@ public class MMHHIndex extends IoTDBIndex {
 
   @Override
   public String toString() {
-    return String.format("{#bucket=%d, #size=%d, table=%s}",
+    return String.format(
+        "{#bucket=%d, #size=%d, table=%s}",
         hashLookupTable.size(), itemSize, hashLookupTable.toString());
   }
 }

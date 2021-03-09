@@ -1,12 +1,11 @@
 package org.apache.iotdb.db.index.algorithm.mmhh;
 
+import org.apache.iotdb.tsfile.utils.Pair;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import org.apache.iotdb.db.query.context.QueryContext;
-import org.apache.iotdb.tsfile.utils.Pair;
-
 
 public class MMHHTest {
 
@@ -20,7 +19,7 @@ public class MMHHTest {
 
   private List<Pair<Integer, Long>> hammingSearch(Long queryCode, int topK) {
     List<Pair<Integer, Long>> res = new ArrayList<>();
-    for (int radius = 0; radius <= hashLength; radius++) {// 注意这里是 <= hashLength
+    for (int radius = 0; radius <= hashLength; radius++) { // 注意这里是 <= hashLength
       System.out.println("--------------------------------radius = " + radius);
       boolean full = scanBucket(queryCode, 0, radius, 0, topK, res);
       if (full) {
@@ -30,18 +29,22 @@ public class MMHHTest {
     return res;
   }
 
-  /**
-   * if res has reached topK
-   */
-  private boolean scanBucket(long queryCode, int doneIdx, int maxIdx, int startIdx, int topK,
+  /** if res has reached topK */
+  private boolean scanBucket(
+      long queryCode,
+      int doneIdx,
+      int maxIdx,
+      int startIdx,
+      int topK,
       List<Pair<Integer, Long>> res) {
-    System.out
-        .println(String.format("scan: done=%d, max=%d, start=%d, code: %d, %s",
-            doneIdx, maxIdx, startIdx, queryCode, Long.toBinaryString(queryCode))
+    System.out.println(
+        String.format(
+                "scan: done=%d, max=%d, start=%d, code: %d, %s",
+                doneIdx, maxIdx, startIdx, queryCode, Long.toBinaryString(queryCode))
             + ((doneIdx == maxIdx) ? ", bucket" : ""));
     if (doneIdx == maxIdx) { // 注意这里是 == maxIdx，而不是 == 0！这是个低级错误
       if (hashLookupTable.containsKey(queryCode)) {
-//        System.out.println("contain: "+ queryCode);
+        //        System.out.println("contain: "+ queryCode);
         List<Long> bucket = hashLookupTable.get(queryCode);
         for (Long seriesId : bucket) {
           Pair<Integer, Long> p = new Pair<>(maxIdx, seriesId);
@@ -58,8 +61,7 @@ public class MMHHTest {
       for (int doIdx = startIdx; doIdx <= hashLength - (maxIdx - doneIdx); doIdx++) {
         // change bit
         queryCode = reverseBit(queryCode, doIdx);
-        boolean full = scanBucket(queryCode, doneIdx + 1, maxIdx, doIdx + 1, topK,
-            res);
+        boolean full = scanBucket(queryCode, doneIdx + 1, maxIdx, doIdx + 1, topK, res);
         if (full) {
           return true;
         }
@@ -88,7 +90,7 @@ public class MMHHTest {
     mmhh.hashLookupTable.put(1L, Arrays.asList(10L, 11L, 12L));
     mmhh.hashLookupTable.put(5L, Arrays.asList(50L, 51L, 52L));
     System.out.println(mmhh.hashLookupTable);
-//    List<Pair<Integer, Long>> r = mmhh.hammingSearch((1L << mmhh.hashLength), 10);
+    //    List<Pair<Integer, Long>> r = mmhh.hammingSearch((1L << mmhh.hashLength), 10);
     List<Pair<Integer, Long>> r = mmhh.hammingSearch(0L, 10);
     System.out.println(r);
   }

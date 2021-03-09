@@ -18,11 +18,15 @@
  */
 package org.apache.iotdb.db.index.it;
 
-import static org.apache.iotdb.db.index.IndexTestUtils.getArrayRange;
-import static org.apache.iotdb.db.index.common.IndexConstant.MODEL_PATH;
-import static org.apache.iotdb.db.index.common.IndexType.MMHH;
-import static org.apache.iotdb.db.index.common.IndexType.RTREE_PAA;
-import static org.junit.Assert.fail;
+import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.index.IndexManager;
+import org.apache.iotdb.db.utils.EnvironmentUtils;
+import org.apache.iotdb.jdbc.Config;
+
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.File;
 import java.sql.Connection;
@@ -30,14 +34,11 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
-import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.index.IndexManager;
-import org.apache.iotdb.db.utils.EnvironmentUtils;
-import org.apache.iotdb.jdbc.Config;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+
+import static org.apache.iotdb.db.index.IndexTestUtils.getArrayRange;
+import static org.apache.iotdb.db.index.common.IndexConstant.MODEL_PATH;
+import static org.apache.iotdb.db.index.common.IndexType.MMHH;
+import static org.junit.Assert.fail;
 
 public class MMHHIndexReadIT {
 
@@ -68,45 +69,57 @@ public class MMHHIndexReadIT {
     Class.forName(Config.JDBC_DRIVER_NAME);
     //    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
     try (Connection connection =
-        DriverManager.getConnection(
-            Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
-        Statement statement = connection.createStatement();) {
+            DriverManager.getConnection(
+                Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
+        Statement statement = connection.createStatement(); ) {
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
       System.out.println(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
 
       for (int i = 0; i < 1; i++) {
         String wholePath = String.format(directionPattern, i);
-//        System.out.println(
-//            String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
+        //        System.out.println(
+        //            String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN",
+        // wholePath));
         statement.execute(
             String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
       }
       System.out.println(
-          String.format("CREATE INDEX ON %s WITH INDEX=%s, SERIES_LENGTH=%d, HASH_LENGTH=%d, %s=%s",
-              indexWhole, MMHH, wholeDim, hashLength, MODEL_PATH,
+          String.format(
+              "CREATE INDEX ON %s WITH INDEX=%s, SERIES_LENGTH=%d, HASH_LENGTH=%d, %s=%s",
+              indexWhole,
+              MMHH,
+              wholeDim,
+              hashLength,
+              MODEL_PATH,
               "\"/Users/kangrong/code/github/deep-learning/hash_journal/TAH_project/src/mmhh.pt\""));
-//      String modelPath = "/Users/kangrong/code/github/deep-learning/hash_journal/TAH_project/src/mmhh.pt";
+      //      String modelPath =
+      // "/Users/kangrong/code/github/deep-learning/hash_journal/TAH_project/src/mmhh.pt";
       String modelPath = "src/test/resources/index/mmhh.pt";
       if (!(new File(modelPath).exists())) {
         fail("model file path is not correct!");
       }
       statement.execute(
-          String.format("CREATE INDEX ON %s WITH INDEX=%s, SERIES_LENGTH=%d, HASH_LENGTH=%d, %s=%s",
-              indexWhole, MMHH, wholeDim, hashLength, MODEL_PATH,
+          String.format(
+              "CREATE INDEX ON %s WITH INDEX=%s, SERIES_LENGTH=%d, HASH_LENGTH=%d, %s=%s",
+              indexWhole,
+              MMHH,
+              wholeDim,
+              hashLength,
+              MODEL_PATH,
               String.format("\"%s\"", modelPath)));
       for (int i = 0; i < wholeSize; i++) {
         String device = String.format(directionDevicePattern, i);
         for (int j = 0; j < wholeDim; j++) {
           String insertSQL =
               String.format(insertPattern, device, directionSensor, j, (i * wholeDim + j) * 1d);
-//          System.out.println(insertSQL);
+          //          System.out.println(insertSQL);
           statement.execute(insertSQL);
         }
       }
       statement.execute("flush");
       System.out.println(IndexManager.getInstance().getRouter());
-//      IndexManager.getInstance().stop();
-//      IndexManager.getInstance().start();
+      //      IndexManager.getInstance().stop();
+      //      IndexManager.getInstance().start();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -124,7 +137,7 @@ public class MMHHIndexReadIT {
   public void checkRead() throws ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection =
-        DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
+            DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
 
       String querySQL =

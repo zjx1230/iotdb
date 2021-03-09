@@ -17,6 +17,14 @@
  */
 package org.apache.iotdb.db.index.algorithm.mmhh;
 
+import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
+import org.apache.iotdb.db.index.common.IndexUtils;
+import org.apache.iotdb.db.index.feature.WholeMatchFeatureExtractor;
+import org.apache.iotdb.db.rescon.TVListAllocator;
+import org.apache.iotdb.db.utils.datastructure.TVList;
+import org.apache.iotdb.tsfile.exception.NotImplementedException;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+
 import ai.djl.MalformedModelException;
 import ai.djl.Model;
 import ai.djl.inference.Predictor;
@@ -27,26 +35,20 @@ import ai.djl.translate.Batchifier;
 import ai.djl.translate.TranslateException;
 import ai.djl.translate.Translator;
 import ai.djl.translate.TranslatorContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
-import org.apache.iotdb.db.index.common.IndexUtils;
-import org.apache.iotdb.db.index.feature.WholeMatchFeatureExtractor;
-import org.apache.iotdb.db.rescon.TVListAllocator;
-import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.tsfile.exception.NotImplementedException;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * For PAA feature in the whole matching. A simplified version all PAA PAA (Piecewise Aggregate
  * Approximation), a classical feature in time series.
  *
- * <p>Refer to: Rong Kang, et al. "Dimensionality reduction for fast similarity search in large
- * time series databases." Knowledge and information Systems 3.3 (2001): 263-286.
+ * <p>Refer to: Rong Kang, et al. "Dimensionality reduction for fast similarity search in large time
+ * series databases." Knowledge and information Systems 3.3 (2001): 263-286.
  */
 public class MMHHWholeFeatureExtractor extends WholeMatchFeatureExtractor {
 
@@ -59,27 +61,27 @@ public class MMHHWholeFeatureExtractor extends WholeMatchFeatureExtractor {
   private final float[] inputArray;
   private NDManager manager;
 
-  private final Translator<NDArray, NDArray> translator = new Translator<NDArray, NDArray>() {
-    @Override
-    public NDList processInput(TranslatorContext ctx, NDArray input) {
-      return new NDList(input);
-    }
+  private final Translator<NDArray, NDArray> translator =
+      new Translator<NDArray, NDArray>() {
+        @Override
+        public NDList processInput(TranslatorContext ctx, NDArray input) {
+          return new NDList(input);
+        }
 
-    @Override
-    public NDArray processOutput(TranslatorContext ctx, NDList list) {
-      return list.get(0);
-    }
+        @Override
+        public NDArray processOutput(TranslatorContext ctx, NDList list) {
+          return list.get(0);
+        }
 
-    @Override
-    public Batchifier getBatchifier() {
-      return Batchifier.STACK;
-    }
-  };
+        @Override
+        public Batchifier getBatchifier() {
+          return Batchifier.STACK;
+        }
+      };
   private Predictor<NDArray, NDArray> predictor;
   private Model model;
 
-  public MMHHWholeFeatureExtractor(
-      String modelPath, int alignedLength, int hashBitLength)
+  public MMHHWholeFeatureExtractor(String modelPath, int alignedLength, int hashBitLength)
       throws IOException, MalformedModelException {
     super(true);
     assert hashBitLength < 64;
@@ -114,9 +116,7 @@ public class MMHHWholeFeatureExtractor extends WholeMatchFeatureExtractor {
     return binaryBitIn64;
   }
 
-  /**
-   * For Whole mathing, it's will deep copy
-   */
+  /** For Whole mathing, it's will deep copy */
   @Override
   public TVList getCurrent_L2_AlignedSequence() {
     TVList res = TVListAllocator.getInstance().allocate(TSDataType.DOUBLE);
@@ -128,12 +128,9 @@ public class MMHHWholeFeatureExtractor extends WholeMatchFeatureExtractor {
       res.putDouble(t, IndexUtils.getDoubleFromAnyType(srcData, idx));
     }
     return res;
-
   }
 
-  /**
-   * 两件事：长度为aligned_len，不足补齐，多了不管
-   */
+  /** 两件事：长度为aligned_len，不足补齐，多了不管 */
   private void fillHashBitArray() {
     //    featureArray
     for (int i = 0; i < inputArray.length; i++) {

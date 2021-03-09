@@ -110,7 +110,8 @@ public enum IndexType {
       case MMHH:
         return new MMHHIndex(path, tsDataType, indexDir, indexInfo);
       case ANY_FOR_QUERY:
-        throw new NotImplementedException("ANY_FOR_QUERY is only for query that is not specified index type");
+        throw new NotImplementedException(
+            "ANY_FOR_QUERY is only for query that is not specified index type");
       default:
         throw new NotImplementedException("unsupported index type:" + indexType);
     }
