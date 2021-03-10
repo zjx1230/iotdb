@@ -218,11 +218,7 @@ public class IndexUtils {
     for (Entry<String, Object> entry : props.entrySet()) {
       String k = entry.getKey();
       Object v = entry.getValue();
-      if (v instanceof String) {
-        uppercase.put(k.toUpperCase(), ((String) v).toUpperCase());
-      } else {
-        uppercase.put(k.toUpperCase(), v);
-      }
+      uppercase.put(k.toUpperCase(), v);
     }
     return uppercase;
   }
