@@ -94,7 +94,7 @@ public abstract class SubMatchFeatureExtractor extends IndexFeatureExtractor {
   /** clear data which has been processed */
   public void clearProcessedSrcData() {
     int idx = nextUnprocessedWindowStartIdx();
-    if(idx == -1){
+    if (idx == -1) {
       // it means no sliding window is consumed.
       return;
     }
