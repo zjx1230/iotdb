@@ -1345,11 +1345,11 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
         return RpcUtils.getStatus(TSStatusCode.NOT_LOGIN_ERROR);
       }
 
-//      AUDIT_LOGGER.debug(
-//          "Session {} insertRecord, device {}, time {}",
-//          currSessionId.get(),
-//          req.getDeviceId(),
-//          req.getTimestamp());
+      //      AUDIT_LOGGER.debug(
+      //          "Session {} insertRecord, device {}, time {}",
+      //          currSessionId.get(),
+      //          req.getDeviceId(),
+      //          req.getTimestamp());
 
       InsertRowPlan plan =
           new InsertRowPlan(
@@ -1373,11 +1373,11 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
         return RpcUtils.getStatus(TSStatusCode.NOT_LOGIN_ERROR);
       }
 
-//      AUDIT_LOGGER.debug(
-//          "Session {} insertRecord, device {}, time {}",
-//          currSessionId.get(),
-//          req.getDeviceId(),
-//          req.getTimestamp());
+      //      AUDIT_LOGGER.debug(
+      //          "Session {} insertRecord, device {}, time {}",
+      //          currSessionId.get(),
+      //          req.getDeviceId(),
+      //          req.getTimestamp());
 
       InsertRowPlan plan = new InsertRowPlan();
       plan.setDeviceId(new PartialPath(req.getDeviceId()));
