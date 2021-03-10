@@ -236,7 +236,7 @@ public class IndexUtils {
       case FLOAT:
         return srcData.getFloat(idx);
       case DOUBLE:
-        return (float) srcData.getDouble(idx);
+        return srcData.getDouble(idx);
       default:
         throw new NotImplementedException(srcData.getDataType().toString());
     }

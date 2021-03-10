@@ -149,7 +149,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
         logger.debug("WAL file {} is closed", currentFileWriter);
         this.currentFileWriter = null;
       }
-      logger.debug("Log node {} closed successfully", identifier);
+//      logger.debug("Log node {} closed successfully", identifier);
     } catch (IOException e) {
       logger.error("Cannot close log node {} because:", identifier, e);
     } catch (InterruptedException e) {
