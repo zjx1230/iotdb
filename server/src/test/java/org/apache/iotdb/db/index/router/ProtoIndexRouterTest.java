@@ -190,13 +190,11 @@ public class ProtoIndexRouterTest {
         newRouter.toString());
     newRouter.removeIndexFromRouter(new PartialPath(index_full), RTREE_PAA);
     Assert.assertEquals(
-        "<{}\n"
-            + "null>\n"
-            + "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {INDEX_SLIDE_STEP=8, INDEX_WINDOW_RANGE=4}]}\n"
+        "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {INDEX_SLIDE_STEP=8, INDEX_WINDOW_RANGE=4}]}\n"
             + "root.wind1.azq01.speed: {ELB_INDEX=[]}>\n",
         newRouter.toString());
 
     newRouter.removeIndexFromRouter(new PartialPath(index_sub), ELB_INDEX);
-    Assert.assertEquals("<{}\nnull>\n<{}\nnull>\n", newRouter.toString());
+    Assert.assertEquals("", newRouter.toString());
   }
 }

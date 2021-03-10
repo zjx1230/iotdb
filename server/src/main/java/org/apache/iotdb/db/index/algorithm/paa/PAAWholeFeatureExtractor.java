@@ -18,7 +18,6 @@
 package org.apache.iotdb.db.index.algorithm.paa;
 
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
-import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.feature.WholeMatchFeatureExtractor;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
@@ -63,13 +62,33 @@ public class PAAWholeFeatureExtractor extends WholeMatchFeatureExtractor {
   /** For Whole mathing, it's will deep copy */
   @Override
   public TVList getCurrent_L2_AlignedSequence() {
-    TVList res = TVListAllocator.getInstance().allocate(TSDataType.DOUBLE);
+    TSDataType dataType = srcData.getDataType();
+    TVList res = TVListAllocator.getInstance().allocate(dataType);
     double timeInterval =
         ((double) (srcData.getLastTime() - srcData.getMinTime())) / (srcData.size() - 1);
     for (int i = 0; i < alignedLength; i++) {
       int idx = i >= srcData.size() ? srcData.size() - 1 : i;
       long t = (long) (srcData.getMinTime() + timeInterval * i);
-      res.putDouble(t, IndexUtils.getDoubleFromAnyType(srcData, idx));
+      switch (dataType) {
+        case BOOLEAN:
+          res.putBoolean(t, srcData.getBoolean(idx));
+          break;
+        case INT32:
+          res.putInt(t, srcData.getInt(idx));
+          break;
+        case INT64:
+          res.putLong(t, srcData.getLong(idx));
+          break;
+        case FLOAT:
+          res.putFloat(t, srcData.getFloat(idx));
+          break;
+        case DOUBLE:
+          res.putDouble(t, srcData.getDouble(idx));
+          break;
+        case TEXT:
+          res.putBinary(t, srcData.getBinary(idx));
+          break;
+      }
     }
     return res;
   }

@@ -350,6 +350,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
       if (isFlushing()) {
         throw new IndexRuntimeException("There has been a flushing, do you want to wait?");
       }
+      System.out.println("start flushing: " + indexSeries);
     } finally {
       lock.writeLock().unlock();
     }

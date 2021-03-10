@@ -77,9 +77,8 @@ public class MMHHIndexReadIT {
 
       for (int i = 0; i < 1; i++) {
         String wholePath = String.format(directionPattern, i);
-        //        System.out.println(
-        //            String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN",
-        // wholePath));
+        System.out.println(
+            String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
         statement.execute(
             String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
       }
