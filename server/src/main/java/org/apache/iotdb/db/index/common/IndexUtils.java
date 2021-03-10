@@ -213,7 +213,7 @@ public class IndexUtils {
 
   private IndexUtils() {}
 
-  public static Map<String, Object> toLowerCaseProps(Map<String, Object> props) {
+  public static Map<String, Object> toUpperCaseProps(Map<String, Object> props) {
     Map<String, Object> uppercase = new HashMap<>(props.size());
     for (Entry<String, Object> entry : props.entrySet()) {
       String k = entry.getKey();
