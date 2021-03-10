@@ -149,7 +149,7 @@ public class ELBIndex extends IoTDBIndex {
     ELBWindowBlockFeature block =
         (ELBWindowBlockFeature) elbMatchPreprocessor.getCurrent_L3_Feature();
     windowBlockFeatures.add(block);
-    System.out.println("elb index insert: " + indexSeries + ", " + block);
+    //    System.out.println("elb index insert: " + indexSeries + ", " + block);
     return true;
   }
 

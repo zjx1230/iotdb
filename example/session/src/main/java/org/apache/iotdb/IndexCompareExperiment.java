@@ -22,6 +22,8 @@ import org.apache.iotdb.db.index.common.math.Randomwalk;
 import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.rpc.IoTDBConnectionException;
 import org.apache.iotdb.rpc.StatementExecutionException;
+import org.apache.iotdb.session.SessionDataSet.DataIterator;
+import org.apache.iotdb.session.pool.SessionDataSetWrapper;
 import org.apache.iotdb.session.pool.SessionPool;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -38,13 +40,14 @@ public class IndexCompareExperiment {
   private static PrimitiveList list;
 
   private static final int DEVICE_NUM = 1;
-//  private static final int DEVICE_NUM = 2;
+  //  private static final int DEVICE_NUM = 2;
   private static final int MEASUREMENT_NUM = 5;
-//  private static final int MEASUREMENT_NUM = 50000;
+  //  private static final int MEASUREMENT_NUM = 50000;
   private static final int TOTAL_POINTS = 100;
-//  private static final int TOTAL_POINTS = 100_000_000;
+  //  private static final int TOTAL_POINTS = 100_000_000;
 
-  public static void main(String[] args) throws InterruptedException {
+  public static void main(String[] args)
+      throws InterruptedException, StatementExecutionException, IoTDBConnectionException {
     totalPoints = new AtomicLong();
     list = Randomwalk.generateRanWalk(TOTAL_POINTS);
 
@@ -81,7 +84,40 @@ public class IndexCompareExperiment {
     }
 
     long time = (System.nanoTime() - start) / 1000_000_000;
-    System.out.println("Average speed: " + totalPoints.get() / (time+1));
+    System.out.println("Average speed: " + totalPoints.get() / (time + 1));
+
+    // query
+    queryForValid();
+  }
+
+  private static void queryForValid() throws StatementExecutionException, IoTDBConnectionException {
+    String querySQL =
+        "SELECT s1.* FROM root.sg1.d1 WHERE s1 "
+            + String.format("CONTAIN (%s) WITH TOLERANCE 0 ", getArrayRange(170, 200, 10))
+            + String.format("CONCAT (%s) WITH TOLERANCE 0 ", getArrayRange(250, 300, 10))
+            + String.format("CONCAT (%s) WITH TOLERANCE 0 ", getArrayRange(400, 430, 10));
+    SessionDataSetWrapper wrapper = sessionPool.executeQueryStatement(querySQL);
+    DataIterator dataIterator = wrapper.iterator();
+    System.out.println(wrapper.getColumnNames());
+    System.out.println(wrapper.getColumnTypes());
+    while (dataIterator.next()) {
+      StringBuilder builder = new StringBuilder();
+      for (String columnName : wrapper.getColumnNames()) {
+        builder.append(dataIterator.getString(columnName) + " ");
+      }
+      System.out.println(builder);
+    }
+  }
+
+  public static String getArrayRange(int start, int end, int interval) {
+    if (start >= end) {
+      return "";
+    }
+    StringBuilder array = new StringBuilder().append(start);
+    for (int i = start + interval; i < end; i += interval) {
+      array.append(',').append(i);
+    }
+    return array.toString();
   }
 
   static class WriteThread implements Runnable {
@@ -123,16 +159,8 @@ public class IndexCompareExperiment {
                 + MEASUREMENT_NUM
                 + " cost: "
                 + (System.nanoTime() - start) / 1000_000
-                + "ms, " + String.format("finish %.1f%%", writeRate * 100));
-      }
-      try {
-        sessionPool.executeNonQueryStatement(
-            "flush");
-        System.out.println("flushed");
-      } catch (StatementExecutionException e) {
-        e.printStackTrace();
-      } catch (IoTDBConnectionException e) {
-        e.printStackTrace();
+                + "ms, "
+                + String.format("finish %.1f%%", writeRate * 100));
       }
     }
   }
