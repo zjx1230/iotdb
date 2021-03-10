@@ -195,8 +195,7 @@
         <!-- Deep learning part start -->
         <dependency>
             <groupId>ai.djl.pytorch</groupId>
-            <artifactId>pytorch-native-cpu</artifactId>
-            <classifier>osx-x86_64</classifier>
+            <artifactId>pytorch-native-auto</artifactId>
             <version>1.7.1</version>
             <!--            <scope>runtime</scope>-->
         </dependency>
