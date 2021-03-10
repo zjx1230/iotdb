@@ -236,9 +236,19 @@ public class IndexUtils {
       case FLOAT:
         return srcData.getFloat(idx);
       case DOUBLE:
-        return srcData.getDouble(idx);
+        return (float) srcData.getDouble(idx);
       default:
         throw new NotImplementedException(srcData.getDataType().toString());
     }
+  }
+
+  /**
+   * "*" is illegal in Windows directory path. Replace it with "#"
+   *
+   * @param previousDir path which may contains "*"
+   * @return path replacing "*" with "#"
+   */
+  public static String removeIllegalStarInDir(String previousDir) {
+    return previousDir.replace('*', '#');
   }
 }
