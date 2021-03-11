@@ -2100,5 +2100,4 @@ public class IoTDBConfig {
   public void setEnableIndexStat(boolean enableIndexStat) {
     this.enableIndexStat = enableIndexStat;
   }
-
 }

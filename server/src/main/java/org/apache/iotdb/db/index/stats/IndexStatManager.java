@@ -18,10 +18,6 @@
  */
 package org.apache.iotdb.db.index.stats;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-
 /**
  * The Stat module will provide researchers with a series of switchable lightweight tools and
  * functions for monitoring some measures commonly concerned in index research, such as disk access
@@ -31,97 +27,21 @@ import java.util.Optional;
  */
 public class IndexStatManager {
 
-  private Map<Long, IndexStatStruct> stats = new HashMap<>();
+  public static long featureExtractCost = 0;
+  public static long totalQueryCost = 0;
+  public static long loadRawDataCost = 0;
 
-
-  public static IndexStatManager getInstance() {
-    return IndexStatManager.InstanceHolder.instance;
-  }
-
-  public void registerQuery(long queryId) {
-    stats.put(queryId, new IndexStatStruct());
-    startTotalQueryCost(queryId);
-  }
-
-
-  //  public void startFeatureExtractCost(long queryId) {
-//    if (stats.containsKey(queryId)) {
-//      IndexStatStruct stat = stats.get(queryId);
-//      stat.nanoFeatureExtract = System.nanoTime();
-//    }
-//  }
-//
-//  public void stopFeatureExtractCost(long queryId) {
-//    if (stats.containsKey(queryId)) {
-//      IndexStatStruct stat = stats.get(queryId);
-//      stat.featureExtractCost += System.nanoTime() - stat.nanoFeatureExtract;
-//    }
-//  }
-  public void addFeatureExtractCost(long queryId, long st, long ed) {
-    if (stats.containsKey(queryId)) {
-      IndexStatStruct stat = stats.get(queryId);
-      stat.featureExtractCost += ed - st;
-    }
-  }
-
-  private void startTotalQueryCost(long queryId) {
-    if (stats.containsKey(queryId)) {
-      IndexStatStruct stat = stats.get(queryId);
-      stat.nanoTotalQuery = System.nanoTime();
-    }
-  }
-
-  private void stopTotalQueryCost(long queryId) {
-    if (stats.containsKey(queryId)) {
-      IndexStatStruct stat = stats.get(queryId);
-      stat.totalQueryCost += System.nanoTime() - stat.nanoTotalQuery;
-    }
-  }
-
-  public void startLoadRawDataCost(long queryId) {
-    if (stats.containsKey(queryId)) {
-      IndexStatStruct stat = stats.get(queryId);
-      stat.nanoLoadRawData = System.nanoTime();
-    }
-  }
-
-  public void stopLoadRawDataCost(long queryId) {
-    if (stats.containsKey(queryId)) {
-      IndexStatStruct stat = stats.get(queryId);
-      stat.loadRawDataCost += System.nanoTime() - stat.nanoLoadRawData;
-    }
-  }
-
-  private String provideReport(IndexStatStruct stat) {
-    return String.format("total:%.3fms-feature:%.3fms-load:%.3fms", stat.totalQueryCost / 1000_000.,
-        stat.featureExtractCost / 1000_000., stat.loadRawDataCost / 1000_000.);
-  }
-
-  public String deregisterQuery(long queryId) {
-    stopTotalQueryCost(queryId);
-    String ret = Optional.ofNullable(stats.get(queryId)).map(this::provideReport)
-        .orElse("");
-    stats.remove(queryId);
+  public static String provideReport() {
+    // total:%.3fms-feature:%.3fms-load:%.3fms
+    String ret =
+        String.format(
+            "&%.3f-%.3f-%.3f",
+            totalQueryCost / 1000_000.,
+            featureExtractCost / 1000_000.,
+            loadRawDataCost / 1000_000.);
+    featureExtractCost = 0;
+    totalQueryCost = 0;
+    loadRawDataCost = 0;
     return ret;
-  }
-
-  private static class InstanceHolder {
-
-    private InstanceHolder() {
-    }
-
-    private static IndexStatManager instance = new IndexStatManager();
-  }
-
-  private class IndexStatStruct {
-
-    private long featureExtractCost = 0;
-    private long totalQueryCost = 0;
-    private long loadRawDataCost = 0;
-
-    private long nanoFeatureExtract;
-    private long nanoTotalQuery;
-    private long nanoLoadRawData;
-
   }
 }

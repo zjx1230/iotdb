@@ -31,6 +31,7 @@ import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.common.distance.Distance;
 import org.apache.iotdb.db.index.read.TVListPointer;
 import org.apache.iotdb.db.index.read.optimize.IIndexCandidateOrderOptimize;
+import org.apache.iotdb.db.index.stats.IndexStatManager;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.index.usable.SubMatchIndexUsability;
 import org.apache.iotdb.db.metadata.PartialPath;
@@ -202,6 +203,10 @@ public class ELBIndex extends IoTDBIndex {
     //    List<Filter> filterList = queryByIndex(struct, (SubMatchIndexUsability) iIndexUsable);
     List<DistSeries> res = new ArrayList<>();
     try {
+      long featureTotal = 0;
+      long cpuTotal = 0;
+      long loadStart = System.nanoTime();
+
       QueryDataSource queryDataSource =
           QueryResourceManager.getInstance().getQueryDataSource(indexSeries, context, null);
 
@@ -221,24 +226,31 @@ public class ELBIndex extends IoTDBIndex {
               tsDataType, struct.pattern.length, blockWidth, elbType, true);
       while (reader.hasNextBatch()) {
         BatchData batch = reader.nextBatch();
+        long featureStart = System.nanoTime();
         featureExtractor.appendNewSrcData(batch);
         while (featureExtractor.hasNext()) {
           featureExtractor.processNext();
           TVListPointer p = featureExtractor.getCurrent_L2_AlignedSequence();
+          long cpuStart = System.nanoTime();
           if (struct.elb.exactDistanceCalc(p.tvList, p.offset)) {
             TVList tvList = TVListAllocator.getInstance().allocate(tsDataType);
             TVList.append(tvList, p.tvList, p.offset, p.length);
             PartialPath showPath = indexSeries.concatNode(String.valueOf(tvList.getMinTime()));
             res.add(new DistSeries(0, tvList, showPath));
           }
+          cpuTotal += System.nanoTime() - cpuStart;
         }
         featureExtractor.clearProcessedSrcData();
+        featureTotal += System.nanoTime() - featureStart;
       }
       reader.close();
+      long loadTotal = System.nanoTime() - loadStart;
+      IndexStatManager.featureExtractCost += featureTotal - cpuTotal;
+      IndexStatManager.loadRawDataCost += loadTotal - featureTotal;
     } catch (StorageEngineException | QueryProcessException | IOException e) {
       throw new QueryIndexException(e.getMessage());
     }
-    return constructSearchDataset(res, context, alignedByTime);
+    return constructSearchDataset(res, alignedByTime);
   }
 
   @Override
@@ -259,6 +271,10 @@ public class ELBIndex extends IoTDBIndex {
     List<DistSeries> res = new ArrayList<>();
     try {
       for (Filter timeFilter : filterList) {
+        long featureTotal = 0;
+        long cpuTotal = 0;
+        long loadStart = System.nanoTime();
+
         QueryDataSource queryDataSource =
             QueryResourceManager.getInstance().getQueryDataSource(indexSeries, context, timeFilter);
         timeFilter = queryDataSource.updateFilterUsingTTL(timeFilter);
@@ -279,25 +295,32 @@ public class ELBIndex extends IoTDBIndex {
                 tsDataType, struct.pattern.length, blockWidth, elbType, true);
         while (reader.hasNextBatch()) {
           BatchData batch = reader.nextBatch();
+          long featureStart = System.nanoTime();
           featureExtractor.appendNewSrcData(batch);
           while (featureExtractor.hasNext()) {
             featureExtractor.processNext();
             TVListPointer p = featureExtractor.getCurrent_L2_AlignedSequence();
+            long cpuStart = System.nanoTime();
             if (struct.elb.exactDistanceCalc(p.tvList, p.offset)) {
               TVList tvList = TVListAllocator.getInstance().allocate(tsDataType);
               TVList.append(tvList, p.tvList, p.offset, p.length);
               PartialPath showPath = indexSeries.concatNode(String.valueOf(tvList.getMinTime()));
               res.add(new DistSeries(0, tvList, showPath));
             }
+            cpuTotal += System.nanoTime() - cpuStart;
           }
           featureExtractor.clearProcessedSrcData();
+          featureTotal += System.nanoTime() - featureStart;
         }
         reader.close();
+        long loadTotal = System.nanoTime() - loadStart;
+        IndexStatManager.featureExtractCost += featureTotal - cpuTotal;
+        IndexStatManager.loadRawDataCost += loadTotal - featureTotal;
       }
     } catch (StorageEngineException | QueryProcessException | IOException e) {
       throw new QueryIndexException(e.getMessage());
     }
-    return constructSearchDataset(res, context, alignedByTime);
+    return constructSearchDataset(res, alignedByTime);
   }
 
   private static class ELBQueryStruct {

@@ -33,6 +33,7 @@ import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.common.TriFunction;
 import org.apache.iotdb.db.index.feature.IndexFeatureExtractor;
 import org.apache.iotdb.db.index.read.optimize.IIndexCandidateOrderOptimize;
+import org.apache.iotdb.db.index.stats.IndexStatManager;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.index.usable.WholeMatchIndexUsability;
 import org.apache.iotdb.db.metadata.MManager;
@@ -389,6 +390,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
       QueryDataSource queryDataSource;
       TVList res = null;
       try {
+        long loadStart = System.nanoTime();
         queryDataSource =
             QueryResourceManager.getInstance().getQueryDataSource(path, context, null);
 
@@ -408,6 +410,8 @@ public abstract class RTreeIndex extends IoTDBIndex {
           BatchData batch = reader.nextBatch();
           TVList.appendAll(tvList, batch);
         }
+        IndexStatManager.loadRawDataCost += System.nanoTime() - loadStart;
+        long featureStart = System.nanoTime();
         featureExtractor.appendNewSrcData(tvList);
         reader.close();
         if (featureExtractor.hasNext()) {
@@ -415,6 +419,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
           res = (TVList) featureExtractor.getCurrent_L2_AlignedSequence();
         }
         featureExtractor.clearProcessedSrcData();
+        IndexStatManager.featureExtractCost += System.nanoTime() - featureStart;
       } catch (StorageEngineException | IOException | QueryProcessException e) {
         e.printStackTrace();
       }
@@ -478,7 +483,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
     for (DistSeries ds : res) {
       ds.partialPath = ds.partialPath.concatNode(String.format("(ND=%.2f)", ds.dist));
     }
-    return constructSearchDataset(res, context, alignedByTime);
+    return constructSearchDataset(res, alignedByTime);
   }
 
   /**
@@ -519,7 +524,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
     for (DistSeries ds : res) {
       ds.partialPath = ds.partialPath.concatNode(String.format("(D=%.2f)", ds.dist));
     }
-    return constructSearchDataset(res, context, alignedByTime);
+    return constructSearchDataset(res, alignedByTime);
   }
 
   //  public int postProcessNext(List<IndexFuncResult> funcResult) throws QueryIndexException {

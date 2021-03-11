@@ -333,6 +333,7 @@ public class PartialPath extends Path implements Comparable<Path> {
 
   /**
    * deep copied
+   *
    * @param src
    */
   public PartialPath(PartialPath src) {

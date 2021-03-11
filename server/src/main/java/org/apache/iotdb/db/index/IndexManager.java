@@ -197,7 +197,7 @@ public class IndexManager implements IndexManagerMBean, IService {
       QueryContext context,
       boolean alignedByTime)
       throws QueryIndexException, StorageEngineException {
-    IndexStatManager.getInstance().registerQuery(context.getQueryId());
+    IndexStatManager.totalQueryCost = System.nanoTime();
     if (paths.size() != 1) {
       throw new QueryIndexException("Index allows to query only one path");
     }

@@ -138,9 +138,7 @@ public class MMHHIndex extends IoTDBIndex {
     return res;
   }
 
-  /**
-   * should be concise into WholeIndex or IoTDBIndex, it's duplicate
-   */
+  /** should be concise into WholeIndex or IoTDBIndex, it's duplicate */
   public void endFlushTask() {
     super.endFlushTask();
     currentInsertPath = null;
@@ -212,9 +210,7 @@ public class MMHHIndex extends IoTDBIndex {
 
   private static class MMHHQueryStruct {
 
-    /**
-     * features is represented by float array
-     */
+    /** features is represented by float array */
     //    float[] patternFeatures;
     //    TriFunction<float[], float[], float[], Double> calcLowerDistFunc;
     //
@@ -251,17 +247,11 @@ public class MMHHIndex extends IoTDBIndex {
       boolean alignedByTime)
       throws QueryIndexException {
     MMHHQueryStruct struct = initQuery(queryProps);
-    long featureCost = 0;
-    long loadCost = 0;
-    long featureStart = 0;
-    long loadStart = 0;
+    long featureStart;
     featureStart = System.nanoTime();
     Long queryCode = mmhhFeatureExtractor.processQuery(struct.patterns);
-    featureCost += System.nanoTime() - featureStart;
-    //    List<DistSeries> res = hammingSearch(queryCode, struct.topK, context);
-    //    for (DistSeries ds : res) {
-    //      ds.partialPath = ds.partialPath.concatNode(String.format("(D=%.2f)", ds.dist));
-    //    }
+    IndexStatManager.featureExtractCost += System.nanoTime() - featureStart;
+
     List<DistSeries> res;
     Function<PartialPath, TVList> loadSeriesFunc =
         RTreeIndex.getLoadSeriesFunc(context, tsDataType, mmhhFeatureExtractor);
@@ -279,9 +269,7 @@ public class MMHHIndex extends IoTDBIndex {
 
     double kthMinDist = Double.MAX_VALUE;
     for (PartialPath path : paths) {
-      loadStart = System.nanoTime();
       TVList srcData = loadSeriesFunc.apply(path);
-      loadCost = System.nanoTime() - loadStart;
       double[] inputArray = new double[srcData.size()];
       //    featureArray
       for (int i = 0; i < inputArray.length; i++) {
@@ -308,7 +296,7 @@ public class MMHHIndex extends IoTDBIndex {
       }
       featureStart = System.nanoTime();
       Long hashCode = mmhhFeatureExtractor.processQuery(inputArray);
-      featureCost += System.nanoTime() - featureStart;
+      IndexStatManager.featureExtractCost += System.nanoTime() - featureStart;
       int tempDist = Long.bitCount(hashCode ^ queryCode);
 
       if (topKPQ.size() < struct.topK || tempDist < kthMinDist) {
@@ -336,8 +324,7 @@ public class MMHHIndex extends IoTDBIndex {
     for (DistSeries ds : res) {
       ds.partialPath = ds.partialPath.concatNode(String.format("(NHam=%.2f)", ds.dist));
     }
-
-    return constructSearchDataset(res, context, alignedByTime);
+    return constructSearchDataset(res, alignedByTime);
   }
 
   @Override
@@ -353,15 +340,14 @@ public class MMHHIndex extends IoTDBIndex {
     }
 
     MMHHQueryStruct struct = initQuery(queryProps);
-    long st = System.nanoTime();
+    long featureStart = System.nanoTime();
     Long queryCode = mmhhFeatureExtractor.processQuery(struct.patterns);
-    IndexStatManager.getInstance()
-        .addFeatureExtractCost(context.getQueryId(), st, System.nanoTime());
+    IndexStatManager.featureExtractCost += System.nanoTime() - featureStart;
     List<DistSeries> res = hammingSearch(queryCode, struct.topK, context);
     for (DistSeries ds : res) {
       ds.partialPath = ds.partialPath.concatNode(String.format("(D=%.2f)", ds.dist));
     }
-    return constructSearchDataset(res, context, alignedByTime);
+    return constructSearchDataset(res, alignedByTime);
   }
 
   private List<DistSeries> hammingSearch(Long queryCode, int topK, QueryContext context) {
@@ -372,7 +358,6 @@ public class MMHHIndex extends IoTDBIndex {
         RTreeIndex.getLoadSeriesFunc(context, tsDataType, mmhhFeatureExtractor);
     for (int radius = 0; radius <= hashLength; radius++) {
       boolean full = scanBucket(queryCode, 0, radius, 0, topK, loadRaw, res);
-
       if (full) {
         break;
       }
@@ -380,9 +365,7 @@ public class MMHHIndex extends IoTDBIndex {
     return res;
   }
 
-  /**
-   * if res has reached topK
-   */
+  /** if res has reached topK */
   private boolean scanBucket(
       long queryCode,
       int doneIdx,
