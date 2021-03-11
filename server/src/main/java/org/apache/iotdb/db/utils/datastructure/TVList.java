@@ -21,9 +21,11 @@ package org.apache.iotdb.db.utils.datastructure;
 
 import org.apache.iotdb.db.rescon.PrimitiveArrayManager;
 import org.apache.iotdb.db.utils.TestOnly;
+import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.read.TimeValuePair;
+import org.apache.iotdb.tsfile.read.common.BatchData;
 import org.apache.iotdb.tsfile.read.common.TimeRange;
 import org.apache.iotdb.tsfile.read.reader.IPointReader;
 import org.apache.iotdb.tsfile.utils.Binary;
@@ -570,5 +572,88 @@ public abstract class TVList {
 
   public long getLastTime() {
     return getTime(size - 1);
+  }
+
+  public static void append(TVList dest, TVList src, int srcPos, int length) {
+    assert srcPos + length <= src.size;
+    for (int i = srcPos; i < srcPos + length; i++) {
+      long time = src.getTime(i);
+      switch (src.getDataType()) {
+        case BOOLEAN:
+          dest.putBoolean(time, src.getBoolean(i));
+          break;
+        case INT32:
+          dest.putInt(time, src.getInt(i));
+          break;
+        case INT64:
+          dest.putLong(time, src.getLong(i));
+          break;
+        case FLOAT:
+          dest.putFloat(time, src.getFloat(i));
+          break;
+        case DOUBLE:
+          dest.putDouble(time, src.getDouble(i));
+          break;
+        case TEXT:
+          dest.putBinary(time, src.getBinary(i));
+          break;
+      }
+    }
+  }
+
+  public static void appendAll(TVList dest, BatchData newData) {
+    while (newData.hasCurrent()) {
+      long time = newData.currentTime();
+      Object value = newData.currentValue();
+      switch (dest.getDataType()) {
+        case BOOLEAN:
+          dest.putBoolean(time, (boolean) value);
+          break;
+        case INT32:
+          dest.putInt(time, (int) value);
+          break;
+        case INT64:
+          dest.putLong(time, (Long) value);
+          break;
+        case FLOAT:
+          dest.putFloat(time, (Float) value);
+          break;
+        case DOUBLE:
+          dest.putDouble(time, (Double) value);
+          break;
+        case TEXT:
+          dest.putBinary(time, (Binary) value);
+          break;
+      }
+      newData.next();
+    }
+  }
+
+  @TestOnly
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("{");
+    for (int i = 0; i < size; i++) {
+      TimeValuePair pair = getTimeValuePair(i);
+      switch (getDataType()) {
+        case INT32:
+          sb.append(String.format("[%d,%d],", pair.getTimestamp(), pair.getValue().getInt()));
+          break;
+        case INT64:
+          sb.append(String.format("[%d,%d],", pair.getTimestamp(), pair.getValue().getLong()));
+          break;
+        case FLOAT:
+          sb.append(String.format("[%d,%.2f],", pair.getTimestamp(), pair.getValue().getFloat()));
+          break;
+        case DOUBLE:
+          sb.append(String.format("[%d,%.2f],", pair.getTimestamp(), pair.getValue().getDouble()));
+          break;
+        default:
+          throw new NotImplementedException(getDataType().toString());
+      }
+    }
+    sb.append("}");
+    return sb.toString();
   }
 }

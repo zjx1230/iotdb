@@ -408,7 +408,7 @@ public class IoTDBSqlVisitor extends SqlBaseBaseVisitor<Operator> {
     if (ctx.property(0) != null) {
       for (PropertyContext property : properties) {
         String k = property.ID().getText().toUpperCase();
-        String v = property.propertyValue().getText().toUpperCase();
+        String v = property.propertyValue().getText();
         v = IndexUtils.removeQuotation(v);
         props.put(k, v);
       }
@@ -1297,7 +1297,7 @@ public class IoTDBSqlVisitor extends SqlBaseBaseVisitor<Operator> {
         props = new HashMap<>();
       }
       props.put(PATTERN, parseSequence(ctx.sequenceClause(0)));
-      queryOp.setIndexType(IndexType.RTREE_PAA);
+      queryOp.setIndexType(IndexType.ANY_FOR_QUERY);
     } else if (ctx.CONTAIN() != null) {
       // subsequence matching case
       List<double[]> compositePattern = new ArrayList<>();

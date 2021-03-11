@@ -28,7 +28,6 @@ import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.cost.statistic.Measurement;
 import org.apache.iotdb.db.cost.statistic.Operation;
 import org.apache.iotdb.db.engine.cache.ChunkCache;
-import org.apache.iotdb.db.engine.cache.ChunkMetadataCache;
 import org.apache.iotdb.db.engine.cache.TimeSeriesMetadataCache;
 import org.apache.iotdb.db.exception.BatchProcessException;
 import org.apache.iotdb.db.exception.IoTDBException;
@@ -40,6 +39,7 @@ import org.apache.iotdb.db.exception.metadata.StorageGroupNotSetException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.exception.query.QueryTimeoutRuntimeException;
 import org.apache.iotdb.db.exception.runtime.SQLParserException;
+import org.apache.iotdb.db.index.read.IndexQueryDataSet;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.metrics.server.SqlArgument;
 import org.apache.iotdb.db.qp.Planner;
@@ -59,6 +59,7 @@ import org.apache.iotdb.db.qp.physical.crud.InsertRowsOfOneDevicePlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowsPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
 import org.apache.iotdb.db.qp.physical.crud.LastQueryPlan;
+import org.apache.iotdb.db.qp.physical.crud.QueryIndexPlan;
 import org.apache.iotdb.db.qp.physical.crud.QueryPlan;
 import org.apache.iotdb.db.qp.physical.crud.RawDataQueryPlan;
 import org.apache.iotdb.db.qp.physical.crud.UDFPlan;
@@ -668,6 +669,13 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
         resp.setIgnoreTimeStamp(false);
       }
 
+      if (plan instanceof QueryIndexPlan) {
+        resp.setColumns(
+            newDataSet.getPaths().stream().map(Path::getFullPath).collect(Collectors.toList()));
+        resp.setDataTypeList(
+            newDataSet.getDataTypes().stream().map(Enum::toString).collect(Collectors.toList()));
+        resp.setColumnNameIndexMap(((IndexQueryDataSet) newDataSet).getPathToIndex());
+      }
       if (newDataSet instanceof DirectNonAlignDataSet) {
         resp.setNonAlignQueryDataSet(fillRpcNonAlignReturnData(fetchSize, newDataSet, username));
       } else {
@@ -707,10 +715,9 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
       }
       if (config.isDebugOn()) {
         SLOW_SQL_LOGGER.info(
-            "ChunkCache used memory proportion: {}\nChunkMetadataCache used memory proportion: {}\n"
+            "ChunkCache used memory proportion: {}\n"
                 + "TimeSeriesMetadataCache used memory proportion: {}",
             ChunkCache.getInstance().getUsedMemoryProportion(),
-            ChunkMetadataCache.getInstance().getUsedMemoryProportion(),
             TimeSeriesMetadataCache.getInstance().getUsedMemoryProportion());
       }
     }
@@ -848,6 +855,10 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
                       .getConfigurations()
                       .getOutputDataType());
         }
+        break;
+      case QUERY_INDEX:
+        // For query index, we don't know the columns before actual query.
+        // It will be deferred after obtaining query result set.
         break;
       default:
         throw new TException("unsupported query type: " + plan.getOperatorType());
@@ -1143,7 +1154,7 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
           req.deviceIds.get(0),
           req.getTimestamps().get(0));
     }
-    boolean allSuccess = true;
+    boolean allCheckSuccess = true;
     InsertRowsPlan insertRowsPlan = new InsertRowsPlan();
     for (int i = 0; i < req.deviceIds.size(); i++) {
       try {
@@ -1156,11 +1167,11 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
         TSStatus status = checkAuthority(plan, req.getSessionId());
         if (status != null) {
           insertRowsPlan.getResults().put(i, status);
-          allSuccess = false;
+          allCheckSuccess = false;
         }
         insertRowsPlan.addOneInsertRowPlan(plan, i);
       } catch (Exception e) {
-        allSuccess = false;
+        allCheckSuccess = false;
         insertRowsPlan
             .getResults()
             .put(
@@ -1172,16 +1183,16 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
     TSStatus tsStatus = executeNonQueryPlan(insertRowsPlan);
 
     return judgeFinalTsStatus(
-        allSuccess, tsStatus, insertRowsPlan.getResults(), req.deviceIds.size());
+        allCheckSuccess, tsStatus, insertRowsPlan.getResults(), req.deviceIds.size());
   }
 
   private TSStatus judgeFinalTsStatus(
-      boolean allSuccess,
+      boolean allCheckSuccess,
       TSStatus executeTsStatus,
       Map<Integer, TSStatus> checkTsStatus,
       int totalRowCount) {
 
-    if (allSuccess) {
+    if (allCheckSuccess) {
       return executeTsStatus;
     }
 
@@ -1252,7 +1263,7 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
           req.getTimestamps().get(0));
     }
 
-    boolean allSuccess = true;
+    boolean allCheckSuccess = true;
     InsertRowsPlan insertRowsPlan = new InsertRowsPlan();
     for (int i = 0; i < req.deviceIds.size(); i++) {
       InsertRowPlan plan = new InsertRowPlan();
@@ -1266,6 +1277,7 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
         TSStatus status = checkAuthority(plan, req.getSessionId());
         if (status != null) {
           insertRowsPlan.getResults().put(i, status);
+          allCheckSuccess = false;
         }
         insertRowsPlan.addOneInsertRowPlan(plan, i);
       } catch (Exception e) {
@@ -1275,13 +1287,13 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
                 i,
                 onNPEOrUnexpectedException(
                     e, "inserting string records", TSStatusCode.INTERNAL_SERVER_ERROR));
-        allSuccess = false;
+        allCheckSuccess = false;
       }
     }
     TSStatus tsStatus = executeNonQueryPlan(insertRowsPlan);
 
     return judgeFinalTsStatus(
-        allSuccess, tsStatus, insertRowsPlan.getResults(), req.deviceIds.size());
+        allCheckSuccess, tsStatus, insertRowsPlan.getResults(), req.deviceIds.size());
   }
 
   @Override
@@ -1333,11 +1345,11 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
         return RpcUtils.getStatus(TSStatusCode.NOT_LOGIN_ERROR);
       }
 
-      AUDIT_LOGGER.debug(
-          "Session {} insertRecord, device {}, time {}",
-          currSessionId.get(),
-          req.getDeviceId(),
-          req.getTimestamp());
+      //      AUDIT_LOGGER.debug(
+      //          "Session {} insertRecord, device {}, time {}",
+      //          currSessionId.get(),
+      //          req.getDeviceId(),
+      //          req.getTimestamp());
 
       InsertRowPlan plan =
           new InsertRowPlan(
@@ -1361,11 +1373,11 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
         return RpcUtils.getStatus(TSStatusCode.NOT_LOGIN_ERROR);
       }
 
-      AUDIT_LOGGER.debug(
-          "Session {} insertRecord, device {}, time {}",
-          currSessionId.get(),
-          req.getDeviceId(),
-          req.getTimestamp());
+      //      AUDIT_LOGGER.debug(
+      //          "Session {} insertRecord, device {}, time {}",
+      //          currSessionId.get(),
+      //          req.getDeviceId(),
+      //          req.getTimestamp());
 
       InsertRowPlan plan = new InsertRowPlan();
       plan.setDeviceId(new PartialPath(req.getDeviceId()));
