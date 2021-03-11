@@ -439,7 +439,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
     System.out.println("no prune, no time filter");
 
     RTreeQueryStruct struct = initQuery(queryProps);
-    List<DistSeries> res = new ArrayList<>();
+    List<DistSeries> res;
     BiFunction<double[], TVList, Double> exactDistFunc = getCalcExactDistFunc();
     Function<PartialPath, TVList> loadSeriesFunc = getLoadSeriesFunc(context, tsDataType,
         createQueryFeatureExtractor());

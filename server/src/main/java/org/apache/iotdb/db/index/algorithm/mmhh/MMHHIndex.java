@@ -18,22 +18,31 @@
  */
 package org.apache.iotdb.db.index.algorithm.mmhh;
 
+import java.util.Collections;
+import java.util.PriorityQueue;
+import java.util.function.BiFunction;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
+import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
 import org.apache.iotdb.db.index.algorithm.RTreeIndex;
+import org.apache.iotdb.db.index.algorithm.rtree.RTree.DistSeriesComparator;
 import org.apache.iotdb.db.index.common.DistSeries;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.feature.IndexFeatureExtractor;
 import org.apache.iotdb.db.index.read.optimize.IIndexCandidateOrderOptimize;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
+import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
+import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.db.utils.datastructure.TVList;
+import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
+import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 import ai.djl.MalformedModelException;
@@ -59,6 +68,7 @@ import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_HASH_LENGTH
 import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_SERIES_LENGTH;
 import static org.apache.iotdb.db.index.common.IndexConstant.HASH_LENGTH;
 import static org.apache.iotdb.db.index.common.IndexConstant.MODEL_PATH;
+import static org.apache.iotdb.db.index.common.IndexConstant.NO_PRUNE;
 import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
 import static org.apache.iotdb.db.index.common.IndexConstant.SERIES_LENGTH;
 import static org.apache.iotdb.db.index.common.IndexConstant.TOP_K;
@@ -128,7 +138,9 @@ public class MMHHIndex extends IoTDBIndex {
     return res;
   }
 
-  /** should be concise into WholeIndex or IoTDBIndex, it's duplicate */
+  /**
+   * should be concise into WholeIndex or IoTDBIndex, it's duplicate
+   */
   public void endFlushTask() {
     super.endFlushTask();
     currentInsertPath = null;
@@ -200,7 +212,9 @@ public class MMHHIndex extends IoTDBIndex {
 
   private static class MMHHQueryStruct {
 
-    /** features is represented by float array */
+    /**
+     * features is represented by float array
+     */
     //    float[] patternFeatures;
     //    TriFunction<float[], float[], float[], Double> calcLowerDistFunc;
     //
@@ -228,6 +242,95 @@ public class MMHHIndex extends IoTDBIndex {
     return struct;
   }
 
+  @TestOnly
+  public QueryDataSet noPruneQuery(
+      Map<String, Object> queryProps,
+      IIndexUsable iIndexUsable,
+      QueryContext context,
+      IIndexCandidateOrderOptimize candidateOrderOptimize,
+      boolean alignedByTime)
+      throws QueryIndexException {
+    MMHHQueryStruct struct = initQuery(queryProps);
+    Long queryCode = mmhhFeatureExtractor.processQuery(struct.patterns);
+//    List<DistSeries> res = hammingSearch(queryCode, struct.topK, context);
+//    for (DistSeries ds : res) {
+//      ds.partialPath = ds.partialPath.concatNode(String.format("(D=%.2f)", ds.dist));
+//    }
+    List<DistSeries> res;
+    Function<PartialPath, TVList> loadSeriesFunc = RTreeIndex.getLoadSeriesFunc(context, tsDataType,
+        mmhhFeatureExtractor);
+    List<PartialPath> paths;
+    try {
+      Pair<List<PartialPath>, Integer> pathsPair =
+          MManager.getInstance().getAllTimeseriesPathWithAlias(indexSeries, -1, -1);
+      paths = pathsPair.left;
+    } catch (MetadataException e) {
+      e.printStackTrace();
+      return null;
+    }
+
+    PriorityQueue<DistSeries> topKPQ = new PriorityQueue<>(struct.topK, new DistSeriesComparator());
+
+    double kthMinDist = Double.MAX_VALUE;
+    for (PartialPath path : paths) {
+      TVList srcData = loadSeriesFunc.apply(path);
+      double[] inputArray = new double[srcData.size()];
+      //    featureArray
+      for (int i = 0; i < inputArray.length; i++) {
+        if (i >= srcData.size()) {
+          inputArray[i] = 0;
+          continue;
+        }
+        switch (srcData.getDataType()) {
+          case INT32:
+            inputArray[i] = srcData.getInt(i);
+            break;
+          case INT64:
+            inputArray[i] = srcData.getLong(i);
+            break;
+          case FLOAT:
+            inputArray[i] = srcData.getFloat(i);
+            break;
+          case DOUBLE:
+            inputArray[i] = (float) srcData.getDouble(i);
+            break;
+          default:
+            throw new NotImplementedException(srcData.getDataType().toString());
+        }
+      }
+      Long hashCode = mmhhFeatureExtractor.processQuery(inputArray);
+
+      int tempDist = Long.bitCount(hashCode ^ queryCode);
+
+      if (topKPQ.size() < struct.topK || tempDist < kthMinDist) {
+        if (topKPQ.size() == struct.topK) {
+          topKPQ.poll();
+        }
+        topKPQ.add(new DistSeries(tempDist, srcData, path));
+        kthMinDist = topKPQ.peek().dist;
+      }
+    }
+
+    if (topKPQ.isEmpty()) {
+      res = Collections.emptyList();
+    } else {
+      int retSize = Math.min(struct.topK, topKPQ.size());
+      DistSeries[] resArray = new DistSeries[retSize];
+      int idx = retSize - 1;
+      while (!topKPQ.isEmpty()) {
+        DistSeries distSeries = topKPQ.poll();
+        resArray[idx--] = distSeries;
+      }
+      res = Arrays.asList(resArray);
+    }
+
+    for (DistSeries ds : res) {
+      ds.partialPath = ds.partialPath.concatNode(String.format("(NHam=%.2f)", ds.dist));
+    }
+
+    return constructSearchDataset(res, alignedByTime);
+  }
+
   @Override
   public QueryDataSet query(
       Map<String, Object> queryProps,
@@ -236,6 +339,10 @@ public class MMHHIndex extends IoTDBIndex {
       IIndexCandidateOrderOptimize candidateOrderOptimize,
       boolean alignedByTime)
       throws QueryIndexException {
+    if (props.containsKey(NO_PRUNE)) {
+      return noPruneQuery(queryProps, iIndexUsable, context, candidateOrderOptimize, alignedByTime);
+    }
+
     MMHHQueryStruct struct = initQuery(queryProps);
     Long queryCode = mmhhFeatureExtractor.processQuery(struct.patterns);
     List<DistSeries> res = hammingSearch(queryCode, struct.topK, context);
@@ -261,7 +368,9 @@ public class MMHHIndex extends IoTDBIndex {
     return res;
   }
 
-  /** if res has reached topK */
+  /**
+   * if res has reached topK
+   */
   private boolean scanBucket(
       long queryCode,
       int doneIdx,
