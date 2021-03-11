@@ -56,7 +56,7 @@ public class RTreeNoIndexReadIT {
   private static final int wholeSize = 20;
   private static final int wholeDim = 15;
   private static final int PAA_Dim = 4;
-  private static final int subLength = 50;
+  private static final int PAA_Dim2 = 4;
 
   @Before
   public void setUp() throws Exception {
