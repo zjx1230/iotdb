@@ -93,5 +93,6 @@ public class IndexConstant {
 
   // only for experiment
   public static final String NO_PRUNE = "NO_PRUNE";
+
   private IndexConstant() {}
 }

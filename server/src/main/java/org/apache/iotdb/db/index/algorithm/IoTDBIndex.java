@@ -27,6 +27,7 @@ import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.feature.IndexFeatureExtractor;
 import org.apache.iotdb.db.index.read.IndexQueryDataSet;
 import org.apache.iotdb.db.index.read.optimize.IIndexCandidateOrderOptimize;
+import org.apache.iotdb.db.index.stats.IndexStatManager;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
@@ -73,10 +74,14 @@ public abstract class IoTDBIndex {
    */
   public abstract void initFeatureExtractor(ByteBuffer previous, boolean inQueryMode);
 
-  /** A new item has been pre-processed by the FeatureExtractor, now the index can insert it. */
+  /**
+   * A new item has been pre-processed by the FeatureExtractor, now the index can insert it.
+   */
   public abstract boolean buildNext() throws IndexManagerException;
 
-  /** This index will be closed, it's time to serialize in-memory data to disk for next open. */
+  /**
+   * This index will be closed, it's time to serialize in-memory data to disk for next open.
+   */
   protected abstract void flushIndex();
 
   /**
@@ -87,7 +92,7 @@ public abstract class IoTDBIndex {
    * @param context query context provided by IoTDB.
    * @param candidateOrderOptimize an optimizer for the order of visiting candidates
    * @param alignedByTime true if the result series need to aligned by timestamp, otherwise they
-   *     will be aligned by their first points
+   * will be aligned by their first points
    * @return the result should be consistent with other IoTDB query result.
    */
   public abstract QueryDataSet query(
@@ -110,12 +115,16 @@ public abstract class IoTDBIndex {
     return indexFeatureExtractor;
   }
 
-  /** The flush task has ended. */
+  /**
+   * The flush task has ended.
+   */
   public void endFlushTask() {
     indexFeatureExtractor.clearProcessedSrcData();
   }
 
-  /** Close the index, release resources of the index structure and the feature extractor. */
+  /**
+   * Close the index, release resources of the index structure and the feature extractor.
+   */
   public ByteBuffer closeAndRelease() throws IOException {
     flushIndex();
     if (indexFeatureExtractor != null) {
@@ -138,14 +147,15 @@ public abstract class IoTDBIndex {
     return indexType.toString();
   }
 
-  protected QueryDataSet constructSearchDataset(List<DistSeries> res, boolean alignedByTime)
+  protected QueryDataSet constructSearchDataset(List<DistSeries> res,
+      QueryContext context, boolean alignedByTime)
       throws QueryIndexException {
     return constructSearchDataset(
-        res, alignedByTime, IoTDBDescriptor.getInstance().getConfig().getMaxIndexQueryResultSize());
+        res, context, alignedByTime, IoTDBDescriptor.getInstance().getConfig().getMaxIndexQueryResultSize());
   }
 
   protected QueryDataSet constructSearchDataset(
-      List<DistSeries> res, boolean alignedByTime, int nMaxReturnSeries)
+      List<DistSeries> res, QueryContext context, boolean alignedByTime, int nMaxReturnSeries)
       throws QueryIndexException {
     if (alignedByTime) {
       throw new QueryIndexException("Unsupported alignedByTime result");
@@ -156,6 +166,12 @@ public abstract class IoTDBIndex {
     List<TSDataType> types = new ArrayList<>();
     Map<String, Integer> pathToIndex = new HashMap<>();
     int nMinLength = Integer.MAX_VALUE;
+    // TODO it's a temp trick!
+    if (IoTDBDescriptor.getInstance().getConfig().isEnableIndexStat() && !res.isEmpty()) {
+      String statReport = IndexStatManager.getInstance().deregisterQuery(context.getQueryId());
+      PartialPath hackPath = new PartialPath(res.get(0).partialPath);
+      res.get(0).partialPath = hackPath.concatNode(statReport);
+    }
     for (int i = 0; i < nMaxReturnSeries; i++) {
       PartialPath series = res.get(i).partialPath;
       paths.add(series);

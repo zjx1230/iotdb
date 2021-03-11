@@ -18,16 +18,6 @@
  */
 package org.apache.iotdb.db.index.it;
 
-import static org.apache.iotdb.db.index.IndexTestUtils.getArrayRange;
-import static org.apache.iotdb.db.index.common.IndexConstant.NO_PRUNE;
-import static org.apache.iotdb.db.index.common.IndexType.ELB_INDEX;
-import static org.junit.Assert.fail;
-
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.Statement;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.index.IndexManager;
 import org.apache.iotdb.db.rescon.TVListAllocator;
@@ -35,14 +25,24 @@ import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.jdbc.Config;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-/**
- * just for experiment
- */
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.Statement;
+
+import static org.apache.iotdb.db.index.IndexTestUtils.getArrayRange;
+import static org.apache.iotdb.db.index.common.IndexConstant.NO_PRUNE;
+import static org.apache.iotdb.db.index.common.IndexType.ELB_INDEX;
+import static org.junit.Assert.fail;
+
+/** just for experiment */
 public class ELBNoIndexIT {
 
   private static final String insertPattern = "INSERT INTO %s(timestamp, %s) VALUES (%d, %.3f)";
@@ -82,9 +82,9 @@ public class ELBNoIndexIT {
 
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection =
-        DriverManager.getConnection(
-            Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
-        Statement statement = connection.createStatement();) {
+            DriverManager.getConnection(
+                Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
+        Statement statement = connection.createStatement(); ) {
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupSub));
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
 
@@ -97,9 +97,9 @@ public class ELBNoIndexIT {
             String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
       }
       statement.execute(
-          String
-              .format("CREATE INDEX ON %s WITH INDEX=%s, BLOCK_SIZE=%d, %s=%s", indexSub, ELB_INDEX,
-                  5, NO_PRUNE, NO_PRUNE));
+          String.format(
+              "CREATE INDEX ON %s WITH INDEX=%s, BLOCK_SIZE=%d, %s=%s",
+              indexSub, ELB_INDEX, 5, NO_PRUNE, NO_PRUNE));
 
       TVList subInput = TVListAllocator.getInstance().allocate(TSDataType.DOUBLE);
       for (int i = 0; i < subLength; i++) {
@@ -176,7 +176,7 @@ public class ELBNoIndexIT {
   public void checkRead() throws ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection =
-        DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
+            DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
 
       String querySQL =

@@ -34,6 +34,7 @@ import org.apache.iotdb.db.index.common.IndexType;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.common.func.CreateIndexProcessorFunc;
 import org.apache.iotdb.db.index.router.IIndexRouter;
+import org.apache.iotdb.db.index.stats.IndexStatManager;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.service.IService;
@@ -196,6 +197,7 @@ public class IndexManager implements IndexManagerMBean, IService {
       QueryContext context,
       boolean alignedByTime)
       throws QueryIndexException, StorageEngineException {
+    IndexStatManager.getInstance().registerQuery(context.getQueryId());
     if (paths.size() != 1) {
       throw new QueryIndexException("Index allows to query only one path");
     }

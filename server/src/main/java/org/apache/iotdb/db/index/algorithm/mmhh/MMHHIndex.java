@@ -18,9 +18,6 @@
  */
 package org.apache.iotdb.db.index.algorithm.mmhh;
 
-import java.util.Collections;
-import java.util.PriorityQueue;
-import java.util.function.BiFunction;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
@@ -33,6 +30,7 @@ import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.feature.IndexFeatureExtractor;
 import org.apache.iotdb.db.index.read.optimize.IIndexCandidateOrderOptimize;
+import org.apache.iotdb.db.index.stats.IndexStatManager;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.PartialPath;
@@ -58,10 +56,12 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.PriorityQueue;
 import java.util.function.Function;
 
 import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_HASH_LENGTH;
@@ -251,14 +251,20 @@ public class MMHHIndex extends IoTDBIndex {
       boolean alignedByTime)
       throws QueryIndexException {
     MMHHQueryStruct struct = initQuery(queryProps);
+    long featureCost = 0;
+    long loadCost = 0;
+    long featureStart = 0;
+    long loadStart = 0;
+    featureStart = System.nanoTime();
     Long queryCode = mmhhFeatureExtractor.processQuery(struct.patterns);
-//    List<DistSeries> res = hammingSearch(queryCode, struct.topK, context);
-//    for (DistSeries ds : res) {
-//      ds.partialPath = ds.partialPath.concatNode(String.format("(D=%.2f)", ds.dist));
-//    }
+    featureCost += System.nanoTime() - featureStart;
+    //    List<DistSeries> res = hammingSearch(queryCode, struct.topK, context);
+    //    for (DistSeries ds : res) {
+    //      ds.partialPath = ds.partialPath.concatNode(String.format("(D=%.2f)", ds.dist));
+    //    }
     List<DistSeries> res;
-    Function<PartialPath, TVList> loadSeriesFunc = RTreeIndex.getLoadSeriesFunc(context, tsDataType,
-        mmhhFeatureExtractor);
+    Function<PartialPath, TVList> loadSeriesFunc =
+        RTreeIndex.getLoadSeriesFunc(context, tsDataType, mmhhFeatureExtractor);
     List<PartialPath> paths;
     try {
       Pair<List<PartialPath>, Integer> pathsPair =
@@ -273,7 +279,9 @@ public class MMHHIndex extends IoTDBIndex {
 
     double kthMinDist = Double.MAX_VALUE;
     for (PartialPath path : paths) {
+      loadStart = System.nanoTime();
       TVList srcData = loadSeriesFunc.apply(path);
+      loadCost = System.nanoTime() - loadStart;
       double[] inputArray = new double[srcData.size()];
       //    featureArray
       for (int i = 0; i < inputArray.length; i++) {
@@ -298,8 +306,9 @@ public class MMHHIndex extends IoTDBIndex {
             throw new NotImplementedException(srcData.getDataType().toString());
         }
       }
+      featureStart = System.nanoTime();
       Long hashCode = mmhhFeatureExtractor.processQuery(inputArray);
-
+      featureCost += System.nanoTime() - featureStart;
       int tempDist = Long.bitCount(hashCode ^ queryCode);
 
       if (topKPQ.size() < struct.topK || tempDist < kthMinDist) {
@@ -328,7 +337,7 @@ public class MMHHIndex extends IoTDBIndex {
       ds.partialPath = ds.partialPath.concatNode(String.format("(NHam=%.2f)", ds.dist));
     }
 
-    return constructSearchDataset(res, alignedByTime);
+    return constructSearchDataset(res, context, alignedByTime);
   }
 
   @Override
@@ -344,12 +353,15 @@ public class MMHHIndex extends IoTDBIndex {
     }
 
     MMHHQueryStruct struct = initQuery(queryProps);
+    long st = System.nanoTime();
     Long queryCode = mmhhFeatureExtractor.processQuery(struct.patterns);
+    IndexStatManager.getInstance()
+        .addFeatureExtractCost(context.getQueryId(), st, System.nanoTime());
     List<DistSeries> res = hammingSearch(queryCode, struct.topK, context);
     for (DistSeries ds : res) {
       ds.partialPath = ds.partialPath.concatNode(String.format("(D=%.2f)", ds.dist));
     }
-    return constructSearchDataset(res, alignedByTime);
+    return constructSearchDataset(res, context, alignedByTime);
   }
 
   private List<DistSeries> hammingSearch(Long queryCode, int topK, QueryContext context) {

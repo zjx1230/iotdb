@@ -18,23 +18,25 @@
  */
 package org.apache.iotdb.db.index.it;
 
-import static org.apache.iotdb.db.index.IndexTestUtils.getArrayRange;
-import static org.apache.iotdb.db.index.common.IndexType.RTREE_PAA;
-import static org.junit.Assert.fail;
+import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.index.IndexManager;
+import org.apache.iotdb.db.utils.EnvironmentUtils;
+import org.apache.iotdb.jdbc.Config;
+
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
-import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.index.IndexManager;
-import org.apache.iotdb.db.utils.EnvironmentUtils;
-import org.apache.iotdb.jdbc.Config;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+
+import static org.apache.iotdb.db.index.IndexTestUtils.getArrayRange;
+import static org.apache.iotdb.db.index.common.IndexType.RTREE_PAA;
+import static org.junit.Assert.fail;
 
 public class RTreeNoIndexReadIT {
 
@@ -78,8 +80,9 @@ public class RTreeNoIndexReadIT {
 
       for (int i = 0; i < 1; i++) {
         String wholePath = String.format(directionPattern, i);
-//        System.out.println(
-//            String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
+        //        System.out.println(
+        //            String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN",
+        // wholePath));
         statement.execute(
             String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
       }
@@ -92,7 +95,7 @@ public class RTreeNoIndexReadIT {
         for (int j = 0; j < wholeDim; j++) {
           String insertSQL =
               String.format(insertPattern, device, directionSensor, j, (i * wholeDim + j) * 1d);
-//          System.out.println(insertSQL);
+          //          System.out.println(insertSQL);
           statement.execute(insertSQL);
         }
       }
@@ -160,7 +163,7 @@ public class RTreeNoIndexReadIT {
           sb.append("\n");
         }
         System.out.println(sb);
-//        Assert.assertEquals(gt, sb.toString());
+        //        Assert.assertEquals(gt, sb.toString());
       }
     } catch (Exception e) {
       e.printStackTrace();

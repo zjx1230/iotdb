@@ -18,10 +18,15 @@
  */
 package org.apache.iotdb.db.index.it;
 
-import static org.apache.iotdb.db.index.IndexTestUtils.getArrayRange;
-import static org.apache.iotdb.db.index.common.IndexConstant.MODEL_PATH;
-import static org.apache.iotdb.db.index.common.IndexType.MMHH;
-import static org.junit.Assert.fail;
+import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.index.IndexManager;
+import org.apache.iotdb.db.utils.EnvironmentUtils;
+import org.apache.iotdb.jdbc.Config;
+
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.File;
 import java.sql.Connection;
@@ -29,14 +34,11 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
-import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.index.IndexManager;
-import org.apache.iotdb.db.utils.EnvironmentUtils;
-import org.apache.iotdb.jdbc.Config;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+
+import static org.apache.iotdb.db.index.IndexTestUtils.getArrayRange;
+import static org.apache.iotdb.db.index.common.IndexConstant.MODEL_PATH;
+import static org.apache.iotdb.db.index.common.IndexType.MMHH;
+import static org.junit.Assert.fail;
 
 public class MMHHNoIndexReadIT {
 
@@ -67,9 +69,9 @@ public class MMHHNoIndexReadIT {
     Class.forName(Config.JDBC_DRIVER_NAME);
     //    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
     try (Connection connection =
-        DriverManager.getConnection(
-            Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
-        Statement statement = connection.createStatement();) {
+            DriverManager.getConnection(
+                Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
+        Statement statement = connection.createStatement(); ) {
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
       System.out.println(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
 
@@ -134,7 +136,7 @@ public class MMHHNoIndexReadIT {
   public void checkRead() throws ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection =
-        DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
+            DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
 
       String querySQL =
@@ -164,7 +166,7 @@ public class MMHHNoIndexReadIT {
           sb.append("\n");
         }
         System.out.println(sb);
-//        Assert.assertEquals(gt.toString(), sb.toString());
+        //        Assert.assertEquals(gt.toString(), sb.toString());
       }
     } catch (Exception e) {
       e.printStackTrace();

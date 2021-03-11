@@ -18,33 +18,6 @@
  */
 package org.apache.iotdb.db.index.algorithm;
 
-import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_FEATURE_DIM;
-import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_SERIES_LENGTH;
-import static org.apache.iotdb.db.index.common.IndexConstant.FEATURE_DIM;
-import static org.apache.iotdb.db.index.common.IndexConstant.MAX_ENTRIES;
-import static org.apache.iotdb.db.index.common.IndexConstant.MIN_ENTRIES;
-import static org.apache.iotdb.db.index.common.IndexConstant.NO_PRUNE;
-import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
-import static org.apache.iotdb.db.index.common.IndexConstant.SEED_PICKER;
-import static org.apache.iotdb.db.index.common.IndexConstant.SERIES_LENGTH;
-import static org.apache.iotdb.db.index.common.IndexConstant.THRESHOLD;
-import static org.apache.iotdb.db.index.common.IndexConstant.TOP_K;
-import static org.apache.iotdb.db.index.common.IndexType.RTREE_PAA;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
@@ -75,8 +48,36 @@ import org.apache.iotdb.tsfile.read.common.BatchData;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.apache.iotdb.tsfile.read.reader.IBatchReader;
 import org.apache.iotdb.tsfile.utils.Pair;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+
+import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_FEATURE_DIM;
+import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_SERIES_LENGTH;
+import static org.apache.iotdb.db.index.common.IndexConstant.FEATURE_DIM;
+import static org.apache.iotdb.db.index.common.IndexConstant.MAX_ENTRIES;
+import static org.apache.iotdb.db.index.common.IndexConstant.MIN_ENTRIES;
+import static org.apache.iotdb.db.index.common.IndexConstant.NO_PRUNE;
+import static org.apache.iotdb.db.index.common.IndexConstant.PATTERN;
+import static org.apache.iotdb.db.index.common.IndexConstant.SEED_PICKER;
+import static org.apache.iotdb.db.index.common.IndexConstant.SERIES_LENGTH;
+import static org.apache.iotdb.db.index.common.IndexConstant.THRESHOLD;
+import static org.apache.iotdb.db.index.common.IndexConstant.TOP_K;
+import static org.apache.iotdb.db.index.common.IndexType.RTREE_PAA;
 
 /**
  * MBRIndex extracts features for input series data and put them into a root leaf node initially.
@@ -100,9 +101,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
    * <p>The range of dimension {@code i} is {@code [corner[i], corner[i]+range[i]]}
    */
   private final boolean usePointType;
-  /**
-   * For generality, RTree only store ids of identifiers or others.
-   */
+  /** For generality, RTree only store ids of identifiers or others. */
   private RTree<PartialPath> rTree;
 
   protected float[] currentLowerBounds;
@@ -132,7 +131,6 @@ public abstract class RTreeIndex extends IoTDBIndex {
       indexDirFile.mkdirs();
       featureFile = IndexUtils.getIndexFile(indexDir + File.separator + "rTreeFeature");
     }
-
   }
 
   private void deserializeFeatures() {
@@ -261,16 +259,12 @@ public abstract class RTreeIndex extends IoTDBIndex {
   //  protected abstract BiConsumer<String, InputStream> getDeserializeFunc();
   //  protected abstract List<Identifier> getQueryCandidates(List<Integer> candidateIds);
 
-  /**
-   *
-   */
+  /** */
   protected abstract float[] calcQueryFeature(double[] patterns);
 
   public static class RTreeQueryStruct {
 
-    /**
-     * features is represented by float array
-     */
+    /** features is represented by float array */
     float[] patternFeatures;
     //    TriFunction<float[], float[], float[], Double> calcLowerDistFunc;
     //
@@ -441,8 +435,8 @@ public abstract class RTreeIndex extends IoTDBIndex {
     RTreeQueryStruct struct = initQuery(queryProps);
     List<DistSeries> res;
     BiFunction<double[], TVList, Double> exactDistFunc = getCalcExactDistFunc();
-    Function<PartialPath, TVList> loadSeriesFunc = getLoadSeriesFunc(context, tsDataType,
-        createQueryFeatureExtractor());
+    Function<PartialPath, TVList> loadSeriesFunc =
+        getLoadSeriesFunc(context, tsDataType, createQueryFeatureExtractor());
     List<PartialPath> paths;
     try {
       Pair<List<PartialPath>, Integer> pathsPair =
@@ -484,7 +478,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
     for (DistSeries ds : res) {
       ds.partialPath = ds.partialPath.concatNode(String.format("(ND=%.2f)", ds.dist));
     }
-    return constructSearchDataset(res, alignedByTime);
+    return constructSearchDataset(res, context, alignedByTime);
   }
 
   /**
@@ -525,7 +519,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
     for (DistSeries ds : res) {
       ds.partialPath = ds.partialPath.concatNode(String.format("(D=%.2f)", ds.dist));
     }
-    return constructSearchDataset(res, alignedByTime);
+    return constructSearchDataset(res, context, alignedByTime);
   }
 
   //  public int postProcessNext(List<IndexFuncResult> funcResult) throws QueryIndexException {

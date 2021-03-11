@@ -166,7 +166,7 @@ public class MMHHIndexReadIT {
           sb.append("\n");
         }
         System.out.println(sb);
-//        Assert.assertEquals(gt.toString(), sb.toString());
+        //        Assert.assertEquals(gt.toString(), sb.toString());
       }
     } catch (Exception e) {
       e.printStackTrace();

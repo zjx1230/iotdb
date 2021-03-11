@@ -269,6 +269,8 @@ public class IoTDBConfig {
   /** index directory. */
   private String indexRootFolder = "data" + File.separator + "index";
 
+  private boolean enableIndexStat = true;
+
   /** When a TsFile's file size (in byte) exceed this, the TsFile is forced closed. */
   private long tsFileSizeThreshold = 1L;
 
@@ -2090,4 +2092,13 @@ public class IoTDBConfig {
   public void setIoTaskQueueSizeForFlushing(int ioTaskQueueSizeForFlushing) {
     this.ioTaskQueueSizeForFlushing = ioTaskQueueSizeForFlushing;
   }
+
+  public boolean isEnableIndexStat() {
+    return enableIndexStat;
+  }
+
+  public void setEnableIndexStat(boolean enableIndexStat) {
+    this.enableIndexStat = enableIndexStat;
+  }
+
 }

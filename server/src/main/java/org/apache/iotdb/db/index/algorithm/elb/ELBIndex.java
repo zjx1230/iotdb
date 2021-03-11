@@ -199,7 +199,7 @@ public class ELBIndex extends IoTDBIndex {
     ELBQueryStruct struct = new ELBQueryStruct();
     System.out.println("no prung, no time filter");
     initQuery(struct, queryProps);
-//    List<Filter> filterList = queryByIndex(struct, (SubMatchIndexUsability) iIndexUsable);
+    //    List<Filter> filterList = queryByIndex(struct, (SubMatchIndexUsability) iIndexUsable);
     List<DistSeries> res = new ArrayList<>();
     try {
       QueryDataSource queryDataSource =
@@ -238,7 +238,7 @@ public class ELBIndex extends IoTDBIndex {
     } catch (StorageEngineException | QueryProcessException | IOException e) {
       throw new QueryIndexException(e.getMessage());
     }
-    return constructSearchDataset(res, alignedByTime);
+    return constructSearchDataset(res, context, alignedByTime);
   }
 
   @Override
@@ -297,7 +297,7 @@ public class ELBIndex extends IoTDBIndex {
     } catch (StorageEngineException | QueryProcessException | IOException e) {
       throw new QueryIndexException(e.getMessage());
     }
-    return constructSearchDataset(res, alignedByTime);
+    return constructSearchDataset(res, context, alignedByTime);
   }
 
   private static class ELBQueryStruct {

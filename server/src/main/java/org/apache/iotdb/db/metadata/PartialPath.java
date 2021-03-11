@@ -330,4 +330,17 @@ public class PartialPath extends Path implements Comparable<Path> {
     if (measurementAlias != null) measurementAlias = measurementAlias.toLowerCase();
     if (tsAlias != null) tsAlias = tsAlias.toLowerCase();
   }
+
+  /**
+   * deep copied
+   * @param src
+   */
+  public PartialPath(PartialPath src) {
+    this.nodes = new String[src.nodes.length];
+    System.arraycopy(src.nodes, 0, nodes, 0, src.nodes.length);
+    this.measurementAlias = src.measurementAlias;
+    this.tsAlias = src.tsAlias;
+    this.fullPath = src.fullPath;
+    this.device = src.device;
+  }
 }

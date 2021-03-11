@@ -163,7 +163,7 @@ public class RTreeIndexReadIT {
           sb.append("\n");
         }
         System.out.println(sb);
-//        Assert.assertEquals(gt, sb.toString());
+        //        Assert.assertEquals(gt, sb.toString());
       }
     } catch (Exception e) {
       e.printStackTrace();
