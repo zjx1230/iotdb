@@ -111,13 +111,12 @@ public class ELBIndex extends IoTDBIndex {
     super(path, tsDataType, indexInfo);
     windowBlockFeatures = new ArrayList<>();
     File indexDirFile = IndexUtils.getIndexFile(indexDir);
+    featureFile = IndexUtils.getIndexFile(indexDir + File.separator + "feature");
     if (indexDirFile.exists()) {
       logger.info("reload index {} from {}", ELB_INDEX, indexDir);
-      featureFile = IndexUtils.getIndexFile(indexDir + File.separator + "feature");
       deserializeFeatures();
     } else {
       indexDirFile.mkdirs();
-      featureFile = IndexUtils.getIndexFile(indexDir + File.separator + "feature");
     }
     // ELB always variable query length, so it's needed windowRange
     //    usableBlocks = PrimitiveList.newList(TSDataType.BOOLEAN);

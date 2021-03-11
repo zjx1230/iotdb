@@ -129,10 +129,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
       deserializeFeatures();
     } else {
       logger.info("mkdir index {} in {}", RTREE_PAA, indexDir);
-      boolean success = indexDirFile.mkdirs();
-      if(!success){
-        logger.error("mkdir index {} in {} failed", RTREE_PAA, indexDir);
-      }
+      indexDirFile.mkdirs();
       featureFile = IndexUtils.getIndexFile(indexDir + File.separator + "rTreeFeature");
     }
 

@@ -234,6 +234,7 @@ public class IndexManager implements IndexManagerMBean, IService {
     for (File processorDataDir :
         Objects.requireNonNull(IndexUtils.getIndexFile(indexDataDirPath).listFiles())) {
       String processorName = processorDataDir.getName();
+      processorName = IndexUtils.addStarToIndexSeries(processorName);
       Map<IndexType, IndexInfo> infos =
           router.getIndexInfosByIndexSeries(new PartialPath(processorName));
       if (infos.isEmpty()) {

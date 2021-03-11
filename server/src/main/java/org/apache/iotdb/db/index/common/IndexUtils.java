@@ -247,4 +247,14 @@ public class IndexUtils {
   public static String removeIllegalStarInDir(String previousDir) {
     return previousDir.replace('*', '#');
   }
+
+  /**
+   * "*" is illegal in Windows directory path. Replace it with "#"
+   *
+   * @param previousDir path which may contains "*"
+   * @return path replacing "*" with "#"
+   */
+  public static String addStarToIndexSeries(String previousDir) {
+    return previousDir.replace('#', '*');
+  }
 }

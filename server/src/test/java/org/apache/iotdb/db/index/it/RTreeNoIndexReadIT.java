@@ -56,7 +56,6 @@ public class RTreeNoIndexReadIT {
   private static final int wholeSize = 20;
   private static final int wholeDim = 15;
   private static final int PAA_Dim = 4;
-  private static final int PAA_Dim2 = 4;
 
   @Before
   public void setUp() throws Exception {
@@ -79,8 +78,8 @@ public class RTreeNoIndexReadIT {
 
       for (int i = 0; i < 1; i++) {
         String wholePath = String.format(directionPattern, i);
-        System.out.println(
-            String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
+//        System.out.println(
+//            String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
         statement.execute(
             String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
       }
@@ -93,7 +92,7 @@ public class RTreeNoIndexReadIT {
         for (int j = 0; j < wholeDim; j++) {
           String insertSQL =
               String.format(insertPattern, device, directionSensor, j, (i * wholeDim + j) * 1d);
-          System.out.println(insertSQL);
+//          System.out.println(insertSQL);
           statement.execute(insertSQL);
         }
       }
