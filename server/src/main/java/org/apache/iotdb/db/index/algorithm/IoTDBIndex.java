@@ -20,6 +20,7 @@ package org.apache.iotdb.db.index.algorithm;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.index.common.DistSeries;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexType;
@@ -31,6 +32,7 @@ import org.apache.iotdb.db.index.stats.IndexStatManager;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
+import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.common.RowRecord;
@@ -152,18 +154,27 @@ public abstract class IoTDBIndex {
       throw new QueryIndexException("Unsupported alignedByTime result");
     }
     // make result paths and types
-    nMaxReturnSeries = Math.min(nMaxReturnSeries, res.size());
     List<PartialPath> paths = new ArrayList<>();
     List<TSDataType> types = new ArrayList<>();
     Map<String, Integer> pathToIndex = new HashMap<>();
     int nMinLength = Integer.MAX_VALUE;
+    IndexStatManager.totalQueryCost = System.nanoTime() - IndexStatManager.totalQueryCost;
+    String statReport = IndexStatManager.provideReport();
+
     // TODO it's a temp trick!
-    if (IoTDBDescriptor.getInstance().getConfig().isEnableIndexStat() && !res.isEmpty()) {
-      IndexStatManager.totalQueryCost = System.nanoTime() - IndexStatManager.totalQueryCost;
-      String statReport = IndexStatManager.provideReport();
-      PartialPath hackPath = new PartialPath(res.get(0).partialPath);
-      res.get(0).partialPath = hackPath.concatNode(statReport);
+    if (IoTDBDescriptor.getInstance().getConfig().isEnableIndexStat() && res.isEmpty()) {
+      // add a fake line and result
+      TVList fake = TVListAllocator.getInstance().allocate(TSDataType.DOUBLE);
+      fake.putDouble(0, 0);
+      try {
+        res.add(new DistSeries(0, fake, new PartialPath("root.sg.fake.fake")));
+      } catch (IllegalPathException e) {
+        e.printStackTrace();
+      }
     }
+    PartialPath hackPath = new PartialPath(res.get(0).partialPath);
+    res.get(0).partialPath = hackPath.concatNode(statReport);
+    nMaxReturnSeries = Math.min(nMaxReturnSeries, res.size());
     for (int i = 0; i < nMaxReturnSeries; i++) {
       PartialPath series = res.get(i).partialPath;
       paths.add(series);
