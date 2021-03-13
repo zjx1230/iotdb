@@ -20,7 +20,6 @@
 package org.apache.iotdb.db.engine.compaction.level;
 
 import static org.apache.iotdb.db.conf.IoTDBConstant.FILE_NAME_SEPARATOR;
-import static org.apache.iotdb.db.engine.compaction.no.NoCompactionTsFileManagement.compareFileName;
 import static org.apache.iotdb.db.engine.compaction.utils.CompactionLogger.COMPACTION_LOG_NAME;
 import static org.apache.iotdb.db.engine.compaction.utils.CompactionLogger.SOURCE_NAME;
 import static org.apache.iotdb.db.engine.compaction.utils.CompactionLogger.TARGET_NAME;
@@ -43,11 +42,11 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.cache.ChunkMetadataCache;
-import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.engine.compaction.TsFileManagement;
 import org.apache.iotdb.db.engine.compaction.utils.CompactionLogAnalyzer;
 import org.apache.iotdb.db.engine.compaction.utils.CompactionLogger;
 import org.apache.iotdb.db.engine.compaction.utils.CompactionUtils;
+import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.query.control.FileReaderManager;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
@@ -63,31 +62,31 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
   private static final Logger logger = LoggerFactory
       .getLogger(LevelCompactionTsFileManagement.class);
 
-  private final int seqLevelNum = Math
+  protected final int seqLevelNum = Math
       .max(IoTDBDescriptor.getInstance().getConfig().getSeqLevelNum(), 1);
-  private final int seqFileNumInEachLevel = Math
+  protected final int seqFileNumInEachLevel = Math
       .max(IoTDBDescriptor.getInstance().getConfig().getSeqFileNumInEachLevel(), 1);
-  private final int unseqLevelNum = Math
+  protected final int unseqLevelNum = Math
       .max(IoTDBDescriptor.getInstance().getConfig().getUnseqLevelNum(), 1);
-  private final int unseqFileNumInEachLevel = Math
+  protected final int unseqFileNumInEachLevel = Math
       .max(IoTDBDescriptor.getInstance().getConfig().getUnseqFileNumInEachLevel(), 1);
 
-  private final boolean enableUnseqCompaction = IoTDBDescriptor.getInstance().getConfig()
+  protected final boolean enableUnseqCompaction = IoTDBDescriptor.getInstance().getConfig()
       .isEnableUnseqCompaction();
-  private final boolean isForceFullMerge = IoTDBDescriptor.getInstance().getConfig()
+  protected final boolean isForceFullMerge = IoTDBDescriptor.getInstance().getConfig()
       .isForceFullMerge();
   // First map is partition list; Second list is level list; Third list is file list in level;
-  private final Map<Long, List<SortedSet<TsFileResource>>> sequenceTsFileResources = new ConcurrentSkipListMap<>();
-  private final Map<Long, List<List<TsFileResource>>> unSequenceTsFileResources = new ConcurrentSkipListMap<>();
-  private final List<List<TsFileResource>> forkedSequenceTsFileResources = new ArrayList<>();
-  private final List<List<TsFileResource>> forkedUnSequenceTsFileResources = new ArrayList<>();
+  protected final Map<Long, List<SortedSet<TsFileResource>>> sequenceTsFileResources = new ConcurrentSkipListMap<>();
+  protected final Map<Long, List<List<TsFileResource>>> unSequenceTsFileResources = new ConcurrentSkipListMap<>();
+  protected final List<List<TsFileResource>> forkedSequenceTsFileResources = new ArrayList<>();
+  protected final List<List<TsFileResource>> forkedUnSequenceTsFileResources = new ArrayList<>();
 
   public LevelCompactionTsFileManagement(String storageGroupName, String storageGroupDir) {
     super(storageGroupName, storageGroupDir);
     clear();
   }
 
-  private void deleteLevelFilesInDisk(Collection<TsFileResource> mergeTsFiles) {
+  protected void deleteLevelFilesInDisk(Collection<TsFileResource> mergeTsFiles) {
     logger.debug("{} [compaction] merge starts to delete real file", storageGroupName);
     for (TsFileResource mergeTsFile : mergeTsFiles) {
       deleteLevelFile(mergeTsFile);
@@ -96,7 +95,7 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
     }
   }
 
-  private void deleteLevelFilesInList(long timePartitionId,
+  protected void deleteLevelFilesInList(long timePartitionId,
       Collection<TsFileResource> mergeTsFiles, int level, boolean sequence) {
     logger.debug("{} [compaction] merge starts to delete file list", storageGroupName);
     if (sequence) {
@@ -118,7 +117,7 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
     }
   }
 
-  private void deleteLevelFile(TsFileResource seqFile) {
+  protected void deleteLevelFile(TsFileResource seqFile) {
     seqFile.writeLock();
     try {
       ChunkMetadataCache.getInstance().remove(seqFile);
@@ -414,7 +413,7 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
     }
   }
 
-  private void deleteAllSubLevelFiles(boolean isSeq, long timePartition) {
+  protected void deleteAllSubLevelFiles(boolean isSeq, long timePartition) {
     if (isSeq) {
       for (int level = 0; level < sequenceTsFileResources.get(timePartition).size();
           level++) {
@@ -452,7 +451,7 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
     }
   }
 
-  private void forkTsFileList(
+  protected void forkTsFileList(
       List<List<TsFileResource>> forkedTsFileResources,
       List rawTsFileResources, int currMaxLevel, int currFileNumInEachLevel) {
     forkedTsFileResources.clear();
@@ -486,7 +485,7 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
   }
 
   @SuppressWarnings("squid:S3776")
-  private void merge(List<List<TsFileResource>> mergeResources, boolean sequence,
+  protected void merge(List<List<TsFileResource>> mergeResources, boolean sequence,
       long timePartition, int currMaxLevel, int currMaxFileNumInEachLevel) {
     // wait until unseq merge has finished
     while (isUnseqMerging) {
@@ -571,13 +570,13 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
   /**
    * if level < maxLevel-1, the file need compaction else, the file can be merged later
    */
-  private File createNewTsFileName(File sourceFile, int level) {
+  protected File createNewTsFileName(File sourceFile, int level) {
     String path = sourceFile.getAbsolutePath();
     String prefixPath = path.substring(0, path.lastIndexOf(FILE_NAME_SEPARATOR) + 1);
     return new File(prefixPath + level + TSFILE_SUFFIX);
   }
 
-  private List<SortedSet<TsFileResource>> newSequenceTsFileResources(Long k) {
+  protected List<SortedSet<TsFileResource>> newSequenceTsFileResources(Long k) {
     List<SortedSet<TsFileResource>> newSequenceTsFileResources = new CopyOnWriteArrayList<>();
     for (int i = 0; i < seqLevelNum; i++) {
       newSequenceTsFileResources.add(Collections.synchronizedSortedSet(new TreeSet<>(
@@ -596,7 +595,7 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
     return newSequenceTsFileResources;
   }
 
-  private List<List<TsFileResource>> newUnSequenceTsFileResources(Long k) {
+  protected List<List<TsFileResource>> newUnSequenceTsFileResources(Long k) {
     List<List<TsFileResource>> newUnSequenceTsFileResources = new CopyOnWriteArrayList<>();
     for (int i = 0; i < unseqLevelNum; i++) {
       newUnSequenceTsFileResources.add(new CopyOnWriteArrayList<>());
@@ -611,7 +610,7 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
     return Integer.parseInt(mergeLevelStr);
   }
 
-  private TsFileResource getTsFileResource(String filePath, boolean isSeq) throws IOException {
+  protected TsFileResource getTsFileResource(String filePath, boolean isSeq) throws IOException {
     if (isSeq) {
       for (List<SortedSet<TsFileResource>> tsFileResourcesWithLevel : sequenceTsFileResources
           .values()) {

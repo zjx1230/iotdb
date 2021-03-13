@@ -24,6 +24,7 @@ import java.io.File;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
+import org.apache.iotdb.db.engine.heavyhitter.QueryHitterStrategy;
 import org.apache.iotdb.db.engine.merge.selector.MergeFileStrategy;
 import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
 import org.apache.iotdb.db.exception.LoadConfigurationException;
@@ -310,6 +311,21 @@ public class IoTDBConfig {
    * LEVEL_COMPACTION, NO_COMPACTION
    */
   private CompactionStrategy compactionStrategy = CompactionStrategy.LEVEL_COMPACTION;
+
+  /**
+   * Query hitter strategy
+   */
+  private QueryHitterStrategy queryHitterStrategy = QueryHitterStrategy.DEFAULT_STRATEGY;
+
+  /**
+   * max query path hitter contains
+   */
+  private int maxHitterNum = 5000;
+
+  /**
+   * size ratio of the level merge
+   */
+  private int sizeRatio = 2;
 
   /**
    * Works when the compaction_strategy is LEVEL_COMPACTION.
@@ -1461,6 +1477,30 @@ public class IoTDBConfig {
     this.mergeFileStrategy = mergeFileStrategy;
   }
 
+  public QueryHitterStrategy getQueryHitterStrategy() {
+    return queryHitterStrategy;
+  }
+
+  public void setQueryHitterStrategy(
+      QueryHitterStrategy queryHitterStrategy) {
+    this.queryHitterStrategy = queryHitterStrategy;
+  }
+
+  public int getMaxHitterNum() {
+    return maxHitterNum;
+  }
+
+  public void setMaxHitterNum(int maxHitterNum) {
+    this.maxHitterNum = maxHitterNum;
+  }
+
+  public int getSizeRatio() {
+    return sizeRatio;
+  }
+
+  public void setSizeRatio(int sizeRatio) {
+    this.sizeRatio = sizeRatio;
+  }
 
   public CompactionStrategy getCompactionStrategy() {
     return compactionStrategy;
