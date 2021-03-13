@@ -33,6 +33,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
+import org.apache.iotdb.db.engine.heavyhitter.QueryHitterStrategy;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.utils.FilePathUtils;
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
@@ -335,6 +336,18 @@ public class IoTDBDescriptor {
       conf.setUnseqFileNumInEachLevel(Integer.parseInt(properties
           .getProperty("unseq_file_num_in_each_level",
               Integer.toString(conf.getUnseqFileNumInEachLevel()))));
+
+      conf.setQueryHitterStrategy(QueryHitterStrategy.valueOf(properties
+          .getProperty("query_hitter_strategy",
+              conf.getQueryHitterStrategy().toString())));
+
+      conf.setMaxHitterNum(Integer.parseInt(properties
+          .getProperty("max_hitter_num",
+              Integer.toString(conf.getMaxHitterNum()))));
+
+      conf.setSizeRatio(Integer.parseInt(properties
+          .getProperty("size_ratio",
+              Integer.toString(conf.getSizeRatio()))));
 
       conf.setSyncEnable(Boolean
           .parseBoolean(properties.getProperty("is_sync_enable",

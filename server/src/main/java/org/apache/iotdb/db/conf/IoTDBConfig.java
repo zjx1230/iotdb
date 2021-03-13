@@ -318,7 +318,7 @@ public class IoTDBConfig {
   private QueryHitterStrategy queryHitterStrategy = QueryHitterStrategy.DEFAULT_STRATEGY;
 
   /**
-   * max query path hitter contains
+   * max query paths hitter contains
    */
   private int maxHitterNum = 5000;
 
