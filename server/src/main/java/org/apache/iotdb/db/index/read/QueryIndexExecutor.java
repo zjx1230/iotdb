@@ -44,7 +44,7 @@ public class QueryIndexExecutor {
     this.queryProps = IndexUtils.toUpperCaseProps(queryIndexPlan.getProps());
     this.paths = queryIndexPlan.getPaths();
     this.alignedByTime = queryIndexPlan.isAlignedByTime();
-    this.paths.forEach(PartialPath::toLowerCase);
+    //    this.paths.forEach(PartialPath::toLowerCase);
     this.context = context;
   }
 

@@ -269,7 +269,7 @@ public class IoTDBConfig {
   /** index directory. */
   private String indexRootFolder = "data" + File.separator + "index";
 
-  private boolean enableIndexStat = true;
+  private boolean enableIndexStat = false;
 
   /** When a TsFile's file size (in byte) exceed this, the TsFile is forced closed. */
   private long tsFileSizeThreshold = 1L;

@@ -162,18 +162,20 @@ public abstract class IoTDBIndex {
     String statReport = IndexStatManager.provideReport();
 
     // TODO it's a temp trick!
-    if (IoTDBDescriptor.getInstance().getConfig().isEnableIndexStat() && res.isEmpty()) {
-      // add a fake line and result
-      TVList fake = TVListAllocator.getInstance().allocate(TSDataType.DOUBLE);
-      fake.putDouble(0, 0);
-      try {
-        res.add(new DistSeries(0, fake, new PartialPath("root.sg.fake.fake")));
-      } catch (IllegalPathException e) {
-        e.printStackTrace();
+    if (IoTDBDescriptor.getInstance().getConfig().isEnableIndexStat()) {
+      if (res.isEmpty()) {
+        // add a fake line and result
+        TVList fake = TVListAllocator.getInstance().allocate(TSDataType.DOUBLE);
+        fake.putDouble(0, 0);
+        try {
+          res.add(new DistSeries(0, fake, new PartialPath("root.sg.fake.fake")));
+        } catch (IllegalPathException e) {
+          e.printStackTrace();
+        }
       }
+      PartialPath hackPath = new PartialPath(res.get(0).partialPath);
+      res.get(0).partialPath = hackPath.concatNode(statReport);
     }
-    PartialPath hackPath = new PartialPath(res.get(0).partialPath);
-    res.get(0).partialPath = hackPath.concatNode(statReport);
     nMaxReturnSeries = Math.min(nMaxReturnSeries, res.size());
     for (int i = 0; i < nMaxReturnSeries; i++) {
       PartialPath series = res.get(i).partialPath;

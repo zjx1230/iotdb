@@ -406,6 +406,11 @@ public class IoTDBDescriptor {
           Boolean.parseBoolean(
               properties.getProperty("enable_index", Boolean.toString(conf.isEnableIndex()))));
 
+      conf.setEnableIndexStat(
+          Boolean.parseBoolean(
+              properties.getProperty(
+                  "enable_index_stat", Boolean.toString(conf.isEnableIndexStat()))));
+
       conf.setConcurrentIndexBuildThread(
           Integer.parseInt(
               properties.getProperty(

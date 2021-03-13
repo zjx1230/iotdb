@@ -239,7 +239,7 @@ public class ProtoIndexRouter implements IIndexRouter {
     if (unmodifiable) {
       throw new MetadataException("cannot add index to unmodifiable router");
     }
-    partialPath.toLowerCase();
+    //    partialPath.toLowerCase();
     // only the pair.left (indexType map) will be updated.
     lock.writeLock().lock();
     IndexType indexType = indexInfo.getIndexType();
@@ -316,7 +316,7 @@ public class ProtoIndexRouter implements IIndexRouter {
     if (unmodifiable) {
       throw new MetadataException("cannot remove index from unmodifiable router");
     }
-    partialPath.toLowerCase();
+    //    partialPath.toLowerCase();
     // only the pair.left (indexType map) will be updated.
     lock.writeLock().lock();
     // record the relationship between storage group and the index processors
