@@ -167,6 +167,9 @@ public class TimeSeriesMetadataCache {
           printCacheLog(false);
           List<TimeseriesMetadata> timeSeriesMetadataList = reader
               .readTimeseriesMetadata(path, allSensors);
+          if (timeSeriesMetadataList == null) {
+            return null;
+          }
           // put TimeSeriesMetadata of all sensors used in this query into cache
           lock.writeLock().lock();
           try {

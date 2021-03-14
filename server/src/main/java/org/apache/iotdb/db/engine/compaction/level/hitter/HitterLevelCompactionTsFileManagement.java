@@ -113,7 +113,8 @@ public class HitterLevelCompactionTsFileManagement extends LevelCompactionTsFile
             for (TsFileResource fileResource : toMergeTsFiles) {
               // remove cache
               ChunkMetadataCache.getInstance().remove(fileResource);
-              FileReaderManager.getInstance().closeFileAndRemoveReader(fileResource.getTsFilePath());
+              FileReaderManager.getInstance()
+                  .closeFileAndRemoveReader(fileResource.getTsFilePath());
 
               TsFileIOWriter oldFileWriter = getOldFileWriter(fileResource);
               // filter all the chunks that have been merged
@@ -144,20 +145,30 @@ public class HitterLevelCompactionTsFileManagement extends LevelCompactionTsFile
               historicalVersions.addAll(tsFileResource.getHistoricalVersions());
             }
             toMergeTsFiles.get(0).setHistoricalVersions(historicalVersions);
-            for (TsFileResource tsFileResource: toMergeTsFiles) {
+            // update start end time
+            for (Map.Entry<String, Integer> deviceIndexEntry : newResource
+                .getDeviceToIndexMap().entrySet()) {
+              toMergeTsFiles.get(0).updateStartTime(deviceIndexEntry.getKey(),
+                  newResource.getStartTime(deviceIndexEntry.getKey()));
+              toMergeTsFiles.get(0).updateEndTime(deviceIndexEntry.getKey(),
+                  newResource.getEndTime(deviceIndexEntry.getKey()));
+            }
+            for (TsFileResource tsFileResource : toMergeTsFiles) {
               // rename file
               File oldFile = tsFileResource.getTsFile();
               File newFile = createNewTsFileName(oldFile, i + 1);
               FSFactoryProducer.getFSFactory().moveFile(oldFile, newFile);
               FSFactoryProducer.getFSFactory().moveFile(
-                  FSFactoryProducer.getFSFactory().getFile(oldFile + TsFileResource.RESOURCE_SUFFIX),
-                  FSFactoryProducer.getFSFactory().getFile(newFile + TsFileResource.RESOURCE_SUFFIX));
+                  FSFactoryProducer.getFSFactory()
+                      .getFile(oldFile + TsFileResource.RESOURCE_SUFFIX),
+                  FSFactoryProducer.getFSFactory()
+                      .getFile(newFile + TsFileResource.RESOURCE_SUFFIX));
               tsFileResource.setFile(newFile);
               //
               tsFileResource.serialize();
               tsFileResource.close();
             }
-            for (TsFileIOWriter writer: writers){
+            for (TsFileIOWriter writer : writers) {
               writer.endFile();
             }
             newFileWriter.close();
