@@ -406,6 +406,11 @@ public class IoTDBDescriptor {
           Boolean.parseBoolean(
               properties.getProperty("enable_index", Boolean.toString(conf.isEnableIndex()))));
 
+      conf.setEnableIndexStat(
+          Boolean.parseBoolean(
+              properties.getProperty(
+                  "enable_index_stat", Boolean.toString(conf.isEnableIndexStat()))));
+
       conf.setConcurrentIndexBuildThread(
           Integer.parseInt(
               properties.getProperty(
@@ -435,6 +440,18 @@ public class IoTDBDescriptor {
       if (conf.getConcurrentQueryThread() <= 0) {
         conf.setConcurrentQueryThread(Runtime.getRuntime().availableProcessors());
       }
+
+      conf.setMaxIndexQueryResultSize(
+          Integer.parseInt(
+              properties.getProperty(
+                  "max_index_query_result_size",
+                  Integer.toString(conf.getMaxIndexQueryResultSize()))));
+
+      conf.setDefaultMaxSizeOfUnusableSegments(
+          Integer.parseInt(
+              properties.getProperty(
+                  "default_max_size_of_unusable_segments",
+                  Integer.toString(conf.getDefaultMaxSizeOfUnusableSegments()))));
 
       conf.setmManagerCacheSize(
           Integer.parseInt(
