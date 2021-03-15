@@ -56,20 +56,8 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
 
   int threadSize = 10;
 
-  private final LinkedBlockingQueue<Object>[] encodingTaskQueues =
-      new LinkedBlockingQueue[threadSize];
-  private LinkedBlockingQueue<Object>[] ioTaskQueues =
-      new LinkedBlockingQueue[threadSize]; // this initialization may be wasted.
-
-  {
-    for (int i = 0; i < threadSize; i++) {
-      ioTaskQueues[i] =
-          config.isEnableMemControl() && SystemInfo.getInstance().isEncodingFasterThanIo()
-              ? new LinkedBlockingQueue<>(config.getIoTaskQueueSizeForFlushing())
-              : new LinkedBlockingQueue<>();
-      encodingTaskQueues[i] = new LinkedBlockingQueue<>();
-    }
-  }
+  private final LinkedBlockingQueue<Object>[] encodingTaskQueues;
+  private LinkedBlockingQueue<Object>[] ioTaskQueues;
 
   private String storageGroup;
 
@@ -88,6 +76,19 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
     this.memTable = memTable;
     this.writer = writer;
     this.storageGroup = storageGroup;
+    if (threadSize > memTable.getChunkGroupNumber()) {
+      threadSize = memTable.getChunkGroupNumber();
+    }
+    this.encodingTaskQueues = new LinkedBlockingQueue[threadSize];
+    ioTaskQueues = new LinkedBlockingQueue[threadSize];
+    for (int i = 0; i < threadSize; i++) {
+      ioTaskQueues[i] =
+          config.isEnableMemControl() && SystemInfo.getInstance().isEncodingFasterThanIo()
+              ? new LinkedBlockingQueue<>(config.getIoTaskQueueSizeForFlushing())
+              : new LinkedBlockingQueue<>();
+      encodingTaskQueues[i] = new LinkedBlockingQueue<>();
+    }
+
     this.encodingTaskFutures = submitEncodingTasks();
     this.ioTaskFuture = SUB_TASK_POOL_MANAGER.submit(ioTask);
     LOGGER.debug(
@@ -372,7 +373,7 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
                 continue;
               }
               for (j = 0; j < threadSize % Byte.SIZE; j++) {
-                if ((finished[threadSize / Byte.SIZE] & BIT_UTIL[j]) != 1) {
+                if ((finished[threadSize / Byte.SIZE] & BIT_UTIL[j]) == 0) {
                   // not finished.
                   break;
                 }
@@ -424,5 +425,5 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
     }
   }
 
-  private static final short[] BIT_UTIL = new short[] {1, 2, 4, 8, 16, 32, 64, 0XFF};
+  private static final byte[] BIT_UTIL = new byte[] {1, 2, 4, 8, 16, 32, 64, -128};
 }

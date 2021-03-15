@@ -107,11 +107,17 @@ public class MemTableFlushTaskTest {
     }
   }
 
+  // @Test
+  public void test2() {
+    byte a = -128;
+    a &= 0XFF;
+    System.out.println(a);
+  }
+
   @Test
   public void test() throws ExecutionException, InterruptedException, IOException {
     IMemTableFlushTask task = new MultiThreadMemTableFlushTask(memTable, writer, "root.sg");
     task.syncFlushMemTable();
-    System.out.println("end file.....");
     writer.endFile();
     writer.close();
 

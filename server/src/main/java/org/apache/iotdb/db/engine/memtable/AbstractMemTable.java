@@ -208,6 +208,11 @@ public abstract class AbstractMemTable implements IMemTable {
   }
 
   @Override
+  public int getChunkGroupNumber() {
+    return memTableMap.size();
+  }
+
+  @Override
   public long getTotalPointsNum() {
     return totalPointsNum;
   }

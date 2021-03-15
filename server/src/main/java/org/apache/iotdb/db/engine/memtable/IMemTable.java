@@ -76,6 +76,8 @@ public interface IMemTable {
 
   int getSeriesNumber();
 
+  int getChunkGroupNumber();
+
   long getTotalPointsNum();
 
   void insert(InsertRowPlan insertRowPlan);
