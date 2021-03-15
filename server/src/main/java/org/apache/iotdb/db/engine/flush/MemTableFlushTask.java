@@ -42,7 +42,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class MemTableFlushTask {
+public class MemTableFlushTask implements IMemTableFlushTask {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(MemTableFlushTask.class);
   private static final FlushSubTaskPoolManager SUB_TASK_POOL_MANAGER =
@@ -84,6 +84,7 @@ public class MemTableFlushTask {
   }
 
   /** the function for flushing memtable. */
+  @Override
   public void syncFlushMemTable() throws ExecutionException, InterruptedException {
     LOGGER.info(
         "The memTable size of SG {} is {}, the avg series points num in chunk is {}, total timeseries number is {}",

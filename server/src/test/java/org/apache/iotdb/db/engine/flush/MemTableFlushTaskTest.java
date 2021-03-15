@@ -19,13 +19,6 @@
 
 package org.apache.iotdb.db.engine.flush;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import org.apache.iotdb.db.engine.memtable.IMemTable;
 import org.apache.iotdb.db.engine.memtable.PrimitiveMemTable;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
@@ -42,17 +35,23 @@ import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.apache.iotdb.tsfile.utils.Binary;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 import org.apache.iotdb.tsfile.write.writer.RestorableTsFileIOWriter;
-import org.apache.iotdb.tsfile.write.writer.TsFileIOWriter;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.concurrent.ExecutionException;
+
 public class MemTableFlushTaskTest {
   String filePath = "target/tsfile.tsfile";
   IMemTable memTable;
   RestorableTsFileIOWriter writer;
-  String[] devices = {"root.sg.d1", "root.sg.d2"};
+  String[] devices = {"root.sg.d1", "root.sg.d2", "root.sg.d3", "root.sg.d4", "root.sg.d5"};
   String[] sensors = {"s1", "s2", "s3"};
   Integer[] types = {
     (int) TSDataType.INT32.serialize(),
@@ -68,7 +67,7 @@ public class MemTableFlushTaskTest {
   @Before
   public void setUp() throws IllegalPathException, IOException {
     memTable = new PrimitiveMemTable();
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < devices.length; i++) {
       InsertTabletPlan plan =
           new InsertTabletPlan(new PartialPath(devices[i]), sensors, Arrays.asList(types));
       Object[] columns = new Object[3];
@@ -110,7 +109,7 @@ public class MemTableFlushTaskTest {
 
   @Test
   public void test() throws ExecutionException, InterruptedException, IOException {
-    MemTableFlushTask task = new MemTableFlushTask(memTable, writer, "root.sg");
+    IMemTableFlushTask task = new MultiThreadMemTableFlushTask(memTable, writer, "root.sg");
     task.syncFlushMemTable();
     System.out.println("end file.....");
     writer.endFile();
@@ -129,7 +128,10 @@ public class MemTableFlushTaskTest {
                   new Path("root.sg.d1.s3", true),
                   new Path("root.sg.d2.s1", true),
                   new Path("root.sg.d2.s2", true),
-                  new Path("root.sg.d2.s3", true)),
+                  new Path("root.sg.d2.s3", true),
+                  new Path("root.sg.d4.s1", true),
+                  new Path("root.sg.d4.s2", true),
+                  new Path("root.sg.d4.s3", true)),
               null);
       QueryDataSet set = reader.query(expression);
       int time = 1;
