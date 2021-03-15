@@ -444,7 +444,7 @@ public class InsertTabletPlan extends InsertPlan {
     this.columns = columns;
   }
 
-  public void setColumn(int index, Object column) {
+  private void setColumn(int index, Object column) {
     columns[index] = column;
   }
 
