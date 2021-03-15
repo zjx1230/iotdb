@@ -62,10 +62,12 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
       new LinkedBlockingQueue[threadSize]; // this initialization may be wasted.
 
   {
-    if (config.isEnableMemControl() && SystemInfo.getInstance().isEncodingFasterThanIo()) {
-      for (int i = 0; i < threadSize; i++) {
-        ioTaskQueues[i] = new LinkedBlockingQueue<>(config.getIoTaskQueueSizeForFlushing());
-      }
+    for (int i = 0; i < threadSize; i++) {
+      ioTaskQueues[i] =
+          config.isEnableMemControl() && SystemInfo.getInstance().isEncodingFasterThanIo()
+              ? new LinkedBlockingQueue<>(config.getIoTaskQueueSizeForFlushing())
+              : new LinkedBlockingQueue<>();
+      encodingTaskQueues[i] = new LinkedBlockingQueue<>();
     }
   }
 
