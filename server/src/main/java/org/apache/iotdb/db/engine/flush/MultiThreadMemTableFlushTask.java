@@ -54,7 +54,8 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
   private final Future<?> ioTaskFuture;
   private RestorableTsFileIOWriter writer;
 
-  int threadSize = 10;
+  int threadSize =
+      IoTDBDescriptor.getInstance().getConfig().getConcurrentEncodingTasksInOneMemtable();
 
   private final LinkedBlockingQueue<Object>[] encodingTaskQueues;
   private LinkedBlockingQueue<Object>[] ioTaskQueues;
@@ -152,6 +153,9 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
         // any failed encoding task will rollback the whole task
         for (LinkedBlockingQueue encodingTaskQueue : encodingTaskQueues) {
           encodingTaskQueue.clear();
+        }
+        for (Future future : encodingTaskFutures) {
+          future.cancel(true);
         }
         ioTaskFuture.cancel(true);
         throw e;
@@ -343,7 +347,7 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
                   // means the queue is done
                   continue;
                 }
-                ioMessage = ioTaskQueues[i].poll(10, TimeUnit.MILLISECONDS);
+                ioMessage = ioTaskQueues[i].poll(5, TimeUnit.MILLISECONDS);
               }
             } else {
               ioMessage = ioTaskQueues[i].take();

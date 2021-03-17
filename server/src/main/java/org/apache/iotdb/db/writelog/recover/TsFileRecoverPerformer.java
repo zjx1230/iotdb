@@ -20,7 +20,8 @@
 package org.apache.iotdb.db.writelog.recover;
 
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
-import org.apache.iotdb.db.engine.flush.MemTableFlushTask;
+import org.apache.iotdb.db.engine.flush.IMemTableFlushTask;
+import org.apache.iotdb.db.engine.flush.MultiThreadMemTableFlushTask;
 import org.apache.iotdb.db.engine.memtable.IMemTable;
 import org.apache.iotdb.db.engine.memtable.PrimitiveMemTable;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
@@ -217,8 +218,8 @@ public class TsFileRecoverPerformer {
     try {
       if (!recoverMemTable.isEmpty()) {
         // flush logs
-        MemTableFlushTask tableFlushTask =
-            new MemTableFlushTask(
+        IMemTableFlushTask tableFlushTask =
+            new MultiThreadMemTableFlushTask(
                 recoverMemTable,
                 restorableTsFileIOWriter,
                 tsFileResource.getTsFile().getParentFile().getParentFile().getName());

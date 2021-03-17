@@ -26,7 +26,8 @@ import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.flush.CloseFileListener;
 import org.apache.iotdb.db.engine.flush.FlushListener;
 import org.apache.iotdb.db.engine.flush.FlushManager;
-import org.apache.iotdb.db.engine.flush.MemTableFlushTask;
+import org.apache.iotdb.db.engine.flush.IMemTableFlushTask;
+import org.apache.iotdb.db.engine.flush.MultiThreadMemTableFlushTask;
 import org.apache.iotdb.db.engine.flush.NotifyFlushMemTable;
 import org.apache.iotdb.db.engine.memtable.IMemTable;
 import org.apache.iotdb.db.engine.memtable.PrimitiveMemTable;
@@ -774,8 +775,11 @@ public class TsFileProcessor {
     if (!memTableToFlush.isSignalMemTable()) {
       try {
         writer.mark();
-        MemTableFlushTask flushTask =
-            new MemTableFlushTask(memTableToFlush, writer, storageGroupName);
+        IMemTableFlushTask flushTask =
+            // config.getConcurrentEncodingTasksInOneMemtable() == 1
+            //  ? new MemTableFlushTask(memTableToFlush, writer, storageGroupName)
+            //        :
+            new MultiThreadMemTableFlushTask(memTableToFlush, writer, storageGroupName);
         flushTask.syncFlushMemTable();
       } catch (Exception e) {
         if (writer == null) {

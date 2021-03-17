@@ -20,6 +20,7 @@ package org.apache.iotdb.db.engine.memtable;
 
 import org.apache.iotdb.db.constant.TestConstant;
 import org.apache.iotdb.db.engine.MetadataManagerHelper;
+import org.apache.iotdb.db.engine.flush.IMemTableFlushTask;
 import org.apache.iotdb.db.engine.flush.MemTableFlushTask;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.tsfile.file.metadata.ChunkMetadata;
@@ -69,7 +70,7 @@ public class MemTableFlushTaskTest {
         MemTableTestUtils.deviceId0,
         MemTableTestUtils.measurementId0,
         MemTableTestUtils.dataType0);
-    MemTableFlushTask memTableFlushTask = new MemTableFlushTask(memTable, writer, storageGroup);
+    IMemTableFlushTask memTableFlushTask = new MemTableFlushTask(memTable, writer, storageGroup);
     assertTrue(
         writer
             .getVisibleMetadataList(

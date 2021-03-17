@@ -640,6 +640,9 @@ public class IoTDBConfig {
   /** the size of ioTaskQueue */
   private int ioTaskQueueSizeForFlushing = 10;
 
+  /** the maximal concurrent encoding tasks in a memtable flushing task */
+  private int concurrentEncodingTasksInOneMemtable = 2;
+
   /** the number of virtual storage groups per user-defined storage group */
   private int virtualStorageGroupNum = 1;
 
@@ -2080,5 +2083,13 @@ public class IoTDBConfig {
 
   public void setIoTaskQueueSizeForFlushing(int ioTaskQueueSizeForFlushing) {
     this.ioTaskQueueSizeForFlushing = ioTaskQueueSizeForFlushing;
+  }
+
+  public int getConcurrentEncodingTasksInOneMemtable() {
+    return concurrentEncodingTasksInOneMemtable;
+  }
+
+  public void setConcurrentEncodingTasksInOneMemtable(int concurrentEncodingTasksInOneMemtable) {
+    this.concurrentEncodingTasksInOneMemtable = concurrentEncodingTasksInOneMemtable;
   }
 }
