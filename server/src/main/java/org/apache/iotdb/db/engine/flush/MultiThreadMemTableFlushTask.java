@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -50,22 +51,19 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
       FlushSubTaskPoolManager.getInstance();
   private static IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
   // we have multiple thread to do the encoding Task.
-  private Future<?>[] encodingTaskFutures;
-  private final Future<?> ioTaskFuture;
+  private Future<Long>[] encodingTaskFutures;
+  private final Future<Long> ioTaskFuture;
   private RestorableTsFileIOWriter writer;
 
   int threadSize =
       IoTDBDescriptor.getInstance().getConfig().getConcurrentEncodingTasksInOneMemtable();
 
-  private final LinkedBlockingQueue<Object>[] encodingTaskQueues;
+  private LinkedBlockingQueue<Object>[] encodingTaskQueues;
   private LinkedBlockingQueue<Object>[] ioTaskQueues;
 
   private String storageGroup;
 
   private IMemTable memTable;
-
-  private volatile long memSerializeTime = 0L;
-  private volatile long ioTime = 0L;
 
   /**
    * @param memTable the memTable to flush
@@ -82,12 +80,20 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
     }
     this.encodingTaskQueues = new LinkedBlockingQueue[threadSize];
     ioTaskQueues = new LinkedBlockingQueue[threadSize];
-    for (int i = 0; i < threadSize; i++) {
-      ioTaskQueues[i] =
-          config.isEnableMemControl() && SystemInfo.getInstance().isEncodingFasterThanIo()
-              ? new LinkedBlockingQueue<>(config.getIoTaskQueueSizeForFlushing())
-              : new LinkedBlockingQueue<>();
-      encodingTaskQueues[i] = new LinkedBlockingQueue<>();
+    if (config.isEnableMemControl() && SystemInfo.getInstance().isEncodingFasterThanIo()) {
+      LOGGER.debug(
+          "Encoding is faster than IO, will limit the size of Encoding queue as {}",
+          config.getIoTaskQueueSizeForFlushing());
+      for (int i = 0; i < threadSize; i++) {
+        ioTaskQueues[i] = new LinkedBlockingQueue<>(config.getIoTaskQueueSizeForFlushing());
+        encodingTaskQueues[i] = new LinkedBlockingQueue<>();
+      }
+    } else {
+      LOGGER.debug("Encoding is slower than IO, will do not limit the size of Encoding queue");
+      for (int i = 0; i < threadSize; i++) {
+        ioTaskQueues[i] = new LinkedBlockingQueue<>();
+        encodingTaskQueues[i] = new LinkedBlockingQueue<>();
+      }
     }
 
     this.encodingTaskFutures = submitEncodingTasks();
@@ -111,8 +117,17 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
     long estimatedTemporaryMemSize = 0L;
     if (config.isEnableMemControl() && SystemInfo.getInstance().isEncodingFasterThanIo()) {
       estimatedTemporaryMemSize =
-          memTable.memSize() / memTable.getSeriesNumber() * config.getIoTaskQueueSizeForFlushing();
+          memTable.memSize()
+              / memTable.getSeriesNumber()
+              * threadSize
+              * config.getIoTaskQueueSizeForFlushing();
+      // memTable.memSize() / memTable.getSeriesNumber() * config.getIoTaskQueueSizeForFlushing();
       SystemInfo.getInstance().applyTemporaryMemoryForFlushing(estimatedTemporaryMemSize);
+      LOGGER.debug(
+          "Assign {} KB memory to the flushing task. SG {}, file {}",
+          estimatedTemporaryMemSize / 1024,
+          storageGroup,
+          writer.getFile().getName());
     }
     long start = System.currentTimeMillis();
     long sortTime = 0;
@@ -145,10 +160,10 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
         storageGroup,
         writer.getFile().getName(),
         sortTime);
-
-    for (Future encodingTaskFuture : encodingTaskFutures) {
+    long memSerializeTime = 0;
+    for (Future<Long> encodingTaskFuture : encodingTaskFutures) {
       try {
-        encodingTaskFuture.get();
+        memSerializeTime += encodingTaskFuture.get();
       } catch (InterruptedException | ExecutionException e) {
         // any failed encoding task will rollback the whole task
         for (LinkedBlockingQueue encodingTaskQueue : encodingTaskQueues) {
@@ -161,8 +176,9 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
         throw e;
       }
     }
+    memSerializeTime /= threadSize;
 
-    ioTaskFuture.get();
+    long ioTime = ioTaskFuture.get();
 
     try {
       writer.writePlanIndices();
@@ -193,10 +209,13 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
     return futures;
   }
 
-  class EncodingTask implements Runnable {
+  class EncodingTask implements Callable<Long> {
     LinkedBlockingQueue<Object> encodingTaskQueue;
     LinkedBlockingQueue<Object> ioTaskQueue;
     int threadNumber;
+
+    long consume = 0;
+    long memSerializeTime = 0;
 
     EncodingTask(
         int threadNumber,
@@ -250,17 +269,22 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
 
     @SuppressWarnings("squid:S135")
     @Override
-    public void run() {
+    public Long call() {
       LOGGER.debug(
           "Storage group {} memtable flushing to file {} starts to encoding data (Thread #{}).",
           storageGroup,
           writer.getFile().getName(),
           threadNumber);
+      long encodingQueueTakeTime = 0, ioEnqueueTime = 0;
+      int totalTask = 0;
+      long st = 0; // temporary vairable
       while (true) {
 
         Object task = null;
+        st = System.currentTimeMillis();
         try {
           task = encodingTaskQueue.take();
+          encodingQueueTakeTime += System.currentTimeMillis() - st;
         } catch (InterruptedException e1) {
           LOGGER.error(
               "Storage group {}, file {}, Take task from encodingTaskQueue Interrupted (Thread #{})",
@@ -272,7 +296,10 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
         }
         if (task instanceof StartFlushGroupIOTask || task instanceof EndChunkGroupIoTask) {
           try {
+            st = System.currentTimeMillis();
             ioTaskQueue.put(task);
+            ioEnqueueTime += System.currentTimeMillis() - st;
+            totalTask++; // TODO
           } catch (
               @SuppressWarnings("squid:S2142")
               InterruptedException e) {
@@ -293,8 +320,12 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
           writeOneSeries(encodingMessage.left, seriesWriter, encodingMessage.right.getType());
           seriesWriter.sealCurrentPage();
           seriesWriter.clearPageWriter();
+          consume += System.currentTimeMillis() - starTime;
+          totalTask++; // TODO
           try {
+            st = System.currentTimeMillis();
             ioTaskQueue.put(seriesWriter);
+            ioEnqueueTime += System.currentTimeMillis() - st;
           } catch (InterruptedException e) {
             LOGGER.error("Put task into ioTaskQueue Interrupted");
             Thread.currentThread().interrupt();
@@ -303,29 +334,40 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
         }
       }
       try {
+        st = System.currentTimeMillis();
         ioTaskQueue.put(new TaskEnd());
+        ioEnqueueTime += System.currentTimeMillis() - st;
       } catch (InterruptedException e) {
         LOGGER.error("Put task into ioTaskQueue Interrupted");
         Thread.currentThread().interrupt();
       }
 
       LOGGER.debug(
-          "Storage group {}, flushing memtable {} into disk: (Thread #{}) Encoding data cost "
-              + "{} ms.",
+          "Storage group {}, flushing memtable {} (size {} KB) into disk: (Thread #{}) Taking task "
+              + "from Encoding queue time {} ms, Enqueue IO task queue takes {} ms, Encoding data cost "
+              + "{} ms. real consume time {} ms. total task {}",
           storageGroup,
           writer.getFile().getName(),
+          memTable.memSize() / 1024,
           threadNumber,
-          memSerializeTime);
+          encodingQueueTakeTime,
+          ioEnqueueTime,
+          memSerializeTime,
+          consume,
+          totalTask);
+      return memSerializeTime;
     }
   }
 
   @SuppressWarnings("squid:S135")
-  private Runnable ioTask =
+  private Callable ioTask =
       () -> {
+        int totalTasks = 0;
         LOGGER.debug(
             "Storage group {} memtable flushing to file {} start io.",
             storageGroup,
             writer.getFile().getName());
+        long ioTime = 0;
         int i = -1;
         // whether the IO task is writing a new ChunkGroup.
         // if true, then we can choose task from any queue.
@@ -343,6 +385,8 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
               while (ioMessage == null) {
                 // round robin strategy to get a task.
                 i = (i + 1) % threadSize;
+                // each Byte.SIZE thread takes one byte. So task i is in finished[i/Byte.SIZE].
+                // i%Byte.SIZE is the position that i in fisnished[i/Byte.SIZE]
                 if ((finished[i / Byte.SIZE] & BIT_UTIL[i % Byte.SIZE]) == 1) {
                   // means the queue is done
                   continue;
@@ -362,13 +406,14 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
             if (ioMessage instanceof StartFlushGroupIOTask) {
               isNew = false;
               this.writer.startChunkGroup(((StartFlushGroupIOTask) ioMessage).deviceId);
+              totalTasks++; // TODO
             } else if (ioMessage instanceof TaskEnd) {
               // queue i is finished
               finished[i / Byte.SIZE] |= BIT_UTIL[i % Byte.SIZE];
               // check whether if all queues are finished.
               int j;
               for (j = 0; j < threadSize / Byte.SIZE; j++) {
-                if (finished[j] != 0XFF) {
+                if (finished[j] != (byte) 0XFF) {
                   // not finished.
                   break;
                 }
@@ -390,11 +435,13 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
             } else if (ioMessage instanceof IChunkWriter) {
               ChunkWriterImpl chunkWriter = (ChunkWriterImpl) ioMessage;
               chunkWriter.writeToFileWriter(this.writer);
+              totalTasks++; // TODO
             } else {
               this.writer.setMinPlanIndex(memTable.getMinPlanIndex());
               this.writer.setMaxPlanIndex(memTable.getMaxPlanIndex());
               this.writer.endChunkGroup();
               isNew = true;
+              totalTasks++; // TODO
             }
           } catch (IOException e) {
             LOGGER.error(
@@ -404,10 +451,12 @@ public class MultiThreadMemTableFlushTask implements IMemTableFlushTask {
           ioTime += System.currentTimeMillis() - starTime;
         }
         LOGGER.debug(
-            "flushing a memtable to file {} in storage group {}, io cost {}ms",
+            "flushing a memtable to file {} in storage group {}, io cost {}ms. TotalTask {}",
             writer.getFile().getName(),
             storageGroup,
-            ioTime);
+            ioTime,
+            totalTasks);
+        return ioTime;
       };
 
   static class TaskEnd {

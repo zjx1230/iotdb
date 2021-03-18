@@ -19,13 +19,28 @@
 
 package org.apache.iotdb.db.engine.flush;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.concurrent.Callable;
+import java.util.concurrent.LinkedBlockingQueue;
+import org.apache.iotdb.db.conf.IoTDBConfig;
+import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.engine.flush.MultiThreadMemTableFlushTask.EncodingTask;
+import org.apache.iotdb.db.engine.flush.MultiThreadMemTableFlushTask.EndChunkGroupIoTask;
+import org.apache.iotdb.db.engine.flush.MultiThreadMemTableFlushTask.StartFlushGroupIOTask;
+import org.apache.iotdb.db.engine.flush.MultiThreadMemTableFlushTask.TaskEnd;
 import org.apache.iotdb.db.engine.memtable.IMemTable;
 import org.apache.iotdb.db.engine.memtable.PrimitiveMemTable;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.metadata.mnode.MeasurementMNode;
 import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
+import org.apache.iotdb.db.utils.datastructure.TVList;
+import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.read.ReadOnlyTsFile;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Path;
@@ -33,6 +48,9 @@ import org.apache.iotdb.tsfile.read.common.RowRecord;
 import org.apache.iotdb.tsfile.read.expression.QueryExpression;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.apache.iotdb.tsfile.utils.Binary;
+import org.apache.iotdb.tsfile.utils.Pair;
+import org.apache.iotdb.tsfile.write.chunk.ChunkWriterImpl;
+import org.apache.iotdb.tsfile.write.chunk.IChunkWriter;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 import org.apache.iotdb.tsfile.write.writer.RestorableTsFileIOWriter;
 
@@ -46,8 +64,21 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MemTableFlushTaskTest {
+
+  LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
+
+  {
+    loggerContext
+        .getLogger("org.apache.iotdb.db.engine.flush.MultiThreadMemTableFlushTask")
+        .setLevel(Level.valueOf("trace"));
+  }
+
+  Logger LOGGER = LoggerFactory.getLogger(MemTableFlushTaskTest.class);
+
   String filePath = "target/tsfile.tsfile";
   IMemTable memTable;
   RestorableTsFileIOWriter writer;
@@ -107,11 +138,70 @@ public class MemTableFlushTaskTest {
     }
   }
 
-  // @Test
+  @Test
+  public void testLarge()
+      throws IllegalPathException, ExecutionException, InterruptedException, IOException {
+
+    IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
+    config.setConcurrentEncodingTasksInOneMemtable(10);
+    config.setEnableMemControl(true);
+    config.setIoTaskQueueSizeForFlushing(2000);
+    // config.setAllocateMemoryForWrite(1024 * 1024);
+    // config.setRejectProportion(0.2);
+
+    String[] sensors = {"s1", "s2"};
+    Integer[] types = {(int) TSDataType.INT32.serialize(), (int) TSDataType.DOUBLE.serialize()};
+    MeasurementMNode[] nodes = {
+      new MeasurementMNode(
+          null,
+          "s1",
+          new MeasurementSchema("s1", TSDataType.INT32, TSEncoding.RLE, CompressionType.SNAPPY),
+          null),
+      new MeasurementMNode(
+          null,
+          "s2",
+          new MeasurementSchema("s2", TSDataType.DOUBLE, TSEncoding.RLE, CompressionType.SNAPPY),
+          null),
+    };
+    String[] devices = new String[10];
+    for (int i = 0; i < 10; i++) {
+      devices[i] = "root.sg.d" + i;
+    }
+    for (int flush = 0; flush < 100; flush++) {
+      for (int loop = 0; loop < 10; loop++) {
+        for (int i = 0; i < devices.length; i++) {
+          InsertTabletPlan plan =
+              new InsertTabletPlan(new PartialPath(devices[i]), sensors, Arrays.asList(types));
+          Object[] columns = new Object[2];
+          int size = 100_000;
+          columns[0] = new int[size];
+          columns[1] = new double[size];
+          long[] times = new long[size];
+          for (int j = 0; j < size; j++) {
+            ((int[]) columns[0])[j] = loop * size + j;
+            ((double[]) columns[1])[j] = loop * size + j;
+            times[j] = loop * size + j;
+          }
+          plan.setColumns(columns);
+          plan.setTimes(times);
+          plan.setMeasurements(sensors);
+          plan.setMeasurementMNodes(nodes);
+          memTable.write(plan, 0, size);
+        }
+      }
+      IMemTableFlushTask task = new MultiThreadMemTableFlushTask(memTable, writer, "root.sg");
+      task.syncFlushMemTable();
+      memTable.clear();
+    }
+    writer.endFile();
+    writer.close();
+  }
+
+  @Test
   public void test2() {
-    byte a = -128;
-    a &= 0XFF;
-    System.out.println(a);
+    byte[] bits = new byte[] {1, 2, 4, 8, 16, 32, 64, -128};
+    byte a1 = (byte) 0X80;
+    System.out.println(a1);
   }
 
   @Test
