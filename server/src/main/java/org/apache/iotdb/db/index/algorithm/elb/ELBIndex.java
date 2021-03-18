@@ -415,9 +415,12 @@ public class ELBIndex extends IoTDBIndex {
           cannotPruned.minusUsableRange(indexSeries, startTime, endTime);
         }
       }
-      System.out.println(String.format("========== elb prune: %d/%d=%.3f", cannotPrunedCount,
-          windowBlockFeatures.size() - struct.blockNum + 1,
-          (double) cannotPrunedCount / (windowBlockFeatures.size() - struct.blockNum)));
+      System.out.println(
+          String.format(
+              "========== elb prune: %d/%d=%.3f",
+              cannotPrunedCount,
+              windowBlockFeatures.size() - struct.blockNum + 1,
+              (double) cannotPrunedCount / (windowBlockFeatures.size() - struct.blockNum)));
     }
     return ((SubMatchIndexUsability) cannotPruned).getUnusableRange();
   }

@@ -26,7 +26,7 @@ public class DistSeries {
   public double dist;
   public TVList tvList;
   public PartialPath partialPath;
-  public double backDist= Double.NaN;
+  public double backDist = Double.NaN;
 
   public DistSeries(double dist, TVList tvList, PartialPath partialPath) {
     this.dist = dist;

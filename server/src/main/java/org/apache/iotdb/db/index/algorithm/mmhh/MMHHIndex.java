@@ -18,7 +18,6 @@
  */
 package org.apache.iotdb.db.index.algorithm.mmhh;
 
-import java.util.Comparator;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
@@ -59,6 +58,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -140,9 +140,7 @@ public class MMHHIndex extends IoTDBIndex {
     return res;
   }
 
-  /**
-   * should be concise into WholeIndex or IoTDBIndex, it's duplicate
-   */
+  /** should be concise into WholeIndex or IoTDBIndex, it's duplicate */
   public void endFlushTask() {
     super.endFlushTask();
     currentInsertPath = null;
@@ -214,9 +212,7 @@ public class MMHHIndex extends IoTDBIndex {
 
   private static class MMHHQueryStruct {
 
-    /**
-     * features is represented by float array
-     */
+    /** features is represented by float array */
     //    float[] patternFeatures;
     //    TriFunction<float[], float[], float[], Double> calcLowerDistFunc;
     //
@@ -372,9 +368,7 @@ public class MMHHIndex extends IoTDBIndex {
     return res;
   }
 
-  /**
-   * if res has reached topK
-   */
+  /** if res has reached topK */
   private boolean scanBucket(
       long queryCode,
       int doneIdx,
