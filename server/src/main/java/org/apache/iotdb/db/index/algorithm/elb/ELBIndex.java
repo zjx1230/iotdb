@@ -394,6 +394,7 @@ public class ELBIndex extends IoTDBIndex {
           windowBlockFeatures.get(0).startTime,
           windowBlockFeatures.get(wbfSize - struct.blockNum).endTime);
       // pruning
+      int cannotPrunedCount = 0;
       for (int i = 0; i <= windowBlockFeatures.size() - struct.blockNum; i++) {
         boolean canBePruned = false;
         for (int j = 0; j < struct.blockNum; j++) {
@@ -403,7 +404,9 @@ public class ELBIndex extends IoTDBIndex {
             break;
           }
         }
+
         if (!canBePruned) {
+          cannotPrunedCount++;
           // update range
           long startTime = windowBlockFeatures.get(i).startTime;
           int endIdx = i + struct.blockNum + (struct.pattern.length % blockWidth == 0 ? 0 : 1);
@@ -412,6 +415,9 @@ public class ELBIndex extends IoTDBIndex {
           cannotPruned.minusUsableRange(indexSeries, startTime, endTime);
         }
       }
+      System.out.println(String.format("========== elb prune: %d/%d=%.3f", cannotPrunedCount,
+          windowBlockFeatures.size() - struct.blockNum + 1,
+          (double) cannotPrunedCount / (windowBlockFeatures.size() - struct.blockNum)));
     }
     return ((SubMatchIndexUsability) cannotPruned).getUnusableRange();
   }

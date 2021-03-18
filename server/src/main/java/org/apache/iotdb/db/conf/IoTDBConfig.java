@@ -644,7 +644,7 @@ public class IoTDBConfig {
   /** the number of virtual storage groups per user-defined storage group */
   private int virtualStorageGroupNum = 1;
 
-  private int maxIndexQueryResultSize = 5;
+  private int maxIndexQueryResultSize = 20;
 
   public IoTDBConfig() {
     // empty constructor

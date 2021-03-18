@@ -18,6 +18,7 @@
  */
 package org.apache.iotdb.db.index.algorithm.mmhh;
 
+import java.util.Comparator;
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
@@ -28,6 +29,7 @@ import org.apache.iotdb.db.index.algorithm.rtree.RTree.DistSeriesComparator;
 import org.apache.iotdb.db.index.common.DistSeries;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexUtils;
+import org.apache.iotdb.db.index.common.distance.LNormDouble;
 import org.apache.iotdb.db.index.feature.IndexFeatureExtractor;
 import org.apache.iotdb.db.index.read.optimize.IIndexCandidateOrderOptimize;
 import org.apache.iotdb.db.index.stats.IndexStatManager;
@@ -138,7 +140,9 @@ public class MMHHIndex extends IoTDBIndex {
     return res;
   }
 
-  /** should be concise into WholeIndex or IoTDBIndex, it's duplicate */
+  /**
+   * should be concise into WholeIndex or IoTDBIndex, it's duplicate
+   */
   public void endFlushTask() {
     super.endFlushTask();
     currentInsertPath = null;
@@ -210,7 +214,9 @@ public class MMHHIndex extends IoTDBIndex {
 
   private static class MMHHQueryStruct {
 
-    /** features is represented by float array */
+    /**
+     * features is represented by float array
+     */
     //    float[] patternFeatures;
     //    TriFunction<float[], float[], float[], Double> calcLowerDistFunc;
     //
@@ -340,6 +346,7 @@ public class MMHHIndex extends IoTDBIndex {
     }
 
     MMHHQueryStruct struct = initQuery(queryProps);
+    this.tempQueryStruct = struct;
     long featureStart = System.nanoTime();
     Long queryCode = mmhhFeatureExtractor.processQuery(struct.patterns);
     IndexStatManager.featureExtractCost += System.nanoTime() - featureStart;
@@ -365,7 +372,9 @@ public class MMHHIndex extends IoTDBIndex {
     return res;
   }
 
-  /** if res has reached topK */
+  /**
+   * if res has reached topK
+   */
   private boolean scanBucket(
       long queryCode,
       int doneIdx,
@@ -381,10 +390,9 @@ public class MMHHIndex extends IoTDBIndex {
         List<Long> bucket = hashLookupTable.get(queryCode);
         for (Long seriesId : bucket) {
           res.add(readRawData(maxIdx, seriesId, loadSeriesFunc));
-          if (res.size() == topK) {
-            return true;
-          }
         }
+        sortByEd(res);
+        return res.size() == topK;
       }
     } else {
       for (int doIdx = startIdx; doIdx <= hashLength - (maxIdx - doneIdx); doIdx++) {
@@ -400,6 +408,19 @@ public class MMHHIndex extends IoTDBIndex {
       }
     }
     return false;
+  }
+
+  private MMHHQueryStruct tempQueryStruct;
+
+  private void sortByEd(List<DistSeries> resList) {
+    LNormDouble norm2 = new LNormDouble(2);
+    for (DistSeries ds : resList) {
+      if (Double.isNaN(ds.backDist)) {
+        ds.backDist = norm2.dist(tempQueryStruct.patterns, 0, ds.tvList, 0, ds.tvList.size());
+      }
+    }
+    resList.sort(Comparator.comparingDouble(o -> o.backDist));
+    resList.subList(tempQueryStruct.topK, resList.size()).clear();
   }
 
   private long reverseBit(long hashCode, int idx) {
