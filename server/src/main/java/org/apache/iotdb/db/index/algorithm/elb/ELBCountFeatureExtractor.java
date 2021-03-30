@@ -35,7 +35,7 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
  * <p>Refer to: Kang R, et al. Matching Consecutive Subpatterns over Streaming Time Series[C]
  * APWeb-WAIM Joint International Conference. Springer, Cham, 2018: 90-105.
  */
-public class ELBCountMatchFeatureExtractor extends CountFixedFeatureExtractor {
+public class ELBCountFeatureExtractor extends CountFixedFeatureExtractor {
 
   //  private final int blockNum;
   private final int blockWidth;
@@ -52,7 +52,7 @@ public class ELBCountMatchFeatureExtractor extends CountFixedFeatureExtractor {
    * <p>A block contains {@code L/b} points. {@code b} blocks cover adjacent {@code L/b} sliding
    * windows.
    */
-  public ELBCountMatchFeatureExtractor(
+  public ELBCountFeatureExtractor(
       TSDataType tsDataType,
       int windowRange,
       int blockWidth,

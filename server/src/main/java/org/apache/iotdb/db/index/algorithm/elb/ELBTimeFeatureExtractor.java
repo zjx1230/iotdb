@@ -38,23 +38,23 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
  *
  * Temp
  */
-public class ELBTimeMatchFeatureExtractor extends TimeFixedFeatureExtractor {
+public class ELBTimeFeatureExtractor extends TimeFixedFeatureExtractor {
 
 
-  public ELBTimeMatchFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
+  public ELBTimeFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
       int alignedDim, long timeAnchor, boolean storeIdentifier, boolean storeAligned,
       boolean inQueryMode) {
     super(tsDataType, windowRange, slideStep, alignedDim, timeAnchor, storeIdentifier, storeAligned,
         inQueryMode);
   }
 
-  public ELBTimeMatchFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
+  public ELBTimeFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
       int alignedDim, long timeAnchor, boolean storeIdentifier, boolean storeAligned) {
     super(tsDataType, windowRange, slideStep, alignedDim, timeAnchor, storeIdentifier,
         storeAligned);
   }
 
-  public ELBTimeMatchFeatureExtractor(TSDataType tsDataType, int windowRange, int alignedDim,
+  public ELBTimeFeatureExtractor(TSDataType tsDataType, int windowRange, int alignedDim,
       int slideStep, long timeAnchor) {
     super(tsDataType, windowRange, alignedDim, slideStep, timeAnchor);
   }

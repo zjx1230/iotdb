@@ -102,7 +102,7 @@ public class ELBIndex extends IoTDBIndex {
   private final Logger logger = LoggerFactory.getLogger(ELBIndex.class);
   private ELBType elbType;
 
-  private ELBCountMatchFeatureExtractor elbMatchPreprocessor;
+  private ELBCountFeatureExtractor elbMatchPreprocessor;
   private List<ELBWindowBlockFeature> windowBlockFeatures;
 
   private int blockWidth;
@@ -142,7 +142,7 @@ public class ELBIndex extends IoTDBIndex {
       }
     }
     this.elbMatchPreprocessor =
-        new ELBCountMatchFeatureExtractor(tsDataType, -1, blockWidth, elbType, inQueryMode);
+        new ELBCountFeatureExtractor(tsDataType, -1, blockWidth, elbType, inQueryMode);
     this.indexFeatureExtractor = elbMatchPreprocessor;
     elbMatchPreprocessor.deserializePrevious(previous);
   }
@@ -221,8 +221,8 @@ public class ELBIndex extends IoTDBIndex {
               null,
               null,
               true);
-      ELBCountMatchFeatureExtractor featureExtractor =
-          new ELBCountMatchFeatureExtractor(
+      ELBCountFeatureExtractor featureExtractor =
+          new ELBCountFeatureExtractor(
               tsDataType, struct.pattern.length, blockWidth, elbType, true);
       while (reader.hasNextBatch()) {
         BatchData batch = reader.nextBatch();
@@ -290,8 +290,8 @@ public class ELBIndex extends IoTDBIndex {
                 null,
                 null,
                 true);
-        ELBCountMatchFeatureExtractor featureExtractor =
-            new ELBCountMatchFeatureExtractor(
+        ELBCountFeatureExtractor featureExtractor =
+            new ELBCountFeatureExtractor(
                 tsDataType, struct.pattern.length, blockWidth, elbType, true);
         while (reader.hasNextBatch()) {
           BatchData batch = reader.nextBatch();
