@@ -19,7 +19,9 @@
 
 package org.apache.iotdb.db.engine.heavyhitter.hitter;
 
+import java.util.ArrayList;
 import java.util.List;
+import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.heavyhitter.QueryHeavyHitters;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.metadata.MManager;
@@ -49,6 +51,14 @@ public class DefaultHitter implements QueryHeavyHitters {
     if (devicePaths.size() > 0) {
       String deviceName = devicePaths.get(0).get(0).getDevice();
       logger.info("default hitter, top compaction device:{}", deviceName);
+      if (IoTDBDescriptor.getInstance().getConfig().getMaxHitterNum() == -1) {
+        List<PartialPath> devicePath = devicePaths.get(0);
+        List<PartialPath> ret = new ArrayList<>();
+        for (int i = 0; i < devicePath.size() / 2; i++) {
+          ret.add(devicePath.get(i));
+        }
+        return ret;
+      }
       return devicePaths.get(0);
     }
     return null;
