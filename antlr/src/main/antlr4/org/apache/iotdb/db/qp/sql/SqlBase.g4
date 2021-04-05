@@ -45,7 +45,7 @@ statement
     | CREATE INDEX ON prefixPath whereClause? indexWithClause #createIndex //not support yet
     | DROP INDEX indexName=ID ON prefixPath #dropIndex //not support yet
     | MERGE #merge
-    | FLUSH prefixPath? (COMMA prefixPath)* (BooleanClause)?#flush
+    | FLUSH prefixPath? (COMMA prefixPath)* (Boolean)?#flush
     | FULL MERGE #fullMerge
     | CLEAR CACHE #clearcache
     | CREATE USER userName=ID password= StringLiteral#createUser
@@ -189,8 +189,8 @@ aliasClause
     ;
 
 attributeClauses
-    : DATATYPE OPERATOR_EQ dataType (COMMA ENCODING OPERATOR_EQ encoding)?
-    (COMMA (COMPRESSOR | COMPRESSION) OPERATOR_EQ compressor)?
+    : K_DATATYPE OPERATOR_EQ DataType (COMMA Encoding OPERATOR_EQ Encoding)?
+    (COMMA (K_COMPRESSOR | COMPRESSION) OPERATOR_EQ Compressor)?
     (COMMA property)*
     tagClause?
     attributeClause?
@@ -324,9 +324,9 @@ groupByLevelClause
     ;
 
 typeClause
-    : (dataType | ALL) LS_BRACKET linearClause RS_BRACKET
-    | (dataType | ALL) LS_BRACKET previousClause RS_BRACKET
-    | (dataType | ALL) LS_BRACKET previousUntilLastClause RS_BRACKET
+    : (DataType | ALL) LS_BRACKET linearClause RS_BRACKET
+    | (DataType | ALL) LS_BRACKET previousClause RS_BRACKET
+    | (DataType | ALL) LS_BRACKET previousUntilLastClause RS_BRACKET
     ;
 
 linearClause
@@ -418,10 +418,10 @@ nodeName
     | (ID | OPERATOR_IN)? LS_BRACKET INT? ID? RS_BRACKET? ID?
     | MINUS? (EXPONENT | INT)
     | DURATION
-    | encoding
-    | dataType
+    | Encoding
+    | DataType
     | dateExpression
-    | BooleanClause
+    | Boolean
     | CREATE
     | INSERT
     | UPDATE
@@ -452,8 +452,8 @@ nodeName
     | TIMESTAMP
     | PROPERTY
     | WITH
-    | DATATYPE
-    | COMPRESSOR
+    | K_DATATYPE
+    | K_COMPRESSOR
     | STORAGE
     | GROUP
     | LABEL
@@ -516,7 +516,7 @@ nodeName
     | SCHEMA
     | TRACING
     | OFF
-    | compressor
+    | Compressor
     | GLOBAL
     | PARTITION
     | DESC
@@ -529,10 +529,10 @@ nodeNameWithoutStar
     | MINUS? ( EXPONENT | INT)
     | (ID | OPERATOR_IN)? LS_BRACKET INT? ID? RS_BRACKET? ID?
     | DURATION
-    | encoding
-    | dataType
+    | Encoding
+    | DataType
     | dateExpression
-    | BooleanClause
+    | Boolean
     | CREATE
     | INSERT
     | UPDATE
@@ -563,8 +563,8 @@ nodeNameWithoutStar
     | TIMESTAMP
     | PROPERTY
     | WITH
-    | DATATYPE
-    | COMPRESSOR
+    | K_DATATYPE
+    | K_COMPRESSOR
     | STORAGE
     | GROUP
     | LABEL
@@ -627,22 +627,11 @@ nodeNameWithoutStar
     | SCHEMA
     | TRACING
     | OFF
-    | compressor
+    | Compressor
     | GLOBAL
     | PARTITION
     | DESC
     | ASC
-    ;
-
-dataType
-    : INT32 | INT64 | FLOAT | DOUBLE | BOOLEAN | TEXT
-    ;
-
-compressor
-    : UNCOMPRESSED
-    | SNAPPY
-    | LZ4
-    | GZIP
     ;
 
 dateFormat
@@ -653,10 +642,10 @@ dateFormat
 constant
     : dateExpression
     | NaN
-    | MINUS? realLiteral
+    | MINUS? RealLiteral
     | MINUS? INT
     | StringLiteral
-    | BooleanClause
+    | Boolean
     ;
 
 
@@ -665,23 +654,17 @@ dateExpression
     : dateFormat ((PLUS | MINUS) DURATION)*
     ;
 
-encoding
-    : PLAIN | PLAIN_DICTIONARY | RLE | DIFF | TS_2DIFF | GORILLA | REGULAR
-    ;
 
-realLiteral
-    :   INT DOT (INT | EXPONENT)?
-    |   DOT  (INT|EXPONENT)
-    |   EXPONENT
-    ;
+
+
 
 property
     : name=ID OPERATOR_EQ value=PropertyValue
     ;
 
 autoCreateSchema
-    : BooleanClause
-    | BooleanClause INT
+    : Boolean
+    | Boolean INT
     ;
 
 triggerEventClause
@@ -694,6 +677,12 @@ triggerAttributeClause
 
 triggerAttribute
     : key=StringLiteral OPERATOR_EQ value=StringLiteral
+    ;
+
+timeValue
+    : dateFormat
+    | dateExpression
+    | INT
     ;
 
 PropertyValue

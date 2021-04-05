@@ -164,11 +164,11 @@ ROOT
     : R O O T
     ;
 
-DATATYPE
+K_DATATYPE
     : D A T A T Y P E
     ;
 
-COMPRESSOR
+K_COMPRESSOR
     : C O M P R E S S O R
     ;
 
@@ -200,7 +200,7 @@ DOUBLE
     : D O U B L E
     ;
 
-BOOLEAN
+K_BOOLEAN
     : B O O L E A N
     ;
 
@@ -607,6 +607,8 @@ EXPLAIN
 //============================
 // End of the keywords list
 //============================
+SEMI: ';';
+
 COMMA : ',';
 
 STAR : '*';
@@ -667,7 +669,7 @@ UNDERLINE : '_';
 
 NaN : 'NaN';
 
-BooleanClause
+Boolean
     : TRUE
     | FALSE
     ;
@@ -695,6 +697,31 @@ DATETIME
 
 /** Allow unicode rule/token names */
 ID : FIRST_NAME_CHAR NAME_CHAR*;
+
+//======================================
+// Complex
+//======================================
+
+RealLiteral
+    :   INT DOT (INT | EXPONENT)?
+    |   DOT  (INT|EXPONENT)
+    |   EXPONENT
+    ;
+
+Encoding
+    : PLAIN | PLAIN_DICTIONARY | RLE | DIFF | TS_2DIFF | GORILLA | REGULAR
+    ;
+
+Compressor
+    : UNCOMPRESSED
+    | SNAPPY
+    | LZ4
+    | GZIP
+    ;
+
+DataType
+    : INT32 | INT64 | FLOAT | DOUBLE | K_BOOLEAN | TEXT
+    ;
 
 fragment
 NAME_CHAR
