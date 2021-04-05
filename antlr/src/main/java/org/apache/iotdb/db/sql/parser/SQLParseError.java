@@ -16,24 +16,25 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.iotdb.db.qp.strategy;
+package org.apache.iotdb.db.sql.parser;
 
-import org.apache.iotdb.db.qp.logical.Operator;
-import org.apache.iotdb.db.qp.sql.IoTDBSqlVisitor;
-import org.apache.iotdb.db.sql.parser.SQLParseUtil;
-
+import org.antlr.v4.runtime.BaseErrorListener;
+import org.antlr.v4.runtime.RecognitionException;
+import org.antlr.v4.runtime.Recognizer;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 
-import java.time.ZoneId;
+public class SQLParseError extends BaseErrorListener {
 
-/** LogicalGenerator. */
-public class LogicalGenerator {
+  public static final SQLParseError INSTANCE = new SQLParseError();
 
-  public LogicalGenerator() {}
-
-  public Operator generate(String sql, ZoneId zoneId) throws ParseCancellationException {
-    IoTDBSqlVisitor ioTDBSqlVisitor = new IoTDBSqlVisitor();
-    ioTDBSqlVisitor.setZoneId(zoneId);
-    return ioTDBSqlVisitor.visit(SQLParseUtil.parseTree(sql));
+  @Override
+  public void syntaxError(
+      Recognizer<?, ?> recognizer,
+      Object offendingSymbol,
+      int line,
+      int charPositionInLine,
+      String msg,
+      RecognitionException e) {
+    throw new ParseCancellationException("line " + line + ":" + charPositionInLine + " " + msg);
   }
 }
