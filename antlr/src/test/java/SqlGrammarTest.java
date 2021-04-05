@@ -58,8 +58,8 @@ public class SqlGrammarTest {
       select = new StringBuilder(200);
       from = new StringBuilder(210);
     }
-    sqls[sqls.length - 1] =
-        "select select, create, *, abc, abc* from root.select.int32, root.int64";
+    sqls[0] =
+        "select select, create, *, abc, abc* from root.select.b, root.a";
     long time = System.currentTimeMillis();
     for (String sql : sqls) {
       try {
