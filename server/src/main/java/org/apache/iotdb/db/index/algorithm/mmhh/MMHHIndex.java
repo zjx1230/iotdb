@@ -76,6 +76,9 @@ import static org.apache.iotdb.db.index.common.IndexConstant.SERIES_LENGTH;
 import static org.apache.iotdb.db.index.common.IndexConstant.TOP_K;
 import static org.apache.iotdb.db.index.common.IndexType.MMHH;
 
+/**
+ * <p>Refer to: Kang, Rong, et al. Maximum-margin hamming hashing. ICCV. IEEE/CVF. 2019: 8252-8261.
+ */
 public class MMHHIndex extends IoTDBIndex {
 
   private static final Logger logger = LoggerFactory.getLogger(MMHHIndex.class);
@@ -140,7 +143,9 @@ public class MMHHIndex extends IoTDBIndex {
     return res;
   }
 
-  /** should be concise into WholeIndex or IoTDBIndex, it's duplicate */
+  /**
+   * should be concise into WholeIndex or IoTDBIndex, it's duplicate
+   */
   public void endFlushTask() {
     super.endFlushTask();
     currentInsertPath = null;
@@ -212,7 +217,9 @@ public class MMHHIndex extends IoTDBIndex {
 
   private static class MMHHQueryStruct {
 
-    /** features is represented by float array */
+    /**
+     * features is represented by float array
+     */
     //    float[] patternFeatures;
     //    TriFunction<float[], float[], float[], Double> calcLowerDistFunc;
     //
@@ -368,7 +375,9 @@ public class MMHHIndex extends IoTDBIndex {
     return res;
   }
 
-  /** if res has reached topK */
+  /**
+   * if res has reached topK
+   */
   private boolean scanBucket(
       long queryCode,
       int doneIdx,

@@ -33,8 +33,8 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
  * <p>ELB-Match is a scan-based method for accelerating the subsequence similarity query. It stores
  * the block features during the index building phase.
  *
- * <p>Refer to: Kang R, et al. Matching Consecutive Subpatterns over Streaming Time Series[C]
- * APWeb-WAIM Joint International Conference. Springer, Cham, 2018: 90-105.
+ * <p>Refer to: Kang, Rong, et al. Matching Consecutive Subpatterns over Streaming Time Series.
+ * APWeb-WAIM. Springer. 2018: 90-105.
  *
  * Temp
  */
