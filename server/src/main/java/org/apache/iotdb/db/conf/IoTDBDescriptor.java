@@ -96,8 +96,8 @@ public class IoTDBDescriptor {
     String urlString = System.getProperty(IoTDBConstant.IOTDB_CONF, null);
     // If it wasn't, check if a home directory was provided (This usually contains a config)
     if (urlString == null) {
-      urlString = System.getProperty(IoTDBConstant.IOTDB_HOME, null);
-//      urlString = "/Users/tianyu/2019秋季学期/iotdb/server/src/assembly/resources";
+//      urlString = System.getProperty(IoTDBConstant.IOTDB_HOME, null);
+      urlString = "/Users/tianyu/2019秋季学期/iotdb/server/src/assembly/resources";
       if (urlString != null) {
         urlString =
             urlString + File.separatorChar + "conf" + File.separatorChar + IoTDBConfig.CONFIG_NAME;
