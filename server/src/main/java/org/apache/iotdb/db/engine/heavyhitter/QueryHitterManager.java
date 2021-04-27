@@ -21,6 +21,7 @@ package org.apache.iotdb.db.engine.heavyhitter;
 
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.heavyhitter.hitter.DefaultHitter;
+import org.apache.iotdb.db.engine.heavyhitter.hitter.HashMapHitter;
 
 public class QueryHitterManager {
 
@@ -32,6 +33,8 @@ public class QueryHitterManager {
 
   private static QueryHeavyHitters loadQueryHitters() {
     switch (IoTDBDescriptor.getInstance().getConfig().getQueryHitterStrategy()) {
+      case HASH_STRATEGY:
+        return new HashMapHitter(IoTDBDescriptor.getInstance().getConfig().getMaxHitterNum());
       case DEFAULT_STRATEGY:
       default:
         return new DefaultHitter(IoTDBDescriptor.getInstance().getConfig().getMaxHitterNum());

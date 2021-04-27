@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.iotdb.db.auth.AuthException;
+import org.apache.iotdb.db.engine.heavyhitter.QueryHitterManager;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.query.PathNumOverLimitException;
 import org.apache.iotdb.db.exception.query.LogicalOperatorException;
@@ -678,6 +679,11 @@ public class PhysicalGenerator {
     List<PartialPath> paths = queryPlan.getPaths();
     List<TSDataType> dataTypes = getSeriesTypes(paths);
     queryPlan.setDataTypes(dataTypes);
+
+    // add query to hitter
+    for (PartialPath path: paths) {
+      QueryHitterManager.getQueryHitter().acceptQuerySeries(path);
+    }
 
     // deduplicate from here
     if (queryPlan instanceof AlignByDevicePlan) {

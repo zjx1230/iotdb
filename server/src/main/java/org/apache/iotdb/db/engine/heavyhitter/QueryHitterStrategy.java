@@ -21,6 +21,8 @@ package org.apache.iotdb.db.engine.heavyhitter;
 
 public enum  QueryHitterStrategy {
   //用于测试的 strategy
-  DEFAULT_STRATEGY;
+  DEFAULT_STRATEGY,
+  //Hash Map Hitter;
+  HASH_STRATEGY
 
 }
