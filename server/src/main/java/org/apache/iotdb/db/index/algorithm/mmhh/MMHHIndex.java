@@ -423,7 +423,9 @@ public class MMHHIndex extends IoTDBIndex {
       }
     }
     resList.sort(Comparator.comparingDouble(o -> o.backDist));
-    resList.subList(tempQueryStruct.topK, resList.size()).clear();
+    if(tempQueryStruct.topK < resList.size()){
+      resList.subList(tempQueryStruct.topK, resList.size()).clear();
+    }
   }
 
   private long reverseBit(long hashCode, int idx) {

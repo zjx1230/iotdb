@@ -202,6 +202,7 @@ public class ProtoIndexRouter implements IIndexRouter {
     lock.readLock().lock();
     try {
       IndexProcessorStruct struct;
+      partialPath.toLowerCase();
       if (partialPath.isFullPath()) {
         String fullPath = partialPath.getFullPath();
         if (!fullPathProcessorMap.containsKey(fullPath)) {

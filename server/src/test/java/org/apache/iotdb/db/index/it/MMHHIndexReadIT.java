@@ -90,7 +90,9 @@ public class MMHHIndexReadIT {
               wholeDim,
               hashLength,
               MODEL_PATH,
-              "\"/Users/kangrong/code/github/deep-learning/hash_journal/TAH_project/src/mmhh.pt\""));
+//              "\"/Users/kangrong/code/github/deep-learning/hash_journal/TAH_project/src/mmhh.pt\""
+              "\"resources/index/mmhh.pt\""
+          ));
       //      String modelPath =
       // "/Users/kangrong/code/github/deep-learning/hash_journal/TAH_project/src/mmhh.pt";
       String modelPath = "src/test/resources/index/mmhh.pt";
@@ -141,15 +143,15 @@ public class MMHHIndexReadIT {
 
       String querySQL =
           String.format(
-              "SELECT TOP 5 direction FROM root.wind2.* WHERE direction LIKE (%s)",
+              "SELECT TOP 2 direction FROM root.wind2.* WHERE direction LIKE (%s)",
               getArrayRange(121, 121 + wholeDim));
 
       System.out.println(querySQL);
       boolean hasIndex = statement.execute(querySQL);
       StringBuilder gt = new StringBuilder();
-      gt.append("Time,root.wind2.1.direction.(D=0.00),root.wind2.4.direction.(D=1.00),\n");
+      gt.append("Time,root.wind2.1.direction.(D=0.00),root.wind2.2.direction.(D=1.00),\n");
       for (int i = 0; i < 100; i++) {
-        gt.append(String.format("%d,%.1f,%.1f,\n", i, 100f + i, 400f + i));
+        gt.append(String.format("%d,%.1f,%.1f,\n", i, 100f + i, 200f + i));
       }
       Assert.assertTrue(hasIndex);
       try (ResultSet resultSet = statement.getResultSet()) {
@@ -166,7 +168,7 @@ public class MMHHIndexReadIT {
           sb.append("\n");
         }
         System.out.println(sb);
-        //        Assert.assertEquals(gt.toString(), sb.toString());
+        Assert.assertEquals(gt.toString(), sb.toString());
       }
     } catch (Exception e) {
       e.printStackTrace();
