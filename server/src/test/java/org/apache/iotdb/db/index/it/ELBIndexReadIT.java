@@ -182,7 +182,7 @@ public class ELBIndexReadIT {
       String querySQL =
           "SELECT speed.* FROM root.wind1.azq01 WHERE Speed "
               + String.format("CONTAIN (%s) WITH TOLERANCE 100000 ", getArrayRange(170, 200, 10))
-              + String.format("CONCAT (%s) WITH TOLERANCE 50 ", getArrayRange(250, 300, 10))
+              + String.format("CONCAT (%s) WITH TOLERANCE 200 ", getArrayRange(250, 300, 10))
               + String.format("CONCAT (%s) WITH TOLERANCE 100000 ", getArrayRange(400, 430, 10));
       System.out.println(querySQL);
       boolean hasIndex = statement.execute(querySQL);

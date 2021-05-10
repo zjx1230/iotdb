@@ -270,6 +270,7 @@ public class ELBIndex extends IoTDBIndex {
     List<Filter> filterList = queryByIndex(struct, (SubMatchIndexUsability) iIndexUsable);
     List<DistSeries> res = new ArrayList<>();
     try {
+      long lastTimestamp = -1;
       for (Filter timeFilter : filterList) {
         long featureTotal = 0;
         long cpuTotal = 0;
@@ -300,12 +301,22 @@ public class ELBIndex extends IoTDBIndex {
           while (featureExtractor.hasNext()) {
             featureExtractor.processNext();
             TVListPointer p = featureExtractor.getCurrent_L2_AlignedSequence();
+            long pStartTime = p.tvList.getTime(p.offset);
+            if (pStartTime <= lastTimestamp) {
+              continue;
+            }
             long cpuStart = System.nanoTime();
             if (struct.elb.exactDistanceCalc(p.tvList, p.offset)) {
               TVList tvList = TVListAllocator.getInstance().allocate(tsDataType);
               TVList.append(tvList, p.tvList, p.offset, p.length);
               PartialPath showPath = indexSeries.concatNode(String.valueOf(tvList.getMinTime()));
               res.add(new DistSeries(0, tvList, showPath));
+              // add no-overlap
+              final boolean noOverlap = true;
+              if (noOverlap) {
+                lastTimestamp = tvList.getLastTime();
+              }
+              // end no-overlap
             }
             cpuTotal += System.nanoTime() - cpuStart;
           }
