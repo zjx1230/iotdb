@@ -85,17 +85,21 @@ public class ELBIndexReadIT {
         Statement statement = connection.createStatement(); ) {
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupSub));
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
-
+      System.out.println(String.format("SET STORAGE GROUP TO %s", storageGroupSub));
+      System.out.println(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
       statement.execute(
           String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", speed1));
+      System.out.println(String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", speed1));
 
       for (int i = 0; i < wholeSize; i++) {
         String wholePath = String.format(directionPattern, i);
         statement.execute(
             String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
+        System.out.println(String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
       }
       statement.execute(
           String.format("CREATE INDEX ON %s WITH INDEX=%s, BLOCK_SIZE=%d", indexSub, ELB_INDEX, 5));
+      System.out.println(String.format("CREATE INDEX ON %s WITH INDEX=%s, BLOCK_SIZE=%d", indexSub, ELB_INDEX, 5));
 
       TVList subInput = TVListAllocator.getInstance().allocate(TSDataType.DOUBLE);
       for (int i = 0; i < subLength; i++) {
@@ -169,10 +173,60 @@ public class ELBIndexReadIT {
   }
 
   @Test
-  public void checkRead() throws ClassNotFoundException {
+  public void checkMultiSeriesTimeAligned() throws ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection =
             DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
+        Statement statement = connection.createStatement()) {
+
+      String querySQL =
+          "SELECT speed.* FROM root.wind1.azq01 WHERE Speed "
+              + String.format("CONTAIN (%s) WITH TOLERANCE 100000 ", getArrayRange(170, 200, 10))
+              + String.format("CONCAT (%s) WITH TOLERANCE 50 ", getArrayRange(250, 300, 10))
+              + String.format("CONCAT (%s) WITH TOLERANCE 100000 ", getArrayRange(400, 430, 10));
+      System.out.println(querySQL);
+      boolean hasIndex = statement.execute(querySQL);
+      String gt =
+          "Time,root.wind1.azq01.speed.17,\n"
+              + "0,170.0,\n"
+              + "1,180.0,\n"
+              + "2,190.0,\n"
+              + "3,250.0,\n"
+              + "4,260.0,\n"
+              + "5,270.0,\n"
+              + "6,280.0,\n"
+              + "7,290.0,\n"
+              + "8,400.0,\n"
+              + "9,410.0,\n"
+              + "10,420.0,\n";
+      Assert.assertTrue(hasIndex);
+      try (ResultSet resultSet = statement.getResultSet()) {
+        ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
+          sb.append(resultSetMetaData.getColumnName(i)).append(",");
+        }
+        sb.append("\n");
+        while (resultSet.next()) {
+          for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
+            sb.append(resultSet.getString(i)).append(",");
+          }
+          sb.append("\n");
+        }
+        System.out.println(sb);
+//        Assert.assertEquals(gt, sb.toString());
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+      fail(e.getMessage());
+    }
+  }
+
+  @Test
+  public void checkRead() throws ClassNotFoundException {
+    Class.forName(Config.JDBC_DRIVER_NAME);
+    try (Connection connection =
+        DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
 
       String querySQL =

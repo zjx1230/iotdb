@@ -17,6 +17,9 @@
  */
 package org.apache.iotdb.db.index.algorithm;
 
+import java.util.Arrays;
+import java.util.PriorityQueue;
+import java.util.TreeMap;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
@@ -35,6 +38,8 @@ import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.read.TimeValuePair;
+import org.apache.iotdb.tsfile.read.common.Field;
 import org.apache.iotdb.tsfile.read.common.RowRecord;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 
@@ -151,7 +156,8 @@ public abstract class IoTDBIndex {
       List<DistSeries> res, boolean alignedByTime, int nMaxReturnSeries)
       throws QueryIndexException {
     if (alignedByTime) {
-      throw new QueryIndexException("Unsupported alignedByTime result");
+//      throw new QueryIndexException("Unsupported alignedByTime result");
+      return constructTimeAlignedSearchDataset(res, nMaxReturnSeries);
     }
     // make result paths and types
     List<PartialPath> paths = new ArrayList<>();
@@ -198,6 +204,68 @@ public abstract class IoTDBIndex {
       }
       dataSet.putRecord(record);
     }
+    return dataSet;
+  }
+
+  protected QueryDataSet constructTimeAlignedSearchDataset(
+      List<DistSeries> res, int nMaxReturnSeries) {
+    // make result paths and types
+    List<PartialPath> paths = new ArrayList<>();
+    List<TSDataType> types = new ArrayList<>();
+    Map<String, Integer> pathToIndex = new HashMap<>();
+    IndexStatManager.totalQueryCost = System.nanoTime() - IndexStatManager.totalQueryCost;
+    String statReport = IndexStatManager.provideReport();
+
+    // TODO it's a temp trick!
+    if (IoTDBDescriptor.getInstance().getConfig().isEnableIndexStat()) {
+      if (res.isEmpty()) {
+        // add a fake line and result
+        TVList fake = TVListAllocator.getInstance().allocate(TSDataType.DOUBLE);
+        fake.putDouble(0, 0);
+        try {
+          res.add(new DistSeries(0, fake, new PartialPath("root.sg.fake.fake")));
+        } catch (IllegalPathException e) {
+          e.printStackTrace();
+        }
+      }
+      PartialPath hackPath = new PartialPath(res.get(0).partialPath);
+      res.get(0).partialPath = hackPath.concatNode(statReport);
+    }
+    nMaxReturnSeries = Math.min(nMaxReturnSeries, res.size());
+    for (int i = 0; i < nMaxReturnSeries; i++) {
+      PartialPath series = res.get(i).partialPath;
+      paths.add(series);
+      pathToIndex.put(series.getFullPath(), i);
+      types.add(tsDataType);
+    }
+    IndexQueryDataSet dataSet = new IndexQueryDataSet(paths, types, pathToIndex);
+    if (nMaxReturnSeries == 0) {
+      return dataSet;
+    }
+
+    // add and sort time list
+    // TODO it's a temp trick due to nobody to ask
+    TreeMap<Long, List<Field>> timeMergedFields = new TreeMap<>();
+
+    for (int col = 0; col < nMaxReturnSeries; col++) {
+        TVList tvList = res.get(col).tvList;
+
+      for (int row = 0; row < tvList.size(); row++) {
+        long t = tvList.getTime(row);
+        Object v = IndexUtils.getValue(tvList, row);
+        //        record.addField(IndexUtils.getValue(tvList, row), tsDataType);
+        if (!timeMergedFields.containsKey(t)) {
+          timeMergedFields.put(t, Arrays.asList(new Field[nMaxReturnSeries]));
+        }
+        timeMergedFields.get(t).set(col, Field.getField(v, tsDataType));
+      }
+    }
+//    timeMergedFields.forEach((k,v)-> System.out.println(k + "," + v));
+    // to dataset
+    timeMergedFields.forEach((k,v)->{
+      RowRecord record = new RowRecord(k, v);
+      dataSet.putRecord(record);
+    });
     return dataSet;
   }
 }

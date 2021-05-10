@@ -28,7 +28,8 @@ public class QueryIndexPlan extends RawDataQueryPlan {
 
   private Map<String, Object> props;
   private IndexType indexType;
-  private boolean alignedByTime = false;
+  // for now, it's always true
+  private boolean alignedByTime = true;
 
   public QueryIndexPlan() {
     super();
