@@ -258,6 +258,7 @@ public class ELBIndexReadIT {
               + String.format("CONCAT (%s) WITH TOLERANCE 0 ", getArrayRange(250, 300, 10))
               + String.format("CONCAT (%s) WITH TOLERANCE 0 ", getArrayRange(400, 430, 10));
       System.out.println(querySQL);
+      statement.setQueryTimeout(20);
       boolean hasIndex = statement.execute(querySQL);
       String gt =
           "Time,root.wind1.azq01.speed.17,\n"

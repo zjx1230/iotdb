@@ -630,7 +630,21 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
       queryId = generateQueryId(true, fetchSize, deduplicatedPathNum);
       // register query info to queryTimeManager
       if (!(plan instanceof ShowQueryProcesslistPlan)) {
-        queryTimeManager.registerQuery(queryId, startTime, statement, timeout);
+        if (plan instanceof QueryIndexPlan) {
+          long actualTimeout = timeout == 0 ? config.getQueryTimeThreshold() : timeout;
+          ((QueryIndexPlan) plan).setIndexTimeoutInMs(actualTimeout);
+          // it's a hyper-parameter, we can add it into .properties.
+          // although we cannot trust that index always return result before time out, but index
+          // will early-stop the query
+//          long indexQueryExtraTimeInMs = 3_000;
+          long indexQueryExtraTimeInMs = 3_000;
+          long indexFinalTimeout = actualTimeout + indexQueryExtraTimeInMs;
+          queryTimeManager.registerQuery(queryId, startTime, statement, indexFinalTimeout);
+        }
+        else{
+          queryTimeManager.registerQuery(queryId, startTime, statement, timeout);
+        }
+
       }
       if (plan instanceof QueryPlan && config.isEnablePerformanceTracing()) {
         TracingManager tracingManager = TracingManager.getInstance();

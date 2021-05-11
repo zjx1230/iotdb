@@ -164,8 +164,10 @@ public class MMHHIndex extends IoTDBIndex {
 
   @Override
   protected void flushIndex() {
+    logger.info("MMHHIndex {} starts serialization", indexSeries);
     serializeHashLookup();
     hashLookupTable.clear();
+    logger.info("MMHHIndex {} finishes serialization", indexSeries);
   }
 
   private void deserializeHashLookup() {
@@ -365,6 +367,10 @@ public class MMHHIndex extends IoTDBIndex {
       if (full) {
         break;
       }
+      if(IndexStatManager.alreadyTimeout()){
+        logger.warn("MMHH query on {}: already timeout", indexSeries);
+        break;
+      }
     }
     return res;
   }
@@ -396,6 +402,10 @@ public class MMHHIndex extends IoTDBIndex {
         boolean full =
             scanBucket(queryCode, doneIdx + 1, maxIdx, doIdx + 1, topK, loadSeriesFunc, res);
         if (full) {
+          return true;
+        }
+        if(IndexStatManager.alreadyTimeout()){
+          logger.warn("MMHH query on {}: already timeout, MMHHIndex:406", indexSeries);
           return true;
         }
         // change bit back

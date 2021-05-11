@@ -38,19 +38,25 @@ public class QueryIndexExecutor {
   private final QueryContext context;
   private final List<PartialPath> paths;
   private final boolean alignedByTime;
+  private long timeout;
 
   public QueryIndexExecutor(QueryIndexPlan queryIndexPlan, QueryContext context) {
     this.indexType = queryIndexPlan.getIndexType();
     this.queryProps = IndexUtils.toUpperCaseProps(queryIndexPlan.getProps());
     this.paths = queryIndexPlan.getPaths();
     this.alignedByTime = queryIndexPlan.isAlignedByTime();
+    this.timeout = queryIndexPlan.getIndexTimeoutInMs();
     //    this.paths.forEach(PartialPath::toLowerCase);
     this.context = context;
+  }
+
+  public long getIndexTimeoutInMs() {
+    return timeout;
   }
 
   public QueryDataSet executeIndexQuery() throws StorageEngineException, QueryIndexException {
     // get all related storage group
     return IndexManager.getInstance()
-        .queryIndex(paths, indexType, queryProps, context, alignedByTime);
+        .queryIndex(paths, indexType, queryProps, context, alignedByTime, timeout);
   }
 }

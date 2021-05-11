@@ -46,6 +46,7 @@ import static org.apache.zeppelin.iotdb.IoTDBInterpreter.IOTDB_PORT;
 import static org.apache.zeppelin.iotdb.IoTDBInterpreter.IOTDB_TIME_DISPLAY_TYPE;
 import static org.apache.zeppelin.iotdb.IoTDBInterpreter.IOTDB_USERNAME;
 import static org.apache.zeppelin.iotdb.IoTDBInterpreter.IOTDB_ZONE_ID;
+import static org.apache.zeppelin.iotdb.IoTDBInterpreter.SET_QUERY_TIMEOUT;
 import static org.apache.zeppelin.iotdb.IoTDBInterpreter.SET_TIMESTAMP_DISPLAY;
 
 public class IoTDBInterpreterTest {
@@ -131,6 +132,19 @@ public class IoTDBInterpreterTest {
     Assert.assertNotNull(actual);
     Assert.assertEquals(Code.SUCCESS, actual.code());
     Assert.assertEquals(gt, actual.message().get(0).getData());
+  }
+
+  @Test
+  public void testSetQueryTimeout() {
+    // default
+    Assert.assertEquals(-1, interpreter.getQueryTimeout());
+    InterpreterResult actual =
+        interpreter.internalInterpret(SET_QUERY_TIMEOUT + "=" + 2, null);
+    Assert.assertNotNull(actual);
+    Assert.assertEquals(Code.SUCCESS, actual.code());
+    Assert.assertEquals(
+        "Query timeout has set to 2 seconds", actual.message().get(0).getData());
+    Assert.assertEquals(2, interpreter.getQueryTimeout());
   }
 
   @Test

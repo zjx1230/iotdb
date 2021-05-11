@@ -83,5 +83,6 @@ public class PytorchLoadTest {
       }
       System.out.println();
     }
+    model.close();
   }
 }

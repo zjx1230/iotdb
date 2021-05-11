@@ -117,10 +117,11 @@ public class MMHHIndexReadIT {
           statement.execute(insertSQL);
         }
       }
+      IndexManager.getInstance().stop();
+      IndexManager.getInstance().start();
       statement.execute("flush");
       System.out.println(IndexManager.getInstance().getRouter());
-      //      IndexManager.getInstance().stop();
-      //      IndexManager.getInstance().start();
+
 
     } catch (Exception e) {
       e.printStackTrace();

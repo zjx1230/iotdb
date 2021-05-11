@@ -30,7 +30,8 @@ public class IndexStatManager {
   public static long featureExtractCost = 0;
   public static long totalQueryCost = 0;
   public static long loadRawDataCost = 0;
-
+  public static long latestTimestamp = 0;
+  
   public static String provideReport() {
     // total:%.3fms-feature:%.3fms-load:%.3fms
     String ret =
@@ -43,5 +44,10 @@ public class IndexStatManager {
     totalQueryCost = 0;
     loadRawDataCost = 0;
     return ret;
+  }
+
+  public static boolean alreadyTimeout() {
+    long current = System.nanoTime();
+    return current > latestTimestamp;
   }
 }

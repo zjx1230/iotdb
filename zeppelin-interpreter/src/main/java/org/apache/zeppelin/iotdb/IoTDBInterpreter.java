@@ -83,6 +83,7 @@ public class IoTDBInterpreter extends AbstractInterpreter {
   private static final String HELP = "help";
   private static final String IMPORT_CMD = "import";
   static final String SET_TIMESTAMP_DISPLAY = "set time_display_type";
+  static final String SET_QUERY_TIMEOUT = "set query_time_timeout";
   private static final String SET_MAX_DISPLAY_NUM = "set max_display_num";
   private static final String SHOW_TIMESTAMP_DISPLAY = "show time_display_type";
   private static final String SET_TIME_ZONE = "set time_zone";
@@ -106,6 +107,8 @@ public class IoTDBInterpreter extends AbstractInterpreter {
               IMPORT_CMD));
 
   private String timeFormat;
+
+  private int queryTimeout = -1;
 
   private IoTDBConnectionException connectionException;
   private IoTDBConnection connection = null;
@@ -199,6 +202,10 @@ public class IoTDBInterpreter extends AbstractInterpreter {
     }
   }
 
+  public int getQueryTimeout() {
+    return queryTimeout;
+  }
+
   private InterpreterResult handleInputCmd(String cmd, IoTDBConnection connection)
       throws StatementExecutionException {
     String specialCmd = cmd.toLowerCase().trim();
@@ -216,6 +223,16 @@ public class IoTDBInterpreter extends AbstractInterpreter {
       this.timeFormat = setTimeFormat(values[1]);
       return new InterpreterResult(Code.SUCCESS, "Time display type has set to " + timeDisplayType);
     }
+    else if (specialCmd.startsWith(SET_QUERY_TIMEOUT)) {
+      String[] values = cmd.split(EQUAL_SIGN);
+      if (values.length != 2) {
+        throw new StatementExecutionException(
+            String.format(
+                "Query timeout format error, please input like %s=10", SET_QUERY_TIMEOUT));
+      }
+      this.queryTimeout = Integer.parseInt(values[1].trim());
+      return new InterpreterResult(Code.SUCCESS, "Query timeout has set to " + queryTimeout + " seconds");
+    }
     return executeQuery(connection, cmd);
   }
 
@@ -223,6 +240,9 @@ public class IoTDBInterpreter extends AbstractInterpreter {
     StringBuilder stringBuilder = new StringBuilder();
     try (Statement statement = connection.createStatement()) {
       statement.setFetchSize(fetchSize);
+      if(this.queryTimeout > 0){
+        statement.setQueryTimeout(this.queryTimeout);
+      }
       boolean hasResultSet = statement.execute(cmd.trim());
       InterpreterResult interpreterResult;
       if (hasResultSet) {

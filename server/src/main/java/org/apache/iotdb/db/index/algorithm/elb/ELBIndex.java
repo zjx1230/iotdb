@@ -99,7 +99,7 @@ import static org.apache.iotdb.db.index.common.IndexType.ELB_INDEX;
  */
 public class ELBIndex extends IoTDBIndex {
 
-  private final Logger logger = LoggerFactory.getLogger(ELBIndex.class);
+  private static final Logger logger = LoggerFactory.getLogger(ELBIndex.class);
   private ELBType elbType;
 
   private ELBCountFeatureExtractor elbMatchPreprocessor;
@@ -176,6 +176,7 @@ public class ELBIndex extends IoTDBIndex {
 
   @Override
   protected void flushIndex() {
+    logger.info("ELBIndex {} start serialization", indexSeries);
     try (OutputStream outputStream = new FileOutputStream(featureFile)) {
       ReadWriteIOUtils.write(windowBlockFeatures.size(), outputStream);
       for (ELBWindowBlockFeature features : windowBlockFeatures) {
@@ -187,6 +188,7 @@ public class ELBIndex extends IoTDBIndex {
     } catch (IOException e) {
       logger.error("Error when serialize router. Given up.", e);
     }
+    logger.info("ELBIndex {} finish serialization", indexSeries);
   }
 
   @TestOnly
@@ -294,6 +296,7 @@ public class ELBIndex extends IoTDBIndex {
         ELBCountFeatureExtractor featureExtractor =
             new ELBCountFeatureExtractor(
                 tsDataType, struct.pattern.length, blockWidth, elbType, true);
+        boolean alreadyTimeout = false;
         while (reader.hasNextBatch()) {
           BatchData batch = reader.nextBatch();
           long featureStart = System.nanoTime();
@@ -311,6 +314,11 @@ public class ELBIndex extends IoTDBIndex {
               TVList.append(tvList, p.tvList, p.offset, p.length);
               PartialPath showPath = indexSeries.concatNode(String.valueOf(tvList.getMinTime()));
               res.add(new DistSeries(0, tvList, showPath));
+              if(IndexStatManager.alreadyTimeout()){
+                logger.warn("ELB query on {}: already timeout", indexSeries);
+                alreadyTimeout = true;
+                break;
+              }
               // add no-overlap
               final boolean noOverlap = true;
               if (noOverlap) {
@@ -322,6 +330,9 @@ public class ELBIndex extends IoTDBIndex {
           }
           featureExtractor.clearProcessedSrcData();
           featureTotal += System.nanoTime() - featureStart;
+          if(alreadyTimeout){
+            break;
+          }
         }
         reader.close();
         long loadTotal = System.nanoTime() - loadStart;

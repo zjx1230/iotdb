@@ -147,12 +147,14 @@ public abstract class RTreeIndex extends IoTDBIndex {
 
   @Override
   protected void flushIndex() {
+    logger.info("RTreeIndex {} starts serialization", indexSeries);
     try (OutputStream outputStream = new FileOutputStream(featureFile)) {
       rTree.serialize(outputStream);
       rTree.clear();
     } catch (IOException e) {
       logger.error("Error when serialize router. Given up.", e);
     }
+    logger.info("RTreeIndex {} finishes serialization", indexSeries);
   }
 
   private void initRTree() {

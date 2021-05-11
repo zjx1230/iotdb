@@ -30,6 +30,7 @@ public class QueryIndexPlan extends RawDataQueryPlan {
   private IndexType indexType;
   // for now, it's always true
   private boolean alignedByTime = true;
+  private long indexTimeoutInMs;
 
   public QueryIndexPlan() {
     super();
@@ -82,5 +83,13 @@ public class QueryIndexPlan extends RawDataQueryPlan {
   @Override
   public String toString() {
     return String.format("Query paths: %s, index type: %s, props: %s", paths, indexType, props);
+  }
+
+  public void setIndexTimeoutInMs(long indexTimeoutInMs) {
+    this.indexTimeoutInMs = indexTimeoutInMs;
+  }
+
+  public long getIndexTimeoutInMs() {
+    return indexTimeoutInMs;
   }
 }

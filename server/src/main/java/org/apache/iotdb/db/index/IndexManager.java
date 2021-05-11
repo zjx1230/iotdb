@@ -189,6 +189,7 @@ public class IndexManager implements IndexManagerMBean, IService {
    * @param queryProps the properties of this query.
    * @param context the query context.
    * @param alignedByTime whether aligned index result by timestamps.
+   * @param timeout index should early-stop when the execution time > timeout.
    * @return the index query result.
    */
   public QueryDataSet queryIndex(
@@ -196,9 +197,13 @@ public class IndexManager implements IndexManagerMBean, IService {
       IndexType indexType,
       Map<String, Object> queryProps,
       QueryContext context,
-      boolean alignedByTime)
+      boolean alignedByTime,
+      long timeout)
       throws QueryIndexException, StorageEngineException {
-    IndexStatManager.totalQueryCost = System.nanoTime();
+    long current = System.nanoTime();
+    IndexStatManager.totalQueryCost = current;
+    IndexStatManager.latestTimestamp = current + timeout * 1000_000;
+    logger.info("index query time out has been set to {} sec", timeout);
     if (paths.size() != 1) {
       throw new QueryIndexException("Index allows to query only one path");
     }
@@ -261,7 +266,9 @@ public class IndexManager implements IndexManagerMBean, IService {
 
   /** close the index manager. */
   private synchronized void close() {
+    logger.info("IndexManager begins closing");
     router.serialize(true);
+    logger.info("IndexManager finishes closing");
   }
 
   @Override
@@ -269,6 +276,7 @@ public class IndexManager implements IndexManagerMBean, IService {
     if (!config.isEnableIndex()) {
       return;
     }
+    logger.info("IndexManager starts...");
     IndexBuildTaskPoolManager.getInstance().start();
     try {
       JMXService.registerMBean(this, ServiceType.INDEX_SERVICE.getJmxName());
@@ -278,6 +286,7 @@ public class IndexManager implements IndexManagerMBean, IService {
     } catch (Exception e) {
       throw new StartupException(e);
     }
+    logger.info("IndexManager starts successfully");
   }
 
   public Map<PartialPath, Map<IndexType, IndexInfo>> getIndexInfos(PartialPath prefixPath) {

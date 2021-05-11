@@ -22,6 +22,7 @@ import org.apache.iotdb.db.exception.index.IndexRuntimeException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.index.common.DistSeries;
 import org.apache.iotdb.db.index.common.TriFunction;
+import org.apache.iotdb.db.index.stats.IndexStatManager;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.utils.Pair;
@@ -740,7 +741,10 @@ public class RTree<T> {
                 patternFeatures);
         bsfAnswer.dist =
             minTopKDistOfNode(pairs.right, pairs.left, queryTs, topKPQ, calcRealDistFunc, topK);
-
+        if(IndexStatManager.alreadyTimeout()){
+          logger.warn("RTree query already timeout, no more visiting leaf node, RTree:745");
+          break;
+        }
       } else {
         //        processInnerCount++;
         // minPqItem is internal

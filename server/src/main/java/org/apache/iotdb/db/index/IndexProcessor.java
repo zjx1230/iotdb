@@ -258,6 +258,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     if (closed) {
       return;
     }
+    logger.info("IndexProcessor {} begins closing", indexSeries);
     waitingFlushEndAndDo(
         () -> {
           lock.writeLock().lock();
@@ -284,6 +285,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
             lock.writeLock().unlock();
           }
         });
+    logger.info("IndexProcessor {} finishes closing", indexSeries);
   }
 
   private void waitingFlushEndAndDo(IndexNaiveFunc indexNaiveAction) throws IOException {
