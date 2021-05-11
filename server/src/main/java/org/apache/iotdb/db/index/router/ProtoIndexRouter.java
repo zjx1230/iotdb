@@ -20,6 +20,7 @@ package org.apache.iotdb.db.index.router;
 
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.IndexProcessor;
 import org.apache.iotdb.db.index.common.IndexInfo;
@@ -228,6 +229,33 @@ public class ProtoIndexRouter implements IIndexRouter {
   @Override
   public void endQuery(PartialPath indexSeries, IndexType indexType, QueryContext context) {
     // do nothing.
+  }
+
+  @Override
+  public Map<PartialPath, Map<IndexType, IndexInfo>> getIndexInfosByPrefixPath(
+      PartialPath prefixPath) {
+    // TODO prefixPath must be "prefix", i.e. ending with wildcard: root.XX.XX.*
+    // the wildcard match is costly. We'd move router into MManager
+    Map<PartialPath, Map<IndexType, IndexInfo>> res = new HashMap<>();
+    if (prefixPath != null) prefixPath.toLowerCase();
+    wildCardProcessorMap.forEach(
+        (indexSeries, struct) -> {
+          if (prefixPath == null || prefixPath.matchFullPath(indexSeries)) {
+            res.put(indexSeries, struct.infos);
+          }
+        });
+    fullPathProcessorMap.forEach(
+        (indexSeries, struct) -> {
+          try {
+            PartialPath path = new PartialPath(indexSeries);
+            if (prefixPath == null || prefixPath.matchFullPath(path)) {
+              res.put(path, struct.infos);
+            }
+          } catch (IllegalPathException e) {
+            // that's impossible but ugly, so let's move it into MManager quickly
+          }
+        });
+    return res;
   }
 
   @Override

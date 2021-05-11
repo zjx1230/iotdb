@@ -130,6 +130,17 @@ public class IndexInfo implements Cloneable {
     return String.format("[type: %s, time: %d, props: %s]", indexType, time, props);
   }
 
+  public String toStringForShow() {
+    // no indexType. not default map.toString. no time if not set
+    StringBuilder sb = new StringBuilder();
+    props.forEach((k, v) -> sb.append(k).append("=").append(v).append(","));
+    if (time > 0) {
+      sb.append("time>").append(time);
+    }
+    sb.deleteCharAt(sb.length() - 1);
+    return sb.toString();
+  }
+
   @Override
   public Object clone() {
     return new IndexInfo(indexType, time, new HashMap<>(props));

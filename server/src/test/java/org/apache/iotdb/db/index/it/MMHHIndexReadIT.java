@@ -90,9 +90,9 @@ public class MMHHIndexReadIT {
               wholeDim,
               hashLength,
               MODEL_PATH,
-//              "\"/Users/kangrong/code/github/deep-learning/hash_journal/TAH_project/src/mmhh.pt\""
-              "\"resources/index/mmhh.pt\""
-          ));
+              //
+              // "\"/Users/kangrong/code/github/deep-learning/hash_journal/TAH_project/src/mmhh.pt\""
+              "\"resources/index/mmhh.pt\""));
       //      String modelPath =
       // "/Users/kangrong/code/github/deep-learning/hash_journal/TAH_project/src/mmhh.pt";
       String modelPath = "src/test/resources/index/mmhh.pt";

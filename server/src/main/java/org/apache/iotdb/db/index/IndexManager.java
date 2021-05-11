@@ -273,6 +273,10 @@ public class IndexManager implements IndexManagerMBean, IService {
     }
   }
 
+  public Map<PartialPath, Map<IndexType, IndexInfo>> getIndexInfos(PartialPath prefixPath) {
+    return router.getIndexInfosByPrefixPath(prefixPath);
+  }
+
   /**
    * As IoTDB has no normal shutdown mechanism, this function will not be called. To ensure the
    * information safety, The router needs to serialize index metadata every time createIndex or

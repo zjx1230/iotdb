@@ -114,6 +114,7 @@ public class ShowPlan extends PhysicalPlan {
     COUNT_NODES,
     MERGE_STATUS,
     FUNCTIONS,
+    INDEX,
     COUNT_DEVICES,
     COUNT_STORAGE_GROUP,
     QUERY_PROCESSLIST,

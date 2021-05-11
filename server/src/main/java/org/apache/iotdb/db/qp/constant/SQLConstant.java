@@ -100,6 +100,7 @@ public class SQLConstant {
   public static final int TOK_CREATE_INDEX = 31;
   public static final int TOK_DROP_INDEX = 32;
   public static final int TOK_QUERY_INDEX = 33;
+  public static final int TOK_SHOW_INDEX = 34;
 
   public static final int TOK_GRANT_WATERMARK_EMBEDDING = 34;
   public static final int TOK_REVOKE_WATERMARK_EMBEDDING = 35;
@@ -265,6 +266,7 @@ public class SQLConstant {
     tokenNames.put(TOK_CREATE_INDEX, "TOK_CREATE_INDEX");
     tokenNames.put(TOK_DROP_INDEX, "TOK_DROP_INDEX");
     tokenNames.put(TOK_QUERY_INDEX, "TOK_QUERY_INDEX");
+    tokenNames.put(TOK_SHOW_INDEX, "TOK_SHOW_INDEX");
 
     tokenNames.put(TOK_TRIGGER_CREATE, "TOK_TRIGGER_CREATE");
     tokenNames.put(TOK_TRIGGER_DROP, "TOK_TRIGGER_DROP");

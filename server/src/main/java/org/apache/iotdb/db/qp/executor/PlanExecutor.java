@@ -101,6 +101,7 @@ import org.apache.iotdb.db.qp.physical.sys.ShowChildNodesPlan;
 import org.apache.iotdb.db.qp.physical.sys.ShowChildPathsPlan;
 import org.apache.iotdb.db.qp.physical.sys.ShowDevicesPlan;
 import org.apache.iotdb.db.qp.physical.sys.ShowFunctionsPlan;
+import org.apache.iotdb.db.qp.physical.sys.ShowIndexPlan;
 import org.apache.iotdb.db.qp.physical.sys.ShowPlan;
 import org.apache.iotdb.db.qp.physical.sys.ShowStorageGroupPlan;
 import org.apache.iotdb.db.qp.physical.sys.ShowTTLPlan;
@@ -168,6 +169,9 @@ import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_DONE;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_FUNCTION_CLASS;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_FUNCTION_NAME;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_FUNCTION_TYPE;
+import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_INDEX_ATTRIBUTE;
+import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_INDEX_SERIES;
+import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_INDEX_TYPE;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_ITEM;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_PRIVILEGE;
 import static org.apache.iotdb.db.conf.IoTDBConstant.COLUMN_PROGRESS;
@@ -545,6 +549,8 @@ public class PlanExecutor implements IPlanExecutor {
         return processShowQueryProcesslist();
       case FUNCTIONS:
         return processShowFunctions((ShowFunctionsPlan) showPlan);
+      case INDEX:
+        return processShowIndex((ShowIndexPlan) showPlan);
       case TRIGGERS:
         return processShowTriggers((ShowTriggersPlan) showPlan);
       default:
@@ -821,6 +827,35 @@ public class PlanExecutor implements IPlanExecutor {
 
     appendUDFs(listDataSet, showPlan);
     appendNativeFunctions(listDataSet, showPlan);
+
+    listDataSet.sort(
+        (r1, r2) ->
+            String.CASE_INSENSITIVE_ORDER.compare(
+                r1.getFields().get(0).getStringValue(), r2.getFields().get(0).getStringValue()));
+    return listDataSet;
+  }
+
+  private QueryDataSet processShowIndex(ShowIndexPlan showPlan) throws QueryProcessException {
+    ListDataSet listDataSet =
+        new ListDataSet(
+            Arrays.asList(
+                new PartialPath(COLUMN_INDEX_SERIES, false),
+                new PartialPath(COLUMN_INDEX_TYPE, false),
+                new PartialPath(COLUMN_INDEX_ATTRIBUTE, false)),
+            Arrays.asList(TSDataType.TEXT, TSDataType.TEXT, TSDataType.TEXT));
+
+    Map<PartialPath, Map<IndexType, IndexInfo>> infos =
+        indexManager.getIndexInfos(showPlan.getPath());
+    infos.forEach(
+        (path, struct) ->
+            struct.forEach(
+                (indexType, info) -> {
+                  RowRecord rowRecord = new RowRecord(0); // ignore timestamp
+                  rowRecord.addField(Binary.valueOf(path.getFullPath()), TSDataType.TEXT);
+                  rowRecord.addField(Binary.valueOf(indexType.toString()), TSDataType.TEXT);
+                  rowRecord.addField(Binary.valueOf(info.toStringForShow()), TSDataType.TEXT);
+                  listDataSet.putRecord(rowRecord);
+                }));
 
     listDataSet.sort(
         (r1, r2) ->

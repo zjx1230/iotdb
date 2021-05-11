@@ -17,13 +17,7 @@
  */
 package org.apache.iotdb.db.index.algorithm.elb;
 
-import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
-import org.apache.iotdb.db.exception.index.IndexRuntimeException;
-import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBType;
-import org.apache.iotdb.db.index.algorithm.elb.ELB.ELBWindowBlockFeature;
-import org.apache.iotdb.db.index.feature.CountFixedFeatureExtractor;
 import org.apache.iotdb.db.index.feature.TimeFixedFeatureExtractor;
-import org.apache.iotdb.db.index.read.TVListPointer;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 
 /**
@@ -36,26 +30,44 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
  * <p>Refer to: Kang, Rong, et al. Matching Consecutive Subpatterns over Streaming Time Series.
  * APWeb-WAIM. Springer. 2018: 90-105.
  *
- * Temp
+ * <p>Temp
  */
 public class ELBTimeFeatureExtractor extends TimeFixedFeatureExtractor {
 
-
-  public ELBTimeFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
-      int alignedDim, long timeAnchor, boolean storeIdentifier, boolean storeAligned,
+  public ELBTimeFeatureExtractor(
+      TSDataType tsDataType,
+      int windowRange,
+      int slideStep,
+      int alignedDim,
+      long timeAnchor,
+      boolean storeIdentifier,
+      boolean storeAligned,
       boolean inQueryMode) {
-    super(tsDataType, windowRange, slideStep, alignedDim, timeAnchor, storeIdentifier, storeAligned,
+    super(
+        tsDataType,
+        windowRange,
+        slideStep,
+        alignedDim,
+        timeAnchor,
+        storeIdentifier,
+        storeAligned,
         inQueryMode);
   }
 
-  public ELBTimeFeatureExtractor(TSDataType tsDataType, int windowRange, int slideStep,
-      int alignedDim, long timeAnchor, boolean storeIdentifier, boolean storeAligned) {
-    super(tsDataType, windowRange, slideStep, alignedDim, timeAnchor, storeIdentifier,
-        storeAligned);
+  public ELBTimeFeatureExtractor(
+      TSDataType tsDataType,
+      int windowRange,
+      int slideStep,
+      int alignedDim,
+      long timeAnchor,
+      boolean storeIdentifier,
+      boolean storeAligned) {
+    super(
+        tsDataType, windowRange, slideStep, alignedDim, timeAnchor, storeIdentifier, storeAligned);
   }
 
-  public ELBTimeFeatureExtractor(TSDataType tsDataType, int windowRange, int alignedDim,
-      int slideStep, long timeAnchor) {
+  public ELBTimeFeatureExtractor(
+      TSDataType tsDataType, int windowRange, int alignedDim, int slideStep, long timeAnchor) {
     super(tsDataType, windowRange, alignedDim, slideStep, timeAnchor);
   }
 }

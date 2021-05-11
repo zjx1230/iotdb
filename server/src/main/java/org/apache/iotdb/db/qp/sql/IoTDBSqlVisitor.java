@@ -68,6 +68,7 @@ import org.apache.iotdb.db.qp.logical.sys.ShowChildNodesOperator;
 import org.apache.iotdb.db.qp.logical.sys.ShowChildPathsOperator;
 import org.apache.iotdb.db.qp.logical.sys.ShowDevicesOperator;
 import org.apache.iotdb.db.qp.logical.sys.ShowFunctionsOperator;
+import org.apache.iotdb.db.qp.logical.sys.ShowIndexOperator;
 import org.apache.iotdb.db.qp.logical.sys.ShowMergeStatusOperator;
 import org.apache.iotdb.db.qp.logical.sys.ShowOperator;
 import org.apache.iotdb.db.qp.logical.sys.ShowStorageGroupOperator;
@@ -183,6 +184,7 @@ import org.apache.iotdb.db.qp.sql.SqlBaseParser.ShowChildPathsContext;
 import org.apache.iotdb.db.qp.sql.SqlBaseParser.ShowDevicesContext;
 import org.apache.iotdb.db.qp.sql.SqlBaseParser.ShowFlushTaskInfoContext;
 import org.apache.iotdb.db.qp.sql.SqlBaseParser.ShowFunctionsContext;
+import org.apache.iotdb.db.qp.sql.SqlBaseParser.ShowIndexContext;
 import org.apache.iotdb.db.qp.sql.SqlBaseParser.ShowMergeStatusContext;
 import org.apache.iotdb.db.qp.sql.SqlBaseParser.ShowQueryProcesslistContext;
 import org.apache.iotdb.db.qp.sql.SqlBaseParser.ShowStorageGroupContext;
@@ -459,6 +461,15 @@ public class IoTDBSqlVisitor extends SqlBaseBaseVisitor<Operator> {
         new ShowFunctionsOperator(SQLConstant.TOK_SHOW_FUNCTIONS);
     showFunctionsOperator.setShowTemporary(ctx.TEMPORARY() != null);
     return showFunctionsOperator;
+  }
+
+  @Override
+  public Operator visitShowIndex(ShowIndexContext ctx) {
+    ShowIndexOperator showIndexOperator = new ShowIndexOperator();
+    if (ctx.prefixPath() != null) {
+      showIndexOperator.setPrefixPath(parsePrefixPath(ctx.prefixPath()));
+    }
+    return showIndexOperator;
   }
 
   @Override

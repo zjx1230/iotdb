@@ -81,6 +81,7 @@ statement
     | SHOW DEVICES prefixPath? (WITH STORAGE GROUP)? limitClause? #showDevices
     | SHOW MERGE #showMergeStatus
     | SHOW QUERY PROCESSLIST #showQueryProcesslist
+    | SHOW INDEX (FROM prefixPath)? #showIndex
     | KILL QUERY INT? #killQuery
     | TRACING ON #tracingOn
     | TRACING OFF #tracingOff

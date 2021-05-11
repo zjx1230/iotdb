@@ -17,9 +17,6 @@
  */
 package org.apache.iotdb.db.index.algorithm;
 
-import java.util.Arrays;
-import java.util.PriorityQueue;
-import java.util.TreeMap;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
@@ -38,7 +35,6 @@ import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.read.TimeValuePair;
 import org.apache.iotdb.tsfile.read.common.Field;
 import org.apache.iotdb.tsfile.read.common.RowRecord;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
@@ -46,9 +42,11 @@ import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * For index developers, the indexing framework aims to provide a simple and friendly platform and
@@ -156,7 +154,7 @@ public abstract class IoTDBIndex {
       List<DistSeries> res, boolean alignedByTime, int nMaxReturnSeries)
       throws QueryIndexException {
     if (alignedByTime) {
-//      throw new QueryIndexException("Unsupported alignedByTime result");
+      //      throw new QueryIndexException("Unsupported alignedByTime result");
       return constructTimeAlignedSearchDataset(res, nMaxReturnSeries);
     }
     // make result paths and types
@@ -248,7 +246,7 @@ public abstract class IoTDBIndex {
     TreeMap<Long, List<Field>> timeMergedFields = new TreeMap<>();
 
     for (int col = 0; col < nMaxReturnSeries; col++) {
-        TVList tvList = res.get(col).tvList;
+      TVList tvList = res.get(col).tvList;
 
       for (int row = 0; row < tvList.size(); row++) {
         long t = tvList.getTime(row);
@@ -260,12 +258,13 @@ public abstract class IoTDBIndex {
         timeMergedFields.get(t).set(col, Field.getField(v, tsDataType));
       }
     }
-//    timeMergedFields.forEach((k,v)-> System.out.println(k + "," + v));
+    //    timeMergedFields.forEach((k,v)-> System.out.println(k + "," + v));
     // to dataset
-    timeMergedFields.forEach((k,v)->{
-      RowRecord record = new RowRecord(k, v);
-      dataSet.putRecord(record);
-    });
+    timeMergedFields.forEach(
+        (k, v) -> {
+          RowRecord record = new RowRecord(k, v);
+          dataSet.putRecord(record);
+        });
     return dataSet;
   }
 }

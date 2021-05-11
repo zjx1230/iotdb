@@ -116,6 +116,8 @@ public interface IIndexRouter {
    */
   void endQuery(PartialPath indexSeries, IndexType indexType, QueryContext context);
 
+  Map<PartialPath, Map<IndexType, IndexInfo>> getIndexInfosByPrefixPath(PartialPath prefixPath);
+
   class Factory {
 
     private Factory() {

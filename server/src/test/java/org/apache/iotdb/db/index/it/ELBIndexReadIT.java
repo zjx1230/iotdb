@@ -89,17 +89,20 @@ public class ELBIndexReadIT {
       System.out.println(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
       statement.execute(
           String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", speed1));
-      System.out.println(String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", speed1));
+      System.out.println(
+          String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", speed1));
 
       for (int i = 0; i < wholeSize; i++) {
         String wholePath = String.format(directionPattern, i);
         statement.execute(
             String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
-        System.out.println(String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
+        System.out.println(
+            String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
       }
       statement.execute(
           String.format("CREATE INDEX ON %s WITH INDEX=%s, BLOCK_SIZE=%d", indexSub, ELB_INDEX, 5));
-      System.out.println(String.format("CREATE INDEX ON %s WITH INDEX=%s, BLOCK_SIZE=%d", indexSub, ELB_INDEX, 5));
+      System.out.println(
+          String.format("CREATE INDEX ON %s WITH INDEX=%s, BLOCK_SIZE=%d", indexSub, ELB_INDEX, 5));
 
       TVList subInput = TVListAllocator.getInstance().allocate(TSDataType.DOUBLE);
       for (int i = 0; i < subLength; i++) {
@@ -214,7 +217,7 @@ public class ELBIndexReadIT {
           sb.append("\n");
         }
         System.out.println(sb);
-//        Assert.assertEquals(gt, sb.toString());
+        //        Assert.assertEquals(gt, sb.toString());
       }
     } catch (Exception e) {
       e.printStackTrace();
@@ -226,7 +229,7 @@ public class ELBIndexReadIT {
   public void checkRead() throws ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection =
-        DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
+            DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
 
       String querySQL =
