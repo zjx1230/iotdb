@@ -104,7 +104,9 @@ public class ProtoIndexRouterTest {
     this.fakeCreateFunc =
         (indexSeries, indexInfoMap) ->
             new IndexProcessor(
-                indexSeries, testRouterDir + File.separator + "index_fake_" + indexSeries);
+                indexSeries,
+                testRouterDir + File.separator + "index_fake_" + indexSeries,
+                indexInfoMap);
   }
 
   private static final String testRouterDir = "test_protoIndexRouter";

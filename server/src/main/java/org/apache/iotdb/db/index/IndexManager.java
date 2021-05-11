@@ -90,7 +90,8 @@ public class IndexManager implements IndexManagerMBean, IService {
         (indexSeries, indexInfoMap) ->
             new IndexProcessor(
                 indexSeries,
-                IndexUtils.removeIllegalStarInDir(indexDataDirPath + File.separator + indexSeries));
+                IndexUtils.removeIllegalStarInDir(indexDataDirPath + File.separator + indexSeries),
+                indexInfoMap);
     router = IIndexRouter.Factory.getIndexRouter(indexRouterDir);
   }
 
@@ -204,7 +205,13 @@ public class IndexManager implements IndexManagerMBean, IService {
     PartialPath queryIndexSeries = paths.get(0);
     IndexProcessorStruct indexProcessorStruct =
         router.startQueryAndCheck(queryIndexSeries, indexType, context);
-    List<StorageGroupProcessor> list = indexProcessorStruct.addMergeLock();
+    List<StorageGroupProcessor> list;
+    try {
+      list = indexProcessorStruct.addMergeLock();
+    } catch (MetadataException e) {
+      e.printStackTrace();
+      throw new QueryIndexException("add merge lock failed");
+    }
     try {
       return indexProcessorStruct.processor.query(indexType, queryProps, context, alignedByTime);
     } finally {

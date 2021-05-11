@@ -21,6 +21,7 @@ package org.apache.iotdb.db.index.common;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor;
 import org.apache.iotdb.db.exception.StorageEngineException;
+import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.IndexProcessor;
 import org.apache.iotdb.db.metadata.PartialPath;
 
@@ -41,7 +42,11 @@ public class IndexProcessorStruct {
     this.infos = infos;
   }
 
-  public List<StorageGroupProcessor> addMergeLock() throws StorageEngineException {
+  public List<StorageGroupProcessor> addMergeLock()
+      throws StorageEngineException, MetadataException {
+    if (!representativePath.isFullPath()) {
+      representativePath = IndexUtils.getRepresentativePath(representativePath);
+    }
     return StorageEngine.getInstance().mergeLock(Collections.singletonList(representativePath));
   }
 

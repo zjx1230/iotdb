@@ -65,10 +65,9 @@ public class RTreeIndexReadIT {
     IoTDBDescriptor.getInstance().getConfig().setEnableIndex(true);
     EnvironmentUtils.closeStatMonitor();
     EnvironmentUtils.envSetUp();
-    insertSQL();
   }
 
-  private void insertSQL() throws ClassNotFoundException {
+  private void insertSQL(boolean createTS) throws ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
     //    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
     try (Connection connection =
@@ -78,14 +77,19 @@ public class RTreeIndexReadIT {
       //      statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupSub));
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
       System.out.println(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
-
-      for (int i = 0; i < 1; i++) {
-        String wholePath = String.format(directionPattern, i);
-        System.out.println(
-            String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
-        statement.execute(
-            String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
+      if (createTS) {
+        for (int i = 0; i < 1; i++) {
+          String wholePath = String.format(directionPattern, i);
+          System.out.println(
+              String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
+          statement.execute(
+              String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
+        }
       }
+      System.out.println(
+          String.format(
+              "CREATE INDEX ON %s WITH INDEX=%s, SERIES_LENGTH=%d, FEATURE_DIM=%d, MAX_ENTRIES=%d, MIN_ENTRIES=%d",
+              indexWhole, RTREE_PAA, wholeDim, PAA_Dim, 10, 2));
       statement.execute(
           String.format(
               "CREATE INDEX ON %s WITH INDEX=%s, SERIES_LENGTH=%d, FEATURE_DIM=%d, MAX_ENTRIES=%d, MIN_ENTRIES=%d",
@@ -117,8 +121,17 @@ public class RTreeIndexReadIT {
   }
 
   @Test
-  public void checkRead() throws ClassNotFoundException {
+  public void checkReadWithCreateTS() throws ClassNotFoundException {
+    checkRead(true);
+  }
 
+  @Test
+  public void checkReadWithoutCreateTS() throws ClassNotFoundException {
+    checkRead(false);
+  }
+
+  private void checkRead(boolean createTS) throws ClassNotFoundException {
+    insertSQL(createTS);
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection =
             DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");

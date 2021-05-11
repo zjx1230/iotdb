@@ -26,12 +26,12 @@ import org.apache.iotdb.db.index.IndexProcessor;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexProcessorStruct;
 import org.apache.iotdb.db.index.common.IndexType;
+import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.common.func.CreateIndexProcessorFunc;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.metadata.mnode.StorageGroupMNode;
 import org.apache.iotdb.db.query.context.QueryContext;
-import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 import org.slf4j.Logger;
@@ -303,7 +303,12 @@ public class ProtoIndexRouter implements IIndexRouter {
           Map<IndexType, IndexInfo> infoMap = new EnumMap<>(IndexType.class);
           infoMap.put(indexType, indexInfo);
           IndexProcessor processor = func.act(partialPath, infoMap);
-          PartialPath representativePath = getRepresentativePath(partialPath);
+          PartialPath representativePath;
+          try {
+            representativePath = IndexUtils.getRepresentativePath(partialPath);
+          } catch (MetadataException e) {
+            representativePath = partialPath;
+          }
           wildCardProcessorMap.put(
               partialPath, new IndexProcessorStruct(processor, representativePath, infoMap));
         } else {
@@ -327,16 +332,6 @@ public class ProtoIndexRouter implements IIndexRouter {
       lock.writeLock().unlock();
     }
     return true;
-  }
-
-  private PartialPath getRepresentativePath(PartialPath wildcardPath) throws MetadataException {
-    Pair<List<PartialPath>, Integer> paths =
-        mManager.getAllTimeseriesPathWithAlias(wildcardPath, 1, 0);
-    if (paths.left.isEmpty()) {
-      throw new MetadataException("Please create at least one series before create index");
-    } else {
-      return paths.left.get(0);
-    }
   }
 
   @Override

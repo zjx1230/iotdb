@@ -188,17 +188,17 @@ public class ELBNoIndexIT {
       boolean hasIndex = statement.execute(querySQL);
       String gt =
           "Time,root.wind1.azq01.speed.17,\n"
-              + "0,170.0,\n"
-              + "1,180.0,\n"
-              + "2,190.0,\n"
-              + "3,250.0,\n"
-              + "4,260.0,\n"
-              + "5,270.0,\n"
-              + "6,280.0,\n"
-              + "7,290.0,\n"
-              + "8,400.0,\n"
-              + "9,410.0,\n"
-              + "10,420.0,\n";
+              + "17,170.0,\n"
+              + "18,180.0,\n"
+              + "19,190.0,\n"
+              + "25,250.0,\n"
+              + "26,260.0,\n"
+              + "27,270.0,\n"
+              + "28,280.0,\n"
+              + "29,290.0,\n"
+              + "40,400.0,\n"
+              + "41,410.0,\n"
+              + "42,420.0,\n";
       Assert.assertTrue(hasIndex);
       try (ResultSet resultSet = statement.getResultSet()) {
         ResultSetMetaData resultSetMetaData = resultSet.getMetaData();

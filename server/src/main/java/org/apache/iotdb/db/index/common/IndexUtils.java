@@ -19,6 +19,8 @@ package org.apache.iotdb.db.index.common;
 
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
+import org.apache.iotdb.db.exception.metadata.MetadataException;
+import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.TestOnly;
@@ -27,9 +29,11 @@ import org.apache.iotdb.db.utils.datastructure.primitive.PrimitiveList;
 import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.TimeValuePair;
+import org.apache.iotdb.tsfile.utils.Pair;
 
 import java.io.File;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -55,6 +59,17 @@ public class IndexUtils {
       }
     }
     return true;
+  }
+
+  public static PartialPath getRepresentativePath(PartialPath wildcardPath)
+      throws MetadataException {
+    Pair<List<PartialPath>, Integer> paths =
+        MManager.getInstance().getAllTimeseriesPathWithAlias(wildcardPath, 1, 0);
+    if (paths.left.isEmpty()) {
+      throw new MetadataException("Please create at least one series before create index");
+    } else {
+      return paths.left.get(0);
+    }
   }
 
   public static int getDataTypeSize(TVList srcData) {

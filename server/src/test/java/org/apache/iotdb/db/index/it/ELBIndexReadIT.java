@@ -67,7 +67,6 @@ public class ELBIndexReadIT {
     IoTDBDescriptor.getInstance().getConfig().setEnableIndex(true);
     EnvironmentUtils.closeStatMonitor();
     EnvironmentUtils.envSetUp();
-    insertSQL();
   }
 
   @After
@@ -76,7 +75,7 @@ public class ELBIndexReadIT {
     IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
   }
 
-  private static void insertSQL() throws ClassNotFoundException {
+  private static void insertSQL(boolean createTS) throws ClassNotFoundException {
 
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection =
@@ -87,17 +86,18 @@ public class ELBIndexReadIT {
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
       System.out.println(String.format("SET STORAGE GROUP TO %s", storageGroupSub));
       System.out.println(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
-      statement.execute(
-          String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", speed1));
-      System.out.println(
-          String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", speed1));
-
-      for (int i = 0; i < wholeSize; i++) {
-        String wholePath = String.format(directionPattern, i);
+      if (createTS) {
         statement.execute(
-            String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
+            String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", speed1));
         System.out.println(
-            String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
+            String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", speed1));
+        for (int i = 0; i < wholeSize; i++) {
+          String wholePath = String.format(directionPattern, i);
+          statement.execute(
+              String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
+          System.out.println(
+              String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
+        }
       }
       statement.execute(
           String.format("CREATE INDEX ON %s WITH INDEX=%s, BLOCK_SIZE=%d", indexSub, ELB_INDEX, 5));
@@ -176,7 +176,17 @@ public class ELBIndexReadIT {
   }
 
   @Test
-  public void checkMultiSeriesTimeAligned() throws ClassNotFoundException {
+  public void checkMultiSeriesTimeAlignedWithCreateTS() throws ClassNotFoundException {
+    checkMultiSeriesTimeAligned(true);
+  }
+
+  @Test
+  public void checkMultiSeriesTimeAlignedWithoutCreateTS() throws ClassNotFoundException {
+    checkMultiSeriesTimeAligned(false);
+  }
+
+  private void checkMultiSeriesTimeAligned(boolean createTS) throws ClassNotFoundException {
+    insertSQL(createTS);
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection =
             DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
@@ -191,17 +201,17 @@ public class ELBIndexReadIT {
       boolean hasIndex = statement.execute(querySQL);
       String gt =
           "Time,root.wind1.azq01.speed.17,\n"
-              + "0,170.0,\n"
-              + "1,180.0,\n"
-              + "2,190.0,\n"
-              + "3,250.0,\n"
-              + "4,260.0,\n"
-              + "5,270.0,\n"
-              + "6,280.0,\n"
-              + "7,290.0,\n"
-              + "8,400.0,\n"
-              + "9,410.0,\n"
-              + "10,420.0,\n";
+              + "17,170.0,\n"
+              + "18,180.0,\n"
+              + "19,190.0,\n"
+              + "25,250.0,\n"
+              + "26,260.0,\n"
+              + "27,270.0,\n"
+              + "28,280.0,\n"
+              + "29,290.0,\n"
+              + "40,400.0,\n"
+              + "41,410.0,\n"
+              + "42,420.0,";
       Assert.assertTrue(hasIndex);
       try (ResultSet resultSet = statement.getResultSet()) {
         ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
@@ -226,7 +236,17 @@ public class ELBIndexReadIT {
   }
 
   @Test
-  public void checkRead() throws ClassNotFoundException {
+  public void checkReadWithCreateTS() throws ClassNotFoundException {
+    checkRead(true);
+  }
+
+  @Test
+  public void checkReadWithoutCreateTS() throws ClassNotFoundException {
+    checkRead(false);
+  }
+
+  private void checkRead(boolean createTS) throws ClassNotFoundException {
+    insertSQL(createTS);
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection =
             DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
@@ -241,17 +261,17 @@ public class ELBIndexReadIT {
       boolean hasIndex = statement.execute(querySQL);
       String gt =
           "Time,root.wind1.azq01.speed.17,\n"
-              + "0,170.0,\n"
-              + "1,180.0,\n"
-              + "2,190.0,\n"
-              + "3,250.0,\n"
-              + "4,260.0,\n"
-              + "5,270.0,\n"
-              + "6,280.0,\n"
-              + "7,290.0,\n"
-              + "8,400.0,\n"
-              + "9,410.0,\n"
-              + "10,420.0,\n";
+              + "17,170.0,\n"
+              + "18,180.0,\n"
+              + "19,190.0,\n"
+              + "25,250.0,\n"
+              + "26,260.0,\n"
+              + "27,270.0,\n"
+              + "28,280.0,\n"
+              + "29,290.0,\n"
+              + "40,400.0,\n"
+              + "41,410.0,\n"
+              + "42,420.0,\n";
       Assert.assertTrue(hasIndex);
       try (ResultSet resultSet = statement.getResultSet()) {
         ResultSetMetaData resultSetMetaData = resultSet.getMetaData();

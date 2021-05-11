@@ -19,6 +19,7 @@
 package org.apache.iotdb.db.index.common;
 
 import org.apache.iotdb.db.metadata.MetadataOperationType;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 import java.io.IOException;
@@ -144,5 +145,9 @@ public class IndexInfo implements Cloneable {
   @Override
   public Object clone() {
     return new IndexInfo(indexType, time, new HashMap<>(props));
+  }
+
+  public TSDataType getRecommendDataType() {
+    return indexType.getRecommendDataType();
   }
 }

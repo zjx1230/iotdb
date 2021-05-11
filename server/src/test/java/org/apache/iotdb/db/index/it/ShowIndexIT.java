@@ -19,7 +19,6 @@
 package org.apache.iotdb.db.index.it;
 
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.index.IndexManager;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.jdbc.Config;
 
@@ -35,15 +34,15 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 
-import static org.apache.iotdb.db.index.IndexTestUtils.getArrayRange;
 import static org.apache.iotdb.db.index.common.IndexConstant.MODEL_PATH;
 import static org.apache.iotdb.db.index.common.IndexType.MMHH;
 import static org.junit.Assert.fail;
 
-public class MMHHIndexReadIT {
+public class ShowIndexIT {
 
   private static final String insertPattern = "INSERT INTO %s(timestamp, %s) VALUES (%d, %.3f)";
 
+  private static final String storageGroupSub = "root.wind1";
   private static final String storageGroupWhole = "root.wind2";
 
   private static final String speed1 = "root.wind1.azq01.speed";
@@ -62,66 +61,61 @@ public class MMHHIndexReadIT {
     IoTDBDescriptor.getInstance().getConfig().setEnableIndex(true);
     EnvironmentUtils.closeStatMonitor();
     EnvironmentUtils.envSetUp();
+    //    insertSQL();
   }
 
-  private void insertSQL(boolean explicitCreateTS) throws ClassNotFoundException {
+  @Test
+  public void createIndexBeforeCreateSeries() throws ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
     //    IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
     try (Connection connection =
             DriverManager.getConnection(
                 Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement(); ) {
+      statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupSub));
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
+      System.out.println(String.format("SET STORAGE GROUP TO %s", storageGroupSub));
       System.out.println(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
-      if (explicitCreateTS) {
-        for (int i = 0; i < 1; i++) {
-          String wholePath = String.format(directionPattern, i);
-          System.out.println(
-              String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
-          statement.execute(
-              String.format("CREATE TIMESERIES %s WITH DATATYPE=FLOAT,ENCODING=PLAIN", wholePath));
-        }
-      }
+
       System.out.println(
           String.format(
               "CREATE INDEX ON %s WITH INDEX=%s, SERIES_LENGTH=%d, HASH_LENGTH=%d, %s=%s",
-              indexWhole,
-              MMHH,
-              wholeDim,
-              hashLength,
-              MODEL_PATH,
-              //
-              // "\"/Users/kangrong/code/github/deep-learning/hash_journal/TAH_project/src/mmhh.pt\""
-              "\"src/test/resources/index/mmhh.pt\""));
-      //      String modelPath =
-      // "/Users/kangrong/code/github/deep-learning/hash_journal/TAH_project/src/mmhh.pt";
+              indexWhole, MMHH, wholeDim, hashLength, MODEL_PATH, "\"resources/index/mmhh.pt\""));
       String modelPath = "src/test/resources/index/mmhh.pt";
       if (!(new File(modelPath).exists())) {
         fail("model file path is not correct!");
       }
       statement.execute(
-          String.format(
-              "CREATE INDEX ON %s WITH INDEX=%s, SERIES_LENGTH=%d, HASH_LENGTH=%d, %s=%s",
-              indexWhole,
-              MMHH,
-              wholeDim,
-              hashLength,
-              MODEL_PATH,
-              String.format("\"%s\"", modelPath)));
-      for (int i = 0; i < wholeSize; i++) {
-        String device = String.format(directionDevicePattern, i);
-        for (int j = 0; j < wholeDim; j++) {
-          String insertSQL =
-              String.format(insertPattern, device, directionSensor, j, (i * wholeDim + j) * 1d);
-          //          System.out.println(insertSQL);
-          statement.execute(insertSQL);
-        }
-      }
+          "CREATE INDEX ON root.wind2.*.direction WITH INDEX=MMHH, SERIES_LENGTH=100, "
+              + "HASH_LENGTH=48, MODEL_PATH=\"src/test/resources/index/mmhh.pt\"");
+      statement.execute(
+          "CREATE INDEX ON root.wind1.azq01.speed WITH INDEX=ELB_INDEX, BLOCK_SIZE=5");
+      statement.execute(
+          "CREATE INDEX ON root.wind2.*.direction WITH INDEX=RTREE_PAA, "
+              + "SERIES_LENGTH=15, FEATURE_DIM=4, MAX_ENTRIES=10, MIN_ENTRIES=2");
       statement.execute("flush");
-      System.out.println(IndexManager.getInstance().getRouter());
+      //      System.out.println(IndexManager.getInstance().getRouter());
       //      IndexManager.getInstance().stop();
       //      IndexManager.getInstance().start();
+      checkRead(
+          "SHOW INDEX",
+          "index series,index type,index attribute,\n"
+              + "root.wind1.azq01.speed,ELB_INDEX,BLOCK_SIZE=5,\n"
+              + "root.wind2.*.direction,RTREE_PAA,FEATURE_DIM=4,MIN_ENTRIES=2,SERIES_LENGTH=15,MAX_ENTRIES=10,\n"
+              + "root.wind2.*.direction,MMHH,MODEL_PATH=src/test/resources/index/mmhh.pt,SERIES_LENGTH=100,HASH_LENGTH=48,\n");
 
+      checkRead(
+          "SHOW INDEX FROM root.*",
+          "index series,index type,index attribute,\n"
+              + "root.wind1.azq01.speed,ELB_INDEX,BLOCK_SIZE=5,\n"
+              + "root.wind2.*.direction,RTREE_PAA,FEATURE_DIM=4,MIN_ENTRIES=2,SERIES_LENGTH=15,MAX_ENTRIES=10,\n"
+              + "root.wind2.*.direction,MMHH,MODEL_PATH=src/test/resources/index/mmhh.pt,SERIES_LENGTH=100,HASH_LENGTH=48,\n");
+
+      checkRead(
+          "SHOW INDEX FROM root.wind2.*",
+          "index series,index type,index attribute,\n"
+              + "root.wind2.*.direction,RTREE_PAA,FEATURE_DIM=4,MIN_ENTRIES=2,SERIES_LENGTH=15,MAX_ENTRIES=10,\n"
+              + "root.wind2.*.direction,MMHH,MODEL_PATH=src/test/resources/index/mmhh.pt,SERIES_LENGTH=100,HASH_LENGTH=48,\n");
     } catch (Exception e) {
       e.printStackTrace();
       fail(e.getMessage());
@@ -134,36 +128,13 @@ public class MMHHIndexReadIT {
     IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
   }
 
-  @Test
-  public void checkReadWithCreateTS() throws ClassNotFoundException {
-    checkRead(true);
-  }
-
-  @Test
-  public void checkReadWithoutCreateTS() throws ClassNotFoundException {
-    checkRead(false);
-  }
-
-  private void checkRead(boolean explicitCreateTS) throws ClassNotFoundException {
+  private void checkRead(String SQL, String gt) throws ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
-    insertSQL(explicitCreateTS);
     try (Connection connection =
             DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
+      boolean hasIndex = statement.execute(SQL);
 
-      String querySQL =
-          String.format(
-              "SELECT TOP 2 direction FROM root.wind2.* WHERE direction LIKE (%s)",
-              getArrayRange(121, 121 + wholeDim));
-
-      System.out.println(querySQL);
-      statement.setQueryTimeout(600);
-      boolean hasIndex = statement.execute(querySQL);
-      StringBuilder gt = new StringBuilder();
-      gt.append("Time,root.wind2.1.direction.(D=0.00),root.wind2.2.direction.(D=1.00),\n");
-      for (int i = 0; i < 100; i++) {
-        gt.append(String.format("%d,%.1f,%.1f,\n", i, 100f + i, 200f + i));
-      }
       Assert.assertTrue(hasIndex);
       try (ResultSet resultSet = statement.getResultSet()) {
         ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
@@ -179,7 +150,7 @@ public class MMHHIndexReadIT {
           sb.append("\n");
         }
         System.out.println(sb);
-        Assert.assertEquals(gt.toString(), sb.toString());
+        Assert.assertEquals(gt, sb.toString());
       }
     } catch (Exception e) {
       e.printStackTrace();

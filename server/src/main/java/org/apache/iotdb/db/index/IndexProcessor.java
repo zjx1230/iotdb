@@ -120,7 +120,8 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   /** The optimizer for the post-processing phase (refinement phase). Unused yet. */
   private final IIndexCandidateOrderOptimize refinePhaseOptimizer;
 
-  public IndexProcessor(PartialPath indexSeries, String indexSeriesDirPath) {
+  public IndexProcessor(
+      PartialPath indexSeries, String indexSeriesDirPath, Map<IndexType, IndexInfo> indexInfoMap) {
     this.indexBuildPoolManager = IndexBuildTaskPoolManager.getInstance();
 
     this.numIndexBuildTasks = new AtomicInteger(0);
@@ -137,7 +138,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
     this.usableMap = new EnumMap<>(IndexType.class);
     this.previousDataBufferFile = indexSeriesDirPath + File.separator + "previousBuffer";
     this.usableFile = indexSeriesDirPath + File.separator + "usableMap";
-    this.tsDataType = initSeriesType();
+    this.tsDataType = initSeriesType(indexInfoMap);
     this.refinePhaseOptimizer = IIndexCandidateOrderOptimize.Factory.getOptimize();
     deserializePreviousBuffer();
     deserializeUsable(indexSeries);
@@ -149,7 +150,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
    *
    * @return tsDataType of this IndexProcessor
    */
-  private TSDataType initSeriesType() {
+  private TSDataType initSeriesType(Map<IndexType, IndexInfo> indexInfoMap) {
     try {
       if (indexSeries.isFullPath()) {
         return MManager.getInstance().getSeriesType(indexSeries);
@@ -157,13 +158,26 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
         List<PartialPath> list =
             IoTDB.metaManager.getAllTimeseriesPathWithAlias(indexSeries, 1, 0).left;
         if (list.isEmpty()) {
-          throw new IndexRuntimeException("No series in the wildcard path");
+          throw new MetadataException(
+              "not exist any series in " + indexSeries + " cannot determine the index datatype");
+          //          throw new IndexRuntimeException("No series in the wildcard path");
+          // not throw, just return null
+          //          return null;
         } else {
           return MManager.getInstance().getSeriesType(list.get(0));
         }
       }
     } catch (MetadataException e) {
-      throw new IndexRuntimeException("get type failed. ", e);
+      // not throw, just return null
+      if (!indexInfoMap.isEmpty()) {
+        return indexInfoMap.entrySet().stream().findFirst().get().getValue().getRecommendDataType();
+      } else {
+        // not any index, why it's called? warning and find type from MManager
+        logger.warn(
+            "no any type of index when IndexProcessor is created, find DataType from Metadata.");
+        throw new IndexRuntimeException(
+            "cannot find datatype: no data series, no index recommendation. ", e);
+      }
     }
   }
 

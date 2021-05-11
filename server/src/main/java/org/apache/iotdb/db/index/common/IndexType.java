@@ -33,11 +33,17 @@ import java.util.HashMap;
 import java.util.Map;
 
 public enum IndexType {
-  NO_INDEX,
-  RTREE_PAA,
-  ELB_INDEX,
-  MMHH,
-  ANY_FOR_QUERY;
+  NO_INDEX(TSDataType.FLOAT),
+  RTREE_PAA(TSDataType.FLOAT),
+  ELB_INDEX(TSDataType.FLOAT),
+  MMHH(TSDataType.FLOAT),
+  ANY_FOR_QUERY(TSDataType.FLOAT);
+
+  private TSDataType recommendDataType;
+
+  IndexType(TSDataType recommendDataType) {
+    this.recommendDataType = recommendDataType;
+  }
 
   /**
    * judge the index type.
@@ -134,5 +140,9 @@ public enum IndexType {
     Map<String, String> uppercase = new HashMap<>(props.size());
     props.forEach((k, v) -> uppercase.put(k.toUpperCase(), v));
     return uppercase;
+  }
+
+  public TSDataType getRecommendDataType() {
+    return recommendDataType;
   }
 }
