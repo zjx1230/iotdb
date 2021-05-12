@@ -20,8 +20,10 @@
 package org.apache.iotdb.db.engine.heavyhitter.hitter;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.heavyhitter.QueryHeavyHitters;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.metadata.MManager;
@@ -45,22 +47,34 @@ public class DefaultHitter implements QueryHeavyHitters {
 
   @Override
   public List<PartialPath> getTopCompactionSeries(PartialPath sgName) throws MetadataException {
+    int totalSG = StorageEngine.getInstance().getProcessorMap().size();
+    List<PartialPath> ret = new ArrayList<>();
     List<PartialPath> unmergedSeries =
         MManager.getInstance().getAllTimeseriesPath(sgName);
-    List<List<PartialPath>> devicePaths = MergeUtils.splitPathsByDevice(unmergedSeries);
-    if (devicePaths.size() > 0) {
-      String deviceName = devicePaths.get(0).get(0).getDevice();
-      logger.info("default hitter, top compaction device:{}", deviceName);
-      if (IoTDBDescriptor.getInstance().getConfig().getMaxHitterNum() == -1) {
-        List<PartialPath> devicePath = devicePaths.get(0);
-        List<PartialPath> ret = new ArrayList<>();
-        for (int i = 0; i < devicePath.size() / 2; i++) {
-          ret.add(devicePath.get(i));
-        }
-        return ret;
-      }
-      return devicePaths.get(0);
+//    List<List<PartialPath>> devicePaths = MergeUtils.splitPathsByDevice(unmergedSeries);
+//    if (devicePaths.size() > 0) {
+//      String deviceName = devicePaths.get(0).get(0).getDevice();
+//      logger.info("default hitter, top compaction device:{}", deviceName);
+//      if (IoTDBDescriptor.getInstance().getConfig().getMaxHitterNum() == -1) {
+//        List<PartialPath> devicePath = devicePaths.get(0);
+//        for (int i = 0; i < devicePath.size() / 2; i++) {
+//          ret.add(devicePath.get(i));
+//        }
+//        return ret;
+//      }
+//      return devicePaths.get(0);
+//    }
+//    for (List<PartialPath> paths: devicePaths) {
+//      for (int i = 0; i < 500; i++){
+//        ret.add(paths.get(i));
+//      }
+//    }
+    Collections.shuffle(unmergedSeries);
+    for (int i = 0; i < IoTDBDescriptor.getInstance().getConfig().getMaxHitterNum() / totalSG;
+        i++) {
+      ret.add(unmergedSeries.get(i));
     }
-    return null;
+    logger.info("default hitter, top compaction path:{},{}", ret.get(0), ret.get(1));
+    return ret;
   }
 }

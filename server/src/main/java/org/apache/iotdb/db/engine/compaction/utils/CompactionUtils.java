@@ -25,6 +25,7 @@ import static org.apache.iotdb.db.utils.QueryUtils.modifyChunkMetaData;
 import com.google.common.util.concurrent.RateLimiter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -203,6 +204,144 @@ public class CompactionUtils {
       tsFileDevicesSet.addAll(reader.getAllDevices());
     }
     return tsFileDevicesSet;
+  }
+
+  /**
+   * @param targetResource the target resource to be merged to
+   * @param tsFileResources the source resource to be merged
+   * @param storageGroup the storage group name
+   * @param devices the devices to be skipped(used by recover)
+   */
+  @SuppressWarnings("squid:S3776") // Suppress high Cognitive Complexity warning
+  public static void hitterMergeTest(TsFileResource targetResource,
+      List<TsFileResource> tsFileResources, String storageGroup,
+      Set<String> devices, List<PartialPath> unmergedPaths) throws IOException, MetadataException {
+    RestorableTsFileIOWriter writer = new RestorableTsFileIOWriter(targetResource.getTsFile());
+    Map<String, TsFileSequenceReader> tsFileSequenceReaderMap = new HashMap<>();
+    Map<String, List<Modification>> modificationCache = new HashMap<>();
+    RateLimiter compactionWriteRateLimiter = MergeManager.getINSTANCE().getMergeWriteRateLimiter();
+
+    List<List<PartialPath>> devicePaths = MergeUtils.splitPathsByDevice(unmergedPaths);
+//    long time1 = System.nanoTime();
+//    long interval ;
+    for (List<PartialPath> pathList : devicePaths) {
+      String device = pathList.get(0).getDevice();
+      if (devices.contains(device)) {
+        continue;
+      }
+      writer.startChunkGroup(device);
+      // sort chunkMeta by measurement
+      Map<String, Map<TsFileSequenceReader, List<ChunkMetadata>>> measurementChunkMetadataMap = new HashMap<>();
+      for (TsFileResource levelResource : tsFileResources) {
+        TsFileSequenceReader reader = buildReaderFromTsFileResource(levelResource,
+            tsFileSequenceReaderMap, storageGroup);
+        if (reader == null) {
+          continue;
+        }
+        Map<String, List<ChunkMetadata>> chunkMetadataMap = new HashMap<>();
+        for (PartialPath path : pathList) {
+          chunkMetadataMap.computeIfAbsent(path.getMeasurement(), p -> new ArrayList<>());
+          chunkMetadataMap.get(path.getMeasurement()).addAll(reader.getChunkMetadataList(path));
+        }
+        for (Entry<String, List<ChunkMetadata>> entry : chunkMetadataMap.entrySet()) {
+          for (ChunkMetadata chunkMetadata : entry.getValue()) {
+            Map<TsFileSequenceReader, List<ChunkMetadata>> readerChunkMetadataMap;
+            String measurementUid = chunkMetadata.getMeasurementUid();
+            if (measurementChunkMetadataMap.containsKey(measurementUid)) {
+              readerChunkMetadataMap = measurementChunkMetadataMap.get(measurementUid);
+            } else {
+              readerChunkMetadataMap = new LinkedHashMap<>();
+            }
+            List<ChunkMetadata> chunkMetadataList;
+            if (readerChunkMetadataMap.containsKey(reader)) {
+              chunkMetadataList = readerChunkMetadataMap.get(reader);
+            } else {
+              chunkMetadataList = new ArrayList<>();
+            }
+            chunkMetadataList.add(chunkMetadata);
+            readerChunkMetadataMap.put(reader, chunkMetadataList);
+            measurementChunkMetadataMap
+                .put(chunkMetadata.getMeasurementUid(), readerChunkMetadataMap);
+          }
+        }
+      }
+      long maxVersion = Long.MIN_VALUE;
+      for (Entry<String, Map<TsFileSequenceReader, List<ChunkMetadata>>> entry : measurementChunkMetadataMap
+          .entrySet()) {
+        Map<TsFileSequenceReader, List<ChunkMetadata>> readerChunkMetadatasMap = entry.getValue();
+        boolean isPageEnoughLarge = true;
+        for (List<ChunkMetadata> chunkMetadatas : readerChunkMetadatasMap.values()) {
+          for (ChunkMetadata chunkMetadata : chunkMetadatas) {
+            if (chunkMetadata.getNumOfPoints() < MERGE_PAGE_POINT_NUM) {
+              isPageEnoughLarge = false;
+              break;
+            }
+          }
+        }
+        if (isPageEnoughLarge) {
+          logger.debug("{} [Compaction] page enough large, use append merge", storageGroup);
+          // append page in chunks, so we do not have to deserialize a chunk
+          maxVersion = writeByAppendMerge(maxVersion, device, compactionWriteRateLimiter,
+              entry, targetResource, writer, modificationCache);
+        } else {
+//          logger
+//              .debug("{} [Compaction] page too small, use deserialize merge", storageGroup);
+          // we have to deserialize chunks to merge pages
+          maxVersion = writeByDeserializeMerge(maxVersion, device, compactionWriteRateLimiter,
+              entry, targetResource, writer, modificationCache);
+        }
+      }
+      writer.endChunkGroup();
+      writer.writeVersion(maxVersion);
+    }
+//    long time2 = System.nanoTime();
+//    interval = time2 - time1;
+//    System.out.println("合并耗时:"+ interval);
+
+    Set<PartialPath> mergedPaths = new HashSet<>(unmergedPaths);
+    // copy the other part to the target tsfile
+    for (TsFileResource resource: tsFileResources) {
+      TsFileSequenceReader tsReader = buildReaderFromTsFileResource(resource,
+          tsFileSequenceReaderMap, storageGroup);
+      List<String> deviceList = tsReader.getAllDevices();
+      for (String device : deviceList) {
+        List<ChunkMetadata> chunkMetadataList = new ArrayList<>();
+        Map<String, List<ChunkMetadata>> chunkMetadataInDevice = tsReader.readChunkMetadataInDevice(device);
+        for (Entry<String, List<ChunkMetadata>> chunkMetadataListInDevice : chunkMetadataInDevice.entrySet()) {
+          if (!mergedPaths.contains(new PartialPath(device, chunkMetadataListInDevice.getKey()))) {
+            chunkMetadataList.addAll(chunkMetadataListInDevice.getValue());
+          }
+        }
+        if (!chunkMetadataList.isEmpty()) {
+          long maxVersion = Long.MIN_VALUE;
+          chunkMetadataList.sort(Comparator.comparing(ChunkMetadata::getOffsetOfChunkHeader));
+          writer.startChunkGroup(device);
+          for (ChunkMetadata chunkMetadata : chunkMetadataList) {
+            Chunk chunk = tsReader.readMemChunk(chunkMetadata);
+            writer.writeChunk(chunk, chunkMetadata);
+            maxVersion = Math.max(chunkMetadata.getVersion(), maxVersion);
+            targetResource.updateStartTime(device, chunkMetadata.getStartTime());
+            targetResource.updateEndTime(device, chunkMetadata.getEndTime());
+          }
+          writer.endChunkGroup();
+          writer.writeVersion(maxVersion);
+        }
+      }
+    }
+//    long time3 = System.nanoTime();
+//    interval = time3 - time2;
+//    System.out.println("拷贝耗时:"+ interval);
+    for (TsFileSequenceReader reader : tsFileSequenceReaderMap.values()) {
+      reader.close();
+    }
+    Set<Long> historicalVersions = new HashSet<>();
+    for (TsFileResource tsFileResource : tsFileResources) {
+      historicalVersions.addAll(tsFileResource.getHistoricalVersions());
+    }
+    targetResource.setHistoricalVersions(historicalVersions);
+    targetResource.serialize();
+    writer.endFile();
+    targetResource.close();
   }
 
   /**

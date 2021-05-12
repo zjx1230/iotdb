@@ -97,8 +97,9 @@ public class QueryResourceManager {
   }
 
   public int getMaxDeduplicatedPathNum(int fetchSize) {
-    return Math.min((int) ((totalFreeMemoryForRead.get() / fetchSize) / POINT_ESTIMATED_SIZE),
-        CONFIG.getMaxQueryDeduplicatedPathNum());
+//    return Math.min((int) ((totalFreeMemoryForRead.get() / fetchSize) / POINT_ESTIMATED_SIZE),
+//        CONFIG.getMaxQueryDeduplicatedPathNum());
+    return Integer.MAX_VALUE;
   }
 
   /**

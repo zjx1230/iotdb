@@ -69,7 +69,7 @@ public class HitterLevelCompactionTsFileManagement extends LevelCompactionTsFile
     }
   }
 
-  protected void merge(List<List<TsFileResource>> mergeResources, long timePartition) {
+  protected void merge1(List<List<TsFileResource>> mergeResources, long timePartition) {
     // wait until unseq merge has finished
     while (isUnseqMerging) {
       try {
@@ -99,6 +99,7 @@ public class HitterLevelCompactionTsFileManagement extends LevelCompactionTsFile
           // merge, read  heavy hitters time series from source files and write to target file
           List<PartialPath> unmergedPaths = QueryHitterManager.getQueryHitter()
               .getTopCompactionSeries(new PartialPath(storageGroupName));
+          long st = System.nanoTime();
           CompactionUtils
               .hitterMerge(newResource, toMergeTsFiles, storageGroupName, new HashSet<>(),
                   unmergedPaths);
@@ -177,6 +178,9 @@ public class HitterLevelCompactionTsFileManagement extends LevelCompactionTsFile
             writeUnlockAllFiles(toMergeTsFiles);
           }
 //          System.exit(0);
+          long en = System.nanoTime();
+          long interval = en - st;
+          System.out.println("合并总时间: " + interval);
           writeLock();
           try {
             synchronized (sequenceTsFileResources) {
@@ -193,6 +197,68 @@ public class HitterLevelCompactionTsFileManagement extends LevelCompactionTsFile
           } finally {
             writeUnlock();
           }
+        }
+      }
+    } catch (Exception e) {
+      logger.error("Error occurred in Compaction Merge thread", e);
+    } finally {
+      // reset the merge working state to false
+      logger.info("{} [Compaction] merge end time consumption: {} ms",
+          storageGroupName, System.currentTimeMillis() - startTimeMillis);
+    }
+  }
+
+  protected void merge(List<List<TsFileResource>> mergeResources, long timePartition) {
+    // wait until unseq merge has finished
+    while (isUnseqMerging) {
+      try {
+        Thread.sleep(200);
+      } catch (InterruptedException e) {
+        logger.error("{} [Compaction] shutdown", storageGroupName, e);
+        Thread.currentThread().interrupt();
+        return;
+      }
+    }
+    long startTimeMillis = System.currentTimeMillis();
+    try {
+      logger.info("{} start to filter compaction condition", storageGroupName);
+      for (int i = 0; i < seqLevelNum - 1; i++) {
+        if (mergeResources.get(i).size() >= firstLevelNum * Math.pow(sizeRatio, i)) {
+          List<TsFileResource> toMergeTsFiles = mergeResources.get(i);
+          logger.info("{} [Hitter Compaction] merge level-{}'s {} TsFiles to next level",
+              storageGroupName, i, toMergeTsFiles.size());
+          for (TsFileResource toMergeTsFile : toMergeTsFiles) {
+            logger.info("{} [Hitter Compaction] start to merge TsFile {}", storageGroupName,
+                toMergeTsFile);
+          }
+
+          // tmp file which contains all the hitter series
+          File newLevelFile = createNewTsFileName(mergeResources.get(i).get(0).getTsFile(), i + 1);
+          TsFileResource newResource = new TsFileResource(newLevelFile);
+          // merge, read  heavy hitters time series from source files and write to target file
+          List<PartialPath> unmergedPaths = QueryHitterManager.getQueryHitter()
+              .getTopCompactionSeries(new PartialPath(storageGroupName));
+          long st = System.nanoTime();
+          CompactionUtils
+              .hitterMergeTest(newResource, toMergeTsFiles, storageGroupName, new HashSet<>(),
+                  unmergedPaths);
+          long en = System.nanoTime();
+          long interval = en - st;
+          System.out.println("合并总时间: " + interval);
+          logger.info(
+              "{} [Compaction] merged level-{}'s {} TsFiles to next level, and start to clean up",
+              storageGroupName, i, toMergeTsFiles.size());
+          writeLock();
+          try {
+            sequenceTsFileResources.get(timePartition).get(i + 1).add(newResource);
+            deleteLevelFilesInList(timePartition, toMergeTsFiles, i, true);
+            if (mergeResources.size() > i + 1) {
+              mergeResources.get(i + 1).add(newResource);
+            }
+          } finally {
+            writeUnlock();
+          }
+          deleteLevelFilesInDisk(toMergeTsFiles);
         }
       }
     } catch (Exception e) {

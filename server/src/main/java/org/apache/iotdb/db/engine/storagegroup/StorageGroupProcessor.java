@@ -1744,6 +1744,16 @@ public class StorageGroupProcessor {
     }
   }
 
+  public void testMerge() throws Exception {
+    // fork and filter current tsfile, then commit then to compaction merge
+    tsFileManagement.forkCurrentFileList(213524);
+    CompactionMergeTaskPoolManager.getInstance()
+        .submitTask(
+            tsFileManagement.new CompactionMergeTask(this::closeCompactionMergeCallBack,
+                213524));
+  }
+
+
   /**
    * close compaction merge callback, to release some locks
    */

@@ -41,7 +41,7 @@ public class TsFileSequenceRead {
 
   @SuppressWarnings("squid:S3776") // Suppress high Cognitive Complexity warning
   public static void main(String[] args) throws IOException {
-    String filename = "test.tsfile";
+    String filename = "/Users/tianyu/2019秋季学期/iotdb/data/data/sequence/root.group_0/213524/1617265416299-2-2.tsfile";
     if (args.length >= 1) {
       filename = args[0];
     }

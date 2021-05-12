@@ -31,6 +31,7 @@ import org.apache.iotdb.db.engine.flush.FlushManager;
 import org.apache.iotdb.db.engine.merge.manage.MergeManager;
 import org.apache.iotdb.db.exception.StartupException;
 import org.apache.iotdb.db.metadata.MManager;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.monitor.StatMonitor;
 import org.apache.iotdb.db.query.control.TracingManager;
 import org.apache.iotdb.db.rescon.PrimitiveArrayManager;
@@ -142,6 +143,13 @@ public class IoTDB implements IoTDBMBean {
     registerManager.register(UpgradeSevice.getINSTANCE());
 
     logger.info("Congratulation, IoTDB is set up successfully. Now, enjoy yourself!");
+    try {
+//      if (true) {
+//        StorageEngine.getInstance().getProcessor(new PartialPath("root.group_0.d_0")).testMerge();
+//      }
+    } catch (Exception e) {
+//      logger.error("mdzz", e);
+    }
   }
 
   private void deactivate() {

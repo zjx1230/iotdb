@@ -526,10 +526,14 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
             }
 
             TsFileResource newResource = new TsFileResource(newLevelFile);
+            long st = System.nanoTime();
             // merge, read from source files and write to target file
             CompactionUtils
                 .merge(newResource, toMergeTsFiles, storageGroupName, compactionLogger,
                     new HashSet<>(), sequence);
+            long en = System.nanoTime();
+            long interval = en - st;
+            System.out.println("合并总时间: " + interval);
             logger.info(
                 "{} [Compaction] merged level-{}'s {} TsFiles to next level, and start to delete old files",
                 storageGroupName, i, toMergeTsFiles.size());
