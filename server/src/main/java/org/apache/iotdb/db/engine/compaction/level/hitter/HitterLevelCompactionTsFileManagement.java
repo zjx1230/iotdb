@@ -223,7 +223,7 @@ public class HitterLevelCompactionTsFileManagement extends LevelCompactionTsFile
     try {
       logger.info("{} start to filter compaction condition", storageGroupName);
       for (int i = 0; i < seqLevelNum - 1; i++) {
-        if (mergeResources.get(i).size() >= firstLevelNum * Math.pow(sizeRatio, i)) {
+        if (mergeResources.get(i).size() >= seqFileNumInEachLevel) {
           List<TsFileResource> toMergeTsFiles = mergeResources.get(i);
           logger.info("{} [Hitter Compaction] merge level-{}'s {} TsFiles to next level",
               storageGroupName, i, toMergeTsFiles.size());
