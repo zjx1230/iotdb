@@ -34,6 +34,9 @@ import org.apache.zeppelin.interpreter.ZeppelinContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -82,6 +85,8 @@ public class IoTDBInterpreter extends AbstractInterpreter {
   private static final String EXIT_COMMAND = "exit";
   private static final String HELP = "help";
   private static final String IMPORT_CMD = "import";
+  private static final String LOAD = "load";
+  private static final String SELECT_SERIES = "select series";
   static final String SET_TIMESTAMP_DISPLAY = "set time_display_type";
   static final String SET_QUERY_TIMEOUT = "set query_time_timeout";
   private static final String SET_MAX_DISPLAY_NUM = "set max_display_num";
@@ -211,6 +216,43 @@ public class IoTDBInterpreter extends AbstractInterpreter {
     String specialCmd = cmd.toLowerCase().trim();
     if (nonSupportCommandSet.contains(specialCmd)) {
       return new InterpreterResult(Code.ERROR, "Not supported in Zeppelin: " + specialCmd);
+    }
+    if (specialCmd.startsWith(SELECT_SERIES.toLowerCase())) {
+      // no query db. draw and return
+      String line = cmd.substring(SELECT_SERIES.length(), cmd.length() - 1).trim();
+      String[] series = line.substring(1, line.length() - 1).split(",");
+      StringBuilder stringBuilder = new StringBuilder();
+      stringBuilder.append("Time").append(TAB).append("Value");
+      stringBuilder.append(NEWLINE);
+      for (int i = 0; i < series.length; i++) {
+        stringBuilder.append(i).append(TAB).append(series[i].trim()).append(NEWLINE);
+      }
+      InterpreterResult interpreterResult = new InterpreterResult(Code.SUCCESS);
+      interpreterResult.add(Type.TABLE, stringBuilder.toString());
+      return interpreterResult;
+    }
+    if (specialCmd.startsWith(LOAD.toLowerCase())) {
+      String[] values = cmd.split(" ");
+      if (values.length != 2) {
+        return new InterpreterResult(
+            Code.ERROR,
+            String.format("load sql format error, please input like %s SQL_FILE_PATH", LOAD));
+      }
+      int idx = 0;
+      String filePath = values[1];
+      try (Statement statement = connection.createStatement();
+          BufferedReader csvReader = new BufferedReader(new FileReader(filePath))) {
+        String sqlLine;
+        while ((sqlLine = csvReader.readLine()) != null) {
+          sqlLine = sqlLine.trim().split(SEMICOLON)[0];
+          statement.execute(sqlLine.trim());
+          idx++;
+        }
+      } catch (IOException | SQLException e) {
+        return new InterpreterResult(Code.ERROR, e.getMessage());
+      }
+      return new InterpreterResult(
+          Code.SUCCESS, String.format("Load finished, insert %d lines", idx));
     }
     if (specialCmd.startsWith(SET_TIMESTAMP_DISPLAY)) {
       String[] values = cmd.split(EQUAL_SIGN);

@@ -23,7 +23,6 @@ import org.apache.iotdb.db.exception.index.IndexManagerException;
 import org.apache.iotdb.db.exception.index.QueryIndexException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.index.algorithm.IoTDBIndex;
-import org.apache.iotdb.db.index.algorithm.RTreeIndex;
 import org.apache.iotdb.db.index.algorithm.rtree.RTree.DistSeriesComparator;
 import org.apache.iotdb.db.index.common.DistSeries;
 import org.apache.iotdb.db.index.common.IndexInfo;
@@ -33,6 +32,7 @@ import org.apache.iotdb.db.index.feature.IndexFeatureExtractor;
 import org.apache.iotdb.db.index.read.optimize.IIndexCandidateOrderOptimize;
 import org.apache.iotdb.db.index.stats.IndexStatManager;
 import org.apache.iotdb.db.index.usable.IIndexUsable;
+import org.apache.iotdb.db.index.usable.WholeMatchIndexUsability;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
@@ -60,12 +60,16 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
+import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import static org.apache.iotdb.db.index.algorithm.RTreeIndex.getLoadSeriesFunc;
 import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_HASH_LENGTH;
 import static org.apache.iotdb.db.index.common.IndexConstant.DEFAULT_SERIES_LENGTH;
 import static org.apache.iotdb.db.index.common.IndexConstant.HASH_LENGTH;
@@ -147,6 +151,8 @@ public class MMHHIndex extends IoTDBIndex {
     currentInsertPath = null;
   }
 
+  private Set<PartialPath> involvedPathSet = new HashSet<>();
+
   @Override
   public boolean buildNext() throws IndexManagerException {
     Long key = mmhhFeatureExtractor.getCurrent_L3_Feature();
@@ -159,6 +165,7 @@ public class MMHHIndex extends IoTDBIndex {
     //        .format("Input record: %s, pathId %d, hash %d, series: %s", currentInsertPath, pathId,
     // key,
     //            mmhhFeatureExtractor.getCurrent_L2_AlignedSequence()));
+    involvedPathSet.add(currentInsertPath);
     return true;
   }
 
@@ -259,7 +266,7 @@ public class MMHHIndex extends IoTDBIndex {
 
     List<DistSeries> res;
     Function<PartialPath, TVList> loadSeriesFunc =
-        RTreeIndex.getLoadSeriesFunc(context, tsDataType, mmhhFeatureExtractor);
+        getLoadSeriesFunc(context, tsDataType, mmhhFeatureExtractor);
     List<PartialPath> paths;
     try {
       Pair<List<PartialPath>, Integer> pathsPair =
@@ -332,6 +339,17 @@ public class MMHHIndex extends IoTDBIndex {
     return constructSearchDataset(res, alignedByTime);
   }
 
+  private BiFunction<double[], TVList, Double> getCalcExactDistFunc() {
+    return (queryTs, tvList) -> {
+      double sum = 0;
+      for (int i = 0; i < queryTs.length; i++) {
+        final double dp = queryTs[i] - IndexUtils.getDoubleFromAnyType(tvList, i);
+        sum += dp * dp;
+      }
+      return Math.sqrt(sum);
+    };
+  }
+
   @Override
   public QueryDataSet query(
       Map<String, Object> queryProps,
@@ -344,14 +362,52 @@ public class MMHHIndex extends IoTDBIndex {
       return noPruneQuery(queryProps, iIndexUsable, context, candidateOrderOptimize, alignedByTime);
     }
 
+    List<PartialPath> uninvolvedList;
+    try {
+      uninvolvedList = MManager.getInstance().getAllTimeseriesPath(indexSeries);
+      uninvolvedList.removeAll(involvedPathSet);
+    } catch (MetadataException e) {
+      e.printStackTrace();
+      throw new QueryIndexException(e.getMessage());
+    }
+    uninvolvedList.addAll(((WholeMatchIndexUsability) iIndexUsable).getUnusableRange());
+
     MMHHQueryStruct struct = initQuery(queryProps);
     this.tempQueryStruct = struct;
     long featureStart = System.nanoTime();
     Long queryCode = mmhhFeatureExtractor.processQuery(struct.patterns);
     IndexStatManager.featureExtractCost += System.nanoTime() - featureStart;
     List<DistSeries> res = hammingSearch(queryCode, struct.topK, context);
+
+    if (!uninvolvedList.isEmpty()) {
+      Function<PartialPath, TVList> loadSeriesFunc =
+          getLoadSeriesFunc(context, tsDataType, mmhhFeatureExtractor);
+      BiFunction<double[], TVList, Double> exactDistFunc = getCalcExactDistFunc();
+      //
+      //      PriorityQueue<DistSeries> topKPQ = new PriorityQueue<>(struct.topK,
+      //          new DistSeriesComparator());
+      //      topKPQ.addAll(res);
+      //      double kthMinDist = topKPQ.isEmpty() ? Double.MAX_VALUE : topKPQ.peek().dist;
+      //      for (PartialPath path : uninvolvedList) {
+      //        TVList tvList = loadSeriesFunc.apply(path);
+      //        double tempDist = exactDistFunc.apply(struct.patterns, tvList);
+      //        if (topKPQ.size() < struct.topK || tempDist < kthMinDist) {
+      //          if (topKPQ.size() == struct.topK) {
+      //            topKPQ.poll();
+      //          }
+      //          topKPQ.add(new DistSeries(tempDist, tvList, path));
+      //          kthMinDist = topKPQ.peek().dist;
+      //        }
+      //      }
+      for (PartialPath path : uninvolvedList) {
+        TVList rawData = loadSeriesFunc.apply(path);
+        res.add(new DistSeries(0, rawData, path));
+      }
+      sortByEd(res);
+    }
+
     for (DistSeries ds : res) {
-      ds.partialPath = ds.partialPath.concatNode(String.format("(D=%.2f)", ds.dist));
+      ds.partialPath = ds.partialPath.concatNode(String.format("(D_Ham=%d)", (int) ds.dist));
     }
     return constructSearchDataset(res, alignedByTime);
   }
@@ -361,7 +417,21 @@ public class MMHHIndex extends IoTDBIndex {
     // Long.toBinaryString(queryCode)));
     List<DistSeries> res = new ArrayList<>();
     Function<PartialPath, TVList> loadRaw =
-        RTreeIndex.getLoadSeriesFunc(context, tsDataType, mmhhFeatureExtractor);
+        getLoadSeriesFunc(context, tsDataType, mmhhFeatureExtractor);
+
+    // it's a hyper-parameter. If itemSize/topK < lambda, scan the list instead of hamming search
+    float lambda = 3;
+    if (itemSize <= topK || (float) itemSize / topK <= lambda) {
+      // scan
+      hashLookupTable.forEach(
+          (k, v) -> {
+            for (Long seriesId : v) {
+              readRawData(0, seriesId, loadRaw);
+            }
+          });
+      sortByEd(res);
+      return res;
+    }
     for (int radius = 0; radius <= hashLength; radius++) {
       boolean full = scanBucket(queryCode, 0, radius, 0, topK, loadRaw, res);
       if (full) {

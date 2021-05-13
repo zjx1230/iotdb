@@ -61,9 +61,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -244,6 +246,8 @@ public abstract class RTreeIndex extends IoTDBIndex {
     currentInsertPath = null;
   }
 
+  private Set<PartialPath> involvedPathSet = new HashSet<>();
+
   @Override
   public boolean buildNext() {
     fillCurrentFeature();
@@ -252,6 +256,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
     } else {
       rTree.insert(currentLowerBounds, currentUpperBounds, currentInsertPath);
     }
+    involvedPathSet.add(currentInsertPath);
     return true;
   }
 
@@ -511,7 +516,18 @@ public abstract class RTreeIndex extends IoTDBIndex {
     if (props.containsKey(NO_PRUNE)) {
       return noPruneQuery(queryProps, iIndexUsable, context, candidateOrderOptimize, alignedByTime);
     }
+    List<PartialPath> uninvolvedList;
+    try {
+      uninvolvedList = MManager.getInstance().getAllTimeseriesPath(indexSeries);
+      uninvolvedList.removeAll(involvedPathSet);
+    } catch (MetadataException e) {
+      e.printStackTrace();
+      throw new QueryIndexException(e.getMessage());
+    }
 
+    Function<PartialPath, TVList> loadSeriesFunc =
+        getLoadSeriesFunc(context, tsDataType, createQueryFeatureExtractor());
+    BiFunction<double[], TVList, Double> exactDistFunc = getCalcExactDistFunc();
     RTreeQueryStruct struct = initQuery(queryProps);
     List<DistSeries> res;
     res =
@@ -521,8 +537,39 @@ public abstract class RTreeIndex extends IoTDBIndex {
             struct.patternFeatures,
             ((WholeMatchIndexUsability) iIndexUsable).getUnusableRange(),
             getCalcLowerDistFunc(),
-            getCalcExactDistFunc(),
-            getLoadSeriesFunc(context, tsDataType, createQueryFeatureExtractor()));
+            exactDistFunc,
+            loadSeriesFunc);
+
+    if (!uninvolvedList.isEmpty()) {
+      PriorityQueue<DistSeries> topKPQ =
+          new PriorityQueue<>(struct.topK, new DistSeriesComparator());
+      topKPQ.addAll(res);
+      double kthMinDist = topKPQ.isEmpty() ? Double.MAX_VALUE : topKPQ.peek().dist;
+      for (PartialPath path : uninvolvedList) {
+        TVList tvList = loadSeriesFunc.apply(path);
+        double tempDist = exactDistFunc.apply(struct.patterns, tvList);
+        if (topKPQ.size() < struct.topK || tempDist < kthMinDist) {
+          if (topKPQ.size() == struct.topK) {
+            topKPQ.poll();
+          }
+          topKPQ.add(new DistSeries(tempDist, tvList, path));
+          kthMinDist = topKPQ.peek().dist;
+        }
+      }
+      if (topKPQ.isEmpty()) {
+        res = Collections.emptyList();
+      } else {
+        int retSize = Math.min(struct.topK, topKPQ.size());
+        DistSeries[] resArray = new DistSeries[retSize];
+        int idx = retSize - 1;
+        while (!topKPQ.isEmpty()) {
+          DistSeries distSeries = topKPQ.poll();
+          resArray[idx--] = distSeries;
+        }
+        res = Arrays.asList(resArray);
+      }
+    }
+
     for (DistSeries ds : res) {
       ds.partialPath = ds.partialPath.concatNode(String.format("(D=%.2f)", ds.dist));
     }

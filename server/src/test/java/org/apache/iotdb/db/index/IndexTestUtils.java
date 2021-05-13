@@ -70,7 +70,7 @@ public class IndexTestUtils {
   public static String getStringFromList(List<Float> list, int start, int end) {
     StringBuilder array = new StringBuilder();
     for (int i = start; i < end; i++) {
-      array.append(list.get(i)).append(',');
+      array.append(String.format("%.3f", list.get(i))).append(',');
     }
     array.deleteCharAt(array.length() - 1);
     return array.toString();

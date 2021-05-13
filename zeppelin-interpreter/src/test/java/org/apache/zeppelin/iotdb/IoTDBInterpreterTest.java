@@ -21,6 +21,7 @@ package org.apache.zeppelin.iotdb;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
+import org.apache.iotdb.jdbc.Config;
 
 import org.apache.zeppelin.interpreter.InterpreterResult;
 import org.apache.zeppelin.interpreter.InterpreterResult.Code;
@@ -30,6 +31,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Properties;
 
 import static org.apache.zeppelin.iotdb.IoTDBInterpreter.DEFAULT_ENABLE_RPC_COMPRESSION;
@@ -390,5 +397,50 @@ public class IoTDBInterpreterTest {
     Assert.assertNotNull(actual);
     Assert.assertEquals(Code.SUCCESS, actual.code());
     Assert.assertEquals(gt, actual.message().get(0).getData());
+  }
+
+  @Test
+  public void loadSQLInsert() throws SQLException, ClassNotFoundException {
+    String cmd = "LOAD /Users/kangrong/tsResearch/tols/JINFENG/d2/elb_insert.sql";
+    InterpreterResult actual = interpreter.internalInterpret(cmd, null);
+    Assert.assertNotNull(actual);
+    Assert.assertEquals(Code.SUCCESS, actual.code());
+    Assert.assertEquals("Load finished, insert 9990 lines", actual.message().get(0).getData());
+
+    Class.forName(Config.JDBC_DRIVER_NAME);
+    Connection connection =
+        DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
+    Statement statement = connection.createStatement();
+
+    statement.execute("SELECT count(*) from root.wind1.azq01");
+    try (ResultSet resultSet = statement.getResultSet()) {
+      ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+      StringBuilder sb = new StringBuilder();
+      for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
+        sb.append(resultSetMetaData.getColumnName(i)).append(",");
+      }
+      sb.append("\n");
+      while (resultSet.next()) {
+        for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
+          sb.append(resultSet.getString(i)).append(",");
+        }
+        sb.append("\n");
+      }
+      System.out.println(sb);
+      String countGt = "count(root.wind1.azq01.speed),\n" + "9990,\n";
+      Assert.assertEquals(countGt, sb.toString());
+    }
+  }
+
+  @Test
+  public void testSelectSeries() {
+    InterpreterResult actual =
+        interpreter.internalInterpret("SELECT SERIES (1.2,3.2, 18239. ,3.3))", null);
+    String gt = "user\n" + "root\n" + "user1";
+    System.out.println(actual.message().get(0).getData());
+    Assert.assertNotNull(actual);
+    Assert.assertEquals(Code.SUCCESS, actual.code());
+
+    //    Assert.assertEquals(gt, actual.message().get(0).getData());
   }
 }
