@@ -636,15 +636,13 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
           // it's a hyper-parameter, we can add it into .properties.
           // although we cannot trust that index always return result before time out, but index
           // will early-stop the query
-//          long indexQueryExtraTimeInMs = 3_000;
+          //          long indexQueryExtraTimeInMs = 3_000;
           long indexQueryExtraTimeInMs = 3_000;
           long indexFinalTimeout = actualTimeout + indexQueryExtraTimeInMs;
           queryTimeManager.registerQuery(queryId, startTime, statement, indexFinalTimeout);
-        }
-        else{
+        } else {
           queryTimeManager.registerQuery(queryId, startTime, statement, timeout);
         }
-
       }
       if (plan instanceof QueryPlan && config.isEnablePerformanceTracing()) {
         TracingManager tracingManager = TracingManager.getInstance();

@@ -367,7 +367,7 @@ public class MMHHIndex extends IoTDBIndex {
       if (full) {
         break;
       }
-      if(IndexStatManager.alreadyTimeout()){
+      if (IndexStatManager.alreadyTimeout()) {
         logger.warn("MMHH query on {}: already timeout", indexSeries);
         break;
       }
@@ -404,7 +404,7 @@ public class MMHHIndex extends IoTDBIndex {
         if (full) {
           return true;
         }
-        if(IndexStatManager.alreadyTimeout()){
+        if (IndexStatManager.alreadyTimeout()) {
           logger.warn("MMHH query on {}: already timeout, MMHHIndex:406", indexSeries);
           return true;
         }

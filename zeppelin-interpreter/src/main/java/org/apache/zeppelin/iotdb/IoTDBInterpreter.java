@@ -222,8 +222,7 @@ public class IoTDBInterpreter extends AbstractInterpreter {
       String timeDisplayType = values[1].trim();
       this.timeFormat = setTimeFormat(values[1]);
       return new InterpreterResult(Code.SUCCESS, "Time display type has set to " + timeDisplayType);
-    }
-    else if (specialCmd.startsWith(SET_QUERY_TIMEOUT)) {
+    } else if (specialCmd.startsWith(SET_QUERY_TIMEOUT)) {
       String[] values = cmd.split(EQUAL_SIGN);
       if (values.length != 2) {
         throw new StatementExecutionException(
@@ -231,7 +230,8 @@ public class IoTDBInterpreter extends AbstractInterpreter {
                 "Query timeout format error, please input like %s=10", SET_QUERY_TIMEOUT));
       }
       this.queryTimeout = Integer.parseInt(values[1].trim());
-      return new InterpreterResult(Code.SUCCESS, "Query timeout has set to " + queryTimeout + " seconds");
+      return new InterpreterResult(
+          Code.SUCCESS, "Query timeout has set to " + queryTimeout + " seconds");
     }
     return executeQuery(connection, cmd);
   }
@@ -240,7 +240,7 @@ public class IoTDBInterpreter extends AbstractInterpreter {
     StringBuilder stringBuilder = new StringBuilder();
     try (Statement statement = connection.createStatement()) {
       statement.setFetchSize(fetchSize);
-      if(this.queryTimeout > 0){
+      if (this.queryTimeout > 0) {
         statement.setQueryTimeout(this.queryTimeout);
       }
       boolean hasResultSet = statement.execute(cmd.trim());

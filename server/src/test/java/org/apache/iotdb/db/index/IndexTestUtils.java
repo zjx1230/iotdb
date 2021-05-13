@@ -67,6 +67,15 @@ public class IndexTestUtils {
     return array.toString();
   }
 
+  public static String getStringFromList(List<Float> list, int start, int end) {
+    StringBuilder array = new StringBuilder();
+    for (int i = start; i < end; i++) {
+      array.append(list.get(i)).append(',');
+    }
+    array.deleteCharAt(array.length() - 1);
+    return array.toString();
+  }
+
   public static String tvListToString(TVList tvList) {
     StringBuilder sb = new StringBuilder();
     sb.append("{");

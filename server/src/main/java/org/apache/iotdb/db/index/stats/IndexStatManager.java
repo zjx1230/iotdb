@@ -31,7 +31,7 @@ public class IndexStatManager {
   public static long totalQueryCost = 0;
   public static long loadRawDataCost = 0;
   public static long latestTimestamp = 0;
-  
+
   public static String provideReport() {
     // total:%.3fms-feature:%.3fms-load:%.3fms
     String ret =

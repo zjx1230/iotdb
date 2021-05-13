@@ -138,12 +138,10 @@ public class IoTDBInterpreterTest {
   public void testSetQueryTimeout() {
     // default
     Assert.assertEquals(-1, interpreter.getQueryTimeout());
-    InterpreterResult actual =
-        interpreter.internalInterpret(SET_QUERY_TIMEOUT + "=" + 2, null);
+    InterpreterResult actual = interpreter.internalInterpret(SET_QUERY_TIMEOUT + "=" + 2, null);
     Assert.assertNotNull(actual);
     Assert.assertEquals(Code.SUCCESS, actual.code());
-    Assert.assertEquals(
-        "Query timeout has set to 2 seconds", actual.message().get(0).getData());
+    Assert.assertEquals("Query timeout has set to 2 seconds", actual.message().get(0).getData());
     Assert.assertEquals(2, interpreter.getQueryTimeout());
   }
 

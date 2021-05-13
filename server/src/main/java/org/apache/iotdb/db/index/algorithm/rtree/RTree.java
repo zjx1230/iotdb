@@ -741,7 +741,7 @@ public class RTree<T> {
                 patternFeatures);
         bsfAnswer.dist =
             minTopKDistOfNode(pairs.right, pairs.left, queryTs, topKPQ, calcRealDistFunc, topK);
-        if(IndexStatManager.alreadyTimeout()){
+        if (IndexStatManager.alreadyTimeout()) {
           logger.warn("RTree query already timeout, no more visiting leaf node, RTree:745");
           break;
         }

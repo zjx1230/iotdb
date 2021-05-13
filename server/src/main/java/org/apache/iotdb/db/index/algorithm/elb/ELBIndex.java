@@ -314,7 +314,7 @@ public class ELBIndex extends IoTDBIndex {
               TVList.append(tvList, p.tvList, p.offset, p.length);
               PartialPath showPath = indexSeries.concatNode(String.valueOf(tvList.getMinTime()));
               res.add(new DistSeries(0, tvList, showPath));
-              if(IndexStatManager.alreadyTimeout()){
+              if (IndexStatManager.alreadyTimeout()) {
                 logger.warn("ELB query on {}: already timeout", indexSeries);
                 alreadyTimeout = true;
                 break;
@@ -330,7 +330,7 @@ public class ELBIndex extends IoTDBIndex {
           }
           featureExtractor.clearProcessedSrcData();
           featureTotal += System.nanoTime() - featureStart;
-          if(alreadyTimeout){
+          if (alreadyTimeout) {
             break;
           }
         }

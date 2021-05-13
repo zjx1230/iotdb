@@ -122,7 +122,6 @@ public class MMHHIndexReadIT {
       statement.execute("flush");
       System.out.println(IndexManager.getInstance().getRouter());
 
-
     } catch (Exception e) {
       e.printStackTrace();
       fail(e.getMessage());
