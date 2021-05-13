@@ -29,6 +29,7 @@ import org.apache.iotdb.db.index.common.DistSeries;
 import org.apache.iotdb.db.index.common.IndexInfo;
 import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.index.common.distance.Distance;
+import org.apache.iotdb.db.index.common.distance.LInfinityNormdouble;
 import org.apache.iotdb.db.index.read.TVListPointer;
 import org.apache.iotdb.db.index.read.optimize.IIndexCandidateOrderOptimize;
 import org.apache.iotdb.db.index.stats.IndexStatManager;
@@ -383,7 +384,16 @@ public class ELBIndex extends IoTDBIndex {
     for (int i = 0; i < patternList.size(); i++) {
       double[] pattern = patternList.get(i);
       patternLength += pattern.length;
-      struct.thresholds[i] = thresholdList.get(i);
+      // note that, in following paper implementation, thres_avg means "avg threshold".
+      // The actual threshold (the meaning in SQL) of "multi-threshold pattern" is:
+      // thres_sql ** p = (thres_avg ** p) * len(subpattern)
+      // thres_avg = [(thres_sql ** p) / len(subpattern)] ** 1/p
+
+      if (struct.distance instanceof LInfinityNormdouble)
+        throw new IllegalIndexParamException("L-inf not supported yet");
+      double p = struct.distance.getP();
+      struct.thresholds[i] = Math.pow(Math.pow(thresholdList.get(i), p) / pattern.length, 1 / p);
+      //      struct.thresholds[i] = thresholdList.get(i);
       struct.borders[i + 1] = patternLength;
     }
     struct.pattern = new double[patternLength];
@@ -439,7 +449,7 @@ public class ELBIndex extends IoTDBIndex {
       }
       System.out.println(
           String.format(
-              "========== elb prune: %d/%d=%.3f",
+              "========== elb prune(1-cannot_pruned/total): 1-%d/%d=%.3f",
               cannotPrunedCount,
               windowBlockFeatures.size() - struct.blockNum + 1,
               (double) cannotPrunedCount / (windowBlockFeatures.size() - struct.blockNum)));

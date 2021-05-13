@@ -122,7 +122,7 @@ public class SequenceELBFeature extends ELBFeature {
           (pattern.maxLeftBorders[m - 1] - pattern.minLeftBorders[m - 1])
               * distance.getThresholdNoRoot(pattern.thresholdsArray[m - 1]);
       // Line 5~7，middle
-      for (int i = pattern.maxLeftBorders[m - 1]; i < pattern.minLeftBorders[n + 1] - 1; i++) {
+      for (int i = pattern.maxLeftBorders[m - 1]; i < pattern.minLeftBorders[n + 1]; i++) {
         sum += distance.getThresholdNoRoot(getAldMax(pattern, i));
       }
       // Line 8，right

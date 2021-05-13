@@ -19,8 +19,6 @@
 package org.apache.iotdb.db.index.it;
 
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
-import org.apache.iotdb.db.index.IndexManager;
-import org.apache.iotdb.db.index.common.IndexUtils;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.db.utils.datastructure.TVList;
@@ -32,17 +30,21 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 
-import static org.apache.iotdb.db.index.IndexTestUtils.getArrayRange;
+import static org.apache.iotdb.db.index.IndexTestUtils.getStringFromList;
 import static org.apache.iotdb.db.index.common.IndexType.ELB_INDEX;
 import static org.junit.Assert.fail;
 
-public class ELBIndexReadIT {
+public class ELBWindIT {
 
   private static final String insertPattern = "INSERT INTO %s(timestamp, %s) VALUES (%d, %.3f)";
 
@@ -77,11 +79,6 @@ public class ELBIndexReadIT {
   }
 
   private static void insertSQL(boolean createTS) throws ClassNotFoundException {
-    for (int i = 0; i < 10000; i++) {
-      System.out.println(
-          String.format(insertPattern, speed1Device, speed1Sensor, i, (float) (i * 10 + 9)));
-    }
-    IndexUtils.breakDown("asd");
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection =
             DriverManager.getConnection(
@@ -109,66 +106,43 @@ public class ELBIndexReadIT {
       System.out.println(
           String.format("CREATE INDEX ON %s WITH INDEX=%s, BLOCK_SIZE=%d", indexSub, ELB_INDEX, 5));
 
-      TVList subInput = TVListAllocator.getInstance().allocate(TSDataType.DOUBLE);
-      for (int i = 0; i < subLength; i++) {
-        subInput.putDouble(i, i * 10);
+      TVList subInput = TVListAllocator.getInstance().allocate(TSDataType.FLOAT);
+      // read base
+      String basePath = "/Users/kangrong/tsResearch/tols/JINFENG/d2/out_sub_base.csv";
+      int idx = 0;
+      try (BufferedReader csvReader = new BufferedReader(new FileReader(basePath))) {
+        String row;
+        while ((row = csvReader.readLine()) != null) {
+          if (idx >= 1) {
+            String[] data = row.split(",");
+            long t = Long.parseLong(data[0]);
+            float v = Float.parseFloat(data[1]);
+
+            //          subInput.putDouble(t, v);
+            subInput.putFloat(idx, v);
+          }
+          idx++;
+        }
       }
-      for (int i = 0; i < 20; i++) {
+
+      //      for (int i = 0; i < subLength; i++) {
+      //        subInput.putDouble(i, i * 10);
+      //      }
+      for (int i = 0; i < subInput.size(); i++) {
         statement.execute(
             String.format(
                 insertPattern,
                 speed1Device,
                 speed1Sensor,
                 subInput.getTime(i),
-                subInput.getDouble(i)));
-        System.out.println(
-            String.format(
-                insertPattern,
-                speed1Device,
-                speed1Sensor,
-                subInput.getTime(i),
-                subInput.getDouble(i)));
-      }
-      statement.execute("flush");
-      //      System.out.println("==========================");
-      //      System.out.println(IndexManager.getInstance().getRouter());
-
-      for (int i = 25; i < 30; i++) {
-        statement.execute(
-            String.format(
-                insertPattern,
-                speed1Device,
-                speed1Sensor,
-                subInput.getTime(i),
-                subInput.getDouble(i)));
-        System.out.println(
-            String.format(
-                insertPattern,
-                speed1Device,
-                speed1Sensor,
-                subInput.getTime(i),
-                subInput.getDouble(i)));
-      }
-      statement.execute("flush");
-
-      IndexManager.getInstance().stop();
-      IndexManager.getInstance().start();
-
-      for (int i = 40; i < subLength; i++) {
-        statement.execute(
-            String.format(
-                insertPattern,
-                speed1Device,
-                speed1Sensor,
-                subInput.getTime(i),
-                subInput.getDouble(i)));
-        System.out.println(
-            String.format(
-                insertPattern,
-                speed1Device,
-                speed1Sensor,
-                subInput.getTime(i),
-                subInput.getDouble(i)));
+                subInput.getFloat(i)));
+        //        System.out.println(
+        //            String.format(
+        //                insertPattern,
+        //                speed1Device,
+        //                speed1Sensor,
+        //                subInput.getTime(i),
+        //                subInput.getFloat(i)));
       }
       statement.execute("flush");
       //      System.out.println("==========================");
@@ -181,42 +155,35 @@ public class ELBIndexReadIT {
   }
 
   @Test
-  public void checkMultiSeriesTimeAlignedWithCreateTS() throws ClassNotFoundException {
-    checkMultiSeriesTimeAligned(true);
+  public void checkReadWithoutCreateTS() throws ClassNotFoundException {
+    checkRead(false);
   }
 
-  @Test
-  public void checkMultiSeriesTimeAlignedWithoutCreateTS() throws ClassNotFoundException {
-    checkMultiSeriesTimeAligned(false);
-  }
-
-  private void checkMultiSeriesTimeAligned(boolean createTS) throws ClassNotFoundException {
+  private void checkRead(boolean createTS) throws ClassNotFoundException {
     insertSQL(createTS);
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection =
             DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
-
+      String queryPath = "/Users/kangrong/tsResearch/tols/JINFENG/d2/out_sub_pattern.csv";
+      List<Float> pattern = new ArrayList<>();
+      try (BufferedReader csvReader = new BufferedReader(new FileReader(queryPath))) {
+        String row;
+        while ((row = csvReader.readLine()) != null) {
+          float v = Float.parseFloat(row);
+          pattern.add(v);
+        }
+      }
       String querySQL =
           "SELECT speed.* FROM root.wind1.azq01 WHERE Speed "
-              + String.format("CONTAIN (%s) WITH TOLERANCE 100000 ", getArrayRange(170, 200, 10))
-              + String.format("CONCAT (%s) WITH TOLERANCE 200 ", getArrayRange(250, 300, 10))
-              + String.format("CONCAT (%s) WITH TOLERANCE 100000 ", getArrayRange(400, 430, 10));
+              + String.format("CONTAIN (%s) WITH TOLERANCE 10 ", getStringFromList(pattern, 0, 30))
+              + String.format("CONCAT (%s) WITH TOLERANCE 25 ", getStringFromList(pattern, 30, 70))
+              + String.format(
+                  "CONCAT (%s) WITH TOLERANCE 10 ", getStringFromList(pattern, 70, 100));
       System.out.println(querySQL);
+      statement.setQueryTimeout(200);
       boolean hasIndex = statement.execute(querySQL);
-      String gt =
-          "Time,root.wind1.azq01.speed.17,\n"
-              + "17,170.0,\n"
-              + "18,180.0,\n"
-              + "19,190.0,\n"
-              + "25,250.0,\n"
-              + "26,260.0,\n"
-              + "27,270.0,\n"
-              + "28,280.0,\n"
-              + "29,290.0,\n"
-              + "40,400.0,\n"
-              + "41,410.0,\n"
-              + "42,420.0,";
+      //      String gt = "Time,root.wind1.azq01.speed.17,\n";
       Assert.assertTrue(hasIndex);
       try (ResultSet resultSet = statement.getResultSet()) {
         ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
@@ -233,67 +200,6 @@ public class ELBIndexReadIT {
         }
         System.out.println(sb);
         //        Assert.assertEquals(gt, sb.toString());
-      }
-    } catch (Exception e) {
-      e.printStackTrace();
-      fail(e.getMessage());
-    }
-  }
-
-  @Test
-  public void checkReadWithCreateTS() throws ClassNotFoundException {
-    checkRead(true);
-  }
-
-  @Test
-  public void checkReadWithoutCreateTS() throws ClassNotFoundException {
-    checkRead(false);
-  }
-
-  private void checkRead(boolean createTS) throws ClassNotFoundException {
-    insertSQL(createTS);
-    Class.forName(Config.JDBC_DRIVER_NAME);
-    try (Connection connection =
-            DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
-        Statement statement = connection.createStatement()) {
-
-      String querySQL =
-          "SELECT speed.* FROM root.wind1.azq01 WHERE Speed "
-              + String.format("CONTAIN (%s) WITH TOLERANCE 0 ", getArrayRange(170, 200, 10))
-              + String.format("CONCAT (%s) WITH TOLERANCE 0 ", getArrayRange(250, 300, 10))
-              + String.format("CONCAT (%s) WITH TOLERANCE 0 ", getArrayRange(400, 430, 10));
-      System.out.println(querySQL);
-      statement.setQueryTimeout(20);
-      boolean hasIndex = statement.execute(querySQL);
-      String gt =
-          "Time,root.wind1.azq01.speed.17,\n"
-              + "17,170.0,\n"
-              + "18,180.0,\n"
-              + "19,190.0,\n"
-              + "25,250.0,\n"
-              + "26,260.0,\n"
-              + "27,270.0,\n"
-              + "28,280.0,\n"
-              + "29,290.0,\n"
-              + "40,400.0,\n"
-              + "41,410.0,\n"
-              + "42,420.0,\n";
-      Assert.assertTrue(hasIndex);
-      try (ResultSet resultSet = statement.getResultSet()) {
-        ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
-        StringBuilder sb = new StringBuilder();
-        for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
-          sb.append(resultSetMetaData.getColumnName(i)).append(",");
-        }
-        sb.append("\n");
-        while (resultSet.next()) {
-          for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
-            sb.append(resultSet.getString(i)).append(",");
-          }
-          sb.append("\n");
-        }
-        System.out.println(sb);
-        Assert.assertEquals(gt, sb.toString());
       }
     } catch (Exception e) {
       e.printStackTrace();
