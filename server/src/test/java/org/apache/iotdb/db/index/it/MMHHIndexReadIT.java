@@ -160,7 +160,7 @@ public class MMHHIndexReadIT {
       statement.setQueryTimeout(600);
       boolean hasIndex = statement.execute(querySQL);
       StringBuilder gt = new StringBuilder();
-      gt.append("Time,root.wind2.1.direction.(D=0.00),root.wind2.2.direction.(D=1.00),\n");
+      gt.append("Time,root.wind2.1.direction.(D_Ham=0),root.wind2.2.direction.(D_Ham=1),\n");
       for (int i = 0; i < 100; i++) {
         gt.append(String.format("%d,%.1f,%.1f,\n", i, 100f + i, 200f + i));
       }

@@ -19,7 +19,6 @@ package org.apache.iotdb.db.index.algorithm.rtree;
 
 import org.apache.iotdb.db.exception.index.IllegalIndexParamException;
 import org.apache.iotdb.db.exception.index.IndexRuntimeException;
-import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.index.common.DistSeries;
 import org.apache.iotdb.db.index.common.TriFunction;
 import org.apache.iotdb.db.index.stats.IndexStatManager;
@@ -43,6 +42,7 @@ import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -390,12 +390,13 @@ public class RTree<T> {
    *
    * @param outputStream serialize to
    */
-  public void serialize(OutputStream outputStream) throws IOException {
+  public void serialize(OutputStream outputStream, BiConsumer<T, OutputStream> serializeItem)
+      throws IOException {
     ReadWriteIOUtils.write(dim, outputStream);
     ReadWriteIOUtils.write(nMaxPerNode, outputStream);
     ReadWriteIOUtils.write(nMinPerNode, outputStream);
     ReadWriteIOUtils.write(seedsPicker.serialize(), outputStream);
-    serialize(root, outputStream);
+    serialize(root, outputStream, serializeItem);
   }
 
   /**
@@ -404,7 +405,9 @@ public class RTree<T> {
    * @param outputStream serialize to
    */
   @SuppressWarnings("unchecked")
-  private void serialize(RNode node, OutputStream outputStream) throws IOException {
+  private void serialize(
+      RNode node, OutputStream outputStream, BiConsumer<T, OutputStream> serializeItem)
+      throws IOException {
     if (node instanceof Item) {
       ReadWriteIOUtils.write(ITEM, outputStream);
     } else if (node.isLeaf) {
@@ -420,39 +423,27 @@ public class RTree<T> {
     }
     if (node instanceof Item) {
       T value = ((Item<T>) node).v;
-      ReadWriteIOUtils.write(value.toString(), outputStream);
-      //      biConsumer.accept(value, outputStream);
+      //      ReadWriteIOUtils.write(value.toString(), outputStream);
+      // only the series id
+      serializeItem.accept(value, outputStream);
     } else {
       // write child
       ReadWriteIOUtils.write(node.getChildren().size(), outputStream);
       for (RNode child : node.getChildren()) {
-        serialize(child, outputStream);
+        serialize(child, outputStream, serializeItem);
       }
     }
   }
 
-  public static RTree<PartialPath> deserialize(InputStream inputStream,
-      Set<PartialPath> involvedPathSet)
+  public static RTree<PartialPath> deserialize(
+      InputStream inputStream, Function<InputStream, PartialPath> deserializeItemFunc)
       throws IOException {
     int dim = ReadWriteIOUtils.readInt(inputStream);
     int nMaxPerNode = ReadWriteIOUtils.readInt(inputStream);
     int nMinPerNode = ReadWriteIOUtils.readInt(inputStream);
     SeedsPicker seedsPicker = SeedsPicker.deserialize(ReadWriteIOUtils.readShort(inputStream));
     RTree<PartialPath> rTree = new RTree<>(nMaxPerNode, nMinPerNode, dim, seedsPicker);
-    rTree.deserialize(
-        rTree,
-        null,
-        inputStream,
-        in -> {
-          try {
-            PartialPath path = new PartialPath(ReadWriteIOUtils.readString(inputStream));
-            involvedPathSet.add(path);
-            return path;
-          } catch (IOException | IllegalPathException e) {
-            logger.error("read path error", e);
-            return null;
-          }
-        });
+    rTree.deserialize(rTree, null, inputStream, deserializeItemFunc);
     return rTree;
   }
 

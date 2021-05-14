@@ -80,9 +80,7 @@ import static org.apache.iotdb.db.index.common.IndexConstant.SERIES_LENGTH;
 import static org.apache.iotdb.db.index.common.IndexConstant.TOP_K;
 import static org.apache.iotdb.db.index.common.IndexType.MMHH;
 
-/**
- * Refer to: Kang, Rong, et al. Maximum-margin hamming hashing. ICCV. IEEE/CVF. 2019: 8252-8261.
- */
+/** Refer to: Kang, Rong, et al. Maximum-margin hamming hashing. ICCV. IEEE/CVF. 2019: 8252-8261. */
 public class MMHHIndex extends IoTDBIndex {
 
   private static final Logger logger = LoggerFactory.getLogger(MMHHIndex.class);
@@ -149,9 +147,7 @@ public class MMHHIndex extends IoTDBIndex {
     return res;
   }
 
-  /**
-   * should be concise into WholeIndex or IoTDBIndex, it's duplicate
-   */
+  /** should be concise into WholeIndex or IoTDBIndex, it's duplicate */
   @Override
   public void endFlushTask() {
     super.endFlushTask();
@@ -200,7 +196,7 @@ public class MMHHIndex extends IoTDBIndex {
         for (int j = 0; j < bucketSize; j++) {
           Long v = ReadWriteIOUtils.readLong(inputStream);
           bucket.add(v);
-          involvedPathSet.add(seriesIdToPath(v));
+          involvedPathSet.add(IndexUtils.seriesIdToPath(indexSeries, v));
           itemSize++;
         }
         hashLookupTable.put(key, bucket);
@@ -232,9 +228,7 @@ public class MMHHIndex extends IoTDBIndex {
 
   private static class MMHHQueryStruct {
 
-    /**
-     * features is represented by float array
-     */
+    /** features is represented by float array */
     //    float[] patternFeatures;
     //    TriFunction<float[], float[], float[], Double> calcLowerDistFunc;
     //
@@ -440,9 +434,7 @@ public class MMHHIndex extends IoTDBIndex {
     return res;
   }
 
-  /**
-   * if res has reached topK
-   */
+  /** if res has reached topK */
   private boolean scanBucket(
       long queryCode,
       int doneIdx,
@@ -508,16 +500,9 @@ public class MMHHIndex extends IoTDBIndex {
     }
   }
 
-  private PartialPath seriesIdToPath(Long seriesId) {
-    int len = indexSeries.getNodeLength();
-    String[] nodes = Arrays.copyOf(indexSeries.getNodes(), len);
-    nodes[len - 2] = seriesId.toString();
-    return new PartialPath(nodes);
-  }
-
   private DistSeries readRawData(
       int hammingDist, Long seriesId, Function<PartialPath, TVList> loadSeriesFunc) {
-    PartialPath path = seriesIdToPath(seriesId);
+    PartialPath path = IndexUtils.seriesIdToPath(indexSeries, seriesId);
     TVList rawData = loadSeriesFunc.apply(path);
     return new DistSeries(hammingDist, rawData, path);
   }

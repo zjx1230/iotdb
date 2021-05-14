@@ -32,6 +32,7 @@ import org.apache.iotdb.tsfile.read.TimeValuePair;
 import org.apache.iotdb.tsfile.utils.Pair;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -226,7 +227,8 @@ public class IndexUtils {
     return SystemFileFactory.INSTANCE.getFile(filePath);
   }
 
-  private IndexUtils() {}
+  private IndexUtils() {
+  }
 
   public static Map<String, Object> toUpperCaseProps(Map<String, Object> props) {
     Map<String, Object> uppercase = new HashMap<>(props.size());
@@ -271,5 +273,33 @@ public class IndexUtils {
    */
   public static String addStarToIndexSeries(String previousDir) {
     return previousDir.replace('#', '*');
+  }
+
+  public static PartialPath seriesIdToPath(PartialPath wildcardIndexSeries, Long seriesId) {
+    int len = wildcardIndexSeries.getNodeLength();
+    String[] nodes = Arrays.copyOf(wildcardIndexSeries.getNodes(), len);
+
+    for (int i = 1; i < nodes.length; i++) {
+      if ("#".equals(nodes[i]) || "*".equals(nodes[i])) {
+        nodes[i] = seriesId.toString();
+        return new PartialPath(nodes);
+      }
+    }
+    throw new IndexRuntimeException("given index series has no * or #:" + wildcardIndexSeries);
+  }
+
+  public static Long pathToSeriesId(PartialPath wildcardIndexSeries, PartialPath path) {
+    String[] wildcardNodes = wildcardIndexSeries.getNodes();
+    String[] pathNodes = path.getNodes();
+    if (wildcardNodes.length != pathNodes.length) {
+      throw new IndexRuntimeException(
+          String.format("given path %s doesn't match index series %s", path, wildcardIndexSeries));
+    }
+    for (int i = 1; i < wildcardNodes.length; i++) {
+      if ("#".equals(wildcardNodes[i]) || "*".equals(wildcardNodes[i])) {
+        return Long.parseLong(pathNodes[i]);
+      }
+    }
+    throw new IndexRuntimeException("given index series has no * or #:" + wildcardIndexSeries);
   }
 }

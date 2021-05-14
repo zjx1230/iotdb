@@ -17,11 +17,11 @@
  */
 package org.apache.iotdb.db.index.algorithm.rtree;
 
-import java.util.HashSet;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.index.algorithm.rtree.RTree.RNode;
 import org.apache.iotdb.db.index.algorithm.rtree.RTree.SeedsPicker;
 import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -38,6 +38,7 @@ import static org.junit.Assert.fail;
 public class RTreeTest {
   @Test
   public void testRTreeSerialization() throws IllegalPathException, IOException {
+    //    PartialPath indexSeries = new PartialPath("root.*");
     int dim = 2;
     Random random = new Random(0);
     RTree<PartialPath> rTree = new RTree<>(4, 2, 2, SeedsPicker.LINEAR);
@@ -54,10 +55,31 @@ public class RTreeTest {
     }
     System.out.println(rTree);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    rTree.serialize(out);
-    InputStream in = new ByteArrayInputStream(out.toByteArray());
+    rTree.serialize(
+        out,
+        (v, o) -> {
+          try {
+            ReadWriteIOUtils.write(v.toString(), o);
+          } catch (IOException e) {
+            e.printStackTrace();
+          }
+        });
+    InputStream inputStream = new ByteArrayInputStream(out.toByteArray());
 
-    RTree<PartialPath> rTree2 = RTree.deserialize(in, new HashSet<>());
+    RTree<PartialPath> rTree2 =
+        RTree.deserialize(
+            inputStream,
+            in -> {
+              try {
+                //              PartialPath path = new
+                // PartialPath(ReadWriteIOUtils.readString(inputStream));
+                PartialPath path = new PartialPath(ReadWriteIOUtils.readString(inputStream));
+                return path;
+              } catch (IOException | IllegalPathException e) {
+                e.printStackTrace();
+                return null;
+              }
+            });
     Assert.assertEquals(rTree.toString(), rTree2.toString());
   }
 

@@ -49,6 +49,7 @@ import org.apache.iotdb.tsfile.read.common.BatchData;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.apache.iotdb.tsfile.read.reader.IBatchReader;
 import org.apache.iotdb.tsfile.utils.Pair;
+import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,7 +81,6 @@ import static org.apache.iotdb.db.index.common.IndexConstant.SEED_PICKER;
 import static org.apache.iotdb.db.index.common.IndexConstant.SERIES_LENGTH;
 import static org.apache.iotdb.db.index.common.IndexConstant.THRESHOLD;
 import static org.apache.iotdb.db.index.common.IndexConstant.TOP_K;
-import static org.apache.iotdb.db.index.common.IndexType.MMHH;
 import static org.apache.iotdb.db.index.common.IndexType.RTREE_PAA;
 
 /**
@@ -105,9 +105,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
    * <p>The range of dimension {@code i} is {@code [corner[i], corner[i]+range[i]]}
    */
   private final boolean usePointType;
-  /**
-   * For generality, RTree only store ids of identifiers or others.
-   */
+  /** For generality, RTree only store ids of identifiers or others. */
   private RTree<PartialPath> rTree;
 
   protected float[] currentLowerBounds;
@@ -116,6 +114,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
   //  protected double threshold;
   //  private int amortizedPerInputCost;
   private File featureFile;
+  //  private PartialPath currentInsertPath;
   private PartialPath currentInsertPath;
 
   public RTreeIndex(
@@ -145,7 +144,24 @@ public abstract class RTreeIndex extends IoTDBIndex {
     }
     try (InputStream inputStream = new FileInputStream(featureFile)) {
       logger.info("reload index {} from {}", RTREE_PAA, featureFile);
-      this.rTree = RTree.deserialize(inputStream, involvedPathSet);
+      // in is inputStream exactly. It seems duplicate, but it would be really weird if the second
+      // parameter "deserializeItemFunc" doesn't have an inputStream.
+      this.rTree =
+          RTree.deserialize(
+              inputStream,
+              in -> {
+                try {
+                  //              PartialPath path = new
+                  // PartialPath(ReadWriteIOUtils.readString(inputStream));
+                  long seriesId = ReadWriteIOUtils.readLong(in);
+                  PartialPath path = IndexUtils.seriesIdToPath(indexSeries, seriesId);
+                  involvedPathSet.add(path);
+                  return path;
+                } catch (IOException e) {
+                  logger.error("read path error", e);
+                  return null;
+                }
+              });
       logger.info("Deserialize RTreeIndex rTree: {}", rTree.toString().substring(0, 10));
       logger.info("Deserialize InvolvedSet: {}, {}", involvedPathSet.size(), involvedPathSet);
     } catch (IOException e) {
@@ -159,7 +175,18 @@ public abstract class RTreeIndex extends IoTDBIndex {
     logger.info("RTreeIndex RTree to serialized: {}", rTree.toString().substring(0, 10));
     logger.info("Serialize InvolvedSet: {}, {}", involvedPathSet.size(), involvedPathSet);
     try (OutputStream outputStream = new FileOutputStream(featureFile)) {
-      rTree.serialize(outputStream);
+      // out is outputStream exactly. It seems redundant, but it would be really weird if the second
+      // parameter "serializeItem" doesn't input an outputStream.
+      rTree.serialize(
+          outputStream,
+          (v, out) -> {
+            long seriesId = IndexUtils.pathToSeriesId(indexSeries, v);
+            try {
+              ReadWriteIOUtils.write(seriesId, out);
+            } catch (IOException e) {
+              e.printStackTrace();
+            }
+          });
     } catch (IOException e) {
       logger.error("Error when serialize router. Given up.", e);
     }
@@ -275,16 +302,12 @@ public abstract class RTreeIndex extends IoTDBIndex {
   //  protected abstract BiConsumer<String, InputStream> getDeserializeFunc();
   //  protected abstract List<Identifier> getQueryCandidates(List<Integer> candidateIds);
 
-  /**
-   *
-   */
+  /** */
   protected abstract float[] calcQueryFeature(double[] patterns);
 
   public static class RTreeQueryStruct {
 
-    /**
-     * features is represented by float array
-     */
+    /** features is represented by float array */
     float[] patternFeatures;
     //    TriFunction<float[], float[], float[], Double> calcLowerDistFunc;
     //

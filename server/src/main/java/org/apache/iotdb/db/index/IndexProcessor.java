@@ -62,7 +62,6 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.iotdb.db.index.common.IndexType.ANY_FOR_QUERY;
-import static org.apache.iotdb.db.index.common.IndexType.ELB_INDEX;
 
 /**
  * Each {@code IndexProcessor} manages all index instances under an <b>IndexSeries</b>.
@@ -431,7 +430,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
   void endFlushMemTable() {
     // wait until all flushing tasks end.
     try {
-      waitingFlushEndAndDo(()-> allPathsIndexMap.forEach((k,index)-> index.serializeIndex()));
+      waitingFlushEndAndDo(() -> allPathsIndexMap.forEach((k, index) -> index.serializeIndex()));
     } catch (IOException ignored) {
       // the exception is ignored
     }
