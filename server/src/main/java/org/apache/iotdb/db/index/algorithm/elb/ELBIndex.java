@@ -175,8 +175,13 @@ public class ELBIndex extends IoTDBIndex {
     }
   }
 
+//  @Override
+//  public void endFlushTask() {
+//    super.endFlushTask();
+//  }
+
   @Override
-  protected void flushIndex() {
+  public void serializeIndex() {
     logger.info("ELBIndex {} start serialization", indexSeries);
     try (OutputStream outputStream = new FileOutputStream(featureFile)) {
       ReadWriteIOUtils.write(windowBlockFeatures.size(), outputStream);

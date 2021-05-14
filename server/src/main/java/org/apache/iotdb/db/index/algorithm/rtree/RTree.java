@@ -431,7 +431,8 @@ public class RTree<T> {
     }
   }
 
-  public static RTree<PartialPath> deserializePartialPath(InputStream inputStream)
+  public static RTree<PartialPath> deserialize(InputStream inputStream,
+      Set<PartialPath> involvedPathSet)
       throws IOException {
     int dim = ReadWriteIOUtils.readInt(inputStream);
     int nMaxPerNode = ReadWriteIOUtils.readInt(inputStream);
@@ -444,7 +445,9 @@ public class RTree<T> {
         inputStream,
         in -> {
           try {
-            return new PartialPath(ReadWriteIOUtils.readString(inputStream));
+            PartialPath path = new PartialPath(ReadWriteIOUtils.readString(inputStream));
+            involvedPathSet.add(path);
+            return path;
           } catch (IOException | IllegalPathException e) {
             logger.error("read path error", e);
             return null;

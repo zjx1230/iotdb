@@ -82,8 +82,8 @@ public abstract class IoTDBIndex {
   /** A new item has been pre-processed by the FeatureExtractor, now the index can insert it. */
   public abstract boolean buildNext() throws IndexManagerException;
 
-  /** This index will be closed, it's time to serialize in-memory data to disk for next open. */
-  protected abstract void flushIndex();
+  /** It's time to serialize in-memory data to disk. */
+  public abstract void serializeIndex();
 
   /**
    * execute index query and return the result.
@@ -123,7 +123,7 @@ public abstract class IoTDBIndex {
 
   /** Close the index, release resources of the index structure and the feature extractor. */
   public ByteBuffer closeAndRelease() throws IOException {
-    flushIndex();
+    serializeIndex();
     if (indexFeatureExtractor != null) {
       return indexFeatureExtractor.closeAndRelease();
     } else {

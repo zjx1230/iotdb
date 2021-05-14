@@ -51,7 +51,7 @@ public class NoIndex extends IoTDBIndex {
   }
 
   @Override
-  protected void flushIndex() {
+  public void serializeIndex() {
     // NoIndex does nothing
   }
 

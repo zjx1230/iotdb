@@ -17,6 +17,7 @@
  */
 package org.apache.iotdb.db.index.algorithm.rtree;
 
+import java.util.HashSet;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.index.algorithm.rtree.RTree.RNode;
 import org.apache.iotdb.db.index.algorithm.rtree.RTree.SeedsPicker;
@@ -56,7 +57,7 @@ public class RTreeTest {
     rTree.serialize(out);
     InputStream in = new ByteArrayInputStream(out.toByteArray());
 
-    RTree<PartialPath> rTree2 = RTree.deserializePartialPath(in);
+    RTree<PartialPath> rTree2 = RTree.deserialize(in, new HashSet<>());
     Assert.assertEquals(rTree.toString(), rTree2.toString());
   }
 

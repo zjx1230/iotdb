@@ -18,7 +18,10 @@
  */
 package org.apache.iotdb.db.index.it;
 
+import java.sql.SQLException;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.exception.StartupException;
+import org.apache.iotdb.db.index.IndexManager;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.db.utils.datastructure.TVList;
@@ -82,12 +85,23 @@ public class DemoRTreeWindIT {
     IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
   }
 
+  private void executeNonQuery(String sql) {
+    try (Connection connection =
+        DriverManager.getConnection(
+            Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
+        Statement statement = connection.createStatement();) {
+      statement.execute(sql);
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+  }
+
   private static void insertSQL(boolean createTS) throws ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection =
-            DriverManager.getConnection(
-                Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
-        Statement statement = connection.createStatement(); ) {
+        DriverManager.getConnection(
+            Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
+        Statement statement = connection.createStatement();) {
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupSub));
       statement.execute(String.format("SET STORAGE GROUP TO %s", storageGroupWhole));
       System.out.println(String.format("SET STORAGE GROUP TO %s", storageGroupSub));
@@ -167,29 +181,68 @@ public class DemoRTreeWindIT {
   }
 
   @Test
-  public void checkReadWithoutCreateTS() throws ClassNotFoundException {
-    checkRead(false);
+  public void checkReadWithoutCreateTS() throws ClassNotFoundException, StartupException {
+    insertSQL(false);
+    System.out.println("<<<<<<< Query after insert");
+    checkReads(true);
+    executeNonQuery("flush");
+    System.out.println("<<<<<<< Query after insert + flush");
+    checkReads(true);
+    IndexManager.getInstance().stop();
+    IndexManager.getInstance().start();
+    System.out.println("<<<<<<< Query after stop and restart");
+    checkReads(true);
+    executeNonQuery("flush");
+    System.out.println("<<<<<<< Query after stop and restart + flush");
+    checkReads(true);
   }
 
-  private void checkRead(boolean createTS) throws ClassNotFoundException {
-    insertSQL(createTS);
+  private void checkReads(boolean assertResult) throws ClassNotFoundException {
+    String template = "SELECT TOP 3 speed FROM root.wind2.* WHERE speed LIKE (%s)";
+    String q1Line = "20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,"
+        + "20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,"
+        + "20.0,20.0,20.0,20.0,20.0,"
+        + "20.5,21.0,21.5,22.0,22.5,23.0,23.5,24.0,24.5,25.0,25.5,26.0,26.5,27.0,"
+        + "27.5,28.0,28.5,29.0,29.5,30.0,29.5,29.0,28.5,28.0,27.5,27.0,26.5,26.0,"
+        + "25.5,25.0,24.5,24.0,23.5,23.0,22.5,22.0,21.5,21.0,20.5,"
+        + "20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,"
+        + "20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0";
+    String q2Best = "17.548,16.949,16.906,16.993,17.630,16.945,17.284,16.831,16.706,17.216,"
+        + "16.937,16.196,15.916,15.947,15.200,16.076,16.000,16.152,15.537,15.362,"
+        + "15.737,15.656,15.995,15.698,15.857,15.706,16.643,16.779,16.383,17.665,"
+        + "18.364,19.835,18.765,18.451,19.949,19.530,20.692,20.544,20.879,20.904,"
+        + "21.953,21.726,22.571,23.718,24.009,23.462,23.782,23.871,24.508,24.553,"
+        + "24.843,24.750,25.500,25.127,25.079,24.951,24.683,24.003,22.977,21.877,"
+        + "21.850,21.100,20.499,19.988,19.376,18.960,19.471,17.961,17.570,18.652,"
+        + "18.555,18.401,18.645,17.587,18.056,18.448,17.901,18.105,17.168,18.083,"
+        + "18.283,16.916,17.099,17.115,18.685,17.483,16.859,16.968,16.339,17.476,"
+        + "16.835,16.379,17.312,17.789,17.147,17.456,18.596,18.269,17.956,17.851";
+    String q3_76 = "18.735,18.299,19.216,18.049,18.762,18.739,18.745,18.074,18.398,17.306,"
+        + "17.455,17.401,16.886,16.683,16.413,16.469,17.458,17.429,17.450,16.701,"
+        + "16.932,16.032,16.755,16.264,17.173,16.238,16.335,15.200,16.120,16.209,"
+        + "18.333,18.754,18.621,18.898,19.394,21.456,20.956,22.844,23.484,23.219,"
+        + "23.903,25.306,24.586,25.023,24.670,25.361,25.771,26.625,27.457,27.110,"
+        + "26.849,26.500,26.552,26.922,26.056,25.468,25.656,25.830,25.439,25.058,"
+        + "23.967,24.251,22.794,22.174,21.551,20.847,20.373,20.662,19.614,19.460,"
+        + "18.355,17.562,18.276,18.907,18.524,18.557,18.104,18.487,18.885,19.310,"
+        + "19.461,19.036,19.356,19.737,19.328,19.652,19.566,19.629,18.953,18.839,"
+        + "18.754,19.221,19.215,19.359,19.324,19.729,19.575,19.720,19.591,19.761";
+    String gt_q1_line = "Time,root.wind2.1417439639000.speed.(D=20.17),root.wind2.1417437998000.speed.(D=32.81),root.wind2.1417437450000.speed.(D=34.97),\n";
+    String gt_q2_best = "Time,root.wind2.1417403228000.speed.(D=16.92),root.wind2.1417439639000.speed.(D=17.02),root.wind2.1417434715000.speed.(D=21.14),\n";
+    String gt_q3_series76 = "Time,root.wind2.1417439639000.speed.(D=0.00),root.wind2.1417403228000.speed.(D=21.57),root.wind2.1417437998000.speed.(D=29.78),\n";
+    checkRead(String.format(template, q1Line), assertResult ? gt_q1_line : null, true);
+    checkRead(String.format(template, q2Best), assertResult ? gt_q2_best : null, true);
+    checkRead(String.format(template, q3_76), assertResult ? gt_q3_series76 : null, true);
+  }
+
+  private void checkRead(String querySQL, String gt, boolean onlyHeader)
+      throws ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection =
-            DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
+        DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
-      String q1Line =
-          "20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,"
-              + "20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,"
-              + "20.0,20.0,20.0,20.0,20.0,"
-              + "20.5,21.0,21.5,22.0,22.5,23.0,23.5,24.0,24.5,25.0,25.5,26.0,26.5,27.0,"
-              + "27.5,28.0,28.5,29.0,29.5,30.0,29.5,29.0,28.5,28.0,27.5,27.0,26.5,26.0,"
-              + "25.5,25.0,24.5,24.0,23.5,23.0,22.5,22.0,21.5,21.0,20.5,"
-              + "20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,"
-              + "20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0";
-      String querySQL =
-          String.format("SELECT TOP 3 speed FROM root.wind2.* WHERE speed LIKE (%s)", q1Line);
-      System.out.println(querySQL);
-      statement.setQueryTimeout(200);
+//      System.out.println(querySQL);
+//      statement.setQueryTimeout(200);
       boolean hasIndex = statement.execute(querySQL);
       //      String gt = "Time,root.wind1.azq01.speed.17,\n";
       Assert.assertTrue(hasIndex);
@@ -200,54 +253,19 @@ public class DemoRTreeWindIT {
           sb.append(resultSetMetaData.getColumnName(i)).append(",");
         }
         sb.append("\n");
-        while (resultSet.next()) {
-          for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
-            sb.append(resultSet.getString(i)).append(",");
+        if (!onlyHeader) {
+          while (resultSet.next()) {
+            for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
+              sb.append(resultSet.getString(i)).append(",");
+            }
+            sb.append("\n");
           }
-          sb.append("\n");
         }
+        System.out.println(">>>>>>>>> Query Result:");
         System.out.println(sb);
-        //        Assert.assertEquals(gt, sb.toString());
-      }
-      // ========================================
-      String basePath = "/Users/kangrong/tsResearch/tols/JINFENG/d2/out_sub_base.csv";
-      List<Float> base = new ArrayList<>();
-      try (BufferedReader csvReader = new BufferedReader(new FileReader(basePath))) {
-        String row;
-        int idx = 0;
-        while ((row = csvReader.readLine()) != null) {
-          if (idx >= 1) {
-            String[] data = row.split(",");
-            long t = Long.parseLong(data[0]);
-            float v = Float.parseFloat(data[1]);
-            base.add(v);
-          }
-          idx++;
+        if (gt != null) {
+          Assert.assertEquals(gt, sb.toString());
         }
-      }
-      String q2Line = getStringFromList(base, 7600, 7600 + 100);
-      querySQL =
-          String.format("SELECT TOP 3 speed FROM root.wind2.* WHERE speed LIKE (%s)", q2Line);
-      System.out.println(querySQL);
-      statement.setQueryTimeout(200);
-      hasIndex = statement.execute(querySQL);
-      //      String gt = "Time,root.wind1.azq01.speed.17,\n";
-      Assert.assertTrue(hasIndex);
-      try (ResultSet resultSet = statement.getResultSet()) {
-        ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
-        StringBuilder sb = new StringBuilder();
-        for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
-          sb.append(resultSetMetaData.getColumnName(i)).append(",");
-        }
-        sb.append("\n");
-        while (resultSet.next()) {
-          for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
-            sb.append(resultSet.getString(i)).append(",");
-          }
-          sb.append("\n");
-        }
-        System.out.println(sb);
-        //        Assert.assertEquals(gt, sb.toString());
       }
     } catch (Exception e) {
       e.printStackTrace();

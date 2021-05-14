@@ -80,6 +80,7 @@ import static org.apache.iotdb.db.index.common.IndexConstant.SEED_PICKER;
 import static org.apache.iotdb.db.index.common.IndexConstant.SERIES_LENGTH;
 import static org.apache.iotdb.db.index.common.IndexConstant.THRESHOLD;
 import static org.apache.iotdb.db.index.common.IndexConstant.TOP_K;
+import static org.apache.iotdb.db.index.common.IndexType.MMHH;
 import static org.apache.iotdb.db.index.common.IndexType.RTREE_PAA;
 
 /**
@@ -104,7 +105,9 @@ public abstract class RTreeIndex extends IoTDBIndex {
    * <p>The range of dimension {@code i} is {@code [corner[i], corner[i]+range[i]]}
    */
   private final boolean usePointType;
-  /** For generality, RTree only store ids of identifiers or others. */
+  /**
+   * For generality, RTree only store ids of identifiers or others.
+   */
   private RTree<PartialPath> rTree;
 
   protected float[] currentLowerBounds;
@@ -128,7 +131,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
     if (indexDirFile.exists()) {
       logger.info("reload index {} from {}", RTREE_PAA, indexDir);
       featureFile = IndexUtils.getIndexFile(indexDir + File.separator + "rTreeFeature");
-      deserializeFeatures();
+      deserializeRTree();
     } else {
       logger.info("mkdir index {} in {}", RTREE_PAA, indexDir);
       indexDirFile.mkdirs();
@@ -136,23 +139,27 @@ public abstract class RTreeIndex extends IoTDBIndex {
     }
   }
 
-  private void deserializeFeatures() {
+  private void deserializeRTree() {
     if (!featureFile.exists()) {
       return;
     }
     try (InputStream inputStream = new FileInputStream(featureFile)) {
-      this.rTree = RTree.deserializePartialPath(inputStream);
+      logger.info("reload index {} from {}", RTREE_PAA, featureFile);
+      this.rTree = RTree.deserialize(inputStream, involvedPathSet);
+      logger.info("Deserialize RTreeIndex rTree: {}", rTree.toString().substring(0, 10));
+      logger.info("Deserialize InvolvedSet: {}, {}", involvedPathSet.size(), involvedPathSet);
     } catch (IOException e) {
       logger.error("Error when deserialize ELB features. Given up.", e);
     }
   }
 
   @Override
-  protected void flushIndex() {
+  public void serializeIndex() {
     logger.info("RTreeIndex {} starts serialization", indexSeries);
+    logger.info("RTreeIndex RTree to serialized: {}", rTree.toString().substring(0, 10));
+    logger.info("Serialize InvolvedSet: {}, {}", involvedPathSet.size(), involvedPathSet);
     try (OutputStream outputStream = new FileOutputStream(featureFile)) {
       rTree.serialize(outputStream);
-      rTree.clear();
     } catch (IOException e) {
       logger.error("Error when serialize router. Given up.", e);
     }
@@ -241,6 +248,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
     return res;
   }
 
+  @Override
   public void endFlushTask() {
     super.endFlushTask();
     currentInsertPath = null;
@@ -267,12 +275,16 @@ public abstract class RTreeIndex extends IoTDBIndex {
   //  protected abstract BiConsumer<String, InputStream> getDeserializeFunc();
   //  protected abstract List<Identifier> getQueryCandidates(List<Integer> candidateIds);
 
-  /** */
+  /**
+   *
+   */
   protected abstract float[] calcQueryFeature(double[] patterns);
 
   public static class RTreeQueryStruct {
 
-    /** features is represented by float array */
+    /**
+     * features is represented by float array
+     */
     float[] patternFeatures;
     //    TriFunction<float[], float[], float[], Double> calcLowerDistFunc;
     //

@@ -80,7 +80,9 @@ import static org.apache.iotdb.db.index.common.IndexConstant.SERIES_LENGTH;
 import static org.apache.iotdb.db.index.common.IndexConstant.TOP_K;
 import static org.apache.iotdb.db.index.common.IndexType.MMHH;
 
-/** Refer to: Kang, Rong, et al. Maximum-margin hamming hashing. ICCV. IEEE/CVF. 2019: 8252-8261. */
+/**
+ * Refer to: Kang, Rong, et al. Maximum-margin hamming hashing. ICCV. IEEE/CVF. 2019: 8252-8261.
+ */
 public class MMHHIndex extends IoTDBIndex {
 
   private static final Logger logger = LoggerFactory.getLogger(MMHHIndex.class);
@@ -109,8 +111,10 @@ public class MMHHIndex extends IoTDBIndex {
 
     File indexDirFile = IndexUtils.getIndexFile(indexDir);
     if (indexDirFile.exists()) {
-      logger.info("reload index {} from {}", MMHH, indexDir);
+      logger.info("reload index {} from {}", MMHH, featureFile);
       deserializeHashLookup();
+      logger.info("Deserialize MMHHIndex hashTable: {}", hashLookupTable);
+      logger.info("Deserialize InvolvedSet: {}, {}", involvedPathSet.size(), involvedPathSet);
     } else {
       indexDirFile.mkdirs();
       hashLookupTable = new HashMap<>();
@@ -145,7 +149,10 @@ public class MMHHIndex extends IoTDBIndex {
     return res;
   }
 
-  /** should be concise into WholeIndex or IoTDBIndex, it's duplicate */
+  /**
+   * should be concise into WholeIndex or IoTDBIndex, it's duplicate
+   */
+  @Override
   public void endFlushTask() {
     super.endFlushTask();
     currentInsertPath = null;
@@ -170,19 +177,21 @@ public class MMHHIndex extends IoTDBIndex {
   }
 
   @Override
-  protected void flushIndex() {
+  public void serializeIndex() {
     logger.info("MMHHIndex {} starts serialization", indexSeries);
+    logger.info("MMHHIndex hashTable to serialized: {}", hashLookupTable);
+    logger.info("Serialize InvolvedSet: {}, {}", involvedPathSet.size(), involvedPathSet);
     serializeHashLookup();
-    hashLookupTable.clear();
     logger.info("MMHHIndex {} finishes serialization", indexSeries);
   }
 
   private void deserializeHashLookup() {
+    hashLookupTable = new HashMap<>();
+
     if (!featureFile.exists()) {
       return;
     }
     try (InputStream inputStream = new FileInputStream(featureFile)) {
-      hashLookupTable = new HashMap<>();
       int tableSize = ReadWriteIOUtils.readInt(inputStream);
       for (int i = 0; i < tableSize; i++) {
         Long key = ReadWriteIOUtils.readLong(inputStream);
@@ -191,6 +200,7 @@ public class MMHHIndex extends IoTDBIndex {
         for (int j = 0; j < bucketSize; j++) {
           Long v = ReadWriteIOUtils.readLong(inputStream);
           bucket.add(v);
+          involvedPathSet.add(seriesIdToPath(v));
           itemSize++;
         }
         hashLookupTable.put(key, bucket);
@@ -222,7 +232,9 @@ public class MMHHIndex extends IoTDBIndex {
 
   private static class MMHHQueryStruct {
 
-    /** features is represented by float array */
+    /**
+     * features is represented by float array
+     */
     //    float[] patternFeatures;
     //    TriFunction<float[], float[], float[], Double> calcLowerDistFunc;
     //
@@ -382,23 +394,6 @@ public class MMHHIndex extends IoTDBIndex {
     if (!uninvolvedList.isEmpty()) {
       Function<PartialPath, TVList> loadSeriesFunc =
           getLoadSeriesFunc(context, tsDataType, mmhhFeatureExtractor);
-      BiFunction<double[], TVList, Double> exactDistFunc = getCalcExactDistFunc();
-      //
-      //      PriorityQueue<DistSeries> topKPQ = new PriorityQueue<>(struct.topK,
-      //          new DistSeriesComparator());
-      //      topKPQ.addAll(res);
-      //      double kthMinDist = topKPQ.isEmpty() ? Double.MAX_VALUE : topKPQ.peek().dist;
-      //      for (PartialPath path : uninvolvedList) {
-      //        TVList tvList = loadSeriesFunc.apply(path);
-      //        double tempDist = exactDistFunc.apply(struct.patterns, tvList);
-      //        if (topKPQ.size() < struct.topK || tempDist < kthMinDist) {
-      //          if (topKPQ.size() == struct.topK) {
-      //            topKPQ.poll();
-      //          }
-      //          topKPQ.add(new DistSeries(tempDist, tvList, path));
-      //          kthMinDist = topKPQ.peek().dist;
-      //        }
-      //      }
       for (PartialPath path : uninvolvedList) {
         TVList rawData = loadSeriesFunc.apply(path);
         res.add(new DistSeries(0, rawData, path));
@@ -445,7 +440,9 @@ public class MMHHIndex extends IoTDBIndex {
     return res;
   }
 
-  /** if res has reached topK */
+  /**
+   * if res has reached topK
+   */
   private boolean scanBucket(
       long queryCode,
       int doneIdx,
@@ -511,12 +508,16 @@ public class MMHHIndex extends IoTDBIndex {
     }
   }
 
-  private DistSeries readRawData(
-      int hammingDist, Long seriesId, Function<PartialPath, TVList> loadSeriesFunc) {
+  private PartialPath seriesIdToPath(Long seriesId) {
     int len = indexSeries.getNodeLength();
     String[] nodes = Arrays.copyOf(indexSeries.getNodes(), len);
     nodes[len - 2] = seriesId.toString();
-    PartialPath path = new PartialPath(nodes);
+    return new PartialPath(nodes);
+  }
+
+  private DistSeries readRawData(
+      int hammingDist, Long seriesId, Function<PartialPath, TVList> loadSeriesFunc) {
+    PartialPath path = seriesIdToPath(seriesId);
     TVList rawData = loadSeriesFunc.apply(path);
     return new DistSeries(hammingDist, rawData, path);
   }
