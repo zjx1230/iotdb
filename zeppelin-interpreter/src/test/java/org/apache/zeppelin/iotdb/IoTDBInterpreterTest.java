@@ -361,6 +361,41 @@ public class IoTDBInterpreterTest {
   }
 
   @Test
+  public void TestMultiQueries() {
+    String insertSQL =
+        "SET STORAGE GROUP TO root.multiquery.wf02.wt01;\n"
+            + "CREATE TIMESERIES root.multiquery.wf02.wt01.status WITH DATATYPE=BOOLEAN, ENCODING=PLAIN;\n"
+            + "CREATE TIMESERIES root.multiquery.wf02.wt01.temperature WITH DATATYPE=FLOAT, ENCODING=PLAIN;\n"
+            + "CREATE TIMESERIES root.multiquery.wf02.wt01.hardware WITH DATATYPE=INT32, ENCODING=PLAIN;\n"
+            + "\n"
+            + "INSERT INTO root.multiquery.wf02.wt01 (timestamp, temperature, status, hardware)\n"
+            + "VALUES (1, 1.1, false, 11);\n"
+            + "\n"
+            + "INSERT INTO root.multiquery.wf02.wt01 (timestamp, hardware)\n"
+            + "VALUES (2, 22);\n"
+            + "\n"
+            + "INSERT INTO root.multiquery.wf02.wt01 (timestamp, status, hardware)\n"
+            + "VALUES (3, true, 33);\n"
+            + "\n"
+            + "INSERT INTO root.multiquery.wf02.wt01 (timestamp, temperature)\n"
+            + "VALUES (4, 4.4);\n"
+            + "\n"
+            + "INSERT INTO root.multiquery.wf02.wt01 (timestamp, temperature, status)\n"
+            + "VALUES (5, 5.5, false);\n";
+    System.out.println(insertSQL);
+    InterpreterResult actual = interpreter.internalInterpret(insertSQL, null);
+    System.out.println(actual.message().get(0).getData());
+    String sql1 =
+        "select temperature from root.multiquery.wf02.wt01;\n"
+            + "select status, hardware from root.multiquery.wf02.wt01";
+    System.out.println(sql1);
+    actual = interpreter.internalInterpret(sql1, null);
+    Assert.assertNotNull(actual);
+    //    Assert.assertEquals(Code.SUCCESS, actual.code());
+    System.out.println(actual.message().get(0).getData());
+  }
+
+  @Test
   public void testShowAllTTL() {
     interpreter.internalInterpret("SET TTL TO root.test.wf01 12345", null);
     InterpreterResult actual = interpreter.internalInterpret("SHOW ALL TTL", null);

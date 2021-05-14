@@ -227,8 +227,7 @@ public class IndexUtils {
     return SystemFileFactory.INSTANCE.getFile(filePath);
   }
 
-  private IndexUtils() {
-  }
+  private IndexUtils() {}
 
   public static Map<String, Object> toUpperCaseProps(Map<String, Object> props) {
     Map<String, Object> uppercase = new HashMap<>(props.size());
