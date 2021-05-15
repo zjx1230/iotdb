@@ -356,7 +356,7 @@ topClause
     ;
 
 indexPredicateClause
-    : (suffixPath | fullPath) LIKE sequenceClause
+    : (suffixPath | fullPath) (indexName=ID)? LIKE sequenceClause
     | (suffixPath | fullPath) CONTAIN sequenceClause WITH TOLERANCE constant (CONCAT sequenceClause WITH TOLERANCE constant)*
     ;
 

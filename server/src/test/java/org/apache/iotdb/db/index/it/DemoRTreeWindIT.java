@@ -195,7 +195,7 @@ public class DemoRTreeWindIT {
   }
 
   private void checkReads(boolean assertResult) throws ClassNotFoundException {
-    String template = "SELECT TOP 3 speed FROM root.wind2.* WHERE speed LIKE (%s)";
+    String template = "SELECT TOP 3 speed FROM root.wind2.* WHERE speed RTREE_PAA LIKE (%s)";
     String q1Line =
         "20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,"
             + "20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,"

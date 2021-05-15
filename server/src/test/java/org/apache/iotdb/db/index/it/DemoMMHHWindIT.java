@@ -222,7 +222,7 @@ public class DemoMMHHWindIT {
   }
 
   private void checkReads(boolean assertResult) throws ClassNotFoundException {
-    String template = "SELECT TOP 3 speed FROM root.wind2.* WHERE speed LIKE (%s)";
+    String template = "SELECT TOP 3 speed FROM root.wind2.* WHERE speed MMHH LIKE (%s)";
     String q1Line =
         "20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,"
             + "20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,20.0,"

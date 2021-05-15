@@ -138,9 +138,8 @@ public class ProtoIndexRouterTest {
     //    System.out.println(router.toString());
     Assert.assertEquals(
         "<{NO_INDEX=[type: NO_INDEX, time: 10, props: {PAA_DIM=10}], RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]}\n"
-            + "root.wind2.*.direction: {NO_INDEX=NO_INDEX, RTREE_PAA=nMax:50,nMin:2,dim:4,seedsPicker:LINEAR\n"
-            + "RNode{LB=[3.4028235E38, 3.4028235E38, 3.4028235E38, 3.4028235E38], UB=[-3.4028235E38, -3.4028235E38, -3.4028235E38, -3.4028235E38], leaf=true}\n"
-            + "}>\n"
+            + "root.wind2.*.direction: {NO_INDEX=NO_INDEX, RTREE_PAA=nMax:50,nMin:2,dim:4,seedsPicker:LINEARinner:0,leaf:1,item:0;\n"
+            + " calc size: 52=4*3+2+(#inner(0)+#leaf(1)) * (2*dim(4)*4+2+4) + #item(0) * (dim(4)*4 + 2 + 8)}>\n"
             + "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {INDEX_SLIDE_STEP=8, INDEX_WINDOW_RANGE=4}]}\n"
             + "root.wind1.azq01.speed: {ELB_INDEX=[]}>\n",
         router.toString());
@@ -149,9 +148,8 @@ public class ProtoIndexRouterTest {
         (ProtoIndexRouter) router.getRouterByStorageGroup(storageGroupFull);
     Assert.assertEquals(
         "<{NO_INDEX=[type: NO_INDEX, time: 10, props: {PAA_DIM=10}], RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]}\n"
-            + "root.wind2.*.direction: {NO_INDEX=NO_INDEX, RTREE_PAA=nMax:50,nMin:2,dim:4,seedsPicker:LINEAR\n"
-            + "RNode{LB=[3.4028235E38, 3.4028235E38, 3.4028235E38, 3.4028235E38], UB=[-3.4028235E38, -3.4028235E38, -3.4028235E38, -3.4028235E38], leaf=true}\n"
-            + "}>\n",
+            + "root.wind2.*.direction: {NO_INDEX=NO_INDEX, RTREE_PAA=nMax:50,nMin:2,dim:4,seedsPicker:LINEARinner:0,leaf:1,item:0;\n"
+            + " calc size: 52=4*3+2+(#inner(0)+#leaf(1)) * (2*dim(4)*4+2+4) + #item(0) * (dim(4)*4 + 2 + 8)}>\n",
         sgRouters.toString());
     //    System.out.println(sgRouters.toString());
 
@@ -160,9 +158,8 @@ public class ProtoIndexRouterTest {
     //    System.out.println(router.toString());
     Assert.assertEquals(
         "<{NO_INDEX=[type: NO_INDEX, time: 10, props: {PAA_DIM=10}], RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]}\n"
-            + "root.wind2.*.direction: {NO_INDEX=NO_INDEX, RTREE_PAA=nMax:50,nMin:2,dim:4,seedsPicker:LINEAR\n"
-            + "RNode{LB=[3.4028235E38, 3.4028235E38, 3.4028235E38, 3.4028235E38], UB=[-3.4028235E38, -3.4028235E38, -3.4028235E38, -3.4028235E38], leaf=true}\n"
-            + "}>\n"
+            + "root.wind2.*.direction: {NO_INDEX=NO_INDEX, RTREE_PAA=nMax:50,nMin:2,dim:4,seedsPicker:LINEARinner:0,leaf:1,item:0;\n"
+            + " calc size: 52=4*3+2+(#inner(0)+#leaf(1)) * (2*dim(4)*4+2+4) + #item(0) * (dim(4)*4 + 2 + 8)}>\n"
             + "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {INDEX_SLIDE_STEP=8, INDEX_WINDOW_RANGE=4}]}\n"
             + "root.wind1.azq01.speed: {ELB_INDEX=[]}>\n",
         router.toString());
@@ -173,9 +170,8 @@ public class ProtoIndexRouterTest {
     newRouter.deserializeAndReload(fakeCreateFunc);
     Assert.assertEquals(
         "<{NO_INDEX=[type: NO_INDEX, time: 10, props: {PAA_DIM=10}], RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]}\n"
-            + "root.wind2.*.direction: {NO_INDEX=NO_INDEX, RTREE_PAA=nMax:50,nMin:2,dim:4,seedsPicker:LINEAR\n"
-            + "RNode{LB=[3.4028235E38, 3.4028235E38, 3.4028235E38, 3.4028235E38], UB=[-3.4028235E38, -3.4028235E38, -3.4028235E38, -3.4028235E38], leaf=true}\n"
-            + "}>\n"
+            + "root.wind2.*.direction: {NO_INDEX=NO_INDEX, RTREE_PAA=nMax:50,nMin:2,dim:4,seedsPicker:LINEARinner:0,leaf:1,item:0;\n"
+            + " calc size: 52=4*3+2+(#inner(0)+#leaf(1)) * (2*dim(4)*4+2+4) + #item(0) * (dim(4)*4 + 2 + 8)}>\n"
             + "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {INDEX_SLIDE_STEP=8, INDEX_WINDOW_RANGE=4}]}\n"
             + "root.wind1.azq01.speed: {ELB_INDEX=[]}>\n",
         newRouter.toString());
@@ -184,9 +180,8 @@ public class ProtoIndexRouterTest {
     newRouter.removeIndexFromRouter(new PartialPath(index_full), NO_INDEX);
     Assert.assertEquals(
         "<{RTREE_PAA=[type: RTREE_PAA, time: 5, props: {PAA_DIM=5}]}\n"
-            + "root.wind2.*.direction: {RTREE_PAA=nMax:50,nMin:2,dim:4,seedsPicker:LINEAR\n"
-            + "RNode{LB=[3.4028235E38, 3.4028235E38, 3.4028235E38, 3.4028235E38], UB=[-3.4028235E38, -3.4028235E38, -3.4028235E38, -3.4028235E38], leaf=true}\n"
-            + "}>\n"
+            + "root.wind2.*.direction: {RTREE_PAA=nMax:50,nMin:2,dim:4,seedsPicker:LINEARinner:0,leaf:1,item:0;\n"
+            + " calc size: 52=4*3+2+(#inner(0)+#leaf(1)) * (2*dim(4)*4+2+4) + #item(0) * (dim(4)*4 + 2 + 8)}>\n"
             + "<{ELB_INDEX=[type: ELB_INDEX, time: 0, props: {INDEX_SLIDE_STEP=8, INDEX_WINDOW_RANGE=4}]}\n"
             + "root.wind1.azq01.speed: {ELB_INDEX=[]}>\n",
         newRouter.toString());

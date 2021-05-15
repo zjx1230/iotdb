@@ -141,7 +141,7 @@ public class MMHHNoIndexReadIT {
 
       String querySQL =
           String.format(
-              "SELECT TOP 5 direction FROM root.wind2.* WHERE direction LIKE (%s)",
+              "SELECT TOP 5 direction FROM root.wind2.* WHERE direction MMHH LIKE (%s)",
               getArrayRange(121, 121 + wholeDim));
 
       System.out.println(querySQL);

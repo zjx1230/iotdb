@@ -126,7 +126,7 @@ public class RTreeNoIndexReadIT {
 
       String querySQL =
           String.format(
-              "SELECT TOP 5 direction FROM root.wind2.* WHERE direction LIKE (%s)",
+              "SELECT TOP 5 direction FROM root.wind2.* WHERE direction RTREE_PAA LIKE (%s)",
               getArrayRange(121, 121 + wholeDim));
 
       System.out.println(querySQL);

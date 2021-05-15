@@ -468,14 +468,36 @@ public class IoTDBInterpreterTest {
   }
 
   @Test
-  public void testSelectSeries() {
+  public void testDrawSeries() {
     InterpreterResult actual =
-        interpreter.internalInterpret("SELECT SERIES (1.2,3.2, 18239. ,3.3))", null);
-    String gt = "user\n" + "root\n" + "user1";
+        interpreter.internalInterpret("DRAW SERIES (1.2,3.2, 18239. ,3.3))", null);
     System.out.println(actual.message().get(0).getData());
     Assert.assertNotNull(actual);
     Assert.assertEquals(Code.SUCCESS, actual.code());
 
-    //    Assert.assertEquals(gt, actual.message().get(0).getData());
+    Assert.assertEquals(
+        "Time\tSegment-0\n" + "0\t1.2\n" + "1\t3.2\n" + "2\t18239.\n" + "3\t3.3\n",
+        actual.message().get(0).getData());
+
+    actual =
+        interpreter.internalInterpret(
+            "DRAW SERIES (1.2,3.2, 18239. -3.3,2,0.12,1 - 95,8,1.0))", null);
+    System.out.println(actual.message().get(0).getData());
+    Assert.assertNotNull(actual);
+    Assert.assertEquals(Code.SUCCESS, actual.code());
+
+    Assert.assertEquals(
+        "Time\tSegment-0\tSegment-1\tSegment-2\n"
+            + "0\t1.2\tnull\tnull\n"
+            + "1\t3.2\tnull\tnull\n"
+            + "2\t18239.\tnull\tnull\n"
+            + "3\tnull\t3.3\tnull\n"
+            + "4\tnull\t2\tnull\n"
+            + "5\tnull\t0.12\tnull\n"
+            + "6\tnull\t1\tnull\n"
+            + "7\tnull\tnull\t95\n"
+            + "8\tnull\tnull\t8\n"
+            + "9\tnull\tnull\t1.0\n",
+        actual.message().get(0).getData());
   }
 }

@@ -119,6 +119,44 @@ public class IndexLogicalPlanTest {
     Assert.assertEquals("Glu", queryOperator.getSelectedPaths().get(0).getFullPath());
     Assert.assertEquals(
         "root.Ery.*", queryOperator.getFromOperator().getPrefixPaths().get(0).getFullPath());
+    Assert.assertEquals(IndexType.ANY_FOR_QUERY, queryOperator.getIndexType());
+    Assert.assertEquals(2, queryOperator.getProps().size());
+    Assert.assertEquals(2, (int) queryOperator.getProps().get(TOP_K));
+    Assert.assertEquals(
+        "[0.0, 120.0, 20.0, 80.0, 120.0, 100.0, 80.0, 0.0]",
+        Arrays.toString((double[]) queryOperator.getProps().get(PATTERN)));
+  }
+
+  @Test
+  public void testParseQueryIndexWholeMatching2() {
+    String sqlStr =
+        "SELECT TOP 2 Glu FROM root.Ery.* WHERE Glu MMHH LIKE (0, 120, 20, 80, 120, 100, 80, 0)";
+    Operator op = generator.generate(sqlStr, ZoneId.systemDefault());
+    Assert.assertEquals(QueryOperator.class, op.getClass());
+    QueryOperator queryOperator = (QueryOperator) op;
+    Assert.assertEquals(OperatorType.QUERY, queryOperator.getType());
+    Assert.assertEquals("Glu", queryOperator.getSelectedPaths().get(0).getFullPath());
+    Assert.assertEquals(
+        "root.Ery.*", queryOperator.getFromOperator().getPrefixPaths().get(0).getFullPath());
+    Assert.assertEquals(IndexType.MMHH, queryOperator.getIndexType());
+    Assert.assertEquals(2, queryOperator.getProps().size());
+    Assert.assertEquals(2, (int) queryOperator.getProps().get(TOP_K));
+    Assert.assertEquals(
+        "[0.0, 120.0, 20.0, 80.0, 120.0, 100.0, 80.0, 0.0]",
+        Arrays.toString((double[]) queryOperator.getProps().get(PATTERN)));
+  }
+
+  @Test
+  public void testParseQueryIndexWholeMatching3() {
+    String sqlStr =
+        "SELECT TOP 2 Glu FROM root.Ery.* WHERE Glu RTREE_PAA LIKE (0, 120, 20, 80, 120, 100, 80, 0)";
+    Operator op = generator.generate(sqlStr, ZoneId.systemDefault());
+    Assert.assertEquals(QueryOperator.class, op.getClass());
+    QueryOperator queryOperator = (QueryOperator) op;
+    Assert.assertEquals(OperatorType.QUERY, queryOperator.getType());
+    Assert.assertEquals("Glu", queryOperator.getSelectedPaths().get(0).getFullPath());
+    Assert.assertEquals(
+        "root.Ery.*", queryOperator.getFromOperator().getPrefixPaths().get(0).getFullPath());
     Assert.assertEquals(IndexType.RTREE_PAA, queryOperator.getIndexType());
     Assert.assertEquals(2, queryOperator.getProps().size());
     Assert.assertEquals(2, (int) queryOperator.getProps().get(TOP_K));
