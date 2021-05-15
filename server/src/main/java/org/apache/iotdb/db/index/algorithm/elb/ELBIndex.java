@@ -50,6 +50,7 @@ import org.apache.iotdb.tsfile.read.reader.IBatchReader;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -191,6 +192,12 @@ public class ELBIndex extends IoTDBIndex {
         ReadWriteIOUtils.write(features.feature, outputStream);
       }
       //      usableBlocks.clearAndRelease();
+      long expectSize = 4L + windowBlockFeatures.size() * (8 + 8 + 8);
+      System.out.println(
+          String.format(
+              "calc size: %d=4L + block_size(%d) * (8 + 8 + 8)",
+              expectSize, windowBlockFeatures.size()));
+      System.out.println("hashtable file size: " + FileUtils.sizeOf(featureFile));
     } catch (IOException e) {
       logger.error("Error when serialize router. Given up.", e);
     }
@@ -394,8 +401,9 @@ public class ELBIndex extends IoTDBIndex {
       // thres_sql ** p = (thres_avg ** p) * len(subpattern)
       // thres_avg = [(thres_sql ** p) / len(subpattern)] ** 1/p
 
-      if (struct.distance instanceof LInfinityNormdouble)
+      if (struct.distance instanceof LInfinityNormdouble) {
         throw new IllegalIndexParamException("L-inf not supported yet");
+      }
       double p = struct.distance.getP();
       struct.thresholds[i] = Math.pow(Math.pow(thresholdList.get(i), p) / pattern.length, 1 / p);
       //      struct.thresholds[i] = thresholdList.get(i);

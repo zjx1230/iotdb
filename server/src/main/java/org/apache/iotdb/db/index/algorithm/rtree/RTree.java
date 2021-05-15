@@ -54,9 +54,9 @@ public class RTree<T> {
 
   private static final Logger logger = LoggerFactory.getLogger(RTree.class);
 
-  private static final int INNER_NODE = 0;
-  private static final int LEAF_NODE = 1;
-  private static final int ITEM = 2;
+  private static final short INNER_NODE = 0;
+  private static final short LEAF_NODE = 1;
+  private static final short ITEM = 2;
   private static final float VAGUE_ERROR = 0.0001f;
 
   final int dim;
@@ -418,8 +418,10 @@ public class RTree<T> {
     for (float lb : node.lbs) {
       ReadWriteIOUtils.write(lb, outputStream);
     }
-    for (float ub : node.ubs) {
-      ReadWriteIOUtils.write(ub, outputStream);
+    if (!(node instanceof Item)) {
+      for (float ub : node.ubs) {
+        ReadWriteIOUtils.write(ub, outputStream);
+      }
     }
     if (node instanceof Item) {
       T value = ((Item<T>) node).v;
@@ -458,14 +460,18 @@ public class RTree<T> {
       InputStream inputStream,
       Function<InputStream, T> deserializeItemFunc)
       throws IOException {
-    int nodeType = ReadWriteIOUtils.readInt(inputStream);
+    short nodeType = ReadWriteIOUtils.readShort(inputStream);
     float[] lbs = new float[rTree.dim];
     float[] ubs = new float[rTree.dim];
     for (int i = 0; i < rTree.dim; i++) {
       lbs[i] = ReadWriteIOUtils.readFloat(inputStream);
     }
-    for (int i = 0; i < rTree.dim; i++) {
-      ubs[i] = ReadWriteIOUtils.readFloat(inputStream);
+    if (nodeType == ITEM) {
+      System.arraycopy(lbs, 0, ubs, 0, rTree.dim);
+    } else {
+      for (int i = 0; i < rTree.dim; i++) {
+        ubs[i] = ReadWriteIOUtils.readFloat(inputStream);
+      }
     }
     RNode node;
     if (nodeType == ITEM) {
@@ -492,12 +498,36 @@ public class RTree<T> {
     sb.append(String.format("nMax:%d,", nMaxPerNode));
     sb.append(String.format("nMin:%d,", nMinPerNode));
     sb.append(String.format("dim:%d,", dim));
-    sb.append(String.format("seedsPicker:%s%n", seedsPicker));
-    if (root == null) {
-      return sb.toString();
-    }
-    toString(root, 0, sb);
+    sb.append(String.format("seedsPicker:%s", seedsPicker));
+    int[] countNodes = {0, 0, 0}; // inner, leaf, item
+    statRTree(countNodes, root);
+    sb.append(
+        String.format("inner:%d,leaf:%d,item:%d;%n ", countNodes[0], countNodes[1], countNodes[2]));
+    long expectSize =
+        4 * 3
+            + 2
+            + (countNodes[0] + countNodes[1]) * (2L * dim * 4 + 2 + 4)
+            + countNodes[2] * (dim * 4 + 2 + 8);
+    sb.append(
+        String.format(
+            "calc size: %d=4*3+2+(#inner(%d)+#leaf(%d)) * (2*dim(%d)*4+2+4) + #item(%d) * (dim(%d)*4 + 2 + 8)",
+            expectSize, countNodes[0], countNodes[1], dim, countNodes[2], dim));
     return sb.toString();
+  }
+
+  private void statRTree(int[] countNodes, RNode node) {
+    if (node instanceof Item) {
+      countNodes[2]++;
+    } else {
+      if (node.isLeaf) {
+        countNodes[1]++;
+      } else {
+        countNodes[0]++;
+      }
+      for (RNode child : node.children) {
+        statRTree(countNodes, child);
+      }
+    }
   }
 
   public String toDetailedString() {

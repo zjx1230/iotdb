@@ -51,6 +51,7 @@ import org.apache.iotdb.tsfile.read.reader.IBatchReader;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -162,7 +163,8 @@ public abstract class RTreeIndex extends IoTDBIndex {
                   return null;
                 }
               });
-      logger.info("Deserialize RTreeIndex rTree: {}", rTree.toString().substring(0, 10));
+      //      logger.info("Deserialize RTreeIndex rTree: {}", rTree.toString().substring(0, 10));
+      logger.info("Deserialize RTreeIndex rTree: {}", rTree);
       logger.info("Deserialize InvolvedSet: {}, {}", involvedPathSet.size(), involvedPathSet);
     } catch (IOException e) {
       logger.error("Error when deserialize ELB features. Given up.", e);
@@ -172,8 +174,10 @@ public abstract class RTreeIndex extends IoTDBIndex {
   @Override
   public void serializeIndex() {
     logger.info("RTreeIndex {} starts serialization", indexSeries);
-    logger.info("RTreeIndex RTree to serialized: {}", rTree.toString().substring(0, 10));
-    logger.info("Serialize InvolvedSet: {}, {}", involvedPathSet.size(), involvedPathSet);
+    //    logger.info("RTreeIndex RTree to serialized: {}", rTree.toString().substring(0, 10));
+    logger.info("RTreeIndex RTree to serialized: {}", rTree);
+    logger.info("RTreeIndex RTree to serialized: {}", rTree.toDetailedString());
+    logger.info("Serialize InvolvedSet: {}", involvedPathSet.size());
     try (OutputStream outputStream = new FileOutputStream(featureFile)) {
       // out is outputStream exactly. It seems redundant, but it would be really weird if the second
       // parameter "serializeItem" doesn't input an outputStream.
@@ -187,6 +191,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
               e.printStackTrace();
             }
           });
+      System.out.println("rtree file size: " + FileUtils.sizeOf(featureFile));
     } catch (IOException e) {
       logger.error("Error when serialize router. Given up.", e);
     }

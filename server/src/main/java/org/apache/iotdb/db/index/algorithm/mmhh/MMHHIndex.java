@@ -45,6 +45,7 @@ import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 import ai.djl.MalformedModelException;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -221,6 +222,13 @@ public class MMHHIndex extends IoTDBIndex {
           ReadWriteIOUtils.write(v, outputStream);
         }
       }
+      System.out.println("hashtable bucket size: " + hashLookupTable.size());
+      long expectSize = 4L + hashLookupTable.size() * (8 + 4) + itemSize * 8;
+      System.out.println(
+          String.format(
+              "calc size: %d=4L + bucket_size(%d) * (8 + 4) + itemSize(%d) * 8",
+              expectSize, hashLookupTable.size(), itemSize));
+      System.out.println("hashtable file size: " + FileUtils.sizeOf(featureFile));
     } catch (IOException e) {
       logger.error("Error when serialize router. Given up.", e);
     }

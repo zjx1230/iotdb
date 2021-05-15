@@ -130,9 +130,10 @@ public class RTreeTest {
       if (!checkRTree(rTree)) {
         fail();
       }
+      System.out.println(rTree.toDetailedString());
     }
-    System.out.println(rTree);
-    Assert.assertEquals(gt, rTree.toString());
+    System.out.println(rTree.toDetailedString());
+    Assert.assertEquals(gt, rTree.toDetailedString());
   }
 
   /**

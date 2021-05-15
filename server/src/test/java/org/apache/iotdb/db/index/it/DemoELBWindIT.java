@@ -153,7 +153,7 @@ public class DemoELBWindIT {
                     ZoneId.systemDefault()),
                 subInput.getFloat(i));
         statement.execute(insertSQL);
-        System.out.println(insertSQL);
+        //        System.out.println(insertSQL);
       }
       statement.execute("flush");
       //      System.out.println("==========================");
