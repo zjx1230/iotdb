@@ -1746,11 +1746,11 @@ public class StorageGroupProcessor {
 
   public void testMerge() throws Exception {
     // fork and filter current tsfile, then commit then to compaction merge
-    tsFileManagement.forkCurrentFileList(213524);
+    tsFileManagement.forkCurrentFileList(0);
     CompactionMergeTaskPoolManager.getInstance()
         .submitTask(
             tsFileManagement.new CompactionMergeTask(this::closeCompactionMergeCallBack,
-                213524));
+                0));
   }
 
 

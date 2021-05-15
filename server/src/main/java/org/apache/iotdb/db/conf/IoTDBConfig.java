@@ -710,7 +710,7 @@ public class IoTDBConfig {
   /**
    * whether enable data partition. If disabled, all data belongs to partition 0
    */
-  private boolean enablePartition = true;
+  private boolean enablePartition = false;
 
   /**
    * whether enable MTree snapshot

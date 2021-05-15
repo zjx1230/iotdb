@@ -64,6 +64,7 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
 
   protected final int seqLevelNum = Math
       .max(IoTDBDescriptor.getInstance().getConfig().getSeqLevelNum(), 1);
+  private static int merge_time = 0;
   protected final int seqFileNumInEachLevel = Math
       .max(IoTDBDescriptor.getInstance().getConfig().getSeqFileNumInEachLevel(), 1);
   protected final int unseqLevelNum = Math
@@ -473,14 +474,22 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
 
   @Override
   protected void merge(long timePartition) {
+    long startTimeMillis = System.currentTimeMillis();
     merge(forkedSequenceTsFileResources, true, timePartition, seqLevelNum,
         seqFileNumInEachLevel);
+    long time = System.currentTimeMillis();
+    merge_time += time - startTimeMillis;
+    logger.info("merge 总时长: {}", merge_time);
     if (enableUnseqCompaction && unseqLevelNum <= 1 && forkedUnSequenceTsFileResources.size() > 0) {
       merge(isForceFullMerge, getTsFileList(true), forkedUnSequenceTsFileResources.get(0),
           Long.MAX_VALUE);
     } else {
       merge(forkedUnSequenceTsFileResources, false, timePartition, unseqLevelNum,
           unseqFileNumInEachLevel);
+    }
+    this.forkCurrentFileList(timePartition);
+    if (!forkedSequenceTsFileResources.get(0).isEmpty()) {
+      this.merge(timePartition);
     }
   }
 

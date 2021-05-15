@@ -24,11 +24,17 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.PriorityQueue;
+import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.heavyhitter.QueryHeavyHitters;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
+import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +42,15 @@ import org.slf4j.LoggerFactory;
 public class HashMapHitter implements QueryHeavyHitters {
 
   private static final Logger logger = LoggerFactory.getLogger(HashMapHitter.class);
+  int hitter = IoTDBDescriptor.getInstance().getConfig().getMaxHitterNum();
   private Map<PartialPath, Integer> counter = new HashMap<>();
+  private PriorityQueue<Entry<PartialPath, Integer>> topHeap = new PriorityQueue<>(hitter,
+      new Comparator<Entry<PartialPath, Integer>>() {
+        @Override
+        public int compare(Entry<PartialPath, Integer> o1, Entry<PartialPath, Integer> o2) {
+          return o2.getValue() - o1.getValue();
+        }
+      });
 
   public HashMapHitter(int maxHitterNum) {
 
@@ -49,7 +63,18 @@ public class HashMapHitter implements QueryHeavyHitters {
 
   @Override
   public List<PartialPath> getTopCompactionSeries(PartialPath sgName) throws MetadataException {
-    return null;
+    List<PartialPath> ret = new ArrayList<>();
+    topHeap.addAll(counter.entrySet());
+    List<PartialPath> sgPaths = MManager.getInstance().getAllTimeseriesPath(sgName);
+    for (int k = 0; k < hitter; k++) {
+      if (!topHeap.isEmpty()) {
+        PartialPath path =  topHeap.poll().getKey();
+        if (sgPaths.contains(path)) {
+          ret.add(path);
+        }
+      }
+    }
+    return ret;
   }
 
   /**

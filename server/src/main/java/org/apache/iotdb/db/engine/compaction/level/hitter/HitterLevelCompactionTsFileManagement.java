@@ -51,6 +51,7 @@ public class HitterLevelCompactionTsFileManagement extends LevelCompactionTsFile
 
   private static final Logger logger = LoggerFactory
       .getLogger(HitterLevelCompactionTsFileManagement.class);
+  private static int merge_time = 0;
   private final int sizeRatio = IoTDBDescriptor.getInstance().getConfig().getSizeRatio();
   private final int firstLevelNum = Math
       .max(IoTDBDescriptor.getInstance().getConfig().getSeqFileNumInEachLevel(), 1);
@@ -62,10 +63,18 @@ public class HitterLevelCompactionTsFileManagement extends LevelCompactionTsFile
 
   @Override
   protected void merge(long timePartition) {
-    merge(forkedSequenceTsFileResources, timePartition);
+    long startTimeMillis = System.currentTimeMillis();
+    merge1(forkedSequenceTsFileResources, timePartition);
+    long time = System.currentTimeMillis();
+    merge_time += time - startTimeMillis;
+    logger.info("merge 总时长: {}", merge_time);
     if (enableUnseqCompaction && forkedUnSequenceTsFileResources.size() > 0) {
       merge(isForceFullMerge, getTsFileList(true), forkedUnSequenceTsFileResources.get(0),
           Long.MAX_VALUE);
+    }
+    this.forkCurrentFileList(timePartition);
+    if (!forkedSequenceTsFileResources.get(0).isEmpty()) {
+      merge(timePartition);
     }
   }
 
@@ -373,7 +382,7 @@ public class HitterLevelCompactionTsFileManagement extends LevelCompactionTsFile
       for (TsFileResource tsFileResource : levelRawTsFileResources) {
         if (tsFileResource.isClosed()) {
           forkedLevelTsFileResources.add(tsFileResource);
-          if (forkedLevelTsFileResources.size() > firstLevelNum * Math.pow(sizeRatio, i)) {
+          if (forkedLevelTsFileResources.size() >= firstLevelNum * Math.pow(sizeRatio, i)) {
             break;
           }
         }
