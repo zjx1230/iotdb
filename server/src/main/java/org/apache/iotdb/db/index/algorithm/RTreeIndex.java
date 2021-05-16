@@ -176,8 +176,8 @@ public abstract class RTreeIndex extends IoTDBIndex {
     logger.info("RTreeIndex {} starts serialization", indexSeries);
     //    logger.info("RTreeIndex RTree to serialized: {}", rTree.toString().substring(0, 10));
     logger.info("RTreeIndex RTree to serialized: {}", rTree);
-    logger.info("RTreeIndex RTree to serialized: {}", rTree.toDetailedString());
-    logger.info("Serialize InvolvedSet: {}", involvedPathSet.size());
+    //    logger.info("RTreeIndex RTree to serialized: {}", rTree.toDetailedString());
+    //    logger.info("Serialize InvolvedSet: {}", involvedPathSet.size());
     try (OutputStream outputStream = new FileOutputStream(featureFile)) {
       // out is outputStream exactly. It seems redundant, but it would be really weird if the second
       // parameter "serializeItem" doesn't input an outputStream.
@@ -193,7 +193,7 @@ public abstract class RTreeIndex extends IoTDBIndex {
           });
       System.out.println("rtree file size: " + FileUtils.sizeOf(featureFile));
     } catch (IOException e) {
-      logger.error("Error when serialize router. Given up.", e);
+      logger.error("Error when serialize RTree. Given up.", e);
     }
     logger.info("RTreeIndex {} finishes serialization", indexSeries);
   }

@@ -186,7 +186,9 @@ public class ELBIndex extends IoTDBIndex {
     logger.info("ELBIndex {} start serialization", indexSeries);
     try (OutputStream outputStream = new FileOutputStream(featureFile)) {
       ReadWriteIOUtils.write(windowBlockFeatures.size(), outputStream);
-      for (ELBWindowBlockFeature features : windowBlockFeatures) {
+      int len = windowBlockFeatures.size();
+      for (int i = 0; i < len; i++) {
+        ELBWindowBlockFeature features = windowBlockFeatures.get(i);
         ReadWriteIOUtils.write(features.startTime, outputStream);
         ReadWriteIOUtils.write(features.endTime, outputStream);
         ReadWriteIOUtils.write(features.feature, outputStream);
@@ -197,7 +199,7 @@ public class ELBIndex extends IoTDBIndex {
           String.format(
               "calc size: %d=4L + block_size(%d) * (8 + 8 + 8)",
               expectSize, windowBlockFeatures.size()));
-      System.out.println("hashtable file size: " + FileUtils.sizeOf(featureFile));
+      System.out.println("elb file size: " + FileUtils.sizeOf(featureFile));
     } catch (IOException e) {
       logger.error("Error when serialize router. Given up.", e);
     }

@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.ConcurrentModificationException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.PriorityQueue;
@@ -408,32 +409,39 @@ public class RTree<T> {
   private void serialize(
       RNode node, OutputStream outputStream, BiConsumer<T, OutputStream> serializeItem)
       throws IOException {
-    if (node instanceof Item) {
-      ReadWriteIOUtils.write(ITEM, outputStream);
-    } else if (node.isLeaf) {
-      ReadWriteIOUtils.write(LEAF_NODE, outputStream);
-    } else {
-      ReadWriteIOUtils.write(INNER_NODE, outputStream);
-    }
-    for (float lb : node.lbs) {
-      ReadWriteIOUtils.write(lb, outputStream);
-    }
-    if (!(node instanceof Item)) {
-      for (float ub : node.ubs) {
-        ReadWriteIOUtils.write(ub, outputStream);
+    try {
+      if (node instanceof Item) {
+        ReadWriteIOUtils.write(ITEM, outputStream);
+      } else if (node.isLeaf) {
+        ReadWriteIOUtils.write(LEAF_NODE, outputStream);
+      } else {
+        ReadWriteIOUtils.write(INNER_NODE, outputStream);
       }
-    }
-    if (node instanceof Item) {
-      T value = ((Item<T>) node).v;
-      //      ReadWriteIOUtils.write(value.toString(), outputStream);
-      // only the series id
-      serializeItem.accept(value, outputStream);
-    } else {
-      // write child
-      ReadWriteIOUtils.write(node.getChildren().size(), outputStream);
-      for (RNode child : node.getChildren()) {
-        serialize(child, outputStream, serializeItem);
+      for (float lb : node.lbs) {
+        ReadWriteIOUtils.write(lb, outputStream);
       }
+      if (!(node instanceof Item)) {
+        for (float ub : node.ubs) {
+          ReadWriteIOUtils.write(ub, outputStream);
+        }
+      }
+      if (node instanceof Item) {
+        T value = ((Item<T>) node).v;
+        //      ReadWriteIOUtils.write(value.toString(), outputStream);
+        // only the series id
+        serializeItem.accept(value, outputStream);
+      } else {
+        // write child
+        ReadWriteIOUtils.write(node.getChildren().size(), outputStream);
+        List<RNode> children = node.getChildren();
+        int len = children.size();
+        for (int i = 0; i < len; i++) {
+          serialize(children.get(i), outputStream, serializeItem);
+        }
+      }
+    } catch (ConcurrentModificationException e) {
+      System.out.println("finished");
+      throw e;
     }
   }
 

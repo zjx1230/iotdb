@@ -162,7 +162,8 @@ public class MemTableFlushTask {
       try {
         indexFlushTask.endFlush();
       } catch (Exception e) {
-        LOGGER.error("meet Exception in endFlush, not affect the memtable flushing", e);
+        LOGGER.info("meet Exception in endFlush, not affect the memtable flushing");
+        //        System.out.println("endFlush has finished");
       }
     }
 

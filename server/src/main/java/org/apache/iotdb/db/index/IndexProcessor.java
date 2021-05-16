@@ -398,28 +398,48 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
               numIndexBuildTasks.decrementAndGet();
               return;
             }
-            Runnable buildTask =
-                () -> {
-                  try {
-                    indexLockMap.get(indexType).writeLock().lock();
-                    IndexFeatureExtractor extractor = index.startFlushTask(path, tvList);
-                    while (extractor.hasNext()) {
-                      extractor.processNext();
-                      index.buildNext();
-                    }
-                    index.endFlushTask();
-                  } catch (IndexManagerException e) {
-                    // Give up the following data, but the previously serialized chunk will not be
-                    // affected.
-                    logger.error("build index failed", e);
-                  } catch (RuntimeException e) {
-                    logger.error("RuntimeException", e);
-                  } finally {
-                    numIndexBuildTasks.decrementAndGet();
-                    indexLockMap.get(indexType).writeLock().unlock();
-                  }
-                };
-            indexBuildPoolManager.submit(buildTask);
+            //            Runnable buildTask =
+            //                () -> {
+            //                  try {
+            //                    indexLockMap.get(indexType).writeLock().lock();
+            //                    IndexFeatureExtractor extractor = index.startFlushTask(path,
+            // tvList);
+            //                    while (extractor.hasNext()) {
+            //                      extractor.processNext();
+            //                      index.buildNext();
+            //                    }
+            //                    index.endFlushTask();
+            //                  } catch (IndexManagerException e) {
+            //                    // Give up the following data, but the previously serialized chunk
+            // will not be
+            //                    // affected.
+            //                    logger.error("build index failed", e);
+            //                  } catch (RuntimeException e) {
+            //                    logger.error("RuntimeException", e);
+            //                  } finally {
+            //                    numIndexBuildTasks.decrementAndGet();
+            //                    indexLockMap.get(indexType).writeLock().unlock();
+            //                  }
+            //                };
+            try {
+              indexLockMap.get(indexType).writeLock().lock();
+              IndexFeatureExtractor extractor = index.startFlushTask(path, tvList);
+              while (extractor.hasNext()) {
+                extractor.processNext();
+                index.buildNext();
+              }
+              index.endFlushTask();
+            } catch (IndexManagerException e) {
+              // Give up the following data, but the previously serialized chunk will not be
+              // affected.
+              logger.error("build index failed", e);
+            } catch (RuntimeException e) {
+              logger.error("RuntimeException", e);
+            } finally {
+              numIndexBuildTasks.decrementAndGet();
+              indexLockMap.get(indexType).writeLock().unlock();
+            }
+            //            indexBuildPoolManager.submit(buildTask);
           });
     } finally {
       lock.writeLock().unlock();

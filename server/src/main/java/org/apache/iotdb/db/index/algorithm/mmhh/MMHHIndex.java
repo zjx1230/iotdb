@@ -60,6 +60,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -218,8 +219,9 @@ public class MMHHIndex extends IoTDBIndex {
         List<Long> bucket = entry.getValue();
         ReadWriteIOUtils.write(k, outputStream);
         ReadWriteIOUtils.write(bucket.size(), outputStream);
-        for (Long v : bucket) {
-          ReadWriteIOUtils.write(v, outputStream);
+        int len = bucket.size();
+        for (int i = 0; i < len; i++) {
+          ReadWriteIOUtils.write(bucket.get(i), outputStream);
         }
       }
       System.out.println("hashtable bucket size: " + hashLookupTable.size());
@@ -230,7 +232,10 @@ public class MMHHIndex extends IoTDBIndex {
               expectSize, hashLookupTable.size(), itemSize));
       System.out.println("hashtable file size: " + FileUtils.sizeOf(featureFile));
     } catch (IOException e) {
-      logger.error("Error when serialize router. Given up.", e);
+      logger.error("Error when serialize MMHH. Given up.", e);
+    } catch (ConcurrentModificationException e2) {
+      System.out.println("finished");
+      throw e2;
     }
   }
 

@@ -204,6 +204,7 @@ public class IndexManager implements IndexManagerMBean, IService {
     IndexStatManager.totalQueryCost = current;
     IndexStatManager.latestTimestamp = current + timeout * 1000_000;
     logger.info("index query time out has been set to {} sec", timeout);
+    System.out.println("index query time out has been set to sec:" + timeout);
     if (paths.size() != 1) {
       throw new QueryIndexException("Index allows to query only one path");
     }
@@ -277,6 +278,7 @@ public class IndexManager implements IndexManagerMBean, IService {
       return;
     }
     logger.info("IndexManager starts...");
+    System.out.println("IndexManager starts...");
     IndexBuildTaskPoolManager.getInstance().start();
     try {
       JMXService.registerMBean(this, ServiceType.INDEX_SERVICE.getJmxName());
@@ -287,6 +289,7 @@ public class IndexManager implements IndexManagerMBean, IService {
       throw new StartupException(e);
     }
     logger.info("IndexManager starts successfully");
+    System.out.println("IndexManager starts successfully");
   }
 
   public Map<PartialPath, Map<IndexType, IndexInfo>> getIndexInfos(PartialPath prefixPath) {
