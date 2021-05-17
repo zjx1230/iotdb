@@ -25,6 +25,12 @@ import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.TimeValuePair;
 import org.apache.iotdb.tsfile.utils.Pair;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
 
 import static org.apache.iotdb.db.index.common.IndexConstant.INDEXED_SUFFIX;
@@ -160,5 +166,38 @@ public class IndexTestUtils {
   //        throw new UnsupportedOperationException();
   //    }
   //  }
+  public static void executeNonQuerySQL(String sql) throws SQLException {
+    try (Connection connection =
+            DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
+        Statement statement = connection.createStatement()) {
+      statement.execute(sql);
+    }
+  }
 
+  public static String executeQuerySQL(Statement statement, String sql, boolean onlyHeader)
+      throws SQLException {
+    boolean hasResult = statement.execute(sql);
+    if (!hasResult) {
+      return null;
+    } else {
+      try (ResultSet resultSet = statement.getResultSet()) {
+        ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
+          sb.append(resultSetMetaData.getColumnName(i)).append(",");
+        }
+        sb.append("\n");
+        if (!onlyHeader) {
+          while (resultSet.next()) {
+            for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
+              sb.append(resultSet.getString(i)).append(",");
+            }
+            sb.append("\n");
+          }
+        }
+        return sb.toString();
+        //        Assert.assertEquals(gt, sb.toString());
+      }
+    }
+  }
 }

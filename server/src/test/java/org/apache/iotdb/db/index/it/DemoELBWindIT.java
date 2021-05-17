@@ -19,6 +19,7 @@
 package org.apache.iotdb.db.index.it;
 
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.index.IndexTestUtils;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.db.utils.datastructure.TVList;
@@ -33,10 +34,9 @@ import org.junit.Test;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -82,7 +82,8 @@ public class DemoELBWindIT {
     IoTDBDescriptor.getInstance().getConfig().setEnableIndex(false);
   }
 
-  private static void insertSQL(boolean createTS) throws ClassNotFoundException {
+  private static void insertSQL(boolean createTS, boolean flushAtLast, boolean ignoreTimestamp)
+      throws ClassNotFoundException {
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection =
             DriverManager.getConnection(
@@ -121,7 +122,6 @@ public class DemoELBWindIT {
             String[] data = row.split(",");
             long t = Long.parseLong(data[0]);
             float v = Float.parseFloat(data[1]);
-
             subInput.putFloat(t, v);
             //            subInput.putFloat(idx, v);
           }
@@ -149,13 +149,15 @@ public class DemoELBWindIT {
                 RpcUtils.formatDatetime(
                     "iso8601",
                     RpcUtils.DEFAULT_TIMESTAMP_PRECISION,
-                    subInput.getTime(i),
+                    ignoreTimestamp ? i : subInput.getTime(i),
                     ZoneId.systemDefault()),
                 subInput.getFloat(i));
         statement.execute(insertSQL);
         //        System.out.println(insertSQL);
       }
-      statement.execute("flush");
+      if (flushAtLast) {
+        statement.execute("flush");
+      }
       //      System.out.println("==========================");
       //      System.out.println(IndexManager.getInstance().getRouter());
 
@@ -171,20 +173,48 @@ public class DemoELBWindIT {
   }
 
   private void checkRead(boolean createTS) throws ClassNotFoundException {
-    insertSQL(createTS);
+    insertSQL(createTS, true, false);
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection =
             DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
-      String queryPath = "/Users/kangrong/tsResearch/tols/JINFENG/d2/out_sub_pattern.csv";
-      List<Float> pattern = new ArrayList<>();
-      try (BufferedReader csvReader = new BufferedReader(new FileReader(queryPath))) {
-        String row;
-        while ((row = csvReader.readLine()) != null) {
-          float v = Float.parseFloat(row);
-          pattern.add(v);
-        }
+      List<Float> pattern = loadSubSeries();
+      String querySQL =
+          "SELECT speed.* FROM root.wind1.azq01 WHERE Speed "
+              + String.format("CONTAIN (%s) WITH TOLERANCE 10 ", getStringFromList(pattern, 0, 30))
+              + String.format("CONCAT (%s) WITH TOLERANCE 20 ", getStringFromList(pattern, 30, 70))
+              + String.format(
+                  "CONCAT (%s) WITH TOLERANCE 10 ", getStringFromList(pattern, 70, 100));
+      System.out.println(querySQL);
+      System.out.println(IndexTestUtils.executeQuerySQL(statement, querySQL, false));
+    } catch (Exception e) {
+      e.printStackTrace();
+      fail(e.getMessage());
+    }
+  }
+
+  private List<Float> loadSubSeries() throws IOException {
+    String queryPath = "/Users/kangrong/tsResearch/tols/JINFENG/d2/out_sub_pattern.csv";
+    List<Float> pattern = new ArrayList<>();
+    try (BufferedReader csvReader = new BufferedReader(new FileReader(queryPath))) {
+      String row;
+      while ((row = csvReader.readLine()) != null) {
+        float v = Float.parseFloat(row);
+        pattern.add(v);
       }
+    }
+    return pattern;
+  }
+
+  @Test
+  public void updateELB() throws ClassNotFoundException {
+    insertSQL(true, true, true);
+
+    Class.forName(Config.JDBC_DRIVER_NAME);
+    try (Connection connection =
+            DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
+        Statement statement = connection.createStatement()) {
+      List<Float> pattern = loadSubSeries();
       String querySQL =
           "SELECT speed.* FROM root.wind1.azq01 WHERE Speed "
               + String.format("CONTAIN (%s) WITH TOLERANCE 10 ", getStringFromList(pattern, 0, 30))
@@ -193,25 +223,27 @@ public class DemoELBWindIT {
                   "CONCAT (%s) WITH TOLERANCE 10 ", getStringFromList(pattern, 70, 100));
       System.out.println(querySQL);
       statement.setQueryTimeout(200);
-      boolean hasIndex = statement.execute(querySQL);
-      //      String gt = "Time,root.wind1.azq01.speed.17,\n";
-      Assert.assertTrue(hasIndex);
-      try (ResultSet resultSet = statement.getResultSet()) {
-        ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
-        StringBuilder sb = new StringBuilder();
-        for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
-          sb.append(resultSetMetaData.getColumnName(i)).append(",");
-        }
-        sb.append("\n");
-        while (resultSet.next()) {
-          for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
-            sb.append(resultSet.getString(i)).append(",");
-          }
-          sb.append("\n");
-        }
-        System.out.println(sb);
-        //        Assert.assertEquals(gt, sb.toString());
-      }
+      //      System.out.println(IndexTestUtils.executeQuerySQL(statement, querySQL, false));
+      Assert.assertEquals(
+          "Time,root.wind1.azq01.speed.1197,root.wind1.azq01.speed.6685,root.wind1.azq01.speed.7595,\n",
+          IndexTestUtils.executeQuerySQL(statement, querySQL, true));
+      String breakFirstSegment =
+          String.format(
+              insertPattern_show,
+              speed1Device,
+              speed1Sensor,
+              RpcUtils.formatDatetime(
+                  "iso8601", RpcUtils.DEFAULT_TIMESTAMP_PRECISION, 1255L, ZoneId.systemDefault()),
+              1000000.);
+      statement.execute(breakFirstSegment);
+      // before flush, nothing happened
+      //      Assert.assertEquals(
+      //          "Time,root.wind1.azq01.speed.1417403212000,"
+      //              + "root.wind1.azq01.speed.1417434633000,"
+      //              + "root.wind1.azq01.speed.1417439612000,\n",
+      //          IndexTestUtils.executeQuerySQL(statement, querySQL, true));
+      //
+      System.out.println(IndexTestUtils.executeQuerySQL(statement, querySQL, false));
     } catch (Exception e) {
       e.printStackTrace();
       fail(e.getMessage());

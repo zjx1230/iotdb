@@ -428,9 +428,9 @@ public class ELBIndex extends IoTDBIndex {
   }
 
   private List<Filter> queryByIndex(ELBQueryStruct struct, SubMatchIndexUsability indexUsable) {
-    if (indexUsable.hasUnusableRange()) {
-      logger.warn("In current version, ELB will ignore the out-of-order data");
-    }
+    //    if (indexUsable.hasUnusableRange()) {
+    //      logger.warn("In current version, ELB will ignore the out-of-order data");
+    //    }
     IIndexUsable cannotPruned = IIndexUsable.Factory.createEmptyIndexUsability(indexSeries);
     cannotPruned.minusUsableRange(indexSeries, Long.MIN_VALUE, Long.MAX_VALUE);
     int wbfSize = windowBlockFeatures.size();
