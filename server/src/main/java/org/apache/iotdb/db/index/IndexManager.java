@@ -76,6 +76,11 @@ public class IndexManager implements IndexManagerMBean, IService {
   private final String indexDataDirPath;
   private final IIndexRouter router;
 
+  @TestOnly
+  public CreateIndexProcessorFunc getCreateIndexProcessorFunc() {
+    return createIndexProcessorFunc;
+  }
+
   /** A function interface to construct an index processor. */
   private CreateIndexProcessorFunc createIndexProcessorFunc;
 
@@ -102,9 +107,13 @@ public class IndexManager implements IndexManagerMBean, IService {
    * @param indexType the type of index
    * @return the feature directory path for this index.
    */
-  private String getFeatureFileDirectory(PartialPath path, IndexType indexType) {
+  public String getFeatureFileDirectory(PartialPath path, IndexType indexType) {
     return IndexUtils.removeIllegalStarInDir(
         indexDataDirPath + File.separator + path.getFullPath() + File.separator + indexType);
+  }
+
+  public String getIndexDirectory() {
+    return indexDataDirPath;
   }
 
   /**
@@ -114,7 +123,7 @@ public class IndexManager implements IndexManagerMBean, IService {
    * @param indexType the type of index
    * @return the feature directory path for this index.
    */
-  private String getIndexDataDirectory(PartialPath path, IndexType indexType) {
+  public String getIndexDataDirectory(PartialPath path, IndexType indexType) {
     return getFeatureFileDirectory(path, indexType);
   }
 

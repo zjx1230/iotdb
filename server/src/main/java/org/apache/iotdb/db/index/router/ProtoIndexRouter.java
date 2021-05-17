@@ -206,12 +206,14 @@ public class ProtoIndexRouter implements IIndexRouter {
       partialPath.toLowerCase();
       if (partialPath.isFullPath()) {
         String fullPath = partialPath.getFullPath();
-        if (!fullPathProcessorMap.containsKey(fullPath)) {
+        if (!fullPathProcessorMap.containsKey(fullPath)
+            || !fullPathProcessorMap.get(fullPath).infos.containsKey(indexType)) {
           throw new QueryIndexException("haven't create index on " + fullPath);
         }
         struct = fullPathProcessorMap.get(fullPath);
       } else {
-        if (!wildCardProcessorMap.containsKey(partialPath)) {
+        if (!wildCardProcessorMap.containsKey(partialPath)
+            || !wildCardProcessorMap.get(partialPath).infos.containsKey(indexType)) {
           throw new QueryIndexException("haven't create index on " + partialPath);
         }
         struct = wildCardProcessorMap.get(partialPath);
@@ -237,7 +239,9 @@ public class ProtoIndexRouter implements IIndexRouter {
     // TODO prefixPath must be "prefix", i.e. ending with wildcard: root.XX.XX.*
     // the wildcard match is costly. We'd move router into MManager
     Map<PartialPath, Map<IndexType, IndexInfo>> res = new HashMap<>();
-    if (prefixPath != null) prefixPath.toLowerCase();
+    if (prefixPath != null) {
+      prefixPath.toLowerCase();
+    }
     wildCardProcessorMap.forEach(
         (indexSeries, struct) -> {
           if (prefixPath == null || prefixPath.matchFullPath(indexSeries)) {
@@ -273,7 +277,12 @@ public class ProtoIndexRouter implements IIndexRouter {
     lock.writeLock().lock();
     IndexType indexType = indexInfo.getIndexType();
     // record the relationship between storage group and the
-    StorageGroupMNode storageGroupMNode = mManager.getStorageGroupNodeByPath(partialPath);
+    StorageGroupMNode storageGroupMNode;
+    try {
+      storageGroupMNode = mManager.getStorageGroupNodeByPath(partialPath);
+    } catch (NullPointerException e) {
+      throw new MetadataException("please set storage group before create index");
+    }
     String storageGroupPath = storageGroupMNode.getPartialPath().getFullPath();
     // add to pathMap
     try {
@@ -286,7 +295,12 @@ public class ProtoIndexRouter implements IIndexRouter {
           fullPathProcessorMap.put(
               fullPath, new IndexProcessorStruct(processor, partialPath, infoMap));
         } else {
-          fullPathProcessorMap.get(fullPath).infos.put(indexType, indexInfo);
+          Map<IndexType, IndexInfo> infoMap = fullPathProcessorMap.get(fullPath).infos;
+          if (infoMap.containsKey(indexType)) {
+            // nothing to do, throw exception
+            throw new MetadataException(indexType + " has already been set on " + fullPath);
+          }
+          infoMap.put(indexType, indexInfo);
         }
         IndexProcessorStruct pair = fullPathProcessorMap.get(fullPath);
         pair.processor.refreshSeriesIndexMapFromMManager(pair.infos);
@@ -312,7 +326,12 @@ public class ProtoIndexRouter implements IIndexRouter {
           wildCardProcessorMap.put(
               partialPath, new IndexProcessorStruct(processor, representativePath, infoMap));
         } else {
-          wildCardProcessorMap.get(partialPath).infos.put(indexType, indexInfo);
+          Map<IndexType, IndexInfo> infoMap = wildCardProcessorMap.get(partialPath).infos;
+          if (infoMap.containsKey(indexType)) {
+            // nothing to do, throw exception
+            throw new MetadataException(indexType + " has already been set on " + partialPath);
+          }
+          infoMap.put(indexType, indexInfo);
         }
         IndexProcessorStruct pair = wildCardProcessorMap.get(partialPath);
         pair.processor.refreshSeriesIndexMapFromMManager(pair.infos);
@@ -344,38 +363,53 @@ public class ProtoIndexRouter implements IIndexRouter {
     // only the pair.left (indexType map) will be updated.
     lock.writeLock().lock();
     // record the relationship between storage group and the index processors
-    StorageGroupMNode storageGroupMNode = mManager.getStorageGroupNodeByPath(partialPath);
+    StorageGroupMNode storageGroupMNode;
+    try {
+      storageGroupMNode = mManager.getStorageGroupNodeByPath(partialPath);
+    } catch (NullPointerException e) {
+      throw new MetadataException("no storage group, remove nothing");
+    }
     String storageGroupPath = storageGroupMNode.getPartialPath().getFullPath();
 
     // remove from pathMap
+    boolean actualRemove = false;
     try {
       if (partialPath.isFullPath()) {
         String fullPath = partialPath.getFullPath();
         if (fullPathProcessorMap.containsKey(fullPath)) {
           IndexProcessorStruct pair = fullPathProcessorMap.get(fullPath);
-          pair.infos.remove(indexType);
-          pair.processor.refreshSeriesIndexMapFromMManager(pair.infos);
-          if (pair.infos.isEmpty()) {
-            sgToFullPathMap.get(storageGroupPath).remove(fullPath);
-            fullPathProcessorMap.remove(fullPath);
-            pair.representativePath = null;
-            pair.processor.close(true);
-            pair.processor = null;
+          if (pair.infos.containsKey(indexType)) {
+            pair.infos.remove(indexType);
+            pair.processor.refreshSeriesIndexMapFromMManager(pair.infos);
+            if (pair.infos.isEmpty()) {
+              sgToFullPathMap.get(storageGroupPath).remove(fullPath);
+              fullPathProcessorMap.remove(fullPath);
+              pair.representativePath = null;
+              pair.processor.close(true);
+              pair.processor = null;
+            }
+            actualRemove = true;
           }
         }
       } else {
         if (wildCardProcessorMap.containsKey(partialPath)) {
           IndexProcessorStruct pair = wildCardProcessorMap.get(partialPath);
-          pair.infos.remove(indexType);
-          pair.processor.refreshSeriesIndexMapFromMManager(pair.infos);
-          if (pair.infos.isEmpty()) {
-            sgToWildCardPathMap.get(storageGroupPath).remove(partialPath);
-            wildCardProcessorMap.remove(partialPath);
-            pair.representativePath = null;
-            pair.processor.close(true);
-            pair.processor = null;
+          if (pair.infos.containsKey(indexType)) {
+            pair.infos.remove(indexType);
+            pair.processor.refreshSeriesIndexMapFromMManager(pair.infos);
+            if (pair.infos.isEmpty()) {
+              sgToWildCardPathMap.get(storageGroupPath).remove(partialPath);
+              wildCardProcessorMap.remove(partialPath);
+              pair.representativePath = null;
+              pair.processor.close(true);
+              pair.processor = null;
+            }
+            actualRemove = true;
           }
         }
+      }
+      if (!actualRemove) {
+        throw new MetadataException(indexType + " hasn't been created on " + partialPath);
       }
       serialize(false);
     } finally {

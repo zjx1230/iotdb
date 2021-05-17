@@ -37,6 +37,7 @@ import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.service.IoTDB;
+import org.apache.iotdb.db.utils.FileUtils;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
@@ -279,7 +280,7 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
             closed = true;
             if (deleteFiles) {
               File dir = IndexUtils.getIndexFile(indexSeriesDirPath);
-              dir.delete();
+              FileUtils.deleteDirectory(dir);
             }
           } finally {
             lock.writeLock().unlock();
@@ -497,9 +498,11 @@ public class IndexProcessor implements Comparable<IndexProcessor> {
           }
           // remove index file directories
           File dir = IndexUtils.getIndexFile(getIndexDir(indexType));
-          dir.delete();
+          FileUtils.deleteDirectory(dir);
           allPathsIndexMap.remove(indexType);
+          indexLockMap.remove(indexType);
           usableMap.remove(indexType);
+          previousDataBufferMap.remove(indexType);
         }
       }
     } finally {
