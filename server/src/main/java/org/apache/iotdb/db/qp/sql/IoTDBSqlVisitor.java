@@ -252,7 +252,6 @@ public class IoTDBSqlVisitor extends SqlBaseBaseVisitor<Operator> {
           + "time > XXX, time <= XXX, or two atomic expressions connected by 'AND'";
   private ZoneId zoneId;
   QueryOperator queryOp;
-  private boolean isParsingSlidingStep;
 
   public void setZoneId(ZoneId zoneId) {
     this.zoneId = zoneId;
@@ -261,7 +260,7 @@ public class IoTDBSqlVisitor extends SqlBaseBaseVisitor<Operator> {
   @Override
   public Operator visitSingleStatement(SingleStatementContext ctx) {
     Operator operator = visit(ctx.statement());
-    if (ctx.EXPLAIN() != null) {
+    if (ctx.DEBUG() != null) {
       operator.setDebug(true);
     }
     return operator;
@@ -1337,6 +1336,9 @@ public class IoTDBSqlVisitor extends SqlBaseBaseVisitor<Operator> {
   }
 
   public void parseGroupByLevelClause(GroupByLevelClauseContext ctx, QueryOperator queryOp) {
+    if (!queryOp.hasAggregation()) {
+      throw new SQLParserException("There is no aggregation function with group by query");
+    }
     queryOp.setGroupByLevel(true);
     queryOp.setLevel(Integer.parseInt(ctx.INT().getText()));
   }
@@ -1428,20 +1430,23 @@ public class IoTDBSqlVisitor extends SqlBaseBaseVisitor<Operator> {
   }
 
   private void parseGroupByTimeClause(GroupByTimeClauseContext ctx, QueryOperator queryOp) {
+    if (!queryOp.hasAggregation()) {
+      throw new SQLParserException("There is no aggregation function with group by query");
+    }
     queryOp.setGroupByTime(true);
     queryOp.setLeftCRightO(ctx.timeInterval().LS_BRACKET() != null);
     // parse timeUnit
-    queryOp.setUnit(parseDuration(ctx.DURATION(0).getText()));
-    queryOp.setSlidingStep(queryOp.getUnit());
+    queryOp.setUnit(parseTimeUnitOrSlidingStep(queryOp, ctx.DURATION(0).getText(), true));
     // parse sliding step
     if (ctx.DURATION().size() == 2) {
-      isParsingSlidingStep = true;
-      queryOp.setSlidingStep(parseDuration(ctx.DURATION(1).getText()));
-      isParsingSlidingStep = false;
+      queryOp.setSlidingStep(parseTimeUnitOrSlidingStep(queryOp, ctx.DURATION(1).getText(), false));
       if (queryOp.getSlidingStep() < queryOp.getUnit()) {
         throw new SQLParserException(
             "The third parameter sliding step shouldn't be smaller than the second parameter time interval.");
       }
+    } else {
+      queryOp.setSlidingStep(queryOp.getUnit());
+      queryOp.setSlidingStepByMonth(queryOp.isIntervalByMonth());
     }
 
     parseTimeInterval(ctx.timeInterval(), queryOp);
@@ -1453,6 +1458,9 @@ public class IoTDBSqlVisitor extends SqlBaseBaseVisitor<Operator> {
   }
 
   private void parseGroupByFillClause(GroupByFillClauseContext ctx, QueryOperator queryOp) {
+    if (!queryOp.hasAggregation()) {
+      throw new SQLParserException("There is no aggregation function with group by query");
+    }
     queryOp.setGroupByTime(true);
     queryOp.setFill(true);
     queryOp.setLeftCRightO(ctx.timeInterval().LS_BRACKET() != null);
@@ -1844,16 +1852,6 @@ public class IoTDBSqlVisitor extends SqlBaseBaseVisitor<Operator> {
           i++;
           unit += durationStr.charAt(i);
         }
-        if (unit.equalsIgnoreCase("mo")) {
-          // interval is by month, sliding step by default equals to interval
-          if (!isParsingSlidingStep) {
-            queryOp.setIntervalByMonth(true);
-          }
-          queryOp.setSlidingStepByMonth(true);
-        } else if (isParsingSlidingStep) {
-          // parsing sliding step value, and unit is not by month
-          queryOp.setSlidingStepByMonth(false);
-        }
         total +=
             DatetimeUtils.convertDurationStrToLong(tmp, unit.toLowerCase(), timestampPrecision);
         tmp = 0;
@@ -1863,6 +1861,45 @@ public class IoTDBSqlVisitor extends SqlBaseBaseVisitor<Operator> {
       throw new SQLParserException("Interval must more than 0.");
     }
     return total;
+  }
+
+  /**
+   * parse time unit or sliding step in group by query. If 'mo' is used, then other units can not be
+   * used together, like '1mo1d'.
+   *
+   * @param durationStr represent duration string like: 12d8m9ns, 1y1mo, etc.
+   * @return time in milliseconds, microseconds, or nanoseconds depending on the profile
+   */
+  private long parseTimeUnitOrSlidingStep(
+      QueryOperator queryOp, String durationStr, boolean isParsingTimeUnit) {
+    boolean hasMonthUnit = false;
+    boolean hasOtherUnits = false;
+    for (int i = 0; i < durationStr.length(); i++) {
+      char ch = durationStr.charAt(i);
+      if (!Character.isDigit(ch)) {
+        String unit = durationStr.charAt(i) + "";
+        // This is to identify units with two letters.
+        if (i + 1 < durationStr.length() && !Character.isDigit(durationStr.charAt(i + 1))) {
+          i++;
+          unit += durationStr.charAt(i);
+        }
+        if (unit.equalsIgnoreCase("mo")) {
+          if (isParsingTimeUnit) {
+            queryOp.setIntervalByMonth(true);
+          } else {
+            queryOp.setSlidingStepByMonth(true);
+          }
+          hasMonthUnit = true;
+        } else {
+          hasOtherUnits = true;
+        }
+      }
+    }
+    if (hasMonthUnit && hasOtherUnits) {
+      throw new SQLParserException(
+          "Natural month unit can not be used with other time units together now.");
+    }
+    return parseDuration(durationStr);
   }
 
   private PartialPath parseSuffixPath(SuffixPathContext ctx) {

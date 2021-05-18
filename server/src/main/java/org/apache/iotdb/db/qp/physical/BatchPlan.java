@@ -16,26 +16,38 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.iotdb.db.doublewrite;
 
-import org.apache.iotdb.service.rpc.thrift.TSInsertRecordsReq;
-import org.apache.iotdb.tsfile.utils.Pair;
+package org.apache.iotdb.db.qp.physical;
 
-import java.util.concurrent.BlockingQueue;
+/** BatchPlan contains multiple sub-plans. */
+public interface BatchPlan {
 
-public class DoubleWriteProducer {
-  private final BlockingQueue<Pair<DoubleWriteType, TSInsertRecordsReq>> doubleWriteQueue;
+  /**
+   * Mark the sub-plan at position i as executed.
+   *
+   * @param i the position of the sub-plan
+   */
+  void setIsExecuted(int i);
 
-  public DoubleWriteProducer(
-      BlockingQueue<Pair<DoubleWriteType, TSInsertRecordsReq>> doubleWriteQueue) {
-    this.doubleWriteQueue = doubleWriteQueue;
-  }
+  /**
+   * Mark the sub-plan at position i as not executed.
+   *
+   * @param i the position of the sub-plan
+   */
+  void unsetIsExecuted(int i);
 
-  public void put(Pair<DoubleWriteType, TSInsertRecordsReq> reqPair) {
-    try {
-      doubleWriteQueue.put(reqPair);
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    }
-  }
+  /**
+   * Whether the sub-plan at position i has been executed.
+   *
+   * @param i the position of the sub-plan
+   * @return whether the sub-plan at position i has been executed.
+   */
+  boolean isExecuted(int i);
+
+  /**
+   * Return how many sub-plans are in the plan
+   *
+   * @return how many sub-plans are in the plan.
+   */
+  int getBatchSize();
 }

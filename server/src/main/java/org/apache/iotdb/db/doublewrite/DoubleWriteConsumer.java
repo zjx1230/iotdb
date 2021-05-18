@@ -37,12 +37,10 @@ import java.util.concurrent.BlockingQueue;
 
 public class DoubleWriteConsumer implements Runnable {
   private static final Logger LOGGER = LoggerFactory.getLogger(DoubleWriteConsumer.class);
-  private BlockingQueue<Pair<DoubleWriteType, TSInsertRecordsReq>> doubleWriteQueue;
+  private final BlockingQueue<Pair<DoubleWriteType, TSInsertRecordsReq>> doubleWriteQueue;
   private TSIService.Iface doubleWriteClient;
   private TTransport transport;
   private long sessionId;
-  private long consumerCnt = 0;
-  private long consumerTime = 0;
 
   public DoubleWriteConsumer(
       BlockingQueue<Pair<DoubleWriteType, TSInsertRecordsReq>> doubleWriteQueue) {
@@ -54,7 +52,6 @@ public class DoubleWriteConsumer implements Runnable {
   public void run() {
     try {
       while (true) {
-        long startTime = System.nanoTime();
         Pair<DoubleWriteType, TSInsertRecordsReq> head = doubleWriteQueue.take();
         if (head.left == DoubleWriteType.DOUBLE_WRITE_END) {
           break;
@@ -78,10 +75,9 @@ public class DoubleWriteConsumer implements Runnable {
               }
             }
             break;
+          default:
+            throw new UnsupportedOperationException(String.valueOf(head.left));
         }
-        consumerCnt += 1;
-        long endTime = System.nanoTime();
-        consumerTime += endTime - startTime;
       }
 
       TSCloseSessionReq req = new TSCloseSessionReq(sessionId);
@@ -101,10 +97,6 @@ public class DoubleWriteConsumer implements Runnable {
         | IoTDBConnectionException e) {
       e.printStackTrace();
     }
-  }
-
-  public double getEfficiency() {
-    return (double) consumerCnt / (double) consumerTime * 1000000000.0;
   }
 
   private boolean reconnect() {

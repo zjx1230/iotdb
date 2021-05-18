@@ -191,7 +191,6 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
   private final Map<Long, String> sessionIdUsernameMap = new ConcurrentHashMap<>();
   private final Map<Long, ZoneId> sessionIdZoneIdMap = new ConcurrentHashMap<>();
   private final Map<Long, DoubleWriteProducer> sessionIdProducerMap = new ConcurrentHashMap<>();
-  private final Map<Long, DoubleWriteConsumer> sessionIdConsumerMap = new ConcurrentHashMap<>();
 
   // The sessionId is unique in one IoTDB instance.
   private final AtomicLong sessionIdGenerator = new AtomicLong();
@@ -290,7 +289,6 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
         DoubleWriteConsumer doubleWriteConsumer = new DoubleWriteConsumer(doubleWriteQueue);
         new Thread(doubleWriteConsumer).start();
         sessionIdProducerMap.put(sessionId, doubleWriteProducer);
-        sessionIdConsumerMap.put(sessionId, doubleWriteConsumer);
       }
     } else {
       tsStatus =
@@ -327,7 +325,6 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
     if (IoTDBDescriptor.getInstance().getConfig().isEnableDoubleWrite()) {
       sessionIdProducerMap.get(sessionId).put(new Pair<>(DoubleWriteType.DOUBLE_WRITE_END, null));
       sessionIdProducerMap.remove(sessionId);
-      sessionIdConsumerMap.remove(sessionId);
     }
 
     return new TSStatus(
@@ -580,9 +577,17 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
             executeList.add(insertRowsPlan);
             index = 0;
           }
+
+          TSStatus status = checkAuthority(physicalPlan, req.getSessionId());
+          if (status != null) {
+            insertRowsPlan.getResults().put(index, status);
+            isAllSuccessful = false;
+          }
+
           lastOperatorType = OperatorType.INSERT;
           insertRowsPlan.addOneInsertRowPlan((InsertRowPlan) physicalPlan, index);
           index++;
+
           if (i == req.getStatements().size() - 1) {
             if (!executeBatchList(executeList, result)) {
               isAllSuccessful = false;
@@ -595,6 +600,13 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
             multiPlan = new CreateMultiTimeSeriesPlan();
             executeList.add(multiPlan);
           }
+
+          TSStatus status = checkAuthority(physicalPlan, req.getSessionId());
+          if (status != null) {
+            multiPlan.getResults().put(i, status);
+            isAllSuccessful = false;
+          }
+
           lastOperatorType = OperatorType.CREATE_TIMESERIES;
           initMultiTimeSeriesPlan(multiPlan);
 
