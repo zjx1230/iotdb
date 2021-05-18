@@ -28,10 +28,12 @@ import org.apache.iotdb.db.engine.heavyhitter.QueryHeavyHitters;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.db.utils.MergeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * user defined hitter
+ */
 public class DefaultHitter implements QueryHeavyHitters {
 
   private static final Logger logger = LoggerFactory.getLogger(DefaultHitter.class);
@@ -45,36 +47,24 @@ public class DefaultHitter implements QueryHeavyHitters {
     // do nothing
   }
 
+  /**
+   *
+   * @param sgName storage group name
+   * @return top compaction series by sgName
+   */
   @Override
   public List<PartialPath> getTopCompactionSeries(PartialPath sgName) throws MetadataException {
     int totalSG = StorageEngine.getInstance().getProcessorMap().size();
     List<PartialPath> ret = new ArrayList<>();
     List<PartialPath> unmergedSeries =
         MManager.getInstance().getAllTimeseriesPath(sgName);
-//    List<List<PartialPath>> devicePaths = MergeUtils.splitPathsByDevice(unmergedSeries);
-//    if (devicePaths.size() > 0) {
-//      String deviceName = devicePaths.get(0).get(0).getDevice();
-//      logger.info("default hitter, top compaction device:{}", deviceName);
-//      if (IoTDBDescriptor.getInstance().getConfig().getMaxHitterNum() == -1) {
-//        List<PartialPath> devicePath = devicePaths.get(0);
-//        for (int i = 0; i < devicePath.size() / 2; i++) {
-//          ret.add(devicePath.get(i));
-//        }
-//        return ret;
-//      }
-//      return devicePaths.get(0);
-//    }
-//    for (List<PartialPath> paths: devicePaths) {
-//      for (int i = 0; i < 500; i++){
-//        ret.add(paths.get(i));
-//      }
-//    }
+
     Collections.shuffle(unmergedSeries);
     for (int i = 0; i < IoTDBDescriptor.getInstance().getConfig().getMaxHitterNum() / totalSG;
         i++) {
       ret.add(unmergedSeries.get(i));
     }
-    logger.info("default hitter, top compaction path:{},{}", ret.get(0), ret.get(1));
+    logger.info("default hitter, compaction series example : {}", ret.get(0));
     return ret;
   }
 }

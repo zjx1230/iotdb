@@ -219,7 +219,7 @@ public class CompactionUtils {
     RestorableTsFileIOWriter writer = new RestorableTsFileIOWriter(targetResource.getTsFile());
     Map<String, TsFileSequenceReader> tsFileSequenceReaderMap = new HashMap<>();
     Map<String, List<Modification>> modificationCache = new HashMap<>();
-    RateLimiter compactionWriteRateLimiter = MergeManager.getINSTANCE().getMergeWriteRateLimiter();
+    RateLimiter compactionWriteRateLimiter = MergeManager.getINSTANCE().getHitterMergeWriteRateLimiter();
 
     List<List<PartialPath>> devicePaths = MergeUtils.splitPathsByDevice(unmergedPaths);
 //    long time1 = System.nanoTime();
@@ -357,7 +357,7 @@ public class CompactionUtils {
     RestorableTsFileIOWriter writer = new RestorableTsFileIOWriter(targetResource.getTsFile());
     Map<String, TsFileSequenceReader> tsFileSequenceReaderMap = new HashMap<>();
     Map<String, List<Modification>> modificationCache = new HashMap<>();
-    RateLimiter compactionWriteRateLimiter = MergeManager.getINSTANCE().getMergeWriteRateLimiter();
+    RateLimiter compactionWriteRateLimiter = MergeManager.getINSTANCE().getHitterMergeWriteRateLimiter();
 
     List<List<PartialPath>> devicePaths = MergeUtils.splitPathsByDevice(unmergedPaths);
     for (List<PartialPath> pathList : devicePaths) {

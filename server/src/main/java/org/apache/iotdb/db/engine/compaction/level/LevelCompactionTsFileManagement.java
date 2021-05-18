@@ -42,6 +42,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.cache.ChunkMetadataCache;
+import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
 import org.apache.iotdb.db.engine.compaction.TsFileManagement;
 import org.apache.iotdb.db.engine.compaction.utils.CompactionLogAnalyzer;
 import org.apache.iotdb.db.engine.compaction.utils.CompactionLogger;
@@ -62,6 +63,7 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
   private static final Logger logger = LoggerFactory
       .getLogger(LevelCompactionTsFileManagement.class);
 
+  protected final boolean conMerge = IoTDBDescriptor.getInstance().getConfig().isConMerge();
   protected final int seqLevelNum = Math
       .max(IoTDBDescriptor.getInstance().getConfig().getSeqLevelNum(), 1);
   private static int merge_time = 0;
@@ -487,9 +489,11 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
       merge(forkedUnSequenceTsFileResources, false, timePartition, unseqLevelNum,
           unseqFileNumInEachLevel);
     }
-    this.forkCurrentFileList(timePartition);
-    if (!forkedSequenceTsFileResources.get(0).isEmpty()) {
-      this.merge(timePartition);
+    if (conMerge) {
+      this.forkCurrentFileList(timePartition);
+      if (forkedSequenceTsFileResources.get(0).size() >= seqFileNumInEachLevel) {
+        this.merge(timePartition);
+      }
     }
   }
 
@@ -591,19 +595,36 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
 
   protected List<SortedSet<TsFileResource>> newSequenceTsFileResources(Long k) {
     List<SortedSet<TsFileResource>> newSequenceTsFileResources = new CopyOnWriteArrayList<>();
-    for (int i = 0; i < seqLevelNum; i++) {
-      newSequenceTsFileResources.add(Collections.synchronizedSortedSet(new TreeSet<>(
-          (o1, o2) -> {
-            try {
-              int rangeCompare = Long
-                  .compare(Long.parseLong(o1.getTsFile().getParentFile().getName()),
-                      Long.parseLong(o2.getTsFile().getParentFile().getName()));
-              return rangeCompare == 0 ? compareFileName(o1.getTsFile(), o2.getTsFile())
-                  : rangeCompare;
-            } catch (NumberFormatException e) {
-              return compareFileName(o1.getTsFile(), o2.getTsFile());
-            }
-          })));
+    if (IoTDBDescriptor.getInstance().getConfig().getCompactionStrategy() == CompactionStrategy.HITTER_LEVEL_COMPACTION) {
+      for (int i = 0; i < seqLevelNum + 1; i++) {
+        newSequenceTsFileResources.add(Collections.synchronizedSortedSet(new TreeSet<>(
+            (o1, o2) -> {
+              try {
+                int rangeCompare = Long
+                    .compare(Long.parseLong(o1.getTsFile().getParentFile().getName()),
+                        Long.parseLong(o2.getTsFile().getParentFile().getName()));
+                return rangeCompare == 0 ? compareFileName(o1.getTsFile(), o2.getTsFile())
+                    : rangeCompare;
+              } catch (NumberFormatException e) {
+                return compareFileName(o1.getTsFile(), o2.getTsFile());
+              }
+            })));
+      }
+    } else {
+      for (int i = 0; i < seqLevelNum; i++) {
+        newSequenceTsFileResources.add(Collections.synchronizedSortedSet(new TreeSet<>(
+            (o1, o2) -> {
+              try {
+                int rangeCompare = Long
+                    .compare(Long.parseLong(o1.getTsFile().getParentFile().getName()),
+                        Long.parseLong(o2.getTsFile().getParentFile().getName()));
+                return rangeCompare == 0 ? compareFileName(o1.getTsFile(), o2.getTsFile())
+                    : rangeCompare;
+              } catch (NumberFormatException e) {
+                return compareFileName(o1.getTsFile(), o2.getTsFile());
+              }
+            })));
+      }
     }
     return newSequenceTsFileResources;
   }

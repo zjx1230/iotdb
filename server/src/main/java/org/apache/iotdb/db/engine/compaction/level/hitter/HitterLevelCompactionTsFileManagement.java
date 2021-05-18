@@ -30,6 +30,7 @@ import java.util.Set;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.cache.ChunkMetadataCache;
 import org.apache.iotdb.db.engine.compaction.level.LevelCompactionTsFileManagement;
+import org.apache.iotdb.db.engine.compaction.utils.CompactionLogger;
 import org.apache.iotdb.db.engine.compaction.utils.CompactionUtils;
 import org.apache.iotdb.db.engine.heavyhitter.QueryHitterManager;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
@@ -56,6 +57,22 @@ public class HitterLevelCompactionTsFileManagement extends LevelCompactionTsFile
   private final int firstLevelNum = Math
       .max(IoTDBDescriptor.getInstance().getConfig().getSeqFileNumInEachLevel(), 1);
   private final String MERGE_SUFFIX = ".temp";
+  private boolean isFullMerging = false;
+
+  public class FullMergeTask implements Runnable {
+
+    private List<TsFileResource> mergeFileLst;
+    private long timePartitionId;
+
+    public FullMergeTask(List<TsFileResource> mergeFileLst, long timePartitionId) {
+      this.mergeFileLst = mergeFileLst;
+      this.timePartitionId = timePartitionId;
+    }
+    @Override
+    public void run() {
+      mergeFull(mergeFileLst, timePartitionId);
+    }
+  }
 
   public HitterLevelCompactionTsFileManagement(String storageGroupName, String storageGroupDir) {
     super(storageGroupName, storageGroupDir);
@@ -72,9 +89,11 @@ public class HitterLevelCompactionTsFileManagement extends LevelCompactionTsFile
       merge(isForceFullMerge, getTsFileList(true), forkedUnSequenceTsFileResources.get(0),
           Long.MAX_VALUE);
     }
-    this.forkCurrentFileList(timePartition);
-    if (!forkedSequenceTsFileResources.get(0).isEmpty()) {
-      merge(timePartition);
+    if (conMerge) {
+      this.forkCurrentFileList(timePartition);
+      if (forkedSequenceTsFileResources.get(0).size() >= firstLevelNum) {
+        merge(timePartition);
+      }
     }
   }
 
@@ -208,6 +227,9 @@ public class HitterLevelCompactionTsFileManagement extends LevelCompactionTsFile
           }
         }
       }
+      List<TsFileResource> fullMergeRes = new ArrayList<>(mergeResources.get(seqLevelNum - 2));
+      FullMergeTask fullMergeTask = new FullMergeTask(fullMergeRes, timePartition);
+      new Thread(fullMergeTask).start();
     } catch (Exception e) {
       logger.error("Error occurred in Compaction Merge thread", e);
     } finally {
@@ -356,14 +378,14 @@ public class HitterLevelCompactionTsFileManagement extends LevelCompactionTsFile
   @Override
   public void forkCurrentFileList(long timePartition) {
     synchronized (sequenceTsFileResources) {
-      forkTsFileList(
+      forkSeqTsFileList(
           forkedSequenceTsFileResources,
           sequenceTsFileResources.computeIfAbsent(timePartition, this::newSequenceTsFileResources),
           seqLevelNum);
     }
     // we have to copy all unseq file
     synchronized (unSequenceTsFileResources) {
-      forkTsFileList(
+      forkUnSeqTsFileList(
           forkedUnSequenceTsFileResources,
           unSequenceTsFileResources
               .computeIfAbsent(timePartition, this::newUnSequenceTsFileResources),
@@ -371,7 +393,7 @@ public class HitterLevelCompactionTsFileManagement extends LevelCompactionTsFile
     }
   }
 
-  protected void forkTsFileList(
+  protected void forkSeqTsFileList(
       List<List<TsFileResource>> forkedTsFileResources,
       List rawTsFileResources, int currMaxLevel) {
     forkedTsFileResources.clear();
@@ -388,6 +410,69 @@ public class HitterLevelCompactionTsFileManagement extends LevelCompactionTsFile
         }
       }
       forkedTsFileResources.add(forkedLevelTsFileResources);
+    }
+    // get max level merge file
+    Collection<TsFileResource> levelRawTsFileResources = (Collection<TsFileResource>) rawTsFileResources
+        .get(currMaxLevel - 1);
+    List<TsFileResource> forkedLevelTsFileResources = new ArrayList<>();
+    for (TsFileResource tsFileResource: levelRawTsFileResources) {
+      if (tsFileResource.isClosed()) {
+        forkedLevelTsFileResources.add(tsFileResource);
+        if (forkedLevelTsFileResources.size() >= firstLevelNum * Math.pow(sizeRatio, currMaxLevel - 2)) {
+          break;
+        }
+      }
+    }
+    forkedTsFileResources.add(forkedLevelTsFileResources);
+  }
+
+  protected void forkUnSeqTsFileList(
+      List<List<TsFileResource>> forkedTsFileResources,
+      List rawTsFileResources, int currMaxLevel) {
+    forkedTsFileResources.clear();
+    for (int i = 0; i < currMaxLevel - 1; i++) {
+      List<TsFileResource> forkedLevelTsFileResources = new ArrayList<>();
+      Collection<TsFileResource> levelRawTsFileResources = (Collection<TsFileResource>) rawTsFileResources
+          .get(i);
+      for (TsFileResource tsFileResource : levelRawTsFileResources) {
+        if (tsFileResource.isClosed()) {
+          forkedLevelTsFileResources.add(tsFileResource);
+          if (forkedLevelTsFileResources.size() >= firstLevelNum * Math.pow(sizeRatio, i)) {
+            break;
+          }
+        }
+      }
+      forkedTsFileResources.add(forkedLevelTsFileResources);
+    }
+  }
+
+  private void mergeFull(List<TsFileResource> mergeFileLst, long timePartitionId) {
+    if (isFullMerging) {
+      return;
+    }
+    try {
+      if (mergeFileLst.size() >= firstLevelNum * Math.pow(sizeRatio, seqLevelNum - 2)) {
+        isFullMerging = true;
+        CompactionLogger compactionLogger = new CompactionLogger(storageGroupDir,
+            storageGroupName);
+        File newLevelFile = createNewTsFileName(mergeFileLst.get(0).getTsFile(),
+            seqLevelNum);
+        TsFileResource newResource = new TsFileResource(newLevelFile);
+        CompactionUtils
+            .merge(newResource, mergeFileLst, storageGroupName, compactionLogger,
+                new HashSet<>(), true);
+        writeLock();
+        try {
+          sequenceTsFileResources.get(timePartitionId).get(seqLevelNum - 1).add(newResource);
+          deleteLevelFilesInList(timePartitionId, mergeFileLst, seqLevelNum - 2, true);
+        } finally {
+          writeUnlock();
+        }
+        deleteLevelFilesInDisk(mergeFileLst);
+        isFullMerging = false;
+      }
+    } catch (Exception e) {
+      logger.error("Error occurred in Compaction Merge thread", e);
     }
   }
 }

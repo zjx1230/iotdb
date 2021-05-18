@@ -328,6 +328,16 @@ public class IoTDBConfig {
   private int sizeRatio = 2;
 
   /**
+   * continue merge after one merge
+   */
+  private boolean conMerge = false;
+
+  /**
+   * The limit of write throughput merge can reach per second for hitter merge
+   */
+  private int hitterMergeWriteThroughputMbPerSec = 6;
+
+  /**
    * Works when the compaction_strategy is LEVEL_COMPACTION.
    * Whether to merge unseq files into seq files or not.
    */
@@ -1500,6 +1510,22 @@ public class IoTDBConfig {
 
   public void setSizeRatio(int sizeRatio) {
     this.sizeRatio = sizeRatio;
+  }
+
+  public int getHitterMergeWriteThroughputMbPerSec() {
+    return hitterMergeWriteThroughputMbPerSec;
+  }
+
+  public void setHitterMergeWriteThroughputMbPerSec(int hitterMergeWriteThroughputMbPerSec) {
+    this.hitterMergeWriteThroughputMbPerSec = hitterMergeWriteThroughputMbPerSec;
+  }
+
+  public void setConMerge(boolean conMerge) {
+    this.conMerge = conMerge;
+  }
+
+  public boolean isConMerge() {
+    return conMerge;
   }
 
   public CompactionStrategy getCompactionStrategy() {

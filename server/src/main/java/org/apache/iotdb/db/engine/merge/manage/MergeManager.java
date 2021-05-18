@@ -41,6 +41,7 @@ import org.apache.iotdb.db.concurrent.ThreadName;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.StorageEngine;
+import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
 import org.apache.iotdb.db.engine.merge.task.MergeMultiChunkTask.MergeChunkHeapTask;
 import org.apache.iotdb.db.engine.merge.task.MergeTask;
 import org.apache.iotdb.db.exception.StorageEngineException;
@@ -62,6 +63,7 @@ public class MergeManager implements IService, MergeManagerMBean {
       .format("%s:%s=%s", IoTDBConstant.IOTDB_PACKAGE, IoTDBConstant.JMX_TYPE,
           getID().getJmxName());
   private final RateLimiter mergeWriteRateLimiter = RateLimiter.create(Double.MAX_VALUE);
+  private final RateLimiter hitterMergeWriteRateLimiter = RateLimiter.create(Double.MAX_VALUE);
 
   private AtomicInteger threadCnt = new AtomicInteger();
   private ThreadPoolExecutor mergeTaskPool;
@@ -76,9 +78,23 @@ public class MergeManager implements IService, MergeManagerMBean {
   }
 
   public RateLimiter getMergeWriteRateLimiter() {
-    setWriteMergeRate(IoTDBDescriptor.getInstance().getConfig().getMergeWriteThroughputMbPerSec());
+    if (IoTDBDescriptor.getInstance().getConfig().getCompactionStrategy()
+        == CompactionStrategy.HITTER_LEVEL_COMPACTION) {
+      setWriteMergeRate(IoTDBDescriptor.getInstance().getConfig().getMergeWriteThroughputMbPerSec()
+          - IoTDBDescriptor.getInstance().getConfig().getHitterMergeWriteThroughputMbPerSec());
+    } else {
+      setWriteMergeRate(
+          IoTDBDescriptor.getInstance().getConfig().getMergeWriteThroughputMbPerSec());
+    }
     return mergeWriteRateLimiter;
   }
+
+  public RateLimiter getHitterMergeWriteRateLimiter() {
+    setHitterWriteMergeRate(
+        IoTDBDescriptor.getInstance().getConfig().getHitterMergeWriteThroughputMbPerSec());
+    return hitterMergeWriteRateLimiter;
+  }
+
 
   /**
    * wait by throughoutMbPerSec limit to avoid continuous Write Or Read
@@ -96,11 +112,22 @@ public class MergeManager implements IService, MergeManagerMBean {
   private void setWriteMergeRate(final double throughoutMbPerSec) {
     double throughout = throughoutMbPerSec * 1024.0 * 1024.0;
     // if throughout = 0, disable rate limiting
-    if (throughout == 0) {
-      throughout = Double.MAX_VALUE;
-    }
+    // if (throughout == 0) {
+      // throughout = Double.MAX_VALUE;
+    // }
     if (mergeWriteRateLimiter.getRate() != throughout) {
       mergeWriteRateLimiter.setRate(throughout);
+    }
+  }
+
+  private void setHitterWriteMergeRate(final double throughoutMbPerSec) {
+    double throughout = throughoutMbPerSec * 1024.0 * 1024.0;
+    // if throughout = 0, disable rate limiting
+    // if (throughout == 0) {
+      // throughout = Double.MAX_VALUE;
+    // }
+    if (hitterMergeWriteRateLimiter.getRate() != throughout) {
+      hitterMergeWriteRateLimiter.setRate(throughout);
     }
   }
 

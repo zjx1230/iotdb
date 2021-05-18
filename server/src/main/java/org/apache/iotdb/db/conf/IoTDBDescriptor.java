@@ -349,6 +349,14 @@ public class IoTDBDescriptor {
           .getProperty("size_ratio",
               Integer.toString(conf.getSizeRatio()))));
 
+      conf.setConMerge(
+          Boolean.parseBoolean(
+              properties.getProperty("continue_merge", Boolean.toString(conf.isConMerge()))));
+
+      conf.setHitterMergeWriteThroughputMbPerSec(
+          Integer.parseInt(properties.getProperty("hitter_merge_write_throughput_mb_per_sec",
+              Integer.toString(conf.getHitterMergeWriteThroughputMbPerSec()))));
+
       conf.setSyncEnable(Boolean
           .parseBoolean(properties.getProperty("is_sync_enable",
               Boolean.toString(conf.isSyncEnable()))));
