@@ -77,7 +77,7 @@ public class HashMapHitter implements QueryHeavyHitters {
 
   @Override
   public List<PartialPath> getTopCompactionSeries(PartialPath sgName) throws MetadataException {
-    hitterLock.readLock().lock();
+    hitterLock.writeLock().lock();
     try {
       List<PartialPath> ret = new ArrayList<>();
       topHeap.addAll(counter.entrySet());
@@ -93,7 +93,7 @@ public class HashMapHitter implements QueryHeavyHitters {
       topHeap.clear();
       return ret;
     } finally {
-      hitterLock.readLock().unlock();
+      hitterLock.writeLock().unlock();
     }
   }
 
