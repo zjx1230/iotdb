@@ -125,7 +125,7 @@ public class HitterLevelCompactionTsFileManagement extends LevelCompactionTsFile
           File newLevelFile = createTempTsFileName(mergeResources.get(i).get(0).getTsFile());
           TsFileResource newResource = new TsFileResource(newLevelFile);
           // merge, read  heavy hitters time series from source files and write to target file
-          List<PartialPath> unmergedPaths = QueryHitterManager.getQueryHitter()
+          List<PartialPath> unmergedPaths = QueryHitterManager.getInstance().getQueryHitter()
               .getTopCompactionSeries(new PartialPath(storageGroupName));
           long st = System.nanoTime();
           CompactionUtils
@@ -267,7 +267,7 @@ public class HitterLevelCompactionTsFileManagement extends LevelCompactionTsFile
           File newLevelFile = createNewTsFileName(mergeResources.get(i).get(0).getTsFile(), i + 1);
           TsFileResource newResource = new TsFileResource(newLevelFile);
           // merge, read  heavy hitters time series from source files and write to target file
-          List<PartialPath> unmergedPaths = QueryHitterManager.getQueryHitter()
+          List<PartialPath> unmergedPaths = QueryHitterManager.getInstance().getQueryHitter()
               .getTopCompactionSeries(new PartialPath(storageGroupName));
           long st = System.nanoTime();
           CompactionUtils
