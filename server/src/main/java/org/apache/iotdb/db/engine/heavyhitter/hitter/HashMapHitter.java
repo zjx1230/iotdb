@@ -47,10 +47,13 @@ public class HashMapHitter implements QueryHeavyHitters {
   private final ReadWriteLock hitterLock = new ReentrantReadWriteLock();
   int hitter = IoTDBDescriptor.getInstance().getConfig().getMaxHitterNum();
   private Map<PartialPath, Integer> counter = new HashMap<>();
-  private PriorityQueue<Entry<PartialPath, Integer>> topHeap = new PriorityQueue<>(hitter,
+  private PriorityQueue<Entry<PartialPath, Integer>> topHeap = new PriorityQueue<>(
       new Comparator<Entry<PartialPath, Integer>>() {
         @Override
         public int compare(Entry<PartialPath, Integer> o1, Entry<PartialPath, Integer> o2) {
+          if (o1 == null || o2 == null) {
+            System.out.println("mdzz");
+          }
           return o2.getValue() - o1.getValue();
         }
       });
@@ -63,6 +66,9 @@ public class HashMapHitter implements QueryHeavyHitters {
   public void acceptQuerySeries(PartialPath queryPath) {
     hitterLock.writeLock().lock();
     try {
+      if (queryPath == null) {
+        return;
+      }
       counter.put(queryPath, counter.getOrDefault(queryPath, 0) + 1);
     } finally {
       hitterLock.writeLock().unlock();
