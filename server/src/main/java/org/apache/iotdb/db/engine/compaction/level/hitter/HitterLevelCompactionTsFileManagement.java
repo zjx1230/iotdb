@@ -227,7 +227,7 @@ public class HitterLevelCompactionTsFileManagement extends LevelCompactionTsFile
           }
         }
       }
-      List<TsFileResource> fullMergeRes = new ArrayList<>(mergeResources.get(seqLevelNum - 2));
+      List<TsFileResource> fullMergeRes = new ArrayList<>(mergeResources.get(seqLevelNum - 1));
       FullMergeTask fullMergeTask = new FullMergeTask(fullMergeRes, timePartition);
       new Thread(fullMergeTask).start();
     } catch (Exception e) {
@@ -463,8 +463,8 @@ public class HitterLevelCompactionTsFileManagement extends LevelCompactionTsFile
                 new HashSet<>(), true);
         writeLock();
         try {
-          sequenceTsFileResources.get(timePartitionId).get(seqLevelNum - 1).add(newResource);
-          deleteLevelFilesInList(timePartitionId, mergeFileLst, seqLevelNum - 2, true);
+          sequenceTsFileResources.get(timePartitionId).get(seqLevelNum).add(newResource);
+          deleteLevelFilesInList(timePartitionId, mergeFileLst, seqLevelNum - 1, true);
         } finally {
           writeUnlock();
         }

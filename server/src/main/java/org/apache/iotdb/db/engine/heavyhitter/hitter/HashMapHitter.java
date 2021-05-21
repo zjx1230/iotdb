@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.heavyhitter.QueryHeavyHitters;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
@@ -42,6 +44,7 @@ import org.slf4j.LoggerFactory;
 public class HashMapHitter implements QueryHeavyHitters {
 
   private static final Logger logger = LoggerFactory.getLogger(HashMapHitter.class);
+  private final ReadWriteLock hitterLock = new ReentrantReadWriteLock();
   int hitter = IoTDBDescriptor.getInstance().getConfig().getMaxHitterNum();
   private Map<PartialPath, Integer> counter = new HashMap<>();
   private PriorityQueue<Entry<PartialPath, Integer>> topHeap = new PriorityQueue<>(hitter,
@@ -58,23 +61,34 @@ public class HashMapHitter implements QueryHeavyHitters {
 
   @Override
   public void acceptQuerySeries(PartialPath queryPath) {
-    counter.put(queryPath, counter.getOrDefault(queryPath, 0) + 1);
+    hitterLock.writeLock().lock();
+    try {
+      counter.put(queryPath, counter.getOrDefault(queryPath, 0) + 1);
+    } finally {
+      hitterLock.writeLock().unlock();
+    }
   }
 
   @Override
   public List<PartialPath> getTopCompactionSeries(PartialPath sgName) throws MetadataException {
-    List<PartialPath> ret = new ArrayList<>();
-    topHeap.addAll(counter.entrySet());
-    List<PartialPath> sgPaths = MManager.getInstance().getAllTimeseriesPath(sgName);
-    for (int k = 0; k < hitter; k++) {
-      if (!topHeap.isEmpty()) {
-        PartialPath path =  topHeap.poll().getKey();
-        if (sgPaths.contains(path)) {
-          ret.add(path);
+    hitterLock.readLock().lock();
+    try {
+      List<PartialPath> ret = new ArrayList<>();
+      topHeap.addAll(counter.entrySet());
+      List<PartialPath> sgPaths = MManager.getInstance().getAllTimeseriesPath(sgName);
+      for (int k = 0; k < hitter; k++) {
+        if (!topHeap.isEmpty()) {
+          PartialPath path = topHeap.poll().getKey();
+          if (sgPaths.contains(path)) {
+            ret.add(path);
+          }
         }
       }
+      topHeap.clear();
+      return ret;
+    } finally {
+      hitterLock.readLock().unlock();
     }
-    return ret;
   }
 
   /**
