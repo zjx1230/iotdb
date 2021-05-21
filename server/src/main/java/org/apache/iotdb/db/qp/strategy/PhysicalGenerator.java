@@ -593,6 +593,11 @@ public class PhysicalGenerator {
     }
     try {
       deduplicate(queryPlan, fetchSize);
+      // estimate time series' query frequency
+      if (queryPlan instanceof RawDataQueryPlan) {
+        QueryHitterManager.getInstance().submitTask(QueryHitterManager.getInstance().new HitterTask(
+            ((RawDataQueryPlan) queryPlan).getDeduplicatedPaths()));
+      }
     } catch (MetadataException e) {
       throw new QueryProcessException(e);
     }
@@ -681,9 +686,9 @@ public class PhysicalGenerator {
     queryPlan.setDataTypes(dataTypes);
 
     // add query to hitter
-    for (PartialPath path: paths) {
-      QueryHitterManager.getQueryHitter().acceptQuerySeries(path);
-    }
+    // for (PartialPath path: paths) {
+      // QueryHitterManager.getQueryHitter().acceptQuerySeries(path);
+    // }
 
     // deduplicate from here
     if (queryPlan instanceof AlignByDevicePlan) {

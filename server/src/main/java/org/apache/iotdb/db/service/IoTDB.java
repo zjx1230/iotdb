@@ -27,7 +27,9 @@ import org.apache.iotdb.db.cost.statistic.Measurement;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.cache.CacheHitRatioMonitor;
 import org.apache.iotdb.db.engine.compaction.CompactionMergeTaskPoolManager;
+import org.apache.iotdb.db.engine.compaction.CompactionStrategy;
 import org.apache.iotdb.db.engine.flush.FlushManager;
+import org.apache.iotdb.db.engine.heavyhitter.QueryHitterManager;
 import org.apache.iotdb.db.engine.merge.manage.MergeManager;
 import org.apache.iotdb.db.exception.StartupException;
 import org.apache.iotdb.db.metadata.MManager;
@@ -111,6 +113,11 @@ public class IoTDB implements IoTDBMBean {
     registerManager.register(CompactionMergeTaskPoolManager.getInstance());
     JMXService.registerMBean(getInstance(), mbeanName);
     registerManager.register(StorageEngine.getInstance());
+
+    if (IoTDBDescriptor.getInstance().getConfig().getCompactionStrategy()
+        == CompactionStrategy.HITTER_LEVEL_COMPACTION) {
+      registerManager.register(QueryHitterManager.getInstance());
+    }
 
     // When registering statMonitor, we should start recovering some statistics
     // with latest values stored

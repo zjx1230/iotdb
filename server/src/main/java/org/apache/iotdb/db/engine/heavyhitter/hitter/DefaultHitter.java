@@ -22,6 +22,8 @@ package org.apache.iotdb.db.engine.heavyhitter.hitter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.heavyhitter.QueryHeavyHitters;
@@ -37,9 +39,22 @@ import org.slf4j.LoggerFactory;
 public class DefaultHitter implements QueryHeavyHitters {
 
   private static final Logger logger = LoggerFactory.getLogger(DefaultHitter.class);
+  protected final ReadWriteLock hitterLock = new ReentrantReadWriteLock();
 
   public DefaultHitter(int maxHitterNum) {
 
+  }
+
+  @Override
+  public void acceptQuerySeriesList(List<PartialPath> queryPaths) {
+    hitterLock.writeLock().lock();
+    try {
+      for (PartialPath path : queryPaths) {
+        acceptQuerySeries(path);
+      }
+    } finally {
+      hitterLock.writeLock().unlock();
+    }
   }
 
   @Override

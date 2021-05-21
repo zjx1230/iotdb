@@ -63,16 +63,23 @@ public class HashMapHitter implements QueryHeavyHitters {
   }
 
   @Override
-  public void acceptQuerySeries(PartialPath queryPath) {
+  public void acceptQuerySeriesList(List<PartialPath> queryPaths) {
     hitterLock.writeLock().lock();
     try {
-      if (queryPath == null) {
-        return;
+      for (PartialPath path : queryPaths) {
+        acceptQuerySeries(path);
       }
-      counter.put(queryPath, counter.getOrDefault(queryPath, 0) + 1);
     } finally {
       hitterLock.writeLock().unlock();
     }
+  }
+
+  @Override
+  public void acceptQuerySeries(PartialPath queryPath) {
+    if (queryPath == null) {
+      return;
+    }
+    counter.put(queryPath, counter.getOrDefault(queryPath, 0) + 1);
   }
 
   @Override
