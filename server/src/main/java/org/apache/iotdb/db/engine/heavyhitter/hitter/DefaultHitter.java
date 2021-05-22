@@ -74,7 +74,7 @@ public class DefaultHitter implements QueryHeavyHitters {
     List<PartialPath> unmergedSeries =
         MManager.getInstance().getAllTimeseriesPath(sgName);
 
-    Collections.shuffle(unmergedSeries);
+//    Collections.shuffle(unmergedSeries);
     for (int i = 0; i < IoTDBDescriptor.getInstance().getConfig().getMaxHitterNum() / totalSG;
         i++) {
       ret.add(unmergedSeries.get(i));
