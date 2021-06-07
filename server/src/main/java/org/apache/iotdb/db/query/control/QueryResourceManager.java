@@ -122,6 +122,34 @@ public class QueryResourceManager {
     return queryId;
   }
 
+  /**
+   * Register a new query. When a query request is created firstly, this method must be invoked.
+   */
+  public long assignQueryId(boolean isDataQuery, int fetchSize, int deduplicatedPathNum,
+      String sql) {
+    long queryId = queryIdAtom.incrementAndGet();
+    if (isDataQuery) {
+      filePathsManager.addQueryId(queryId);
+      if (deduplicatedPathNum > 0) {
+        long estimatedMemoryUsage =
+            (long) deduplicatedPathNum * POINT_ESTIMATED_SIZE * (long) fetchSize;
+        // apply the memory successfully
+        if (totalFreeMemoryForRead.addAndGet(-estimatedMemoryUsage) >= 0) {
+          queryIdEstimatedMemoryMap.put(queryId, estimatedMemoryUsage);
+          logger.info(
+              "query id {}, sql is {}, apply the memory successfully, used {} memory, left {} memory",
+              queryId, sql, estimatedMemoryUsage, totalFreeMemoryForRead.get());
+        } else {
+          totalFreeMemoryForRead.addAndGet(estimatedMemoryUsage);
+          logger.info(
+              "query id {}, sql is {}, apply the memory failed, used {} memory, left {} memory",
+              queryId, sql, estimatedMemoryUsage, totalFreeMemoryForRead.get());
+        }
+      }
+    }
+    return queryId;
+  }
+
   public Map<Long, Integer> getChunkNumMap() {
     return chunkNumMap;
   }
@@ -203,6 +231,13 @@ public class QueryResourceManager {
     Long estimatedMemoryUsage = queryIdEstimatedMemoryMap.remove(queryId);
     if (estimatedMemoryUsage != null) {
       totalFreeMemoryForRead.addAndGet(estimatedMemoryUsage);
+      logger.info(
+          "query id {}, put back the memory successfully, memory size is {}, current  memory is {}",
+          queryId, estimatedMemoryUsage, totalFreeMemoryForRead.get());
+    } else {
+      logger.info(
+          "query id {}, put back the memory failed, current  memory is {}",
+          queryId, totalFreeMemoryForRead.get());
     }
 
     // remove usage of opened file paths of current thread

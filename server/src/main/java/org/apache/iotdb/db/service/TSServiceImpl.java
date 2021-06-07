@@ -696,7 +696,7 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
       }
 
       // generate the queryId for the operation
-      queryId = generateQueryId(true, fetchSize, deduplicatedPathNum);
+      queryId = generateQueryId(true, fetchSize, deduplicatedPathNum, statement);
       if (plan instanceof QueryPlan && config.isEnablePerformanceTracing()) {
         if (!(plan instanceof AlignByDevicePlan)) {
           TracingManager.getInstance()
@@ -1812,6 +1812,11 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
   private long generateQueryId(boolean isDataQuery, int fetchSize, int deduplicatedPathNum) {
     return QueryResourceManager.getInstance()
         .assignQueryId(isDataQuery, fetchSize, deduplicatedPathNum);
+  }
+
+  private long generateQueryId(boolean isDataQuery, int fetchSize, int deduplicatedPathNum, String sql) {
+    return QueryResourceManager.getInstance()
+        .assignQueryId(isDataQuery, fetchSize, deduplicatedPathNum, sql);
   }
 
   protected List<TSDataType> getSeriesTypesByPaths(List<PartialPath> paths,
