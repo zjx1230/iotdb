@@ -137,13 +137,15 @@ public class QueryResourceManager {
         if (totalFreeMemoryForRead.addAndGet(-estimatedMemoryUsage) >= 0) {
           queryIdEstimatedMemoryMap.put(queryId, estimatedMemoryUsage);
           logger.info(
-              "query id {}, sql is {}, apply the memory successfully, used {} memory, left {} memory",
-              queryId, sql, estimatedMemoryUsage, totalFreeMemoryForRead.get());
+              "query id {}, sql is {}, apply the memory successfully, deduplicatedPathNum is {}, fetchSize is {}, used {} memory, left {} memory",
+              queryId, sql, deduplicatedPathNum, fetchSize, estimatedMemoryUsage,
+              totalFreeMemoryForRead.get());
         } else {
           totalFreeMemoryForRead.addAndGet(estimatedMemoryUsage);
           logger.info(
-              "query id {}, sql is {}, apply the memory failed, used {} memory, left {} memory",
-              queryId, sql, estimatedMemoryUsage, totalFreeMemoryForRead.get());
+              "query id {}, sql is {}, apply the memory failed, deduplicatedPathNum is {}, fetchSize is {}, used {} memory, left {} memory",
+              queryId, sql, deduplicatedPathNum, fetchSize, estimatedMemoryUsage,
+              totalFreeMemoryForRead.get());
         }
       }
     }
