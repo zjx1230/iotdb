@@ -76,6 +76,26 @@ public class QueryResourceManager {
 
   private final Map<Long, Long> queryIdEstimatedMemoryMap;
 
+  private final Map<Long, QueryInfo> queryDebugMap;
+
+  private static class QueryInfo {
+    long startTime;
+    String sql;
+    int deduplicatedPathNum;
+    int fetchSize;
+    long estimatedMemoryUsage;
+
+    public QueryInfo(long startTime, String sql, int deduplicatedPathNum, int fetchSize,
+        long estimatedMemoryUsage) {
+      this.startTime = startTime;
+      this.sql = sql;
+      this.deduplicatedPathNum = deduplicatedPathNum;
+      this.fetchSize = fetchSize;
+      this.estimatedMemoryUsage = estimatedMemoryUsage;
+    }
+  }
+
+
   // current total free memory for reading process(not including the cache memory)
   private final AtomicLong totalFreeMemoryForRead;
 
@@ -88,6 +108,7 @@ public class QueryResourceManager {
     filePathsManager = new QueryFileManager();
     externalSortFileMap = new ConcurrentHashMap<>();
     queryIdEstimatedMemoryMap = new ConcurrentHashMap<>();
+    queryDebugMap = new ConcurrentHashMap<>();
     totalFreeMemoryForRead = new AtomicLong(
         IoTDBDescriptor.getInstance().getConfig().getAllocateMemoryForReadWithoutCache());
   }
@@ -136,16 +157,9 @@ public class QueryResourceManager {
         // apply the memory successfully
         if (totalFreeMemoryForRead.addAndGet(-estimatedMemoryUsage) >= 0) {
           queryIdEstimatedMemoryMap.put(queryId, estimatedMemoryUsage);
-          logger.info(
-              "query id {}, sql is {}, apply the memory successfully, deduplicatedPathNum is {}, fetchSize is {}, used {} memory, left {} memory",
-              queryId, sql, deduplicatedPathNum, fetchSize, estimatedMemoryUsage,
-              totalFreeMemoryForRead.get());
+          queryDebugMap.put(queryId, new QueryInfo(System.currentTimeMillis(), sql, deduplicatedPathNum, fetchSize, estimatedMemoryUsage));
         } else {
           totalFreeMemoryForRead.addAndGet(estimatedMemoryUsage);
-          logger.info(
-              "query id {}, sql is {}, apply the memory failed, deduplicatedPathNum is {}, fetchSize is {}, used {} memory, left {} memory",
-              queryId, sql, deduplicatedPathNum, fetchSize, estimatedMemoryUsage,
-              totalFreeMemoryForRead.get());
         }
       }
     }
@@ -233,13 +247,6 @@ public class QueryResourceManager {
     Long estimatedMemoryUsage = queryIdEstimatedMemoryMap.remove(queryId);
     if (estimatedMemoryUsage != null) {
       totalFreeMemoryForRead.addAndGet(estimatedMemoryUsage);
-      logger.info(
-          "query id {}, put back the memory successfully, memory size is {}, current  memory is {}",
-          queryId, estimatedMemoryUsage, totalFreeMemoryForRead.get());
-    } else {
-      logger.info(
-          "query id {}, put back the memory failed, current  memory is {}",
-          queryId, totalFreeMemoryForRead.get());
     }
 
     // remove usage of opened file paths of current thread
