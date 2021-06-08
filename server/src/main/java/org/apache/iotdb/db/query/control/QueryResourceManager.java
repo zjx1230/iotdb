@@ -264,7 +264,7 @@ public class QueryResourceManager {
     queryDebugMap.forEach((k, v) -> {
       // print query that has been running 5 minutes
       if (currentTime - v.startTime > 300_000) {
-        logger.info(
+        DEBUG_LOGGER.info(
             "query id {}, sql is {}, deduplicatedPathNum is {}, fetchSize is {}, used {} memory",
             k, v.sql, v.deduplicatedPathNum, v.fetchSize, v.estimatedMemoryUsage);
       }
