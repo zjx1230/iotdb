@@ -58,6 +58,8 @@ public class QueryResourceManager {
   private final AtomicLong queryIdAtom = new AtomicLong();
   private final QueryFileManager filePathsManager;
   private static final Logger logger = LoggerFactory.getLogger(QueryResourceManager.class);
+  private static final Logger DEBUG_LOGGER = LoggerFactory.getLogger("QUERY_DEBUG");
+
   // record the total number and size of chunks for each query id
   private Map<Long, Integer> chunkNumMap = new ConcurrentHashMap<>();
   // chunk size represents the number of time-value points in the chunk
@@ -79,6 +81,7 @@ public class QueryResourceManager {
   private final Map<Long, QueryInfo> queryDebugMap;
 
   private static class QueryInfo {
+
     long startTime;
     String sql;
     int deduplicatedPathNum;
@@ -157,7 +160,9 @@ public class QueryResourceManager {
         // apply the memory successfully
         if (totalFreeMemoryForRead.addAndGet(-estimatedMemoryUsage) >= 0) {
           queryIdEstimatedMemoryMap.put(queryId, estimatedMemoryUsage);
-          queryDebugMap.put(queryId, new QueryInfo(System.currentTimeMillis(), sql, deduplicatedPathNum, fetchSize, estimatedMemoryUsage));
+          queryDebugMap.put(queryId,
+              new QueryInfo(System.currentTimeMillis(), sql, deduplicatedPathNum, fetchSize,
+                  estimatedMemoryUsage));
         } else {
           totalFreeMemoryForRead.addAndGet(estimatedMemoryUsage);
         }
@@ -245,12 +250,25 @@ public class QueryResourceManager {
 
     // put back the memory usage
     Long estimatedMemoryUsage = queryIdEstimatedMemoryMap.remove(queryId);
+    queryDebugMap.remove(queryId);
     if (estimatedMemoryUsage != null) {
       totalFreeMemoryForRead.addAndGet(estimatedMemoryUsage);
     }
 
     // remove usage of opened file paths of current thread
     filePathsManager.removeUsedFilesForQuery(queryId);
+  }
+
+  public void printLongTimeQueryInfo() {
+    long currentTime = System.currentTimeMillis();
+    queryDebugMap.forEach((k, v) -> {
+      // print query that has been running 5 minutes
+      if (currentTime - v.startTime > 300_000) {
+        logger.info(
+            "query id {}, sql is {}, deduplicatedPathNum is {}, fetchSize is {}, used {} memory",
+            k, v.sql, v.deduplicatedPathNum, v.fetchSize, v.estimatedMemoryUsage);
+      }
+    });
   }
 
   private static class QueryTokenManagerHelper {

@@ -76,6 +76,7 @@ statement
     | SHOW VERSION #showVersion
     | SHOW LATEST? TIMESERIES prefixPath? showWhereClause? limitClause? #showTimeseries
     | SHOW STORAGE GROUP prefixPath? #showStorageGroup
+    | SHOW SLOW QUERY #showSlowQuery
     | SHOW CHILD PATHS prefixPath? #showChildPaths
     | SHOW DEVICES prefixPath? #showDevices
     | SHOW MERGE #showMergeStatus
@@ -1188,6 +1189,14 @@ ASC
 
 EXPLAIN
     : E X P L A I N
+    ;
+
+SLOW
+    : S L O W
+    ;
+
+QUERY
+    : Q U E R Y
     ;
 
 //============================

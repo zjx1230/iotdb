@@ -118,6 +118,7 @@ import org.apache.iotdb.db.qp.physical.sys.ShowTTLPlan;
 import org.apache.iotdb.db.qp.physical.sys.ShowTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.TracingPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
+import org.apache.iotdb.db.query.control.QueryResourceManager;
 import org.apache.iotdb.db.query.dataset.AlignByDeviceDataSet;
 import org.apache.iotdb.db.query.dataset.ListDataSet;
 import org.apache.iotdb.db.query.dataset.ShowTimeseriesDataSet;
@@ -395,6 +396,8 @@ public class PlanExecutor implements IPlanExecutor {
         return processShowTimeseries((ShowTimeSeriesPlan) showPlan, context);
       case STORAGE_GROUP:
         return processShowStorageGroup((ShowStorageGroupPlan) showPlan);
+      case SLOW_QUERY:
+        return processShowSlowQuery();
       case DEVICES:
         return processShowDevices((ShowDevicesPlan) showPlan);
       case CHILD_PATH:
@@ -580,6 +583,13 @@ public class PlanExecutor implements IPlanExecutor {
       listDataSet.putRecord(record);
     }
     return listDataSet;
+  }
+
+  private QueryDataSet processShowSlowQuery() {
+    QueryResourceManager.getInstance().printLongTimeQueryInfo();
+    return new ListDataSet(
+        Collections.singletonList(new PartialPath(COLUMN_STORAGE_GROUP, false)),
+        Collections.singletonList(TSDataType.TEXT));
   }
 
   private QueryDataSet processShowTimeseries(ShowTimeSeriesPlan showTimeSeriesPlan,

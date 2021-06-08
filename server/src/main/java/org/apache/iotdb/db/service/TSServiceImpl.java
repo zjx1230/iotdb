@@ -800,6 +800,7 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
       case TIMESERIES:
         return StaticResps.SHOW_TIMESERIES_RESP;
       case STORAGE_GROUP:
+      case SLOW_QUERY:
         return StaticResps.SHOW_STORAGE_GROUP;
       case CHILD_PATH:
         return StaticResps.SHOW_CHILD_PATHS;
