@@ -19,6 +19,7 @@
 import struct
 
 from iotdb.utils.IoTDBConstants import TSDataType
+from iotdb.utils.IoTDBConstants import UseNew
 
 
 class Tablet(object):
@@ -78,54 +79,70 @@ class Tablet(object):
         return self.__device_id
 
     def get_binary_timestamps(self):
-        format_str_list = [">"]
-        values_tobe_packed = []
-        for timestamp in self.__timestamps:
-            format_str_list.append("q")
-            values_tobe_packed.append(timestamp)
+        if not UseNew:
+            format_str_list = [">"]
+            values_tobe_packed = []
+            for timestamp in self.__timestamps:
+                format_str_list.append("q")
+                values_tobe_packed.append(timestamp)
 
-        format_str = "".join(format_str_list)
-        return struct.pack(format_str, *values_tobe_packed)
+            format_str = "".join(format_str_list)
+            return struct.pack(format_str, *values_tobe_packed)
+        else:
+            return self.__timestamps.tobytes()
 
     def get_binary_values(self):
-        format_str_list = [">"]
-        values_tobe_packed = []
-        for i in range(self.__column_number):
-            if self.__data_types[i] == TSDataType.BOOLEAN:
-                format_str_list.append(str(self.__row_number))
-                format_str_list.append("?")
-                for j in range(self.__row_number):
-                    values_tobe_packed.append(self.__values[j][i])
-            elif self.__data_types[i] == TSDataType.INT32:
-                format_str_list.append(str(self.__row_number))
-                format_str_list.append("i")
-                for j in range(self.__row_number):
-                    values_tobe_packed.append(self.__values[j][i])
-            elif self.__data_types[i] == TSDataType.INT64:
-                format_str_list.append(str(self.__row_number))
-                format_str_list.append("q")
-                for j in range(self.__row_number):
-                    values_tobe_packed.append(self.__values[j][i])
-            elif self.__data_types[i] == TSDataType.FLOAT:
-                format_str_list.append(str(self.__row_number))
-                format_str_list.append("f")
-                for j in range(self.__row_number):
-                    values_tobe_packed.append(self.__values[j][i])
-            elif self.__data_types[i] == TSDataType.DOUBLE:
-                format_str_list.append(str(self.__row_number))
-                format_str_list.append("d")
-                for j in range(self.__row_number):
-                    values_tobe_packed.append(self.__values[j][i])
-            elif self.__data_types[i] == TSDataType.TEXT:
-                for j in range(self.__row_number):
-                    value_bytes = bytes(self.__values[j][i], "utf-8")
+        if not UseNew:
+            format_str_list = [">"]
+            values_tobe_packed = []
+            for i in range(self.__column_number):
+                if self.__data_types[i] == TSDataType.BOOLEAN:
+                    format_str_list.append(str(self.__row_number))
+                    format_str_list.append("?")
+                    for j in range(self.__row_number):
+                        values_tobe_packed.append(self.__values[j][i])
+                elif self.__data_types[i] == TSDataType.INT32:
+                    format_str_list.append(str(self.__row_number))
                     format_str_list.append("i")
-                    format_str_list.append(str(len(value_bytes)))
-                    format_str_list.append("s")
-                    values_tobe_packed.append(len(value_bytes))
-                    values_tobe_packed.append(value_bytes)
-            else:
-                raise RuntimeError("Unsupported data type:" + str(self.__data_types[i]))
+                    for j in range(self.__row_number):
+                        values_tobe_packed.append(self.__values[j][i])
+                elif self.__data_types[i] == TSDataType.INT64:
+                    format_str_list.append(str(self.__row_number))
+                    format_str_list.append("q")
+                    for j in range(self.__row_number):
+                        values_tobe_packed.append(self.__values[j][i])
+                elif self.__data_types[i] == TSDataType.FLOAT:
+                    format_str_list.append(str(self.__row_number))
+                    format_str_list.append("f")
+                    for j in range(self.__row_number):
+                        values_tobe_packed.append(self.__values[j][i])
+                elif self.__data_types[i] == TSDataType.DOUBLE:
+                    format_str_list.append(str(self.__row_number))
+                    format_str_list.append("d")
+                    for j in range(self.__row_number):
+                        values_tobe_packed.append(self.__values[j][i])
+                elif self.__data_types[i] == TSDataType.TEXT:
+                    for j in range(self.__row_number):
+                        value_bytes = bytes(self.__values[j][i], "utf-8")
+                        format_str_list.append("i")
+                        format_str_list.append(str(len(value_bytes)))
+                        format_str_list.append("s")
+                        values_tobe_packed.append(len(value_bytes))
+                        values_tobe_packed.append(value_bytes)
+                else:
+                    raise RuntimeError("Unsupported data type:" + str(self.__data_types[i]))
 
-        format_str = "".join(format_str_list)
-        return struct.pack(format_str, *values_tobe_packed)
+            format_str = "".join(format_str_list)
+            return struct.pack(format_str, *values_tobe_packed)
+        else:
+            ret = None
+            for i in range(self.__column_number):
+                if self.__data_types[i] == TSDataType.FLOAT:
+                    # format_str_list.append(str(self.__row_number))
+                    # format_str_list.append("f")
+                    # for j in range(self.__row_number):
+                    #     values_tobe_packed.append(self.__values[j][i])
+                    ret = self.__values.tobytes()
+                else:
+                    raise RuntimeError("Unsupported data type:" + str(self.__data_types[i]))
+            return ret
