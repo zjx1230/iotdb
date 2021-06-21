@@ -18,9 +18,6 @@
  */
 package org.apache.iotdb.db.qp.plan;
 
-import java.time.ZoneId;
-import java.util.ArrayList;
-import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.query.LogicalOptimizeException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
@@ -35,9 +32,14 @@ import org.apache.iotdb.db.qp.logical.sys.SetStorageGroupOperator;
 import org.apache.iotdb.db.qp.strategy.LogicalGenerator;
 import org.apache.iotdb.db.qp.strategy.optimizer.ConcatPathOptimizer;
 import org.apache.iotdb.db.service.IoTDB;
+
+import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.time.ZoneId;
+import java.util.ArrayList;
 
 public class LogicalPlanSmallTest {
 
@@ -51,8 +53,8 @@ public class LogicalPlanSmallTest {
   @Test
   public void testLimit() {
     String sqlStr = "select * from root.vehicle.d1 limit 10";
-    RootOperator operator = (RootOperator) logicalGenerator
-        .generate(sqlStr, ZoneId.systemDefault());
+    RootOperator operator =
+        (RootOperator) logicalGenerator.generate(sqlStr, ZoneId.systemDefault());
     Assert.assertEquals(QueryOperator.class, operator.getClass());
     Assert.assertEquals(10, ((QueryOperator) operator).getRowLimit());
     Assert.assertEquals(0, ((QueryOperator) operator).getRowOffset());
@@ -63,8 +65,8 @@ public class LogicalPlanSmallTest {
   @Test
   public void testOffset() {
     String sqlStr = "select * from root.vehicle.d1 limit 10 offset 20";
-    RootOperator operator = (RootOperator) logicalGenerator
-        .generate(sqlStr, ZoneId.systemDefault());
+    RootOperator operator =
+        (RootOperator) logicalGenerator.generate(sqlStr, ZoneId.systemDefault());
     Assert.assertEquals(QueryOperator.class, operator.getClass());
     Assert.assertEquals(10, ((QueryOperator) operator).getRowLimit());
     Assert.assertEquals(20, ((QueryOperator) operator).getRowOffset());
@@ -75,8 +77,8 @@ public class LogicalPlanSmallTest {
   @Test
   public void testSlimit() {
     String sqlStr = "select * from root.vehicle.d1 limit 10 slimit 1";
-    RootOperator operator = (RootOperator) logicalGenerator
-        .generate(sqlStr, ZoneId.systemDefault());
+    RootOperator operator =
+        (RootOperator) logicalGenerator.generate(sqlStr, ZoneId.systemDefault());
     Assert.assertEquals(QueryOperator.class, operator.getClass());
     Assert.assertEquals(10, ((QueryOperator) operator).getRowLimit());
     Assert.assertEquals(0, ((QueryOperator) operator).getRowOffset());
@@ -86,9 +88,10 @@ public class LogicalPlanSmallTest {
 
   @Test
   public void testSOffset() {
-    String sqlStr = "select * from root.vehicle.d1 where s1 < 20 and time <= now() limit 50 slimit 10 soffset 100";
-    RootOperator operator = (RootOperator) logicalGenerator
-        .generate(sqlStr, ZoneId.systemDefault());
+    String sqlStr =
+        "select * from root.vehicle.d1 where s1 < 20 and time <= now() limit 50 slimit 10 soffset 100";
+    RootOperator operator =
+        (RootOperator) logicalGenerator.generate(sqlStr, ZoneId.systemDefault());
     Assert.assertEquals(QueryOperator.class, operator.getClass());
     Assert.assertEquals(50, ((QueryOperator) operator).getRowLimit());
     Assert.assertEquals(0, ((QueryOperator) operator).getRowOffset());
@@ -98,9 +101,10 @@ public class LogicalPlanSmallTest {
 
   @Test
   public void testSOffsetTimestamp() {
-    String sqlStr = "select * from root.vehicle.d1 where s1 < 20 and timestamp <= now() limit 50 slimit 10 soffset 100";
-    RootOperator operator = (RootOperator) logicalGenerator
-        .generate(sqlStr, ZoneId.systemDefault());
+    String sqlStr =
+        "select * from root.vehicle.d1 where s1 < 20 and timestamp <= now() limit 50 slimit 10 soffset 100";
+    RootOperator operator =
+        (RootOperator) logicalGenerator.generate(sqlStr, ZoneId.systemDefault());
     Assert.assertEquals(QueryOperator.class, operator.getClass());
     Assert.assertEquals(50, ((QueryOperator) operator).getRowLimit());
     Assert.assertEquals(0, ((QueryOperator) operator).getRowOffset());
@@ -110,88 +114,98 @@ public class LogicalPlanSmallTest {
 
   @Test(expected = SQLParserException.class)
   public void testLimitOutOfRange() {
-    String sqlStr = "select * from root.vehicle.d1 where s1 < 20 and time <= now() limit 1111111111111111111111";
-    RootOperator operator = (RootOperator) logicalGenerator
-        .generate(sqlStr, ZoneId.systemDefault());
+    String sqlStr =
+        "select * from root.vehicle.d1 where s1 < 20 and time <= now() limit 1111111111111111111111";
+    RootOperator operator =
+        (RootOperator) logicalGenerator.generate(sqlStr, ZoneId.systemDefault());
     // expected to throw SQLParserException: Out of range. LIMIT <N>: N should be Int32.
   }
 
   @Test(expected = SQLParserException.class)
   public void testLimitNotPositive() {
     String sqlStr = "select * from root.vehicle.d1 where s1 < 20 and time <= now() limit 0";
-    RootOperator operator = (RootOperator) logicalGenerator
-        .generate(sqlStr, ZoneId.systemDefault());
+    RootOperator operator =
+        (RootOperator) logicalGenerator.generate(sqlStr, ZoneId.systemDefault());
     // expected to throw SQLParserException: LIMIT <N>: N should be greater than 0.
   }
 
   @Test(expected = SQLParserException.class)
   public void testOffsetOutOfRange() {
-    String sqlStr = "select * from root.vehicle.d1 where s1 < 20 and time <= now() "
-        + "limit 1 offset 1111111111111111111111";
-    RootOperator operator = (RootOperator) logicalGenerator
-        .generate(sqlStr, ZoneId.systemDefault());
-    // expected to throw SQLParserException: Out of range. OFFSET <OFFSETValue>: OFFSETValue should be Int32.
+    String sqlStr =
+        "select * from root.vehicle.d1 where s1 < 20 and time <= now() "
+            + "limit 1 offset 1111111111111111111111";
+    RootOperator operator =
+        (RootOperator) logicalGenerator.generate(sqlStr, ZoneId.systemDefault());
+    // expected to throw SQLParserException: Out of range. OFFSET <OFFSETValue>: OFFSETValue should
+    // be Int32.
   }
 
   @Test(expected = ParseCancellationException.class)
   public void testOffsetNotPositive() {
-    String sqlStr = "select * from root.vehicle.d1 where s1 < 20 and time <= now() limit 1 offset -1";
-    RootOperator operator = (RootOperator) logicalGenerator
-        .generate(sqlStr, ZoneId.systemDefault());
+    String sqlStr =
+        "select * from root.vehicle.d1 where s1 < 20 and time <= now() limit 1 offset -1";
+    RootOperator operator =
+        (RootOperator) logicalGenerator.generate(sqlStr, ZoneId.systemDefault());
     // expected to throw SQLParserException: OFFSET <OFFSETValue>: OFFSETValue should >= 0.
   }
 
   @Test(expected = SQLParserException.class)
   public void testSlimitOutOfRange() {
-    String sqlStr = "select * from root.vehicle.d1 where s1 < 20 and time <= now() slimit 1111111111111111111111";
-    RootOperator operator = (RootOperator) logicalGenerator
-        .generate(sqlStr, ZoneId.systemDefault());
+    String sqlStr =
+        "select * from root.vehicle.d1 where s1 < 20 and time <= now() slimit 1111111111111111111111";
+    RootOperator operator =
+        (RootOperator) logicalGenerator.generate(sqlStr, ZoneId.systemDefault());
     // expected to throw SQLParserException: Out of range. SLIMIT <SN>: SN should be Int32.
   }
 
   @Test(expected = SQLParserException.class)
   public void testSlimitNotPositive() {
     String sqlStr = "select * from root.vehicle.d1 where s1 < 20 and time <= now() slimit 0";
-    RootOperator operator = (RootOperator) logicalGenerator
-        .generate(sqlStr, ZoneId.systemDefault());
+    RootOperator operator =
+        (RootOperator) logicalGenerator.generate(sqlStr, ZoneId.systemDefault());
     // expected to throw SQLParserException: SLIMIT <SN>: SN should be greater than 0.
   }
 
   @Test(expected = SQLParserException.class)
   public void testSoffsetOutOfRange() {
-    String sqlStr = "select * from root.vehicle.d1 where s1 < 20 and time <= now() "
-        + "slimit 1 soffset 1111111111111111111111";
-    RootOperator operator = (RootOperator) logicalGenerator
-        .generate(sqlStr, ZoneId.systemDefault());
-    // expected to throw SQLParserException: Out of range. SOFFSET <SOFFSETValue>: SOFFSETValue should be Int32.
+    String sqlStr =
+        "select * from root.vehicle.d1 where s1 < 20 and time <= now() "
+            + "slimit 1 soffset 1111111111111111111111";
+    RootOperator operator =
+        (RootOperator) logicalGenerator.generate(sqlStr, ZoneId.systemDefault());
+    // expected to throw SQLParserException: Out of range. SOFFSET <SOFFSETValue>: SOFFSETValue
+    // should be Int32.
   }
 
   @Test
   public void testSoffsetNotPositive() {
-    String sqlStr = "select * from root.vehicle.d1 where s1 < 20 and time <= now() slimit 1 soffset 1";
-    RootOperator operator = (RootOperator) logicalGenerator
-        .generate(sqlStr, ZoneId.systemDefault());
+    String sqlStr =
+        "select * from root.vehicle.d1 where s1 < 20 and time <= now() slimit 1 soffset 1";
+    RootOperator operator =
+        (RootOperator) logicalGenerator.generate(sqlStr, ZoneId.systemDefault());
     Assert.assertEquals(1, ((QueryOperator) operator).getSeriesOffset());
     Assert.assertEquals(1, ((QueryOperator) operator).getSeriesLimit());
   }
 
   @Test(expected = LogicalOptimizeException.class)
   public void testSoffsetExceedColumnNum() throws QueryProcessException {
-    String sqlStr = "select s1 from root.vehicle.d1 where s1 < 20 and time <= now() slimit 2 soffset 1";
-    RootOperator operator = (RootOperator) logicalGenerator
-        .generate(sqlStr, ZoneId.systemDefault());
+    String sqlStr =
+        "select s1 from root.vehicle.d1 where s1 < 20 and time <= now() slimit 2 soffset 1";
+    RootOperator operator =
+        (RootOperator) logicalGenerator.generate(sqlStr, ZoneId.systemDefault());
     IoTDB.metaManager.init();
     ConcatPathOptimizer concatPathOptimizer = new ConcatPathOptimizer();
-    concatPathOptimizer.transform(operator, 1000);
+    concatPathOptimizer.transform(operator);
     IoTDB.metaManager.clear();
-    // expected to throw LogicalOptimizeException: The value of SOFFSET (%d) is equal to or exceeds the number of sequences (%d) that can actually be returned.
+    // expected to throw LogicalOptimizeException: The value of SOFFSET (%d) is equal to or exceeds
+    // the number of sequences (%d) that can actually be returned.
   }
 
   @Test
   public void testDeleteStorageGroup() throws IllegalPathException {
     String sqlStr = "delete storage group root.vehicle.d1";
-    RootOperator operator = (RootOperator) logicalGenerator
-        .generate(sqlStr, ZoneId.systemDefault());
+    RootOperator operator =
+        (RootOperator) logicalGenerator.generate(sqlStr, ZoneId.systemDefault());
     Assert.assertEquals(DeleteStorageGroupOperator.class, operator.getClass());
     PartialPath path = new PartialPath("root.vehicle.d1");
     Assert.assertEquals(path, ((DeleteStorageGroupOperator) operator).getDeletePathList().get(0));
@@ -200,8 +214,8 @@ public class LogicalPlanSmallTest {
   @Test
   public void testDisableAlign() {
     String sqlStr = "select * from root.vehicle disable align";
-    RootOperator operator = (RootOperator) logicalGenerator
-        .generate(sqlStr, ZoneId.systemDefault());
+    RootOperator operator =
+        (RootOperator) logicalGenerator.generate(sqlStr, ZoneId.systemDefault());
     Assert.assertEquals(QueryOperator.class, operator.getClass());
     Assert.assertFalse(((QueryOperator) operator).isAlignByTime());
   }
@@ -209,8 +223,8 @@ public class LogicalPlanSmallTest {
   @Test
   public void testNotDisableAlign() {
     String sqlStr = "select * from root.vehicle";
-    RootOperator operator = (RootOperator) logicalGenerator
-        .generate(sqlStr, ZoneId.systemDefault());
+    RootOperator operator =
+        (RootOperator) logicalGenerator.generate(sqlStr, ZoneId.systemDefault());
     Assert.assertEquals(QueryOperator.class, operator.getClass());
     Assert.assertTrue(((QueryOperator) operator).isAlignByTime());
   }
@@ -218,21 +232,20 @@ public class LogicalPlanSmallTest {
   @Test(expected = ParseCancellationException.class)
   public void testDisableAlignConflictAlignByDevice() {
     String sqlStr = "select * from root.vehicle disable align align by device";
-    RootOperator operator = (RootOperator) logicalGenerator
-        .generate(sqlStr, ZoneId.systemDefault());
+    RootOperator operator =
+        (RootOperator) logicalGenerator.generate(sqlStr, ZoneId.systemDefault());
   }
 
   @Test
   public void testChineseCharacter() throws IllegalPathException {
     String sqlStr1 = "set storage group to root.一级";
-    RootOperator operator = (RootOperator) logicalGenerator
-        .generate(sqlStr1, ZoneId.systemDefault());
+    RootOperator operator =
+        (RootOperator) logicalGenerator.generate(sqlStr1, ZoneId.systemDefault());
     Assert.assertEquals(SetStorageGroupOperator.class, operator.getClass());
     Assert.assertEquals(new PartialPath("root.一级"), ((SetStorageGroupOperator) operator).getPath());
 
     String sqlStr2 = "select * from root.一级.设备1 limit 10 offset 20";
-    operator = (RootOperator) logicalGenerator
-        .generate(sqlStr2, ZoneId.systemDefault());
+    operator = (RootOperator) logicalGenerator.generate(sqlStr2, ZoneId.systemDefault());
     Assert.assertEquals(QueryOperator.class, operator.getClass());
     ArrayList<PartialPath> paths = new ArrayList<>();
     paths.add(new PartialPath("*"));
