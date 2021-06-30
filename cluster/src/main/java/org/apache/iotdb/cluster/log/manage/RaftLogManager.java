@@ -38,7 +38,14 @@ import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -943,10 +950,36 @@ public abstract class RaftLogManager {
             nextToCheckIndex);
         return;
       }
+      long startTime = System.currentTimeMillis();
+      long lastDump = Long.MAX_VALUE;
       synchronized (log) {
         while (!log.isApplied() && maxHaveAppliedCommitIndex < log.getCurrLogIndex()) {
           // wait until the log is applied or a newer snapshot is installed
           log.wait(5);
+
+          long now = System.currentTimeMillis();
+          if ((now - startTime) > 10000 && now - lastDump > 2000) {
+            int processId = getProcessID();
+            String command = "jstack -l " + processId;
+            try {
+              Process proc = Runtime.getRuntime().exec(command);
+              BufferedReader reader =
+                  new BufferedReader(new InputStreamReader(proc.getInputStream()));
+              String fileName = System.getProperty("user.dir") + File.separator + "jstack_" + now;
+              BufferedWriter out = new BufferedWriter(new FileWriter(fileName));
+              String str;
+              while ((str = reader.readLine()) != null) {
+                out.write(str);
+                out.newLine();
+              }
+              out.close();
+              reader.close();
+              proc.waitFor();
+            } catch (IOException e) {
+              logger.error("dump thread failed, e", e);
+            }
+            lastDump = System.currentTimeMillis();
+          }
         }
       }
       synchronized (changeApplyCommitIndexCond) {
@@ -976,6 +1009,12 @@ public abstract class RaftLogManager {
           commitIndex,
           maxHaveAppliedCommitIndex);
     }
+  }
+
+  public int getProcessID() {
+    RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
+    System.out.println(runtimeMXBean.getName());
+    return Integer.valueOf(runtimeMXBean.getName().split("@")[0]).intValue();
   }
 
   /**
