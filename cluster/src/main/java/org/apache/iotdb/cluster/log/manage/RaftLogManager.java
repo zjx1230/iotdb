@@ -31,6 +31,10 @@ import org.apache.iotdb.cluster.log.LogApplier;
 import org.apache.iotdb.cluster.log.Snapshot;
 import org.apache.iotdb.cluster.log.StableEntryManager;
 import org.apache.iotdb.cluster.server.monitor.Timer.Statistic;
+import org.apache.iotdb.db.engine.StorageEngine;
+import org.apache.iotdb.db.exception.StorageEngineException;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
+import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.tsfile.utils.RamUsageEstimator;
 
@@ -46,6 +50,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -65,6 +70,7 @@ public abstract class RaftLogManager {
   /** manage uncommitted entries */
   private UnCommittedEntryManager unCommittedEntryManager;
 
+  SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd-HH:mm:ss"); // 可以方便地修改日期格式
   /** manage committed entries in memory as a cache */
   private CommittedEntryManager committedEntryManager;
 
@@ -951,7 +957,7 @@ public abstract class RaftLogManager {
         return;
       }
       long startTime = System.currentTimeMillis();
-      long lastDump = Long.MAX_VALUE;
+      long lastDump = 0;
       synchronized (log) {
         while (!log.isApplied() && maxHaveAppliedCommitIndex < log.getCurrLogIndex()) {
           // wait until the log is applied or a newer snapshot is installed
@@ -965,11 +971,26 @@ public abstract class RaftLogManager {
               Process proc = Runtime.getRuntime().exec(command);
               BufferedReader reader =
                   new BufferedReader(new InputStreamReader(proc.getInputStream()));
-              String fileName = System.getProperty("user.dir") + File.separator + "jstack_" + now;
+              String fileName =
+                  System.getProperty("user.dir")
+                      + File.separator
+                      + "jstack_"
+                      + dateFormat.format(now);
               BufferedWriter out = new BufferedWriter(new FileWriter(fileName));
               String str;
               while ((str = reader.readLine()) != null) {
                 out.write(str);
+                out.newLine();
+              }
+              List<PartialPath> storageGroupList = new ArrayList<>();
+              for (int i = 0; i < 10; i++) {
+                storageGroupList.add(new PartialPath("root.group_" + i));
+              }
+              List<String> lockHolderList =
+                  StorageEngine.getInstance().getLockInfo(storageGroupList);
+
+              for (int i = 0; i < storageGroupList.size(); i++) {
+                out.write(storageGroupList.get(i) + ", " + lockHolderList.get(i));
                 out.newLine();
               }
               out.close();
@@ -977,6 +998,10 @@ public abstract class RaftLogManager {
               proc.waitFor();
             } catch (IOException e) {
               logger.error("dump thread failed, e", e);
+            } catch (IllegalPathException e) {
+              logger.error("qihouliang, e");
+            } catch (StorageEngineException e) {
+              logger.error("qihouliang, e");
             }
             lastDump = System.currentTimeMillis();
           }
