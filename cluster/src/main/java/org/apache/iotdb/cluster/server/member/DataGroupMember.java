@@ -696,7 +696,7 @@ public class DataGroupMember extends RaftMember {
    */
   @Override
   public TSStatus executeNonQueryPlan(PhysicalPlan plan) {
-    long startTime = System.currentTimeMillis();
+    long startTime;
     if (ClusterDescriptor.getInstance().getConfig().getReplicationNum() == 1) {
       try {
         getLocalExecutor().processNonQuery(plan);
@@ -719,11 +719,6 @@ public class DataGroupMember extends RaftMember {
           }
         }
         return handleLogExecutionException(plan, cause);
-      } finally {
-        long elapsed = System.currentTimeMillis() - startTime;
-        if (elapsed > 5000) {
-          logger.error("PlanExecutor execute slowly : time cost : {}ms", elapsed);
-        }
       }
     } else {
       TSStatus status = executeNonQueryPlanWithKnownLeader(plan);
