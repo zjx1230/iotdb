@@ -2119,7 +2119,13 @@ public class MManager {
   }
 
   private void setUsingDeviceTemplate(SetUsingDeviceTemplatePlan plan) throws MetadataException {
-    getDeviceNode(plan.getPrefixPath()).setUseTemplate(true);
+    try {
+      getDeviceNode(plan.getPrefixPath()).setUseTemplate(true);
+    } catch (PathNotExistException e) {
+      mtree.getDeviceNodeWithAutoCreating(
+          plan.getPrefixPath(), config.getDefaultStorageGroupLevel());
+      getDeviceNode(plan.getPrefixPath()).setUseTemplate(true);
+    }
   }
 
   public long getTotalSeriesNumber() {
