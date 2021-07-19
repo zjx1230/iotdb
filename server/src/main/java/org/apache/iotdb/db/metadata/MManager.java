@@ -1089,14 +1089,18 @@ public class MManager {
       }
       node = mtree.getDeviceNodeWithAutoCreating(path, sgLevel);
       if (!(node.left instanceof StorageGroupMNode)) {
+        logger.warn("autoCreateDeviceMNode begins:{}", node.left.getPartialPath());
         logWriter.autoCreateDeviceMNode(new AutoCreateDeviceMNodePlan(node.left.getPartialPath()));
+        logger.warn("autoCreateDeviceMNode success:{}", node.left.getPartialPath());
       }
       return node;
     } catch (StorageGroupAlreadySetException e) {
       // ignore set storage group concurrently
       node = mtree.getDeviceNodeWithAutoCreating(path, sgLevel);
       if (!(node.left instanceof StorageGroupMNode)) {
+        logger.warn("autoCreateDeviceMNode begins:{}", node.left.getPartialPath());
         logWriter.autoCreateDeviceMNode(new AutoCreateDeviceMNodePlan(node.left.getPartialPath()));
+        logger.warn("autoCreateDeviceMNode success:{}", node.left.getPartialPath());
       }
       return node;
     }
@@ -1980,7 +1984,9 @@ public class MManager {
       if (!deviceMNode.left.isUseTemplate()) {
         deviceMNode.left.setUseTemplate(true);
         try {
+          logger.warn("setUsingDeviceTemplate begins:{}", deviceMNode.left.getPartialPath());
           logWriter.setUsingDeviceTemplate(deviceMNode.left.getPartialPath());
+          logger.warn("setUsingDeviceTemplate success:{}", deviceMNode.left.getPartialPath());
         } catch (IOException e) {
           throw new MetadataException(e);
         }
