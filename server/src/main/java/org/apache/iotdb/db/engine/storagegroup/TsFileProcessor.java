@@ -260,7 +260,8 @@ public class TsFileProcessor {
         getLogNode().write(insertTabletPlan);
       }
       long elapsed = System.currentTimeMillis() - startTime;
-      if (elapsed > 5000) {
+
+      if (elapsed > 3000) {
         logger.error("write wal slowly : cost {}ms", elapsed);
       }
     } catch (Exception e) {
