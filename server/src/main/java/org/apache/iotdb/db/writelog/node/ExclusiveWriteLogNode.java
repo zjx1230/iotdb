@@ -28,7 +28,6 @@ import org.apache.iotdb.db.writelog.io.ILogWriter;
 import org.apache.iotdb.db.writelog.io.LogWriter;
 import org.apache.iotdb.db.writelog.io.MultiFileLogReader;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,9 +67,8 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
 
   private final Object switchBufferCondition = new Object();
   private ReentrantLock lock = new ReentrantLock();
-  private static final ExecutorService FLUSH_BUFFER_THREAD_POOL =
-      Executors.newCachedThreadPool(
-          new ThreadFactoryBuilder().setNameFormat("Flush-WAL-Thread-%d").setDaemon(true).build());
+  private final ExecutorService FLUSH_BUFFER_THREAD_POOL =
+      Executors.newSingleThreadExecutor(r -> new Thread(r, "Flush-WAL-Thread-" + this.hashCode()));
 
   private long fileId = 0;
   private long lastFlushedId = 0;
@@ -316,7 +314,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
 
   private void switchBufferWorkingToFlushing() throws InterruptedException {
     //    logger.warn("[wal] {} switchBufferWorkingToFlushing start", this.hashCode());
-    long start = System.currentTimeMillis();
+    //long start = System.currentTimeMillis();
     synchronized (switchBufferCondition) {
       while (logBufferFlushing != null && !deleted) {
         switchBufferCondition.wait(100);
@@ -325,16 +323,16 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       logBufferWorking = null;
       switchBufferCondition.notifyAll();
     }
-    long elapse = System.currentTimeMillis() - start;
-    if (elapse > 2000) {
-      logger.error("[wal] switch Working -> Flushing cost: {}ms", elapse);
-    }
+//    long elapse = System.currentTimeMillis() - start;
+//    if (elapse > 2000) {
+//      logger.error("[wal] switch Working -> Flushing cost: {}ms", elapse);
+//    }
     //    logger.warn("[wal] {} switchBufferWorkingToFlushing end", this.hashCode());
   }
 
   private void switchBufferIdleToWorking() throws InterruptedException {
     //    logger.warn("[wal] {} switchBufferIdleToWorking start", this.hashCode());
-    long start = System.currentTimeMillis();
+    // long start = System.currentTimeMillis();
     synchronized (switchBufferCondition) {
       while (logBufferIdle == null && !deleted) {
         switchBufferCondition.wait(100);
@@ -343,16 +341,16 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       logBufferIdle = null;
       switchBufferCondition.notifyAll();
     }
-    long elapse = System.currentTimeMillis() - start;
-    if (elapse > 2000) {
-      logger.error("[wal] switch Idle -> Working cost: {}ms", elapse);
-    }
+//    long elapse = System.currentTimeMillis() - start;
+//    if (elapse > 2000) {
+//      logger.error("[wal] switch Idle -> Working cost: {}ms", elapse);
+//    }
     //    logger.warn("[wal] {} switchBufferIdleToWorking end", this.hashCode());
   }
 
   private void switchBufferFlushingToIdle() throws InterruptedException {
     //    logger.warn("[wal] {} switchBufferFlushingToIdle start", this.hashCode());
-    long start = System.currentTimeMillis();
+//    long start = System.currentTimeMillis();
     synchronized (switchBufferCondition) {
       while (logBufferIdle != null && !deleted) {
         switchBufferCondition.wait(100);
@@ -362,10 +360,10 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       logBufferFlushing = null;
       switchBufferCondition.notifyAll();
     }
-    long elapse = System.currentTimeMillis() - start;
-    if (elapse > 2000) {
-      logger.error("[wal] switch Flushing -> Idle cost: {}ms", elapse);
-    }
+//    long elapse = System.currentTimeMillis() - start;
+//    if (elapse > 2000) {
+//      logger.error("[wal] switch Flushing -> Idle cost: {}ms", elapse);
+//    }
     //    logger.warn("[wal] {} switchBufferFlushingToIdle end", this.hashCode());
   }
 
