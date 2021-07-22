@@ -68,9 +68,9 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
 
   private final Object switchBufferCondition = new Object();
   private ReentrantLock lock = new ReentrantLock();
-  private static final ExecutorService FLUSH_BUFFER_THREAD_POOL =
+  private final ExecutorService FLUSH_BUFFER_THREAD_POOL =
       Executors.newCachedThreadPool(
-          new ThreadFactoryBuilder().setNameFormat("Flush-WAL-Thread-%d").setDaemon(false).build());
+          new ThreadFactoryBuilder().setNameFormat("Flush-WAL-Thread-%d").setDaemon(true).build());
 
   private long fileId = 0;
   private long lastFlushedId = 0;
@@ -270,6 +270,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       }
       switchBufferWorkingToFlushing();
       ILogWriter currWriter = getCurrentFileWriter();
+      logger.warn("[wal] {} submit start", this.hashCode());
       FLUSH_BUFFER_THREAD_POOL.submit(() -> flushBuffer(currWriter));
       switchBufferIdleToWorking();
 
@@ -287,7 +288,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
   }
 
   private void flushBuffer(ILogWriter writer) {
-    //    logger.warn("[wal] {} flushBuffer start", this.hashCode());
+    logger.warn("[wal] {} flushBuffer start", this.hashCode());
     //    long start = System.currentTimeMillis();
     try {
       writer.write(logBufferFlushing);

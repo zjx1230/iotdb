@@ -253,17 +253,17 @@ public class TsFileProcessor {
     }
     try {
       workMemTable.insertTablet(insertTabletPlan, start, end);
-      long startTime = System.currentTimeMillis();
+      //      long startTime = System.currentTimeMillis();
       if (IoTDBDescriptor.getInstance().getConfig().isEnableWal()) {
         insertTabletPlan.setStart(start);
         insertTabletPlan.setEnd(end);
         getLogNode().write(insertTabletPlan);
       }
-      long elapsed = System.currentTimeMillis() - startTime;
-
-      if (elapsed > 3000) {
-        logger.error("write wal slowly : cost {}ms", elapsed);
-      }
+      //      long elapsed = System.currentTimeMillis() - startTime;
+      //
+      //      if (elapsed > 3000) {
+      //        logger.error("write wal slowly : cost {}ms", elapsed);
+      //      }
     } catch (Exception e) {
       for (int i = start; i < end; i++) {
         results[i] = RpcUtils.getStatus(TSStatusCode.INTERNAL_SERVER_ERROR, e.getMessage());
