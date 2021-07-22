@@ -51,46 +51,55 @@ public class SessionExample {
 
   public static void main(String[] args)
       throws IoTDBConnectionException, StatementExecutionException {
-    session = new Session(LOCAL_HOST, 6667, "root", "root");
-    session.open(false);
+    session = new Session("127.0.0.1", 6667, "root", "root");
+    session.open();
+    List<Long> times = new ArrayList<>();
+    List<List<String>> measurements = new ArrayList<>();
+    List<List<TSDataType>> datatypes = new ArrayList<>();
+    List<List<Object>> values = new ArrayList<>();
 
-    // set session fetchSize
-    session.setFetchSize(10000);
-
-    try {
-      session.setStorageGroup("root.sg1");
-    } catch (StatementExecutionException e) {
-      if (e.getStatusCode() != TSStatusCode.PATH_ALREADY_EXIST_ERROR.getStatusCode()) {
-        throw e;
-      }
-    }
-
-    createTimeseries();
-    createMultiTimeseries();
-    insertRecord();
-    insertTablet();
-    insertTablets();
-    insertRecords();
-    nonQuery();
-    query();
-    queryWithTimeout();
-    rawDataQuery();
-    queryByIterator();
-    deleteData();
-    deleteTimeseries();
-    setTimeout();
-
-    sessionEnableRedirect = new Session(LOCAL_HOST, 6667, "root", "root");
-    sessionEnableRedirect.setEnableQueryRedirection(true);
-    sessionEnableRedirect.open(false);
-
-    // set session fetchSize
-    sessionEnableRedirect.setFetchSize(10000);
-
-    insertRecord4Redirect();
-    query4Redirect();
-    sessionEnableRedirect.close();
+    String value = "{\"iMEI\":\"861394053542937\",\"packetData\":\"7E0F861394053542937FD41076134000150603102B070C9B94087084EFDF0825FFFE1F200F3006EE0ED02C70858FDD3F25201C0010F06F6008B203B23E041100004019A40C7405255006A4629804980334163A0ED068283840D3C1FD004D88EB0334257E0FD0A4383D40D302F2004D0CBC033433547F801E004441640E4116435DF0C2681EAC2FA50B14057980AA0176802607D2019A1E31076882681CA029327080E648CE63DAA1A8356954FA1C1F95AEC721593F40C364FA000D94DD033454460FD060593C40A325FB316D70D49AF4397D8E7F4ED7E3B8CC1DA001B3758086CCD0011A342B0768D8501CA071A3F798C68DDE6A1A377AC769DCE88DA779D37F80660EF9019A3BCC0768F6D01EA0F9C379802610FF639A40FCAB6902F11FA709C43F9E6610E1019A436D076816551DA079D4738066D2C9011A4B2C8F093287202CB16C213C805862B9033E805962D98245411EA02E3D1CA0D1847F80C6D3F7011A51C707684CBD1EA049E5FB03F400200A2273082295EF16C203482ADF2D5813E4012A952F7CEB4310030F60AA2EE163F74F09080C0008FC23F14F89AA4BF8D6FD53122000862A8A0848700748007E\",\"rawDataId\":\"3B028613940535429370\",\"serverIp\":\"192.168.35.87\",\"serverPort\":\"15106\",\"sourceIp\":\"39.144.17.57\",\"sourcePort\":\"25398\",\"timestamp\":1622709837103,\"topic\":\"TYP_KTP_Kobelco_Source\"}";
+    addLine(
+        times,
+        measurements,
+        datatypes,
+        values,
+        3L,
+        "TY_0001_Raw_Packet",
+        "s2",
+        TSDataType.TEXT,
+        TSDataType.INT32,
+        value,
+        2);
+    session.insertRecordsOfOneDevice("root.raw.08.8000867157042199208", times, measurements, datatypes, values);
     session.close();
+  }
+
+  private static void addLine(
+      List<Long> times,
+      List<List<String>> measurements,
+      List<List<TSDataType>> datatypes,
+      List<List<Object>> values,
+      long time,
+      String s1,
+      String s2,
+      TSDataType s1type,
+      TSDataType s2type,
+      Object value1,
+      Object value2) {
+    List<String> tmpMeasurements = new ArrayList<>();
+    List<TSDataType> tmpDataTypes = new ArrayList<>();
+    List<Object> tmpValues = new ArrayList<>();
+    tmpMeasurements.add(s1);
+    tmpMeasurements.add(s2);
+    tmpDataTypes.add(s1type);
+    tmpDataTypes.add(s2type);
+    tmpValues.add(value1);
+    tmpValues.add(value2);
+    times.add(time);
+    measurements.add(tmpMeasurements);
+    datatypes.add(tmpDataTypes);
+    values.add(tmpValues);
   }
 
   private static void createTimeseries()

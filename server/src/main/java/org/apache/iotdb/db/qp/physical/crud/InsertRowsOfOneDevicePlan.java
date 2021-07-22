@@ -71,7 +71,7 @@ public class InsertRowsOfOneDevicePlan extends InsertPlan implements BatchPlan {
       for(int j = 0; j < rowPlans[i].getMeasurements().length; j ++) {
         if (rowPlans[i].getMeasurements()[j].equals("TY_0001_Raw_Packet")) {
           String value = ((Binary) rowPlans[i].getValues()[j]).getStringValue().substring(0,100);
-          if (value.contains(rowPlans[i].getDeviceId().getTailNode().substring(4))) {
+          if (!value.contains(rowPlans[i].getDeviceId().getMeasurement().substring(4))) {
             logger.error("receive error data，device:{}, value（first 100 bytes）: {}", rowPlans[i].getDeviceId(), value);
           }
         }
