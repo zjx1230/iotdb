@@ -328,7 +328,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
     }
     long elapse = System.currentTimeMillis() - start;
     if (elapse > 2000) {
-      logger.error("[wal] switch Working -> Flushing cost: {}ms", elapse);
+      logger.error("[wal] {} switch Working -> Flushing cost: {}ms", this.hashCode(), elapse);
     }
     logger.warn("[wal] {} switchBufferWorkingToFlushing end", this.hashCode());
   }
@@ -365,7 +365,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
     }
     long elapse = System.currentTimeMillis() - start;
     if (elapse > 2000) {
-      logger.error("[wal] switch Flushing -> Idle cost: {}ms", elapse);
+      logger.error("[wal] {} switch Flushing -> Idle cost: {}ms", this.hashCode(), elapse);
     }
     logger.warn("[wal] {} switchBufferFlushingToIdle end", this.hashCode());
   }
