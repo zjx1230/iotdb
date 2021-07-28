@@ -264,7 +264,6 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
   }
 
   private void forceWal() {
-    logger.warn("[WAL] {} forceWal start", this.hashCode());
     long start = System.nanoTime();
     lock.lock();
     try {
@@ -282,7 +281,6 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
     if (elapse > 3_000_000_000L) {
       logger.warn("[WAL] {} flushBuffer write log cost {}ms", this.hashCode(), elapse / 1_000_000L);
     }
-    logger.warn("[WAL] {} forceWal end", this.hashCode());
   }
 
   private void sync() {
