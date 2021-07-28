@@ -102,9 +102,6 @@ public class LogWriter implements ILogWriter {
       if (elapse > 3_000_000_000L) {
         logger.warn("[WAL] LogWriter channel.force cost {}ms", elapse / 1_000_000L);
       }
-      if (this.forceEachWrite) {
-        channel.force(true);
-      }
     } catch (ClosedChannelException ignored) {
       logger.warn("someone interrupt current thread, so no need to do write for io safety");
     }

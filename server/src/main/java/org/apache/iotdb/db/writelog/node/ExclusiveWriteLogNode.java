@@ -138,7 +138,6 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
   @Override
   public void close() {
     sync();
-    forceWal();
     long start = System.nanoTime();
     lock.lock();
     try {
@@ -175,7 +174,6 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       return;
     }
     sync();
-    forceWal();
   }
 
   @Override
@@ -259,27 +257,6 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       } catch (IOException e) {
         logger.warn("Old log file {} of {} cannot be deleted", logFile.getName(), identifier, e);
       }
-    }
-  }
-
-  private void forceWal() {
-    lock.lock();
-    try {
-      try {
-        if (currentFileWriter != null) {
-          long start = System.nanoTime();
-          currentFileWriter.force();
-          long elapse = System.nanoTime() - start;
-          if (elapse > 3_000_000_000L) {
-            logger.warn(
-                "[WAL] {} flushBuffer write log cost {}ms", this.hashCode(), elapse / 1_000_000L);
-          }
-        }
-      } catch (IOException e) {
-        logger.warn("Log node {} force failed.", identifier, e);
-      }
-    } finally {
-      lock.unlock();
     }
   }
 
