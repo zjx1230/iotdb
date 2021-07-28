@@ -161,7 +161,6 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       logger.warn("Waiting for current buffer being flushed interrupted");
     } finally {
       lock.unlock();
-      FLUSH_BUFFER_THREAD_POOL.shutdown();
     }
     long elapse = System.nanoTime() - start;
     if (elapse > 3_000_000_000L) {
@@ -230,6 +229,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       deleted.set(true);
       return this.bufferArray;
     } finally {
+      FLUSH_BUFFER_THREAD_POOL.shutdown();
       lock.unlock();
       long elapse = System.nanoTime() - start;
       if (elapse > 3_000_000_000L) {
