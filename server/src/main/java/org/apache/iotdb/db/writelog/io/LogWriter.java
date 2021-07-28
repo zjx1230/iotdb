@@ -99,7 +99,12 @@ public class LogWriter implements ILogWriter {
       channel.write(checkSumBuffer);
 
       if (this.forceEachWrite) {
+        long start = System.nanoTime();
         channel.force(true);
+        long elapse = System.nanoTime() - start;
+        if (elapse > 3_000_000_000L) {
+          logger.warn("[WAL] LogWriter channel.force cost {}ms", elapse / 1_000_000L);
+        }
       }
     } catch (ClosedChannelException ignored) {
       logger.warn("someone interrupt current thread, so no need to do write for io safety");
