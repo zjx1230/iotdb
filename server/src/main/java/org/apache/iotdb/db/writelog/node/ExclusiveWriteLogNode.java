@@ -104,7 +104,12 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
     if (deleted.get()) {
       throw new IOException("WAL node deleted");
     }
+    long start = System.nanoTime();
     lock.lock();
+    long elapse = System.nanoTime() - start;
+    if (elapse > 3_000_000_000L) {
+      logger.warn("[WAL] {} write plan get lock cost {}ms", this.hashCode(), elapse / 1_000_000L);
+    }
     try {
       putLog(plan);
       if (bufferedLogNum >= config.getFlushWalThreshold()) {
@@ -257,8 +262,17 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       if (bufferedLogNum == 0) {
         return;
       }
+      long start = System.nanoTime();
       switchBufferWorkingToFlushing();
+      long elapse = System.nanoTime() - start;
+      if (elapse > 3_000_000_000L) {
+        logger.warn(
+            "[WAL] {} switch buffer working -> flushing cost {}ms",
+            this.hashCode(),
+            elapse / 1_000_000L);
+      }
       ILogWriter currWriter = getCurrentFileWriter();
+      logger.warn("[WAL] {} submit flushBuffer task", this.hashCode());
       FLUSH_BUFFER_THREAD_POOL.submit(() -> flushBuffer(currWriter));
       bufferedLogNum = 0;
       logger.debug("Log node {} ends sync.", identifier);
@@ -284,11 +298,20 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
     }
 
     // switch buffer flushing to idle and notify the sync thread
+    long start = System.nanoTime();
     synchronized (switchBufferCondition) {
       logBufferIdle = logBufferFlushing;
       logBufferFlushing = null;
       switchBufferCondition.notifyAll();
     }
+    long elapse = System.nanoTime() - start;
+    if (elapse > 3_000_000_000L) {
+      logger.warn(
+          "[WAL] {} switch buffer flushing -> idle cost {}ms",
+          this.hashCode(),
+          elapse / 1_000_000L);
+    }
+    logger.warn("[WAL] {} flushBuffer task end", this.hashCode());
   }
 
   private void switchBufferWorkingToFlushing() throws InterruptedException {
