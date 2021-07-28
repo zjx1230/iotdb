@@ -139,6 +139,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
   public void close() {
     sync();
     forceWal();
+    long start = System.nanoTime();
     lock.lock();
     try {
       synchronized (switchBufferCondition) {
@@ -162,6 +163,10 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
     } finally {
       lock.unlock();
     }
+    long elapse = System.nanoTime() - start;
+    if (elapse > 3_000_000_000L) {
+      logger.warn("[WAL] {} flushBuffer write log cost {}ms", this.hashCode(), elapse / 1_000_000L);
+    }
   }
 
   @Override
@@ -175,6 +180,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
 
   @Override
   public void notifyStartFlush() throws FileNotFoundException {
+    long start = System.nanoTime();
     lock.lock();
     try {
       close();
@@ -182,10 +188,15 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
     } finally {
       lock.unlock();
     }
+    long elapse = System.nanoTime() - start;
+    if (elapse > 3_000_000_000L) {
+      logger.warn("[WAL] {} flushBuffer write log cost {}ms", this.hashCode(), elapse / 1_000_000L);
+    }
   }
 
   @Override
   public void notifyEndFlush() {
+    long start = System.nanoTime();
     lock.lock();
     try {
       File logFile =
@@ -193,6 +204,10 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       discard(logFile);
     } finally {
       lock.unlock();
+    }
+    long elapse = System.nanoTime() - start;
+    if (elapse > 3_000_000_000L) {
+      logger.warn("[WAL] {} flushBuffer write log cost {}ms", this.hashCode(), elapse / 1_000_000L);
     }
   }
 
@@ -208,6 +223,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
 
   @Override
   public ByteBuffer[] delete() throws IOException {
+    long start = System.nanoTime();
     lock.lock();
     try {
       close();
@@ -216,6 +232,11 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       return this.bufferArray;
     } finally {
       lock.unlock();
+      long elapse = System.nanoTime() - start;
+      if (elapse > 3_000_000_000L) {
+        logger.warn(
+            "[WAL] {} flushBuffer write log cost {}ms", this.hashCode(), elapse / 1_000_000L);
+      }
     }
   }
 
@@ -242,6 +263,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
   }
 
   private void forceWal() {
+    long start = System.nanoTime();
     lock.lock();
     try {
       try {
@@ -253,6 +275,10 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       }
     } finally {
       lock.unlock();
+    }
+    long elapse = System.nanoTime() - start;
+    if (elapse > 3_000_000_000L) {
+      logger.warn("[WAL] {} flushBuffer write log cost {}ms", this.hashCode(), elapse / 1_000_000L);
     }
   }
 
@@ -287,6 +313,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
   }
 
   private void flushBuffer(ILogWriter writer) {
+    long start1 = System.nanoTime();
     try {
       writer.write(logBufferFlushing);
     } catch (ClosedChannelException e) {
@@ -295,6 +322,11 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       logger.warn("Log node {} sync failed, change system mode to read-only", identifier, e);
       IoTDBDescriptor.getInstance().getConfig().setReadOnly(true);
       return;
+    }
+    long elapse1 = System.nanoTime() - start1;
+    if (elapse1 > 3_000_000_000L) {
+      logger.warn(
+          "[WAL] {} flushBuffer write log cost {}ms", this.hashCode(), elapse1 / 1_000_000L);
     }
 
     // switch buffer flushing to idle and notify the sync thread
