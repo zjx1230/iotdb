@@ -138,6 +138,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
   @Override
   public void close() {
     sync();
+    logger.warn("[WAL] {} close!!!", this.hashCode());
     forceWal();
     long start = System.nanoTime();
     lock.lock();
@@ -263,6 +264,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
   }
 
   private void forceWal() {
+    logger.warn("[WAL] {} forceWal start", this.hashCode());
     long start = System.nanoTime();
     lock.lock();
     try {
@@ -280,6 +282,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
     if (elapse > 3_000_000_000L) {
       logger.warn("[WAL] {} flushBuffer write log cost {}ms", this.hashCode(), elapse / 1_000_000L);
     }
+    logger.warn("[WAL] {} forceWal end", this.hashCode());
   }
 
   private void sync() {
@@ -298,7 +301,6 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
             elapse / 1_000_000L);
       }
       ILogWriter currWriter = getCurrentFileWriter();
-      logger.warn("[WAL] {} submit flushBuffer task", this.hashCode());
       FLUSH_BUFFER_THREAD_POOL.submit(() -> flushBuffer(currWriter));
       bufferedLogNum = 0;
       logger.debug("Log node {} ends sync.", identifier);
@@ -343,7 +345,6 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
           this.hashCode(),
           elapse / 1_000_000L);
     }
-    logger.warn("[WAL] {} flushBuffer task end", this.hashCode());
   }
 
   private void switchBufferWorkingToFlushing() throws InterruptedException {
