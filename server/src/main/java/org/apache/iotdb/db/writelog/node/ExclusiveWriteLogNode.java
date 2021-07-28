@@ -161,6 +161,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       logger.warn("Waiting for current buffer being flushed interrupted");
     } finally {
       lock.unlock();
+      FLUSH_BUFFER_THREAD_POOL.shutdownNow();
     }
     long elapse = System.nanoTime() - start;
     if (elapse > 3_000_000_000L) {
