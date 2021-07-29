@@ -188,6 +188,8 @@ public class TsFileProcessor {
       checkMemCostAndAddToTspInfo(insertRowPlan);
     }
 
+    insertRowPlan.checkForTianYuan("TsFileProcessor#InsertRowPlan");
+
     workMemTable.insert(insertRowPlan);
 
     if (IoTDBDescriptor.getInstance().getConfig().isEnableWal()) {

@@ -1198,6 +1198,7 @@ public class PlanExecutor implements IPlanExecutor {
         // we do not need to infer data type for insertRowsOfOneDevicePlan
       }
       // ok, we can begin to write data into the engine..
+      insertRowsOfOneDevicePlan.checkForTianYuan("PlanExecutor#insert");
       StorageEngine.getInstance().insert(insertRowsOfOneDevicePlan);
 
       List<String> notExistedPaths = null;

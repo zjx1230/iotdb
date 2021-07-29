@@ -63,6 +63,21 @@ public class InsertRowPlan extends InsertPlan {
 
   private List<Object> failedValues;
 
+  public void checkForTianYuan(String location) {
+    for (int j = 0; j < getMeasurements().length; j++) {
+      if (getMeasurements()[j].equals("TY_0001_Raw_Packet")) {
+        String value = ((Binary) getValues()[j]).getStringValue().substring(0, 35);
+        if (!value.contains(getDeviceId().getMeasurement().substring(4))) {
+          logger.error(
+              "{}: receive error data，device:{}, value（first 100 bytes）: {}",
+              location,
+              getDeviceId(),
+              value);
+        }
+      }
+    }
+  }
+
   public InsertRowPlan() {
     super(OperatorType.INSERT);
   }

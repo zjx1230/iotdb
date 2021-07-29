@@ -1050,6 +1050,7 @@ public class StorageGroupProcessor {
       return;
     }
 
+    insertRowPlan.checkForTianYuan("StorageGroupProcessor#insertToTsFileProcessor");
     tsFileProcessor.insert(insertRowPlan);
 
     // try to update the latest time of the device of this tsRecord
@@ -2910,6 +2911,7 @@ public class StorageGroupProcessor {
     writeLock("InsertRowsOfOneDevice");
     try {
       boolean isSequence = false;
+      insertRowsOfOneDevicePlan.checkForTianYuan("StorageGroupProcessor#insert");
       InsertRowPlan[] rowPlans = insertRowsOfOneDevicePlan.getRowPlans();
       for (int i = 0, rowPlansLength = rowPlans.length; i < rowPlansLength; i++) {
 

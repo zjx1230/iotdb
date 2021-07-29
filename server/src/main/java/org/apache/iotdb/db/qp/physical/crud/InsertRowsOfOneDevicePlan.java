@@ -23,6 +23,10 @@ import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
 import org.apache.iotdb.db.qp.physical.BatchPlan;
+import org.apache.iotdb.tsfile.utils.Binary;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -31,14 +35,28 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import org.apache.iotdb.tsfile.utils.Binary;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class InsertRowsOfOneDevicePlan extends InsertPlan implements BatchPlan {
   private static Logger logger = LoggerFactory.getLogger(InsertRowsOfOneDevicePlan.class);
   boolean[] isExecuted;
   private InsertRowPlan[] rowPlans;
+
+  public void checkForTianYuan(String location) {
+    for (int i = 0; i < rowPlans.length; ++i) {
+      for (int j = 0; j < rowPlans[i].getMeasurements().length; j++) {
+        if (rowPlans[i].getMeasurements()[j].equals("TY_0001_Raw_Packet")) {
+          String value = ((Binary) rowPlans[i].getValues()[j]).getStringValue().substring(0, 35);
+          if (!value.contains(rowPlans[i].getDeviceId().getMeasurement().substring(4))) {
+            logger.error(
+                "{}: receive error data，device:{}, value（first 100 bytes）: {}",
+                location,
+                rowPlans[i].getDeviceId(),
+                value);
+          }
+        }
+      }
+    }
+  }
 
   public InsertRowsOfOneDevicePlan(
       PartialPath deviceId,
@@ -67,12 +85,15 @@ public class InsertRowsOfOneDevicePlan extends InsertPlan implements BatchPlan {
                 + ", time:"
                 + insertTimes[i]);
       }
-      //Just for Tianyuan debug
-      for(int j = 0; j < rowPlans[i].getMeasurements().length; j ++) {
+      // Just for Tianyuan debug
+      for (int j = 0; j < rowPlans[i].getMeasurements().length; j++) {
         if (rowPlans[i].getMeasurements()[j].equals("TY_0001_Raw_Packet")) {
-          String value = ((Binary) rowPlans[i].getValues()[j]).getStringValue().substring(0,100);
+          String value = ((Binary) rowPlans[i].getValues()[j]).getStringValue().substring(0, 100);
           if (!value.contains(rowPlans[i].getDeviceId().getMeasurement().substring(4))) {
-            logger.error("receive error data，device:{}, value（first 100 bytes）: {}", rowPlans[i].getDeviceId(), value);
+            logger.error(
+                "receive error data，device:{}, value（first 100 bytes）: {}",
+                rowPlans[i].getDeviceId(),
+                value);
           }
         }
       }
