@@ -233,8 +233,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       lock.unlock();
       long elapse = System.nanoTime() - start;
       if (elapse > 3_000_000_000L) {
-        logger.warn(
-            "[WAL] {} flushBuffer write log cost {}ms", this.hashCode(), elapse / 1_000_000L);
+        logger.warn("[WAL] {} delete logNode cost {}ms", this.hashCode(), elapse / 1_000_000L);
       }
     }
   }

@@ -989,12 +989,17 @@ public class TsFileProcessor {
   }
 
   public WriteLogNode getLogNode() {
+    long start = System.nanoTime();
     if (logNode == null) {
       logNode =
           MultiFileLogNodeManager.getInstance()
               .getNode(
                   storageGroupName + "-" + tsFileResource.getTsFile().getName(),
                   storageGroupInfo.getWalSupplier());
+    }
+    long elapse = System.nanoTime() - start;
+    if (elapse > 3_000_000_000L) {
+      logger.warn("[WAL] {} getWalSupplier cost {}ms", this.hashCode(), elapse / 1_000_000L);
     }
     return logNode;
   }
