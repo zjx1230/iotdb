@@ -278,6 +278,16 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       }
       ILogWriter currWriter = getCurrentFileWriter();
       FLUSH_BUFFER_THREAD_POOL.submit(() -> flushBuffer(currWriter));
+      start = System.nanoTime();
+      switchBufferIdleToWorking();
+      elapse = System.nanoTime() - start;
+      if (elapse > 3_000_000_000L) {
+        logger.warn(
+            "[WAL] {} switch buffer Idle -> Working cost {}ms",
+            this.hashCode(),
+            elapse / 1_000_000L);
+      }
+
       bufferedLogNum = 0;
       logger.debug("Log node {} ends sync.", identifier);
     } catch (InterruptedException e) {
@@ -309,10 +319,10 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
 
     // switch buffer flushing to idle and notify the sync thread
     long start = System.nanoTime();
-    synchronized (switchBufferCondition) {
-      logBufferIdle = logBufferFlushing;
-      logBufferFlushing = null;
-      switchBufferCondition.notifyAll();
+    try {
+      switchBufferFlushingToIdle();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
     }
     long elapse = System.nanoTime() - start;
     if (elapse > 3_000_000_000L) {
@@ -326,12 +336,35 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
   private void switchBufferWorkingToFlushing() throws InterruptedException {
     synchronized (switchBufferCondition) {
       while (logBufferFlushing != null && !deleted.get()) {
-        switchBufferCondition.wait(100);
+        switchBufferCondition.wait();
       }
       logBufferFlushing = logBufferWorking;
       logBufferWorking = logBufferIdle;
       logBufferWorking.clear();
       logBufferIdle = null;
+    }
+  }
+
+  private void switchBufferIdleToWorking() throws InterruptedException {
+    synchronized (switchBufferCondition) {
+      while (logBufferIdle == null && !deleted.get()) {
+        switchBufferCondition.wait();
+      }
+      logBufferWorking = logBufferIdle;
+      logBufferIdle = null;
+      switchBufferCondition.notifyAll();
+    }
+  }
+
+  private void switchBufferFlushingToIdle() throws InterruptedException {
+    synchronized (switchBufferCondition) {
+      while (logBufferIdle != null && !deleted.get()) {
+        switchBufferCondition.wait();
+      }
+      logBufferIdle = logBufferFlushing;
+      logBufferIdle.clear();
+      logBufferFlushing = null;
+      switchBufferCondition.notifyAll();
     }
   }
 
