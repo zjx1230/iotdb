@@ -339,9 +339,8 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
         switchBufferCondition.wait();
       }
       logBufferFlushing = logBufferWorking;
-      logBufferWorking = logBufferIdle;
-      logBufferWorking.clear();
-      logBufferIdle = null;
+      logBufferWorking = null;
+      switchBufferCondition.notifyAll();
     }
   }
 
