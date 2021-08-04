@@ -60,9 +60,9 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
 
   private final IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
 
-  private volatile ByteBuffer logBufferWorking;
-  private volatile ByteBuffer logBufferIdle;
-  private volatile ByteBuffer logBufferFlushing;
+  private ByteBuffer logBufferWorking;
+  private ByteBuffer logBufferIdle;
+  private ByteBuffer logBufferFlushing;
 
   // used for the convenience of deletion
   private volatile ByteBuffer[] bufferArray;
@@ -71,7 +71,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
   private final ReentrantLock lock = new ReentrantLock();
   private static final ExecutorService FLUSH_BUFFER_THREAD_POOL =
       Executors.newCachedThreadPool(
-          new ThreadFactoryBuilder().setNameFormat("Flush-WAL-Thread%d").build());
+          new ThreadFactoryBuilder().setNameFormat("Flush-WAL-Thread-%d").setDaemon(true).build());
 
   private long fileId = 0;
   private long lastFlushedId = 0;
