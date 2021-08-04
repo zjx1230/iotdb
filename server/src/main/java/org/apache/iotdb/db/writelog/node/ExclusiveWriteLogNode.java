@@ -28,6 +28,7 @@ import org.apache.iotdb.db.writelog.io.ILogWriter;
 import org.apache.iotdb.db.writelog.io.LogWriter;
 import org.apache.iotdb.db.writelog.io.MultiFileLogReader;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,8 +69,9 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
 
   private final Object switchBufferCondition = new Object();
   private final ReentrantLock lock = new ReentrantLock();
-  private final ExecutorService FLUSH_BUFFER_THREAD_POOL =
-      Executors.newSingleThreadExecutor(r -> new Thread(r, "Flush-WAL-Thread-" + this.hashCode()));
+  private static final ExecutorService FLUSH_BUFFER_THREAD_POOL =
+      Executors.newCachedThreadPool(
+          new ThreadFactoryBuilder().setNameFormat("Flush-WAL-Thread%d").build());
 
   private long fileId = 0;
   private long lastFlushedId = 0;
@@ -229,7 +231,6 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       deleted.set(true);
       return this.bufferArray;
     } finally {
-      FLUSH_BUFFER_THREAD_POOL.shutdown();
       lock.unlock();
       long elapse = System.nanoTime() - start;
       if (elapse > 3_000_000_000L) {
