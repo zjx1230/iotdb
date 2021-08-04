@@ -252,16 +252,21 @@ public class TsFileProcessor {
       throw new WriteProcessException(e);
     }
     try {
+      long startTime = System.nanoTime();
       workMemTable.insertTablet(insertTabletPlan, start, end);
-      long startTime = System.currentTimeMillis();
+      long elapse = System.nanoTime() - startTime;
+      if (elapse > 5_000_000_000L) {
+        logger.error("write memtable slowly : cost {}ms", elapse / 1_000_000L);
+      }
+      startTime = System.nanoTime();
       if (IoTDBDescriptor.getInstance().getConfig().isEnableWal()) {
         insertTabletPlan.setStart(start);
         insertTabletPlan.setEnd(end);
         getLogNode().write(insertTabletPlan);
       }
-      long elapsed = System.currentTimeMillis() - startTime;
-      if (elapsed > 5000) {
-        logger.error("write wal slowly : cost {}ms", elapsed);
+      elapse = System.nanoTime() - startTime;
+      if (elapse > 5_000_000_000L) {
+        logger.error("write wal slowly : cost {}ms", elapse / 1_000_000L);
       }
     } catch (Exception e) {
       for (int i = start; i < end; i++) {
