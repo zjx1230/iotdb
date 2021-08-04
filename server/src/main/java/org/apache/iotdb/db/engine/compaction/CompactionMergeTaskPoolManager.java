@@ -201,18 +201,20 @@ public class CompactionMergeTaskPoolManager implements IService {
 
   public synchronized void submitTask(StorageGroupCompactionTask storageGroupCompactionTask)
       throws RejectedExecutionException {
-    if (pool != null && !pool.isTerminated()) {
-      String storageGroup = storageGroupCompactionTask.getStorageGroupName();
-      boolean isCompacting = sgCompactionStatus.computeIfAbsent(storageGroup, k -> false);
-      if (isCompacting) {
-        return;
+    if (config.getCompactionStrategy() == CompactionStrategy.LEVEL_COMPACTION) {
+      if (pool != null && !pool.isTerminated()) {
+        String storageGroup = storageGroupCompactionTask.getStorageGroupName();
+        boolean isCompacting = sgCompactionStatus.computeIfAbsent(storageGroup, k -> false);
+        if (isCompacting) {
+          return;
+        }
+        storageGroupCompactionTask.setSgCompactionStatus(sgCompactionStatus);
+        sgCompactionStatus.put(storageGroup, true);
+        Future<Void> future = pool.submit(storageGroupCompactionTask);
+        storageGroupTasks
+            .computeIfAbsent(storageGroup, k -> new CopyOnWriteArrayList<>())
+            .add(future);
       }
-      storageGroupCompactionTask.setSgCompactionStatus(sgCompactionStatus);
-      sgCompactionStatus.put(storageGroup, true);
-      Future<Void> future = pool.submit(storageGroupCompactionTask);
-      storageGroupTasks
-          .computeIfAbsent(storageGroup, k -> new CopyOnWriteArrayList<>())
-          .add(future);
     }
   }
 
