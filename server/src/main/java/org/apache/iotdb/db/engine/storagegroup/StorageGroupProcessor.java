@@ -536,9 +536,11 @@ public class StorageGroupProcessor {
           logicalStorageGroupName,
           virtualStorageGroupId);
       try {
-        CompactionMergeTaskPoolManager.getInstance()
-            .submitTask(
-                tsFileManagement.new CompactionRecoverTask(this::closeCompactionRecoverCallBack));
+        if (config.getCompactionStrategy() == CompactionStrategy.LEVEL_COMPACTION) {
+          CompactionMergeTaskPoolManager.getInstance()
+              .submitTask(
+                  tsFileManagement.new CompactionRecoverTask(this::closeCompactionRecoverCallBack));
+        }
       } catch (RejectedExecutionException e) {
         this.closeCompactionRecoverCallBack(false, 0);
         logger.error(
