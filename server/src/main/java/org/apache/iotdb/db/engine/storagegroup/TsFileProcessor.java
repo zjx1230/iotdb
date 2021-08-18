@@ -192,12 +192,7 @@ public class TsFileProcessor {
 
     if (IoTDBDescriptor.getInstance().getConfig().isEnableWal()) {
       try {
-        long startTime = System.currentTimeMillis();
         getLogNode().write(insertRowPlan);
-        long elapsed = System.currentTimeMillis() - startTime;
-        if (elapsed > 5000) {
-          logger.error("write wal slowly : cost {}ms", elapsed);
-        }
       } catch (Exception e) {
         throw new WriteProcessException(
             String.format(
@@ -252,19 +247,14 @@ public class TsFileProcessor {
       throw new WriteProcessException(e);
     }
     try {
-      long startTime = System.nanoTime();
       workMemTable.insertTablet(insertTabletPlan, start, end);
-      long elapse = System.nanoTime() - startTime;
-      if (elapse > 5_000_000_000L) {
-        logger.error("write memtable slowly : cost {}ms", elapse / 1_000_000L);
-      }
-      startTime = System.nanoTime();
+      long startTime = System.nanoTime();
       if (IoTDBDescriptor.getInstance().getConfig().isEnableWal()) {
         insertTabletPlan.setStart(start);
         insertTabletPlan.setEnd(end);
         getLogNode().write(insertTabletPlan);
       }
-      elapse = System.nanoTime() - startTime;
+      long elapse = System.nanoTime() - startTime;
       if (elapse > 5_000_000_000L) {
         logger.error("write wal slowly : cost {}ms", elapse / 1_000_000L);
       }

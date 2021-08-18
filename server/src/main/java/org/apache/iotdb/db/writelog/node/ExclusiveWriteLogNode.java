@@ -106,12 +106,7 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
     if (deleted.get()) {
       throw new IOException("WAL node deleted");
     }
-    long start = System.nanoTime();
     lock.lock();
-    long elapse = System.nanoTime() - start;
-    if (elapse > 3_000_000_000L) {
-      logger.warn("[WAL] {} write plan get lock cost {}ms", this.hashCode(), elapse / 1_000_000L);
-    }
     try {
       putLog(plan);
       if (bufferedLogNum >= config.getFlushWalThreshold()) {
@@ -196,7 +191,6 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
 
   @Override
   public void notifyEndFlush() {
-    long start = System.nanoTime();
     lock.lock();
     try {
       File logFile =
@@ -204,10 +198,6 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       discard(logFile);
     } finally {
       lock.unlock();
-    }
-    long elapse = System.nanoTime() - start;
-    if (elapse > 3_000_000_000L) {
-      logger.warn("[WAL] {} flushBuffer write log cost {}ms", this.hashCode(), elapse / 1_000_000L);
     }
   }
 
@@ -223,7 +213,6 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
 
   @Override
   public ByteBuffer[] delete() throws IOException {
-    long start = System.nanoTime();
     lock.lock();
     try {
       close();
@@ -232,10 +221,6 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       return this.bufferArray;
     } finally {
       lock.unlock();
-      long elapse = System.nanoTime() - start;
-      if (elapse > 3_000_000_000L) {
-        logger.warn("[WAL] {} delete logNode cost {}ms", this.hashCode(), elapse / 1_000_000L);
-      }
     }
   }
 
@@ -267,26 +252,10 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       if (bufferedLogNum == 0) {
         return;
       }
-      long start = System.nanoTime();
       switchBufferWorkingToFlushing();
-      long elapse = System.nanoTime() - start;
-      if (elapse > 3_000_000_000L) {
-        logger.warn(
-            "[WAL] {} switch buffer working -> flushing cost {}ms",
-            this.hashCode(),
-            elapse / 1_000_000L);
-      }
       ILogWriter currWriter = getCurrentFileWriter();
       FLUSH_BUFFER_THREAD_POOL.submit(() -> flushBuffer(currWriter));
-      start = System.nanoTime();
       switchBufferIdleToWorking();
-      elapse = System.nanoTime() - start;
-      if (elapse > 3_000_000_000L) {
-        logger.warn(
-            "[WAL] {} switch buffer Idle -> Working cost {}ms",
-            this.hashCode(),
-            elapse / 1_000_000L);
-      }
 
       bufferedLogNum = 0;
       logger.debug("Log node {} ends sync.", identifier);
@@ -301,7 +270,6 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
   }
 
   private void flushBuffer(ILogWriter writer) {
-    long start1 = System.nanoTime();
     try {
       writer.write(logBufferFlushing);
     } catch (ClosedChannelException e) {
@@ -311,25 +279,12 @@ public class ExclusiveWriteLogNode implements WriteLogNode, Comparable<Exclusive
       IoTDBDescriptor.getInstance().getConfig().setReadOnly(true);
       return;
     }
-    long elapse1 = System.nanoTime() - start1;
-    if (elapse1 > 3_000_000_000L) {
-      logger.warn(
-          "[WAL] {} flushBuffer write log cost {}ms", this.hashCode(), elapse1 / 1_000_000L);
-    }
 
     // switch buffer flushing to idle and notify the sync thread
-    long start = System.nanoTime();
     try {
       switchBufferFlushingToIdle();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-    }
-    long elapse = System.nanoTime() - start;
-    if (elapse > 3_000_000_000L) {
-      logger.warn(
-          "[WAL] {} switch buffer flushing -> idle cost {}ms",
-          this.hashCode(),
-          elapse / 1_000_000L);
     }
   }
 
