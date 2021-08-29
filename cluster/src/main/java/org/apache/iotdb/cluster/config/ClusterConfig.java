@@ -21,11 +21,18 @@ package org.apache.iotdb.cluster.config;
 import org.apache.iotdb.cluster.utils.ClusterConsistent;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class ClusterConfig {
+
+  private static final Logger logger = LoggerFactory.getLogger(ClusterConfig.class);
 
   static final String CONFIG_NAME = "iotdb-cluster.properties";
 
@@ -449,7 +456,16 @@ public class ClusterConfig {
   }
 
   public void setInternalIp(String internalIp) {
-    this.internalIp = internalIp;
+    if ("hostname".equals(internalIp)) {
+      try {
+        this.internalIp = InetAddress.getLocalHost().getCanonicalHostName();
+        logger.info("Setting Internal IP to {}", this.internalIp);
+      } catch (UnknownHostException e) {
+        throw new RuntimeException("Unable to get Hostname!");
+      }
+    } else {
+      this.internalIp = internalIp;
+    }
   }
 
   public boolean isOpenServerRpcPort() {

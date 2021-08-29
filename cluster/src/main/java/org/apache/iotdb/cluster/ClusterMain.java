@@ -89,12 +89,12 @@ public class ClusterMain {
     IoTDBDescriptor.getInstance().getConfig().setAutoCreateSchemaEnabled(false);
 
     // params check
-    try {
-      ClusterDescriptor.getInstance().replaceHostnameWithIp();
-    } catch (Exception e) {
-      logger.error("replace hostname with ip failed, {}", e.getMessage());
-      return;
-    }
+    //    try {
+    //      ClusterDescriptor.getInstance().replaceHostnameWithIp();
+    //    } catch (Exception e) {
+    //      logger.error("replace hostname with ip failed, {}", e.getMessage());
+    //      return;
+    //    }
 
     String mode = args[0];
 

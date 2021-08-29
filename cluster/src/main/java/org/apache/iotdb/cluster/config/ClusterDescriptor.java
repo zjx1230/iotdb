@@ -37,6 +37,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Properties;
 
 public class ClusterDescriptor {
@@ -130,7 +131,14 @@ public class ClusterDescriptor {
         logger.warn("Fail to find config file {}", url, e);
       }
     }
-    config.setInternalIp(properties.getProperty("internal_ip", config.getInternalIp()));
+
+    // Internal IP can also be set via ENV variable
+    final Optional<String> internalIp = Optional.ofNullable(System.getenv("INTERNAL_IP"));
+    if (internalIp.isPresent()) {
+      config.setInternalIp(internalIp.get());
+    } else {
+      config.setInternalIp(properties.getProperty("internal_ip", config.getInternalIp()));
+    }
 
     config.setInternalMetaPort(
         Integer.parseInt(
