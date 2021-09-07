@@ -943,15 +943,25 @@ public abstract class RaftLogManager {
             nextToCheckIndex);
         return;
       }
+      long start = System.nanoTime();
       synchronized (log) {
         while (!log.isApplied() && maxHaveAppliedCommitIndex < log.getCurrLogIndex()) {
           // wait until the log is applied or a newer snapshot is installed
           log.wait(5);
         }
       }
+      long time = (System.nanoTime() - start) / 1_000_000L;
+      if (time > 5000) {
+        logger.warn("{}:wait log {} to apply slowly for {}ms", name, log, time);
+      }
+      start = System.nanoTime();
       synchronized (changeApplyCommitIndexCond) {
         // maxHaveAppliedCommitIndex may change if a snapshot is applied concurrently
         maxHaveAppliedCommitIndex = Math.max(maxHaveAppliedCommitIndex, nextToCheckIndex);
+      }
+      time = (System.nanoTime() - start) / 1_000_000L;
+      if (time > 10000) {
+        logger.warn("{}:wait snapshot slowly for {}ms", name, time);
       }
       logger.debug(
           "{}: log={} is applied, nextToCheckIndex={}, commitIndex={}, maxHaveAppliedCommitIndex={}",
@@ -968,7 +978,7 @@ public abstract class RaftLogManager {
         // maxHaveAppliedCommitIndex may change if a snapshot is applied concurrently
         maxHaveAppliedCommitIndex = Math.max(maxHaveAppliedCommitIndex, nextToCheckIndex);
       }
-      logger.debug(
+      logger.error(
           "{}: compacted log is assumed applied, nextToCheckIndex={}, commitIndex={}, "
               + "maxHaveAppliedCommitIndex={}",
           name,

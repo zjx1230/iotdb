@@ -140,12 +140,10 @@ public class AsyncDataLogApplier implements LogApplier {
 
   /**
    * We can sure that the storage group of all InsertTabletPlans in InsertMultiTabletPlan are the
-   * same. this is done in {@link
-   * org.apache.iotdb.cluster.query.ClusterPlanRouter#splitAndRoutePlan(InsertMultiTabletPlan)}
+   * same. this is done in
    *
    * <p>We can also sure that the storage group of all InsertRowPlans in InsertRowsPlan are the
-   * same. this is done in {@link
-   * org.apache.iotdb.cluster.query.ClusterPlanRouter#splitAndRoutePlan(InsertRowsPlan)}
+   * same. this is done in
    *
    * @return the sg that the plan belongs to
    * @throws StorageGroupNotSetException if no sg found
@@ -203,7 +201,12 @@ public class AsyncDataLogApplier implements LogApplier {
 
   private void applyInternal(Log log) {
     long startTime = Statistic.RAFT_SENDER_DATA_LOG_APPLY.getOperationStartTime();
+    long start = System.nanoTime();
     embeddedApplier.apply(log);
+    long time = (System.nanoTime() - start) / 1_000_000L;
+    if (time > 5000) {
+      logger.warn("{}:apply log {} slowly for {}ms", name, log, time);
+    }
     if (Timer.ENABLE_INSTRUMENTING) {
       Statistic.RAFT_SENDER_DATA_LOG_APPLY.calOperationCostTimeFromStart(startTime);
     }
