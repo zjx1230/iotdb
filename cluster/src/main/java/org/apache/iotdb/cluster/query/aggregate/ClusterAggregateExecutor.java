@@ -62,7 +62,7 @@ public class ClusterAggregateExecutor extends AggregationExecutor {
   protected void aggregateOneSeries(
       Map.Entry<PartialPath, List<Integer>> pathToAggrIndexes,
       AggregateResult[] aggregateResultList,
-      Set<String> measurements,
+      Set<String> allMeasurementsInDevice,
       Filter timeFilter,
       QueryContext context)
       throws StorageEngineException {
@@ -75,7 +75,7 @@ public class ClusterAggregateExecutor extends AggregationExecutor {
     }
     List<AggregateResult> aggregateResult =
         aggregator.getAggregateResult(
-            seriesPath, measurements, aggregationNames, tsDataType, timeFilter, context, ascending);
+            seriesPath, allMeasurementsInDevice, aggregationNames, tsDataType, timeFilter, context, ascending);
     int rstIndex = 0;
     for (int i : pathToAggrIndexes.getValue()) {
       aggregateResultList[i] = aggregateResult.get(rstIndex++);

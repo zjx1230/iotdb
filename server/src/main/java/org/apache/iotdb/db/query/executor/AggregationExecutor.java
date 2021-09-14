@@ -19,6 +19,7 @@
 
 package org.apache.iotdb.db.query.executor;
 
+import java.util.LinkedHashMap;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.StorageEngine;
@@ -27,6 +28,7 @@ import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.metadata.VectorPartialPath;
 import org.apache.iotdb.db.qp.physical.crud.AggregationPlan;
 import org.apache.iotdb.db.qp.physical.crud.QueryPlan;
 import org.apache.iotdb.db.qp.physical.crud.RawDataQueryPlan;
@@ -100,8 +102,7 @@ public class AggregationExecutor {
     }
 
     // TODO use multi-thread
-    Map<PartialPath, List<Integer>> pathToAggrIndexesMap =
-        groupAggregationsBySeries(selectedSeries);
+    List<ISeriesAggregationExecutor> seriesAggregationExecutor = groupSeriesToExecutor(selectedSeries);
     AggregateResult[] aggregateResultList = new AggregateResult[selectedSeries.size()];
     // TODO-Cluster: group the paths by storage group to reduce communications
     List<StorageGroupProcessor> list =
@@ -132,7 +133,7 @@ public class AggregationExecutor {
   protected void aggregateOneSeries(
       Map.Entry<PartialPath, List<Integer>> pathToAggrIndexes,
       AggregateResult[] aggregateResultList,
-      Set<String> measurements,
+      Set<String> allMeasurementsInDevice,
       Filter timeFilter,
       QueryContext context)
       throws IOException, QueryProcessException, StorageEngineException {
@@ -156,7 +157,7 @@ public class AggregationExecutor {
     }
     aggregateOneSeries(
         seriesPath,
-        measurements,
+        allMeasurementsInDevice,
         context,
         timeFilter,
         tsDataType,
@@ -510,5 +511,76 @@ public class AggregationExecutor {
       pathToAggrIndexesMap.computeIfAbsent(series, key -> new ArrayList<>()).add(i);
     }
     return pathToAggrIndexesMap;
+  }
+
+  /**
+   * Merge same series, Group all the subSensors of one vector into one VectorPartialPath and convert to ISeriesAggregationExecutor.
+   * For example: Given: paths: s1, vector.s1, vector.s2, s1 and aggregations: count, count, count, sum.
+   * Then: SeriesAggregationExecutor s1 -> [0, 3], VectorSeriesAggregationExecutor vector[s1, s2], Map{s1 -> 1, s2 -> 2}
+   *
+   * @param selectedSeries selected series
+   * @return ISeriesAggregationExecutor list
+   */
+  private List<ISeriesAggregationExecutor> groupSeriesToExecutor(
+      List<PartialPath> selectedSeries) {
+    Map<String, ISeriesAggregationExecutor> pathToSeriesExecutor = new LinkedHashMap<>();
+    for (int i = 0; i < selectedSeries.size(); i++) {
+      PartialPath path = selectedSeries.get(i);
+      String pathName = path.getFullPath();
+      if (!pathToSeriesExecutor.containsKey(pathName)) {
+        ISeriesAggregationExecutor seriesExecutor = getSeriesAggregationExecutor(path);
+        pathToSeriesExecutor.put(pathName, seriesExecutor);
+      } else {
+        // if pathToSeriesExecutor contains node
+        ISeriesAggregationExecutor seriesExecutor = pathToSeriesExecutor.get(pathName);
+        if (seriesExecutor instanceof SeriesAggregationExecutor) {
+          ((SeriesAggregationExecutor) seriesExecutor).addSeriesIndex(i);
+        } else if (seriesExecutor instanceof VectorSeriesAggregationExecutor){
+          ((VectorSeriesAggregationExecutor) seriesExecutor).addSubSensorIndex((((VectorPartialPath) path).getSubSensor(0)), i);
+        }
+      }
+    }
+    return new ArrayList<>(pathToSeriesExecutor.values());
+  }
+
+  private ISeriesAggregationExecutor getSeriesAggregationExecutor(PartialPath path) {
+    if (path instanceof VectorPartialPath) {
+      return new VectorSeriesAggregationExecutor((VectorPartialPath) path);
+    } else {
+      return new SeriesAggregationExecutor(path);
+    }
+  }
+
+  public class SeriesAggregationExecutor implements ISeriesAggregationExecutor {
+    private PartialPath path;
+    private TSDataType dataType;
+    private List<Integer> seriesIndex = new ArrayList<>();
+    private IReaderByTimestamp readerByTimestamp;
+
+    public SeriesAggregationExecutor(PartialPath path) {
+      this.path = path.copy();
+    }
+
+    public void addSeriesIndex(int index) {
+      seriesIndex.add(index);
+    }
+  }
+
+  public class VectorSeriesAggregationExecutor implements ISeriesAggregationExecutor {
+    private VectorPartialPath vectorPath;
+    private List<TSDataType> dataTypes;
+    private Map<String, List<Integer>> subSensorIndexMap = new HashMap<>();
+    private IReaderByTimestamp readerByTimestamp;
+
+    public VectorSeriesAggregationExecutor(VectorPartialPath vectorPath) {
+      this.vectorPath = vectorPath.copy();
+    }
+
+    public void addSubSensorIndex(String subSensor, int index) {
+      subSensorIndexMap.computeIfAbsent(subSensor, k -> {
+        vectorPath.addSubSensor(k);
+        return new ArrayList<>();
+      }).add(index);
+    }
   }
 }

@@ -75,7 +75,7 @@ public class VectorPartialPath extends PartialPath {
   }
 
   @Override
-  public PartialPath copy() {
+  public VectorPartialPath copy() {
     VectorPartialPath result = new VectorPartialPath();
     result.nodes = nodes;
     result.fullPath = fullPath;
