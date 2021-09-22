@@ -199,7 +199,7 @@ public class Timer {
         RAFT_MEMBER_SENDER,
         "apply logs that cannot run in parallel",
         TIME_SCALE,
-        RaftMember.USE_LOG_DISPATCHER,
+        true,
         RAFT_SENDER_COMMIT_APPLY_LOGS),
     RAFT_SENDER_COMMIT_WAIT_LOG_APPLY(
         RAFT_MEMBER_SENDER, "wait until log is applied", TIME_SCALE, true, RAFT_SENDER_COMMIT_LOG),

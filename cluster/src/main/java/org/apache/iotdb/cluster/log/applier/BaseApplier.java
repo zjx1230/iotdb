@@ -74,6 +74,8 @@ abstract class BaseApplier implements LogApplier {
     if (plan instanceof InsertPlan) {
       processPlanWithTolerance((InsertPlan) plan, dataGroupMember);
     } else if (plan != null && !plan.isQuery()) {
+      long start = System.currentTimeMillis();
+      logger.error("start apply log {} in PlanExecutor", plan);
       try {
         getQueryExecutor().processNonQuery(plan);
       } catch (BatchProcessException e) {
@@ -88,6 +90,10 @@ abstract class BaseApplier implements LogApplier {
       } catch (StorageGroupNotSetException e) {
         executeAfterSync(plan);
       }
+      logger.error(
+          "apply log {} successfully in PlanExecutor: cost {}ms",
+          plan,
+          System.currentTimeMillis() - start);
     } else if (plan != null) {
       logger.error("Unsupported physical plan: {}", plan);
     }

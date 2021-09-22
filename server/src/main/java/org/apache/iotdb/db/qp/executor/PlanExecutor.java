@@ -1522,10 +1522,12 @@ public class PlanExecutor implements IPlanExecutor {
 
   private boolean createMultiTimeSeries(CreateMultiTimeSeriesPlan multiPlan)
       throws BatchProcessException {
+    logger.error("createMultiTimeSeriesPlan size: {}", multiPlan.getPaths().size());
     for (int i = 0; i < multiPlan.getPaths().size(); i++) {
       if (multiPlan.getResults().containsKey(i) || multiPlan.isExecuted(i)) {
         continue;
       }
+      logger.error("try to create TimeSeries for {}", multiPlan.getPaths().get(i));
       CreateTimeSeriesPlan plan =
           new CreateTimeSeriesPlan(
               multiPlan.getPaths().get(i),
@@ -1538,8 +1540,13 @@ public class PlanExecutor implements IPlanExecutor {
               multiPlan.getAlias() == null ? null : multiPlan.getAlias().get(i));
       try {
         createTimeSeries(plan);
+        logger.error("create TimeSeries successfully for {}", multiPlan.getPaths().get(i));
       } catch (QueryProcessException e) {
         multiPlan.getResults().put(i, RpcUtils.getStatus(e.getErrorCode(), e.getMessage()));
+        logger.error(
+            "create TimeSeries failed for {} because {}",
+            multiPlan.getPaths().get(i),
+            e.toString());
       }
     }
     if (!multiPlan.getResults().isEmpty()) {
