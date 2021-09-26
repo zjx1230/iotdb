@@ -23,7 +23,10 @@ import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.flush.pool.FlushSubTaskPoolManager;
 import org.apache.iotdb.db.engine.memtable.IMemTable;
 import org.apache.iotdb.db.engine.memtable.IWritableMemChunk;
+import org.apache.iotdb.db.exception.layoutoptimize.LayoutNotExistException;
 import org.apache.iotdb.db.exception.runtime.FlushRunTimeException;
+import org.apache.iotdb.db.layoutoptimize.estimator.DataSizeEstimator;
+import org.apache.iotdb.db.layoutoptimize.layoutholder.LayoutHolder;
 import org.apache.iotdb.db.rescon.SystemInfo;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.db.utils.datastructure.VectorTVList;
@@ -38,6 +41,7 @@ import org.apache.iotdb.tsfile.write.writer.RestorableTsFileIOWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -100,6 +104,12 @@ public class MemTableFlushTask {
         memTable.getTotalPointsNum() / memTable.getSeriesNumber(),
         memTable.getSeriesNumber());
 
+    DataSizeEstimator.getInstance()
+        .addDataInfo(
+            storageGroup.substring(0, storageGroup.lastIndexOf(File.separatorChar)),
+            memTable.getTotalPointsNum(),
+            memTable.memSize());
+
     long estimatedTemporaryMemSize = 0L;
     if (config.isEnableMemControl() && SystemInfo.getInstance().isEncodingFasterThanIo()) {
       estimatedTemporaryMemSize =
@@ -115,16 +125,36 @@ public class MemTableFlushTask {
       encodingTaskQueue.put(new StartFlushGroupIOTask(memTableEntry.getKey()));
 
       final Map<String, IWritableMemChunk> value = memTableEntry.getValue();
-      for (Map.Entry<String, IWritableMemChunk> iWritableMemChunkEntry : value.entrySet()) {
-        long startTime = System.currentTimeMillis();
-        IWritableMemChunk series = iWritableMemChunkEntry.getValue();
-        IMeasurementSchema desc = series.getSchema();
-        /*
-         * sort task (first task of flush pipeline)
-         */
-        TVList tvList = series.getSortedTvListForFlush();
-        sortTime += System.currentTimeMillis() - startTime;
-        encodingTaskQueue.put(new Pair<>(tvList, desc));
+      try {
+        LayoutHolder holder = LayoutHolder.getInstance();
+        if (!holder.hasLayoutForDevice(memTableEntry.getKey())) {
+          holder.updateMetadata();
+        }
+        List<String> measurementsOrder = holder.getMeasurementForDevice(memTableEntry.getKey());
+        if (measurementsOrder.size() < value.size()) {
+          holder.updateMetadata();
+        }
+        measurementsOrder = holder.getMeasurementForDevice(memTableEntry.getKey());
+        for (String measurement : measurementsOrder) {
+          if (!value.containsKey(measurement)) continue;
+          long startTime = System.currentTimeMillis();
+          IWritableMemChunk series = value.get(measurement);
+          IMeasurementSchema desc = series.getSchema();
+          TVList tvList = series.getSortedTvListForFlush();
+          sortTime += System.currentTimeMillis() - startTime;
+          encodingTaskQueue.put(new Pair<>(tvList, desc));
+        }
+      } catch (LayoutNotExistException e) {
+        // the layout does not exist in layout holder
+        // and the
+        for (Map.Entry<String, IWritableMemChunk> iWritableMemChunkEntry : value.entrySet()) {
+          long startTime = System.currentTimeMillis();
+          IWritableMemChunk series = iWritableMemChunkEntry.getValue();
+          IMeasurementSchema desc = series.getSchema();
+          TVList tvList = series.getSortedTvListForFlush();
+          sortTime += System.currentTimeMillis() - startTime;
+          encodingTaskQueue.put(new Pair<>(tvList, desc));
+        }
       }
 
       encodingTaskQueue.put(new EndChunkGroupIoTask());

@@ -402,7 +402,7 @@ public class TsFileSketchTool {
   }
 
   private static Pair<String, String> checkArgs(String[] args) {
-    String filename = "test.tsfile";
+    String filename = "/home/lau/桌面/1621322597355-1-0-0.tsfile";
     String outFile = "TsFile_sketch_view.txt";
     if (args.length == 1) {
       filename = args[0];

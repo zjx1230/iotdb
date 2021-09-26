@@ -39,6 +39,11 @@ import org.apache.iotdb.db.exception.metadata.StorageGroupNotSetException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.exception.query.QueryTimeoutRuntimeException;
 import org.apache.iotdb.db.exception.runtime.SQLParserException;
+import org.apache.iotdb.db.layoutoptimize.diskevaluate.DiskEvaluator;
+import org.apache.iotdb.db.layoutoptimize.layoutholder.LayoutHolder;
+import org.apache.iotdb.db.layoutoptimize.layoutoptimizer.LayoutOptimizer;
+import org.apache.iotdb.db.layoutoptimize.layoutoptimizer.optimizerimpl.SCOAOptimizer;
+import org.apache.iotdb.db.layoutoptimize.layoutoptimizer.optimizerimpl.TCAOptimizer;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.metrics.server.SqlArgument;
 import org.apache.iotdb.db.qp.Planner;
@@ -2248,5 +2253,59 @@ public class TSServiceImpl implements TSIService.Iface {
       e = e.getCause();
     }
     return e.getMessage();
+  }
+
+  @Override
+  public void myTest() throws TException {
+    try {
+      PartialPath path = new PartialPath("root.sgtest.d1");
+      LayoutHolder holder = LayoutHolder.getInstance();
+      holder.useLayout(path.getFullPath());
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+  @Override
+  public void optimize(String device, String method) throws TException {
+    try {
+      PartialPath path = new PartialPath(device);
+      LayoutOptimizer optimizer = null;
+      switch (method.toLowerCase()) {
+        case "scoa":
+          {
+            optimizer = new SCOAOptimizer(path);
+            break;
+          }
+        case "tca":
+          {
+            optimizer = new TCAOptimizer(path);
+            break;
+          }
+        default:
+          {
+          }
+      }
+      if (optimizer != null) {
+        optimizer.invoke();
+      }
+    } catch (IllegalPathException ignored) {
+    }
+  }
+
+  @Override
+  public void useLayout(String device) throws TException {
+    LayoutHolder.getInstance().useLayout(device);
+  }
+
+  @Override
+  public TSStatus performDiskEvaluation() throws TException {
+    DiskEvaluator evaluator = DiskEvaluator.getInstance();
+    try {
+      evaluator.performDiskEvaluation();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    return RpcUtils.getStatus(TSStatusCode.SUCCESS_STATUS, "success");
   }
 }

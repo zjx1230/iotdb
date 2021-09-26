@@ -22,7 +22,11 @@ package org.apache.iotdb.db.query.dataset.groupby;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor;
 import org.apache.iotdb.db.exception.StorageEngineException;
+import org.apache.iotdb.db.exception.layoutoptimize.LayoutNotExistException;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
+import org.apache.iotdb.db.layoutoptimize.layoutholder.LayoutHolder;
+import org.apache.iotdb.db.layoutoptimize.workloadmanager.WorkloadManager;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.physical.crud.GroupByTimePlan;
 import org.apache.iotdb.db.query.aggregation.AggregateResult;
@@ -41,12 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class GroupByWithoutValueFilterDataSet extends GroupByEngineDataSet {
@@ -66,6 +65,8 @@ public class GroupByWithoutValueFilterDataSet extends GroupByEngineDataSet {
    * <p>s1 -> 0, 2 s2 -> 1
    */
   private Map<PartialPath, List<Integer>> resultIndexes = new HashMap<>();
+  // deviceID -> index order
+  private Map<String, List<PartialPath>> indexOrder = new HashMap<>();
 
   public GroupByWithoutValueFilterDataSet() {}
 
@@ -94,6 +95,7 @@ public class GroupByWithoutValueFilterDataSet extends GroupByEngineDataSet {
             .mergeLock(paths.stream().map(p -> (PartialPath) p).collect(Collectors.toList()));
     try {
       // init resultIndexes, group result indexes by path
+      Map<String, List<Integer>> deviceQueryIdxMap = new HashMap<>();
       for (int i = 0; i < paths.size(); i++) {
         PartialPath path = (PartialPath) paths.get(i);
         if (!pathExecutors.containsKey(path)) {
@@ -115,6 +117,23 @@ public class GroupByWithoutValueFilterDataSet extends GroupByEngineDataSet {
             AggregateResultFactory.getAggrResultByName(
                 groupByTimePlan.getDeduplicatedAggregations().get(i), dataTypes.get(i), ascending);
         pathExecutors.get(path).addAggregateResult(aggrResult);
+        // Map the device id to the corresponding query indexes
+        if (!deviceQueryIdxMap.containsKey(path.getDevice())) {
+          deviceQueryIdxMap.put(path.getDevice(), new ArrayList<>());
+        }
+        deviceQueryIdxMap.get(path.getDevice()).add(i);
+      }
+      // Add the query record to the workload manager
+      WorkloadManager manager = WorkloadManager.getInstance();
+      for (String deviceId : deviceQueryIdxMap.keySet()) {
+        List<Integer> pathIndexes = deviceQueryIdxMap.get(deviceId);
+        List<String> sensors = new ArrayList<>();
+        for (int idx : pathIndexes) {
+          PartialPath path = (PartialPath) paths.get(idx);
+          sensors.add(path.getMeasurement());
+        }
+        manager.addQueryRecord(
+            deviceId, sensors, groupByTimePlan.getEndTime() - groupByTimePlan.getStartTime());
       }
     } finally {
       StorageEngine.getInstance().mergeUnLock(list);
@@ -138,14 +157,63 @@ public class GroupByWithoutValueFilterDataSet extends GroupByEngineDataSet {
     AggregateResult[] fields = new AggregateResult[paths.size()];
 
     try {
-      for (Entry<PartialPath, GroupByExecutor> pathToExecutorEntry : pathExecutors.entrySet()) {
-        GroupByExecutor executor = pathToExecutorEntry.getValue();
-        List<AggregateResult> aggregations = executor.calcResult(curStartTime, curEndTime);
-        for (int i = 0; i < aggregations.size(); i++) {
-          int resultIndex = resultIndexes.get(pathToExecutorEntry.getKey()).get(i);
-          fields[resultIndex] = aggregations.get(i);
+      if (indexOrder.size() == 0) {
+        // init the index order while querying
+        Set<PartialPath> paths = pathExecutors.keySet();
+        Map<String, Set<PartialPath>> pathsForEachDevice = new HashMap<>();
+        for (PartialPath path : paths) {
+          if (!pathsForEachDevice.containsKey(path.getDevice())) {
+            pathsForEachDevice.put(path.getDevice(), new HashSet<>());
+          }
+          pathsForEachDevice.get(path.getDevice()).add(path);
+        }
+        LayoutHolder holder = LayoutHolder.getInstance();
+        for (String device : pathsForEachDevice.keySet()) {
+          try {
+            indexOrder.put(device, new LinkedList<>());
+            if (!holder.hasLayoutForDevice(device)) {
+              holder.updateMetadata();
+            }
+            List<String> physicalOrderInString = holder.getMeasurementForDevice(device);
+            if (physicalOrderInString.size() < pathsForEachDevice.get(device).size()) {
+              holder.updateMetadata();
+            }
+            physicalOrderInString = holder.getMeasurementForDevice(device);
+            List<PartialPath> queryOrder = new LinkedList<>();
+            Set<PartialPath> visitedPaths = pathsForEachDevice.get(device);
+            for (String pathInString : physicalOrderInString) {
+              PartialPath path = new PartialPath(device, pathInString);
+              if (visitedPaths.contains(path)) {
+                queryOrder.add(path);
+              }
+            }
+            indexOrder.put(device, queryOrder);
+          } catch (LayoutNotExistException | IllegalPathException e) {
+            indexOrder.put(device, new LinkedList<>(pathsForEachDevice.get(device)));
+          }
         }
       }
+      // execute the querying according to the physical order
+      for (String device : indexOrder.keySet()) {
+        List<PartialPath> pathOrder = indexOrder.get(device);
+        for (PartialPath path : pathOrder) {
+          GroupByExecutor executor = pathExecutors.get(path);
+          List<AggregateResult> aggregations = executor.calcResult(curStartTime, curEndTime);
+          for (int i = 0; i < aggregations.size(); i++) {
+            int resultIndex = resultIndexes.get(path).get(i);
+            fields[resultIndex] = aggregations.get(i);
+          }
+        }
+      }
+      //      for (Entry<PartialPath, GroupByExecutor> pathToExecutorEntry :
+      // pathExecutors.entrySet()) {
+      //        GroupByExecutor executor = pathToExecutorEntry.getValue();
+      //        List<AggregateResult> aggregations = executor.calcResult(curStartTime, curEndTime);
+      //        for (int i = 0; i < aggregations.size(); i++) {
+      //          int resultIndex = resultIndexes.get(pathToExecutorEntry.getKey()).get(i);
+      //          fields[resultIndex] = aggregations.get(i);
+      //        }
+      //      }
     } catch (QueryProcessException e) {
       logger.error("GroupByWithoutValueFilterDataSet execute has error", e);
       throw new IOException(e.getMessage(), e);

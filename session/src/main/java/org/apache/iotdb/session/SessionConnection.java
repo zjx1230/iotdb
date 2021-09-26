@@ -834,6 +834,22 @@ public class SessionConnection {
     this.endPoint = endPoint;
   }
 
+  public void myTest() throws TException {
+    client.myTest();
+  }
+
+  public void optimize(String device, String method) throws TException {
+    client.optimize(device, method);
+  }
+
+  public void useLayout(String device) throws TException {
+    client.useLayout(device);
+  }
+
+  public void performDiskEvaluation() throws TException {
+    client.performDiskEvaluation();
+  }
+
   @Override
   public String toString() {
     return "SessionConnection{" + " endPoint=" + endPoint + "}";

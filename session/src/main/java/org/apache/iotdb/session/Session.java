@@ -49,6 +49,7 @@ import org.apache.iotdb.tsfile.write.record.Tablet;
 import org.apache.iotdb.tsfile.write.schema.IMeasurementSchema;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 
+import org.apache.thrift.TException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1910,6 +1911,22 @@ public class Session {
 
   public void setEnableQueryRedirection(boolean enableQueryRedirection) {
     this.enableQueryRedirection = enableQueryRedirection;
+  }
+
+  public void myTest() throws TException {
+    defaultSessionConnection.myTest();
+  }
+
+  public void optimize(String device, String method) throws TException {
+    defaultSessionConnection.optimize(device, method);
+  }
+
+  public void useLayout(String device) throws TException {
+    defaultSessionConnection.useLayout(device);
+  }
+
+  public void evaluateDisk() throws TException {
+    defaultSessionConnection.performDiskEvaluation();
   }
 
   public boolean isEnableCacheLeader() {

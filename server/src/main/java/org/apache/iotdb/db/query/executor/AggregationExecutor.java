@@ -25,7 +25,10 @@ import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
 import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor;
 import org.apache.iotdb.db.exception.StorageEngineException;
+import org.apache.iotdb.db.exception.layoutoptimize.LayoutNotExistException;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
+import org.apache.iotdb.db.layoutoptimize.layoutholder.LayoutHolder;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.physical.crud.AggregationPlan;
 import org.apache.iotdb.db.qp.physical.crud.QueryPlan;
@@ -54,13 +57,8 @@ import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.apache.iotdb.tsfile.read.query.timegenerator.TimeGenerator;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import static org.apache.iotdb.tsfile.read.query.executor.ExecutorWithTimeGenerator.markFilterdPaths;
 
@@ -107,6 +105,48 @@ public class AggregationExecutor {
     List<StorageGroupProcessor> list =
         StorageEngine.getInstance().mergeLock(new ArrayList<>(pathToAggrIndexesMap.keySet()));
     try {
+      // adjust the query order according to the physical order
+      Map<String, Set<PartialPath>> queryForEachDevice = new HashMap<>();
+      Map<PartialPath, Map.Entry<PartialPath, List<Integer>>> entryMap = new HashMap<>();
+      for (Map.Entry<PartialPath, List<Integer>> entry : pathToAggrIndexesMap.entrySet()) {
+        if (!queryForEachDevice.containsKey(entry.getKey().getDevice())) {
+          queryForEachDevice.put(entry.getKey().getDevice(), new HashSet<>());
+        }
+        queryForEachDevice.get(entry.getKey().getDevice()).add(entry.getKey());
+        entryMap.put(entry.getKey(), entry);
+      }
+      LayoutHolder layoutHolder = LayoutHolder.getInstance();
+      for (String deviceID : queryForEachDevice.keySet()) {
+        if (!layoutHolder.hasLayoutForDevice(deviceID)) {
+          layoutHolder.updateMetadata();
+        }
+        Set<PartialPath> pathSet = queryForEachDevice.get(deviceID);
+        List<String> paths = layoutHolder.getMeasurementForDevice(deviceID);
+        for (String pathID : paths) {
+          try {
+            PartialPath path = new PartialPath(deviceID, pathID);
+            if (pathSet.contains(path)) {
+              aggregateOneSeries(
+                  entryMap.get(path),
+                  aggregateResultList,
+                  aggregationPlan.getAllMeasurementsInDevice(deviceID),
+                  timeFilter,
+                  context);
+            }
+          } catch (IllegalPathException e) {
+            continue;
+          }
+        }
+      }
+      for (Map.Entry<PartialPath, List<Integer>> entry : pathToAggrIndexesMap.entrySet()) {
+        aggregateOneSeries(
+            entry,
+            aggregateResultList,
+            aggregationPlan.getAllMeasurementsInDevice(entry.getKey().getDevice()),
+            timeFilter,
+            context);
+      }
+    } catch (LayoutNotExistException e) {
       for (Map.Entry<PartialPath, List<Integer>> entry : pathToAggrIndexesMap.entrySet()) {
         aggregateOneSeries(
             entry,

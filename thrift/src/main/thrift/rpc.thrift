@@ -424,6 +424,14 @@ service TSIService {
 
   i64 requestStatementId(1:i64 sessionId);
 
+  void myTest();
+
+  void optimize(string device, string method);
+
+  void useLayout(string device);
+
+  TSStatus performDiskEvaluation();
+
   TSStatus createSchemaTemplate(1:TSCreateSchemaTemplateReq req);
 
   TSStatus setSchemaTemplate(1:TSSetSchemaTemplateReq req);
