@@ -77,7 +77,7 @@ public class MNode implements Serializable {
   /** Constructor of MNode. */
   public MNode(MNode parent, String name) {
     this.parent = parent;
-    this.name = name;
+    this.name = name.intern();
   }
 
   /** check whether the MNode has a child with the name */
@@ -278,7 +278,7 @@ public class MNode implements Serializable {
   }
 
   public void setName(String name) {
-    this.name = name;
+    this.name = name.intern();
   }
 
   public void serializeTo(MLogWriter logWriter) throws IOException {

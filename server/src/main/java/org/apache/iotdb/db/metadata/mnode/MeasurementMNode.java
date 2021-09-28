@@ -54,7 +54,7 @@ public class MeasurementMNode extends MNode {
       CompressionType type,
       Map<String, String> props) {
     super(parent, measurementName);
-    this.schema = new MeasurementSchema(measurementName, dataType, encoding, type, props);
+    this.schema = new MeasurementSchema(measurementName.intern(), dataType, encoding, type, props);
     this.alias = alias;
   }
 
