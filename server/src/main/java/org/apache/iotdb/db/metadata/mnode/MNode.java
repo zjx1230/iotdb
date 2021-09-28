@@ -107,7 +107,7 @@ public class MNode implements Serializable {
     }
 
     child.parent = this;
-    children.putIfAbsent(name, child);
+    children.putIfAbsent(name.intern(), child);
   }
 
   /**
