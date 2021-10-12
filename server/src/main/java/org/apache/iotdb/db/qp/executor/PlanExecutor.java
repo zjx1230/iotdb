@@ -1658,6 +1658,7 @@ public class PlanExecutor implements IPlanExecutor {
     } catch (MetadataException e) {
       throw new QueryProcessException(e);
     }
+    System.gc();
     return true;
   }
 
