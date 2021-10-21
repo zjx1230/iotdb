@@ -48,6 +48,7 @@ import org.apache.iotdb.tsfile.write.schema.VectorMeasurementSchema;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -234,8 +235,8 @@ public class AlignByDeviceDataSet extends QueryDataSet {
     try {
       Set<String> res = new HashSet<>();
       // TODO: Implement this method in Cluster MManager
-      List<IMeasurementSchema> measurementSchemas =
-          IoTDB.metaManager.getAllMeasurementByDevicePath(device);
+      Collection<IMeasurementSchema> measurementSchemas =
+          IoTDB.metaManager.getAllMeasurementSchemaByPrefix(device).values();
       for (IMeasurementSchema schema : measurementSchemas) {
         if (schema instanceof VectorMeasurementSchema) {
           for (String subMeasurement : schema.getSubMeasurementsList()) {
