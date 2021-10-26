@@ -785,7 +785,7 @@ public class Session {
   private void handleMetaRedirection(String storageGroup, RedirectException e)
       throws IoTDBConnectionException {
     if (enableCacheLeader) {
-      logger.debug("storageGroup[{}]:{}", storageGroup, e.getMessage());
+      logger.info("storageGroup[{}]:{}", storageGroup, e.getMessage());
       AtomicReference<IoTDBConnectionException> exceptionReference = new AtomicReference<>();
       SessionConnection connection =
           endPointToSessionConnection.computeIfAbsent(
@@ -808,6 +808,7 @@ public class Session {
   private void handleRedirection(String deviceId, EndPoint endpoint)
       throws IoTDBConnectionException {
     if (enableCacheLeader) {
+      logger.info("deviceId[{}]:{}", deviceId, endpoint);
       AtomicReference<IoTDBConnectionException> exceptionReference = new AtomicReference<>();
       deviceIdToEndpoint.put(deviceId, endpoint);
       SessionConnection connection =
@@ -960,7 +961,14 @@ public class Session {
           request, deviceIds.get(i), times.get(i), measurementsList.get(i), valuesList.get(i));
     }
 
+    long start = System.currentTimeMillis();
     insertByGroup(recordsGroup, SessionConnection::insertRecords);
+    long end = System.currentTimeMillis();
+    logger.info(
+        "insert {} rows to {} nodes costs {} ms",
+        deviceIds.size(),
+        recordsGroup.size(),
+        end - start);
   }
 
   private TSInsertStringRecordsReq genTSInsertStringRecordsReq(
@@ -1165,7 +1173,14 @@ public class Session {
           typesList.get(i),
           valuesList.get(i));
     }
+    long start = System.currentTimeMillis();
     insertByGroup(recordsGroup, SessionConnection::insertRecords);
+    long end = System.currentTimeMillis();
+    logger.info(
+        "insert {} rows to {} nodes costs {} ms",
+        deviceIds.size(),
+        recordsGroup.size(),
+        end - start);
   }
 
   private TSInsertRecordsReq genTSInsertRecordsReq(
