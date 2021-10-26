@@ -770,7 +770,7 @@ public class Session {
   private void handleMetaRedirection(String storageGroup, RedirectException e)
       throws IoTDBConnectionException {
     if (enableCacheLeader) {
-      logger.debug("storageGroup[{}]:{}", storageGroup, e.getMessage());
+      logger.info("storageGroup[{}]:{}", storageGroup, e.getMessage());
       SessionConnection connection =
           endPointToSessionConnection.computeIfAbsent(
               e.getEndPoint(),
@@ -792,6 +792,7 @@ public class Session {
   private void handleRedirection(String deviceId, EndPoint endpoint)
       throws IoTDBConnectionException {
     if (enableCacheLeader) {
+      logger.info("deviceId[{}]:{}", deviceId, endpoint);
       deviceIdToEndpoint.put(deviceId, endpoint);
       SessionConnection connection =
           endPointToSessionConnection.computeIfAbsent(
@@ -947,6 +948,7 @@ public class Session {
       updateTSInsertStringRecordsReq(
           request, deviceIds.get(i), times.get(i), measurementsList.get(i), valuesList.get(i));
     }
+    long start = System.currentTimeMillis();
     // TODO parallel
     StringBuilder errMsgBuilder = new StringBuilder();
     for (Entry<SessionConnection, TSInsertStringRecordsReq> entry : recordsGroup.entrySet()) {
@@ -964,6 +966,12 @@ public class Session {
         throw e;
       }
     }
+    long end = System.currentTimeMillis();
+    logger.info(
+        "insert {} rows to {} nodes costs {} ms",
+        deviceIds.size(),
+        recordsGroup.size(),
+        end - start);
     String errMsg = errMsgBuilder.toString();
     if (!errMsg.isEmpty()) {
       throw new StatementExecutionException(errMsg);
@@ -1174,6 +1182,7 @@ public class Session {
           typesList.get(i),
           valuesList.get(i));
     }
+    long start = System.currentTimeMillis();
     // TODO parallel
     StringBuilder errMsgBuilder = new StringBuilder();
     for (Entry<SessionConnection, TSInsertRecordsReq> entry : recordsGroup.entrySet()) {
@@ -1191,6 +1200,12 @@ public class Session {
         throw e;
       }
     }
+    long end = System.currentTimeMillis();
+    logger.info(
+        "insert {} rows to {} nodes costs {} ms",
+        deviceIds.size(),
+        recordsGroup.size(),
+        end - start);
     String errMsg = errMsgBuilder.toString();
     if (!errMsg.isEmpty()) {
       throw new StatementExecutionException(errMsg);
