@@ -616,6 +616,11 @@ public abstract class RaftLogManager {
       }
 
       if (needToCompactLog) {
+        logger.error(
+            "Trigger compact:numToReserveForNew:{},sizeToReserveForNew:{},sizeToReserveForConfig:{}",
+            numToReserveForNew,
+            sizeToReserveForNew,
+            minNumOfLogsInMem);
         int numForNew = Math.min(numToReserveForNew, sizeToReserveForNew);
         int sizeToReserveForConfig = minNumOfLogsInMem;
         startTime = Statistic.RAFT_SENDER_COMMIT_DELETE_EXCEEDING_LOGS.getOperationStartTime();
@@ -869,7 +874,7 @@ public abstract class RaftLogManager {
     long compactIndex =
         Math.min(committedEntryManager.getDummyIndex() + removeSize, maxHaveAppliedCommitIndex - 1);
     try {
-      logger.debug(
+      logger.info(
           "{}: Before compaction index {}-{}, compactIndex {}, removeSize {}, committedLogSize "
               + "{}, maxAppliedLog {}",
           name,
@@ -883,7 +888,7 @@ public abstract class RaftLogManager {
       if (ClusterDescriptor.getInstance().getConfig().isEnableRaftLogPersistence()) {
         getStableEntryManager().removeCompactedEntries(compactIndex);
       }
-      logger.debug(
+      logger.info(
           "{}: After compaction index {}-{}, committedLogSize {}",
           name,
           getFirstIndex(),
