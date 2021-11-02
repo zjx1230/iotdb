@@ -24,7 +24,6 @@ import org.apache.iotdb.db.metadata.path.AlignedPath;
 import org.apache.iotdb.db.metadata.path.PartialPath;
 import org.apache.iotdb.db.qp.logical.Operator;
 import org.apache.iotdb.db.qp.strategy.PhysicalGenerator;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.read.expression.IExpression;
 import org.apache.iotdb.tsfile.utils.Pair;
@@ -40,15 +39,12 @@ import java.util.Set;
 public class RawDataQueryPlan extends QueryPlan {
 
   private List<PartialPath> deduplicatedPaths = new ArrayList<>();
-  private List<TSDataType> deduplicatedDataTypes = new ArrayList<>();
   private IExpression expression = null;
   private Map<String, Set<String>> deviceToMeasurements = new HashMap<>();
 
   // TODO: remove this when all types of query supporting vector
   /** used to group all the sub sensors of one vector into VectorPartialPath */
   private List<PartialPath> deduplicatedVectorPaths = new ArrayList<>();
-
-  private List<TSDataType> deduplicatedVectorDataTypes = new ArrayList<>();
 
   public RawDataQueryPlan() {
     super();
@@ -140,18 +136,6 @@ public class RawDataQueryPlan extends QueryPlan {
     this.deduplicatedPaths = deduplicatedPaths;
   }
 
-  public List<TSDataType> getDeduplicatedDataTypes() {
-    return deduplicatedDataTypes;
-  }
-
-  public void addDeduplicatedDataTypes(TSDataType dataType) {
-    this.deduplicatedDataTypes.add(dataType);
-  }
-
-  public void setDeduplicatedDataTypes(List<TSDataType> deduplicatedDataTypes) {
-    this.deduplicatedDataTypes = deduplicatedDataTypes;
-  }
-
   public Set<String> getAllMeasurementsInDevice(String device) {
     return deviceToMeasurements.getOrDefault(device, new HashSet<>());
   }
@@ -173,12 +157,10 @@ public class RawDataQueryPlan extends QueryPlan {
    * the raw query has value filter here.
    */
   public void groupVectorPaths(PhysicalGenerator physicalGenerator) throws MetadataException {
+    // TODO
     List<PartialPath> vectorizedDeduplicatedPaths =
         physicalGenerator.groupVectorPaths(getDeduplicatedPaths());
-    List<TSDataType> vectorizedDeduplicatedDataTypes =
-        new ArrayList<>(physicalGenerator.getSeriesTypes(vectorizedDeduplicatedPaths));
     setDeduplicatedVectorPaths(vectorizedDeduplicatedPaths);
-    setDeduplicatedVectorDataTypes(vectorizedDeduplicatedDataTypes);
   }
 
   public List<PartialPath> getDeduplicatedVectorPaths() {
@@ -189,14 +171,6 @@ public class RawDataQueryPlan extends QueryPlan {
     this.deduplicatedVectorPaths = deduplicatedVectorPaths;
   }
 
-  public List<TSDataType> getDeduplicatedVectorDataTypes() {
-    return deduplicatedVectorDataTypes;
-  }
-
-  public void setDeduplicatedVectorDataTypes(List<TSDataType> deduplicatedVectorDataTypes) {
-    this.deduplicatedVectorDataTypes = deduplicatedVectorDataTypes;
-  }
-
   /**
    * RawQueryWithoutValueFilter should call this method to use grouped vector partial path to
    * replace the previous deduplicatedPaths and deduplicatedDataTypes
@@ -204,7 +178,6 @@ public class RawDataQueryPlan extends QueryPlan {
   public void transformToVector() {
     if (!this.deduplicatedVectorPaths.isEmpty()) {
       this.deduplicatedPaths = this.deduplicatedVectorPaths;
-      this.deduplicatedDataTypes = this.deduplicatedVectorDataTypes;
     }
   }
 }

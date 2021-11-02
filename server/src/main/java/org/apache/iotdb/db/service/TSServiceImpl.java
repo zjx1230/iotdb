@@ -970,6 +970,7 @@ public class TSServiceImpl implements TSIService.Iface {
           } else {
             respColumns.add(resultColumns.get(i).getResultColumnName());
           }
+          // TODO
           seriesTypes.add(getSeriesTypeByPath(paths.get(i)));
         }
         break;
@@ -985,6 +986,7 @@ public class TSServiceImpl implements TSIService.Iface {
         for (ResultColumn resultColumn : resultColumns) {
           respColumns.add(resultColumn.getResultColumnName());
         }
+        // TODO
         seriesTypes = SchemaUtils.getSeriesTypesByPaths(paths, aggregations);
         break;
       case UDTF:
@@ -2184,10 +2186,6 @@ public class TSServiceImpl implements TSIService.Iface {
           "Current system mode is read-only, does not support non-query operation");
     }
     return executor.processNonQuery(plan);
-  }
-
-  protected TSDataType getSeriesTypeByPath(PartialPath path) throws MetadataException {
-    return SchemaUtils.getSeriesTypeByPath(path);
   }
 
   private TSStatus onQueryException(Exception e, String operation) {

@@ -21,6 +21,7 @@ package org.apache.iotdb.db.query.expression.unary;
 
 import org.apache.iotdb.db.exception.query.LogicalOptimizeException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
+import org.apache.iotdb.db.metadata.path.MeasurementPath;
 import org.apache.iotdb.db.metadata.path.PartialPath;
 import org.apache.iotdb.db.qp.physical.crud.UDTFPlan;
 import org.apache.iotdb.db.qp.utils.WildcardsRemover;
@@ -65,7 +66,7 @@ public class TimeSeriesOperand extends Expression {
   @Override
   public void removeWildcards(WildcardsRemover wildcardsRemover, List<Expression> resultExpressions)
       throws LogicalOptimizeException {
-    for (PartialPath actualPath : wildcardsRemover.removeWildcardFrom(path)) {
+    for (MeasurementPath actualPath : wildcardsRemover.removeWildcardFrom(path)) {
       resultExpressions.add(new TimeSeriesOperand(actualPath));
     }
   }

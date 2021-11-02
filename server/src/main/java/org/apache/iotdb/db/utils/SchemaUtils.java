@@ -152,10 +152,6 @@ public class SchemaUtils {
     return measurementDataType;
   }
 
-  public static TSDataType getSeriesTypeByPath(PartialPath path) throws MetadataException {
-    return IoTDB.metaManager.getSeriesType(path);
-  }
-
   public static List<TSDataType> getSeriesTypesByPaths(
       List<PartialPath> paths, List<String> aggregations) throws MetadataException {
     List<TSDataType> tsDataTypes = new ArrayList<>();
@@ -166,6 +162,7 @@ public class SchemaUtils {
         tsDataTypes.add(dataType);
       } else {
         PartialPath path = paths.get(i);
+        // TODO
         tsDataTypes.add(path == null ? null : IoTDB.metaManager.getSeriesType(path));
       }
     }

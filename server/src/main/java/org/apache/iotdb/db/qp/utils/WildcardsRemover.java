@@ -23,6 +23,7 @@ import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.query.LogicalOptimizeException;
 import org.apache.iotdb.db.exception.query.PathNumOverLimitException;
+import org.apache.iotdb.db.metadata.path.MeasurementPath;
 import org.apache.iotdb.db.metadata.path.PartialPath;
 import org.apache.iotdb.db.qp.logical.crud.QueryOperator;
 import org.apache.iotdb.db.qp.strategy.optimizer.ConcatPathOptimizer;
@@ -56,9 +57,10 @@ public class WildcardsRemover {
 
   public WildcardsRemover() {}
 
-  public List<PartialPath> removeWildcardFrom(PartialPath path) throws LogicalOptimizeException {
+  public List<MeasurementPath> removeWildcardFrom(PartialPath path)
+      throws LogicalOptimizeException {
     try {
-      Pair<List<PartialPath>, Integer> pair =
+      Pair<List<MeasurementPath>, Integer> pair =
           IoTDB.metaManager.getMeasurementPathsWithAlias(path, currentLimit, currentOffset);
 
       consumed += pair.right;

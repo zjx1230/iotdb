@@ -22,6 +22,7 @@ import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.query.LogicalOptimizeException;
 import org.apache.iotdb.db.exception.query.PathNumOverLimitException;
 import org.apache.iotdb.db.exception.runtime.SQLParserException;
+import org.apache.iotdb.db.metadata.path.MeasurementPath;
 import org.apache.iotdb.db.metadata.path.PartialPath;
 import org.apache.iotdb.db.qp.constant.FilterConstant.FilterType;
 import org.apache.iotdb.db.qp.constant.SQLConstant;
@@ -151,7 +152,7 @@ public class ConcatPathOptimizer implements ILogicalOptimizer {
   }
 
   private FilterOperator concatFilterAndRemoveWildcards(
-      List<PartialPath> fromPaths, FilterOperator operator, Set<PartialPath> filterPaths)
+      List<PartialPath> fromPaths, FilterOperator operator, Set<MeasurementPath> filterPaths)
       throws LogicalOptimizeException {
     if (!operator.isLeaf()) {
       List<FilterOperator> newFilterList = new ArrayList<>();
@@ -161,17 +162,18 @@ public class ConcatPathOptimizer implements ILogicalOptimizer {
       operator.setChildren(newFilterList);
       return operator;
     }
+    List<PartialPath> concatPaths = new ArrayList<>();
     FunctionOperator functionOperator = (FunctionOperator) operator;
     PartialPath filterPath = functionOperator.getSinglePath();
     // do nothing in the cases of "where time > 5" or "where root.d1.s1 > 5"
-    if (SQLConstant.isReservedPath(filterPath)
-        || filterPath.getFirstNode().startsWith(SQLConstant.ROOT)) {
-      filterPaths.add(filterPath);
+    if (SQLConstant.isReservedPath(filterPath)) {
       return operator;
+    } else if (filterPath.getFirstNode().startsWith(SQLConstant.ROOT)) {
+      concatPaths.add(filterPath);
+    } else {
+      fromPaths.forEach(fromPath -> concatPaths.add(fromPath.concatPath(filterPath)));
     }
-    List<PartialPath> concatPaths = new ArrayList<>();
-    fromPaths.forEach(fromPath -> concatPaths.add(fromPath.concatPath(filterPath)));
-    List<PartialPath> noStarPaths = removeWildcardsInConcatPaths(concatPaths);
+    List<MeasurementPath> noStarPaths = removeWildcardsInConcatPaths(concatPaths);
     filterPaths.addAll(noStarPaths);
     if (noStarPaths.size() == 1) {
       // Transform "select s1 from root.car.* where s1 > 10" to
@@ -232,12 +234,12 @@ public class ConcatPathOptimizer implements ILogicalOptimizer {
     return filterBinaryTree;
   }
 
-  private List<PartialPath> removeWildcardsInConcatPaths(List<PartialPath> originalPaths)
+  private List<MeasurementPath> removeWildcardsInConcatPaths(List<PartialPath> originalPaths)
       throws LogicalOptimizeException {
     HashSet<PartialPath> actualPaths = new HashSet<>();
     try {
       for (PartialPath originalPath : originalPaths) {
-        List<PartialPath> all =
+        List<MeasurementPath> all =
             IoTDB.metaManager.getMeasurementPathsWithAlias(originalPath, 0, 0).left;
         if (all.isEmpty()) {
           throw new LogicalOptimizeException(

@@ -45,6 +45,7 @@ import org.apache.iotdb.db.metadata.mnode.IStorageGroupMNode;
 import org.apache.iotdb.db.metadata.mnode.MeasurementMNode;
 import org.apache.iotdb.db.metadata.mtree.MTree;
 import org.apache.iotdb.db.metadata.path.AlignedPath;
+import org.apache.iotdb.db.metadata.path.MeasurementPath;
 import org.apache.iotdb.db.metadata.path.PartialPath;
 import org.apache.iotdb.db.metadata.tag.TagManager;
 import org.apache.iotdb.db.metadata.template.Template;
@@ -1070,7 +1071,8 @@ public class MManager {
    *
    * @param pathPattern can be a pattern or a full path of timeseries.
    */
-  public List<PartialPath> getMeasurementPaths(PartialPath pathPattern) throws MetadataException {
+  public List<MeasurementPath> getMeasurementPaths(PartialPath pathPattern)
+      throws MetadataException {
     return mtree.getMeasurementPaths(pathPattern);
   }
 
