@@ -28,6 +28,9 @@ import org.apache.iotdb.db.query.reader.series.IAggregateReader;
 import org.apache.iotdb.db.query.reader.series.IReaderByTimestamp;
 import org.apache.iotdb.tsfile.read.reader.IBatchReader;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -36,6 +39,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class ClusterQueryManager {
 
+  private static final Logger logger = LoggerFactory.getLogger(ClusterQueryManager.class);
   private AtomicLong idAtom = new AtomicLong();
   private Map<Node, Map<Long, RemoteQueryContext>> queryContextMap = new ConcurrentHashMap<>();
   private Map<Long, IBatchReader> seriesReaderMap = new ConcurrentHashMap<>();
@@ -46,6 +50,7 @@ public class ClusterQueryManager {
   public synchronized RemoteQueryContext getQueryContext(Node node, long queryId) {
     Map<Long, RemoteQueryContext> nodeContextMap =
         queryContextMap.computeIfAbsent(node, n -> new HashMap<>());
+    logger.warn("regist queryId {} from Node {}", queryId, node);
     return nodeContextMap.computeIfAbsent(
         queryId,
         qId -> new RemoteQueryContext(QueryResourceManager.getInstance().assignQueryId(true)));
@@ -64,6 +69,7 @@ public class ClusterQueryManager {
   }
 
   public synchronized void endQuery(Node node, long queryId) throws StorageEngineException {
+    logger.warn("end queryId {} from Node {}", queryId, node);
     Map<Long, RemoteQueryContext> nodeContextMap = queryContextMap.get(node);
     if (nodeContextMap == null) {
       return;
