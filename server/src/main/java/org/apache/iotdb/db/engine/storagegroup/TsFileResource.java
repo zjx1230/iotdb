@@ -31,7 +31,8 @@ import org.apache.iotdb.db.exception.PartitionViolationException;
 import org.apache.iotdb.db.service.UpgradeSevice;
 import org.apache.iotdb.db.utils.TestOnly;
 import org.apache.iotdb.tsfile.common.constant.TsFileConstant;
-import org.apache.iotdb.tsfile.file.metadata.*;
+import org.apache.iotdb.tsfile.file.metadata.ChunkMetadata;
+import org.apache.iotdb.tsfile.file.metadata.TimeseriesMetadata;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.statistics.Statistics;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
@@ -50,9 +51,21 @@ import java.io.OutputStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Random;
+import java.util.Set;
 
-import static org.apache.iotdb.db.conf.IoTDBConstant.*;
+import static org.apache.iotdb.db.conf.IoTDBConstant.FILE_NAME_SEPARATOR;
+import static org.apache.iotdb.db.conf.IoTDBConstant.FILE_NAME_SUFFIX_INDEX;
+import static org.apache.iotdb.db.conf.IoTDBConstant.FILE_NAME_SUFFIX_MERGECNT_INDEX;
+import static org.apache.iotdb.db.conf.IoTDBConstant.FILE_NAME_SUFFIX_SEPARATOR;
+import static org.apache.iotdb.db.conf.IoTDBConstant.FILE_NAME_SUFFIX_TIME_INDEX;
+import static org.apache.iotdb.db.conf.IoTDBConstant.FILE_NAME_SUFFIX_UNSEQMERGECNT_INDEX;
+import static org.apache.iotdb.db.conf.IoTDBConstant.FILE_NAME_SUFFIX_VERSION_INDEX;
 import static org.apache.iotdb.tsfile.common.constant.TsFileConstant.TSFILE_SUFFIX;
 
 @SuppressWarnings("java:S1135") // ignore todos
@@ -66,6 +79,9 @@ public class TsFileResource {
 
   // tsfile
   private File file;
+
+  private String writeLockHolder;
+  private List<String> readLockHolders = new ArrayList<>();
 
   public static final String RESOURCE_SUFFIX = ".resource";
   static final String TEMP_SUFFIX = ".temp";
@@ -403,12 +419,15 @@ public class TsFileResource {
     return processor;
   }
 
-  public void writeLock() {
+  public void writeLock(String holder) {
     if (originTsFileResource == null) {
       tsFileLock.writeLock();
     } else {
-      originTsFileResource.writeLock();
+      originTsFileResource.writeLock(holder);
     }
+    this.writeLockHolder = holder;
+    logger.warn("write lock stack of {}", holder, new RuntimeException("writeLock"));
+    logger.info("{} get the write lock of {}", holder, this.file);
   }
 
   public void writeUnlock() {
@@ -417,30 +436,41 @@ public class TsFileResource {
     } else {
       originTsFileResource.writeUnlock();
     }
+    writeLockHolder = "";
   }
 
   /**
    * If originTsFileResource is not null, we should acquire the read lock of originTsFileResource
    * before construct the current TsFileResource
    */
-  public void readLock() {
+  public void readLock(String holder) {
     if (originTsFileResource == null) {
       tsFileLock.readLock();
     } else {
-      originTsFileResource.readLock();
+      originTsFileResource.readLock(holder);
     }
+    readLockHolders.add(holder);
+    logger.warn("read lock stack of {}", holder, new RuntimeException("readLock"));
+    logger.info("{} get the read lock of  {}", holder, this.file);
   }
 
-  public void readUnlock() {
+  public void readUnlock(String holder) {
     if (originTsFileResource == null) {
       tsFileLock.readUnlock();
     } else {
-      originTsFileResource.readUnlock();
+      originTsFileResource.readUnlock(holder);
     }
+    readLockHolders.remove(holder);
   }
 
-  public boolean tryWriteLock() {
-    return tsFileLock.tryWriteLock();
+  public boolean tryWriteLock(String holder) {
+    if (tsFileLock.tryWriteLock()) {
+      this.writeLockHolder = holder;
+      logger.info("{} get the write lock of {}", holder, this.file);
+      logger.warn("write lock stack of {}", holder, new RuntimeException("writeLock"));
+      return true;
+    }
+    return false;
   }
 
   void doUpgrade() {

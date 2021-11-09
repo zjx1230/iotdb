@@ -1395,7 +1395,7 @@ public class StorageGroupProcessor {
       resource.setDeleted(true);
 
       // ensure that the file is not used by any queries
-      if (resource.tryWriteLock()) {
+      if (resource.tryWriteLock("checkFileTTL")) {
         try {
           // physical removal
           resource.remove();
@@ -2107,7 +2107,7 @@ public class StorageGroupProcessor {
       return;
     }
     for (TsFileResource resource : resources) {
-      resource.writeLock();
+      resource.writeLock("loadUpgradedResources");
       try {
         UpgradeUtils.moveUpgradedFiles(resource);
         tsFileManagement.addAll(resource.getUpgradedResources(), isseq);
@@ -2429,7 +2429,7 @@ public class StorageGroupProcessor {
       TsFileResource existingTsFile = iterator.next();
       if (newTsFile.isPlanRangeCovers(existingTsFile)
           && !newTsFile.getTsFile().equals(existingTsFile.getTsFile())
-          && existingTsFile.tryWriteLock()) {
+          && existingTsFile.tryWriteLock("removeFullyOverlapFiles")) {
         logger.info(
             "{} is covered by {}: [{}, {}], [{}, {}], remove it",
             existingTsFile,
@@ -2739,7 +2739,7 @@ public class StorageGroupProcessor {
     if (tsFileResourceToBeDeleted == null) {
       return false;
     }
-    tsFileResourceToBeDeleted.writeLock();
+    tsFileResourceToBeDeleted.writeLock("deleteTsfile");
     try {
       tsFileResourceToBeDeleted.remove();
       logger.info("Delete tsfile {} successfully.", tsFileResourceToBeDeleted.getTsFile());
@@ -2793,7 +2793,7 @@ public class StorageGroupProcessor {
     if (tsFileResourceToBeMoved == null) {
       return false;
     }
-    tsFileResourceToBeMoved.writeLock();
+    tsFileResourceToBeMoved.writeLock("moveTsfile");
     try {
       tsFileResourceToBeMoved.moveTo(targetDir);
       logger.info(

@@ -322,7 +322,7 @@ public abstract class TsFileManagement {
     boolean fileLockGot;
     boolean compactionLockGot;
     while (true) {
-      fileLockGot = seqFile.tryWriteLock();
+      fileLockGot = seqFile.tryWriteLock("doubleWriteLock");
       compactionLockGot = tryWriteLock();
 
       if (fileLockGot && compactionLockGot) {
@@ -359,7 +359,7 @@ public abstract class TsFileManagement {
     }
 
     for (TsFileResource unseqFile : unseqFiles) {
-      unseqFile.writeLock();
+      unseqFile.writeLock("removeUnseqFiles");
       try {
         unseqFile.remove();
       } finally {

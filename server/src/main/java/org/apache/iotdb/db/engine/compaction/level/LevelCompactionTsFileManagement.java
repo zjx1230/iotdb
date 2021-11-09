@@ -151,7 +151,7 @@ public class LevelCompactionTsFileManagement extends TsFileManagement {
   }
 
   private void deleteLevelFile(TsFileResource seqFile) {
-    seqFile.writeLock();
+    seqFile.writeLock("deleteLevelFile");
     try {
       ChunkCache.getInstance().clear();
       TimeSeriesMetadataCache.getInstance().clear();
