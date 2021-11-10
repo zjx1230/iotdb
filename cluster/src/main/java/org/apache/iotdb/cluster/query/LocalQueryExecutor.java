@@ -756,7 +756,7 @@ public class LocalQueryExecutor {
       timeFilter = FilterFactory.deserialize(request.timeFilterBytes);
     }
     long queryId = request.getQueryId();
-    logger.debug(
+    logger.warn(
         "{}: {} is querying {} using group by, queryId: {}",
         name,
         request.getRequestor(),

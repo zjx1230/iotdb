@@ -461,6 +461,8 @@ public class TsFileResource {
       originTsFileResource.readUnlock(holder);
     }
     readLockHolders.remove(holder);
+    logger.warn("read unlock stack of {}", holder, new RuntimeException("readLock"));
+    logger.info("{} release the read lock of  {}", holder, this.file);
   }
 
   public boolean tryWriteLock(String holder) {

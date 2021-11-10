@@ -69,17 +69,20 @@ public class ClusterQueryManager {
   }
 
   public synchronized void endQuery(Node node, long queryId) throws StorageEngineException {
-    logger.warn("end queryId {} from Node {}", queryId, node);
+    logger.warn("end queryId before {} from Node {}", queryId, node);
     Map<Long, RemoteQueryContext> nodeContextMap = queryContextMap.get(node);
     if (nodeContextMap == null) {
+      logger.error("nodeContextMap is null queryId {} from Node {}", queryId, node);
       return;
     }
     RemoteQueryContext remoteQueryContext = nodeContextMap.remove(queryId);
     if (remoteQueryContext == null) {
+      logger.error("remoteQueryContext is null queryId {} from Node {}", queryId, node);
       return;
     }
     // release file resources
     QueryResourceManager.getInstance().endQuery(remoteQueryContext.getQueryId());
+    logger.warn("end queryId after {} from Node {}", queryId, node);
 
     // remove the readers from the cache
     Set<Long> readerIds = remoteQueryContext.getLocalReaderIds();
