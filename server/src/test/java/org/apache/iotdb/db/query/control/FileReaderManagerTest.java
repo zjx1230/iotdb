@@ -88,7 +88,7 @@ public class FileReaderManagerTest {
                 }
                 for (int i = 1; i <= 6; i++) {
                   TsFileResource tsFile = tsFileResources[i];
-                  manager.decreaseFileReaderReference(tsFile, false);
+                  manager.decreaseFileReaderReference(tsFile, false, 1L);
                 }
 
               } catch (IOException e) {
@@ -111,7 +111,7 @@ public class FileReaderManagerTest {
                 }
                 for (int i = 4; i <= MAX_FILE_SIZE; i++) {
                   TsFileResource tsFile = tsFileResources[i];
-                  manager.decreaseFileReaderReference(tsFile, false);
+                  manager.decreaseFileReaderReference(tsFile, false, 2L);
                 }
 
               } catch (IOException e) {

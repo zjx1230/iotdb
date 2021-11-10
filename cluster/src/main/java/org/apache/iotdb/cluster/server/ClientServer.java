@@ -292,7 +292,7 @@ public class ClientServer extends TSServiceImpl {
   protected QueryContext genQueryContext(long queryId, boolean debug) {
     RemoteQueryContext context = new RemoteQueryContext(queryId, debug);
     queryContextMap.put(queryId, context);
-    logger.warn("regist queryid {}", queryId);
+    logger.warn("regist remote queryid {}", queryId);
     return context;
   }
 
@@ -309,7 +309,7 @@ public class ClientServer extends TSServiceImpl {
     // release resources remotely
     RemoteQueryContext context = queryContextMap.remove(queryId);
     if (context != null) {
-      logger.warn("release queryid {}", queryId);
+      logger.warn("release remote queryid {}", queryId);
       // release the resources in every queried node
       for (Entry<Node, Set<Node>> headerEntry : context.getQueriedNodesMap().entrySet()) {
         Node header = headerEntry.getKey();
@@ -341,6 +341,8 @@ public class ClientServer extends TSServiceImpl {
           }
         }
       }
+    } else {
+      logger.warn("release remote queryid null {}", queryId);
     }
   }
 }

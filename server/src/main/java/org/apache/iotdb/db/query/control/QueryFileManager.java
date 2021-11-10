@@ -77,7 +77,8 @@ public class QueryFileManager {
             !isClosed ? unsealedFilePathsMap : sealedFilePathsMap;
         // This resource may be removed by other threads of this query.
         if (pathMap.get(queryId).remove(tsFileResource)) {
-          FileReaderManager.getInstance().decreaseFileReaderReference(tsFileResource, isClosed);
+          FileReaderManager.getInstance()
+              .decreaseFileReaderReference(tsFileResource, isClosed, queryId);
         }
         iterator.remove();
       }
@@ -94,7 +95,7 @@ public class QueryFileManager {
         queryId,
         (k, v) -> {
           for (TsFileResource tsFile : v) {
-            FileReaderManager.getInstance().decreaseFileReaderReference(tsFile, true);
+            FileReaderManager.getInstance().decreaseFileReaderReference(tsFile, true, queryId);
           }
           return null;
         });
@@ -102,7 +103,7 @@ public class QueryFileManager {
         queryId,
         (k, v) -> {
           for (TsFileResource tsFile : v) {
-            FileReaderManager.getInstance().decreaseFileReaderReference(tsFile, false);
+            FileReaderManager.getInstance().decreaseFileReaderReference(tsFile, false, queryId);
           }
           return null;
         });
@@ -119,7 +120,7 @@ public class QueryFileManager {
     // TODO this is not an atomic operation, is there concurrent problem?
     if (!pathMap.get(queryId).contains(tsFile)) {
       pathMap.get(queryId).add(tsFile);
-      FileReaderManager.getInstance().increaseFileReaderReference(tsFile, isClosed);
+      FileReaderManager.getInstance().increaseFileReaderReference(tsFile, isClosed, queryId);
     }
   }
 }

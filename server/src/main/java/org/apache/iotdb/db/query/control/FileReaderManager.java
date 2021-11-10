@@ -32,12 +32,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * FileReaderManager is a singleton, which is used to manage all file readers(opened file streams)
@@ -66,12 +67,12 @@ public class FileReaderManager implements IService {
    * the key of closedFileReaderMap is the file path and the value of closedFileReaderMap is the
    * file's reference count.
    */
-  private Map<String, AtomicInteger> closedReferenceMap;
+  private Map<String, Set<Long>> closedReferenceMap;
   /**
    * the key of unclosedFileReaderMap is the file path and the value of unclosedFileReaderMap is the
    * file's reference count.
    */
-  private Map<String, AtomicInteger> unclosedReferenceMap;
+  private Map<String, Set<Long>> unclosedReferenceMap;
 
   private ScheduledExecutorService executorService;
 
@@ -119,14 +120,14 @@ public class FileReaderManager implements IService {
   }
 
   private void clearMap(
-      Map<String, TsFileSequenceReader> readerMap, Map<String, AtomicInteger> refMap) {
+      Map<String, TsFileSequenceReader> readerMap, Map<String, Set<Long>> refMap) {
     Iterator<Map.Entry<String, TsFileSequenceReader>> iterator = readerMap.entrySet().iterator();
     while (iterator.hasNext()) {
       Map.Entry<String, TsFileSequenceReader> entry = iterator.next();
       TsFileSequenceReader reader = entry.getValue();
-      AtomicInteger refAtom = refMap.get(entry.getKey());
+      Set<Long> refAtom = refMap.get(entry.getKey());
 
-      if (refAtom != null && refAtom.get() == 0) {
+      if (refAtom != null && refAtom.size() == 0) {
         try {
           reader.close();
         } catch (IOException e) {
@@ -191,17 +192,17 @@ public class FileReaderManager implements IService {
    * Increase the reference count of the reader specified by filePath. Only when the reference count
    * of a reader equals zero, the reader can be closed and removed.
    */
-  void increaseFileReaderReference(TsFileResource tsFile, boolean isClosed) {
+  void increaseFileReaderReference(TsFileResource tsFile, boolean isClosed, long queryId) {
     tsFile.readLock("fileReaderReference");
     synchronized (this) {
       if (!isClosed) {
         unclosedReferenceMap
-            .computeIfAbsent(tsFile.getTsFilePath(), k -> new AtomicInteger())
-            .getAndIncrement();
+            .computeIfAbsent(tsFile.getTsFilePath(), k -> new HashSet<>())
+            .add(queryId);
       } else {
         closedReferenceMap
-            .computeIfAbsent(tsFile.getTsFilePath(), k -> new AtomicInteger())
-            .getAndIncrement();
+            .computeIfAbsent(tsFile.getTsFilePath(), k -> new HashSet<>())
+            .add(queryId);
       }
     }
   }
@@ -210,12 +211,12 @@ public class FileReaderManager implements IService {
    * Decrease the reference count of the reader specified by filePath. This method is latch-free.
    * Only when the reference count of a reader equals zero, the reader can be closed and removed.
    */
-  void decreaseFileReaderReference(TsFileResource tsFile, boolean isClosed) {
+  void decreaseFileReaderReference(TsFileResource tsFile, boolean isClosed, long queryId) {
     synchronized (this) {
       if (!isClosed && unclosedReferenceMap.containsKey(tsFile.getTsFilePath())) {
-        unclosedReferenceMap.get(tsFile.getTsFilePath()).decrementAndGet();
+        unclosedReferenceMap.get(tsFile.getTsFilePath()).remove(queryId);
       } else if (closedReferenceMap.containsKey(tsFile.getTsFilePath())) {
-        closedReferenceMap.get(tsFile.getTsFilePath()).decrementAndGet();
+        closedReferenceMap.get(tsFile.getTsFilePath()).remove(queryId);
       }
     }
     tsFile.readUnlock("fileReaderReference");

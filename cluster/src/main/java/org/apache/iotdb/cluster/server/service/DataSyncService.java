@@ -196,7 +196,10 @@ public class DataSyncService extends BaseSyncService implements TSDataService.If
   @Override
   public long querySingleSeries(SingleSeriesQueryRequest request) throws TException {
     try {
-      return dataGroupMember.getLocalQueryExecutor().querySingleSeries(request);
+      long result = dataGroupMember.getLocalQueryExecutor().querySingleSeries(request);
+      logger.error(
+          "querySingleSeriesByTimestamp: queryId: {}, readerId: {}", request.getQueryId(), result);
+      return result;
     } catch (Exception e) {
       throw new TException(e);
     }
@@ -214,7 +217,10 @@ public class DataSyncService extends BaseSyncService implements TSDataService.If
   @Override
   public long querySingleSeriesByTimestamp(SingleSeriesQueryRequest request) throws TException {
     try {
-      return dataGroupMember.getLocalQueryExecutor().querySingleSeriesByTimestamp(request);
+      long result = dataGroupMember.getLocalQueryExecutor().querySingleSeriesByTimestamp(request);
+      logger.error(
+          "querySingleSeriesByTimestamp: queryId: {}, readerId: {}", request.getQueryId(), result);
+      return result;
     } catch (Exception e) {
       throw new TException(e);
     }
