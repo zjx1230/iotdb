@@ -504,7 +504,7 @@ public class LocalQueryExecutor {
           readerId);
       return readerId;
     } else {
-      logger.debug(
+      logger.warn(
           "{}: There is no data {} for {}#{}",
           name,
           path,

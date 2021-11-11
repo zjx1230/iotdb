@@ -19,15 +19,17 @@
 
 package org.apache.iotdb.udf;
 
+import org.apache.iotdb.db.query.control.FileReaderManager;
 import org.apache.iotdb.db.query.udf.api.UDTF;
-import org.apache.iotdb.db.query.udf.api.access.Row;
 import org.apache.iotdb.db.query.udf.api.collector.PointCollector;
 import org.apache.iotdb.db.query.udf.api.customizer.config.UDTFConfigurations;
 import org.apache.iotdb.db.query.udf.api.customizer.parameter.UDFParameters;
 import org.apache.iotdb.db.query.udf.api.customizer.strategy.RowByRowAccessStrategy;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 
-import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.Map;
+import java.util.Set;
 
 /** This is an internal example of the UDTF implementation. */
 public class UDTFExample implements UDTF {
@@ -47,11 +49,21 @@ public class UDTFExample implements UDTF {
   public void beforeStart(UDFParameters parameters, UDTFConfigurations configurations) {
     configurations
         .setAccessStrategy(new RowByRowAccessStrategy())
-        .setOutputDataType(TSDataType.INT32);
+        .setOutputDataType(TSDataType.TEXT);
   }
 
   @Override
-  public void transform(Row row, PointCollector collector) throws IOException {
-    collector.putInt(row.getTime(), -row.getInt(0));
+  public void terminate(PointCollector collector) throws Exception {
+    int i = 0;
+    FileReaderManager manager = FileReaderManager.getInstance();
+    Class managerClass = manager.getClass();
+    Field readerMapField = managerClass.getDeclaredField("closedReferenceMap");
+    readerMapField.setAccessible(true);
+    Map<String, Set<Long>> readerMap = (Map) readerMapField.get(manager);
+    for (Map.Entry<String, Set<Long>> entry : readerMap.entrySet()) {
+      if (entry.getValue().size() != 0) {
+        collector.putString(i++, entry.getKey() + " _ " + entry.getValue().toString());
+      }
+    }
   }
 }
