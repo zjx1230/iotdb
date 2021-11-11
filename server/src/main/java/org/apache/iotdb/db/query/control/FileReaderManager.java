@@ -193,7 +193,7 @@ public class FileReaderManager implements IService {
    * of a reader equals zero, the reader can be closed and removed.
    */
   void increaseFileReaderReference(TsFileResource tsFile, boolean isClosed, long queryId) {
-    tsFile.readLock("fileReaderReference");
+    tsFile.readLockQueryId("fileReaderReference", queryId);
     synchronized (this) {
       if (!isClosed) {
         unclosedReferenceMap
@@ -219,7 +219,7 @@ public class FileReaderManager implements IService {
         closedReferenceMap.get(tsFile.getTsFilePath()).remove(queryId);
       }
     }
-    tsFile.readUnlock("fileReaderReference");
+    tsFile.readUnlockQueryId("fileReaderReference", queryId);
   }
 
   /**

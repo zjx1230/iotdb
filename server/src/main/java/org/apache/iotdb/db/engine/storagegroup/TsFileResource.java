@@ -450,8 +450,22 @@ public class TsFileResource {
       originTsFileResource.readLock(holder);
     }
     readLockHolders.add(holder);
-    logger.warn("read lock stack of {}", holder, new RuntimeException("readLock"));
-    logger.info("{} get the read lock of  {}", holder, this.file);
+    logger.warn("read lock stack of {}, {}", holder, this.file, new RuntimeException("readLock"));
+  }
+
+  public void readLockQueryId(String holder, long queryId) {
+    if (originTsFileResource == null) {
+      tsFileLock.readLock();
+    } else {
+      originTsFileResource.readLockQueryId(holder, queryId);
+    }
+    readLockHolders.add(holder);
+    logger.warn(
+        "read lock stack of {},{},{},",
+        holder,
+        queryId,
+        this.file,
+        new RuntimeException("readLock"));
   }
 
   public void readUnlock(String holder) {
@@ -461,8 +475,23 @@ public class TsFileResource {
       originTsFileResource.readUnlock(holder);
     }
     readLockHolders.remove(holder);
-    logger.warn("read unlock stack of {}", holder, new RuntimeException("readLock"));
-    logger.info("{} release the read lock of  {}", holder, this.file);
+    logger.warn(
+        "read unlock stack of {}, {}", holder, this.file, new RuntimeException("readUnLock"));
+  }
+
+  public void readUnlockQueryId(String holder, long queryId) {
+    if (originTsFileResource == null) {
+      tsFileLock.readUnlock();
+    } else {
+      originTsFileResource.readUnlockQueryId(holder, queryId);
+    }
+    readLockHolders.remove(holder);
+    logger.warn(
+        "read unlock stack of {},{},{},",
+        holder,
+        queryId,
+        this.file,
+        new RuntimeException("readUnLock"));
   }
 
   public boolean tryWriteLock(String holder) {
