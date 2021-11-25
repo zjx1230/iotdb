@@ -87,6 +87,7 @@ public class UDTFExecutor {
     try {
       udtf.transform(rowWindow, collector);
     } catch (Exception e) {
+      e.printStackTrace();
       onError("transform(RowWindow, PointCollector)", e);
     }
   }

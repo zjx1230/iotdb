@@ -157,6 +157,7 @@ public class RawQueryInputLayer {
       cachedRowRecord = null;
 
       safetyPile.moveForwardTo(currentRowIndex + 1);
+      updateRowRecordListEvictionUpperBound();
     }
 
     @Override

@@ -71,13 +71,16 @@ public class SessionExample {
     //    createMultiTimeseries();
     //    insertRecord();
     //    long start = System.currentTimeMillis();
-    //    insertTablet();
+    insertTablet();
     //    System.out.println(System.currentTimeMillis() - start);
     //    insertTabletWithNullValues();
     //    insertTablets();
     //    insertRecords();
     //    selectInto();
     //    createAndDropContinuousQueries();
+
+    //    session.executeNonQueryStatement("flush");
+
     //    nonQuery();
     //    query();
     //    queryWithTimeout();
@@ -120,6 +123,26 @@ public class SessionExample {
     // root.ss2.d1.s2, root.ss3.d1.s3 from root.sg1.d1 where time>=2021-11-25T09:22:35.999+08:00 and
     // time <= 2021-12-26T23:09:15.989+08:00"
     session.close();
+  }
+
+  private static void query() throws IoTDBConnectionException, StatementExecutionException {
+    //    long s = System.currentTimeMillis();
+    //    SessionDataSet dataSet = session.executeQueryStatement("select s1, s2, s3 from
+    // root.sg1.d1");
+    //    while (dataSet.hasNext()) {
+    //      dataSet.next();
+    //    }
+    //    dataSet.close();
+    //    System.out.println(System.currentTimeMillis() - s);
+
+    //    long s = System.currentTimeMillis();
+    //    SessionDataSet dataSet =
+    //        session.executeQueryStatement("select en(s1), en(s2), en(s3) from root.sg1.d1");
+    //    while (dataSet.hasNext()) {
+    //      dataSet.next();
+    //    }
+    //    dataSet.close();
+    //    System.out.println(System.currentTimeMillis() - s);
   }
 
   private static void createAndDropContinuousQueries()
@@ -391,20 +414,21 @@ public class SessionExample {
     // The schema of measurements of one device
     // only measurementId and data type in MeasurementSchema take effects in Tablet
     List<IMeasurementSchema> schemaList = new ArrayList<>();
-    schemaList.add(new UnaryMeasurementSchema("s1", TSDataType.INT64));
-    schemaList.add(new UnaryMeasurementSchema("s2", TSDataType.INT64));
-    schemaList.add(new UnaryMeasurementSchema("s3", TSDataType.INT64));
+    schemaList.add(new UnaryMeasurementSchema("s1", TSDataType.DOUBLE));
+    schemaList.add(new UnaryMeasurementSchema("s2", TSDataType.DOUBLE));
+    schemaList.add(new UnaryMeasurementSchema("s3", TSDataType.DOUBLE));
 
     Tablet tablet = new Tablet(ROOT_SG1_D1, schemaList, 100);
 
     // Method 1 to add tablet data
     long timestamp = System.currentTimeMillis();
 
+    //    for (long row = 0; row < 2_5920_0000; row++) {
     for (long row = 0; row < 2_5920_0000; row++) {
       int rowIndex = tablet.rowSize++;
       tablet.addTimestamp(rowIndex, timestamp);
       for (int s = 0; s < 3; s++) {
-        long value = new Random().nextLong();
+        double value = new Random().nextDouble();
         tablet.addValue(schemaList.get(s).getMeasurementId(), rowIndex, value);
       }
       if (tablet.rowSize == tablet.getMaxRowNumber()) {
