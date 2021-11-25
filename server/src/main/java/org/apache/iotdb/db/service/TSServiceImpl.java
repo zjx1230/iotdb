@@ -52,9 +52,9 @@ import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
 import org.apache.iotdb.db.qp.physical.crud.LastQueryPlan;
 import org.apache.iotdb.db.qp.physical.crud.MeasurementInfo;
 import org.apache.iotdb.db.qp.physical.crud.QueryPlan;
+import org.apache.iotdb.db.qp.physical.crud.RawDataQueryPlan;
 import org.apache.iotdb.db.qp.physical.crud.SelectIntoPlan;
 import org.apache.iotdb.db.qp.physical.crud.UDFPlan;
-import org.apache.iotdb.db.qp.physical.crud.UDTFPlan;
 import org.apache.iotdb.db.qp.physical.sys.AppendTemplatePlan;
 import org.apache.iotdb.db.qp.physical.sys.AuthorPlan;
 import org.apache.iotdb.db.qp.physical.sys.CreateAlignedTimeSeriesPlan;
@@ -142,6 +142,11 @@ import org.apache.iotdb.tsfile.read.filter.operator.Lt;
 import org.apache.iotdb.tsfile.read.filter.operator.LtEq;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 
+import com.google.common.primitives.Bytes;
+import org.apache.thrift.TException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.sql.SQLException;
@@ -159,11 +164,6 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveTask;
 import java.util.stream.Collectors;
-
-import com.google.common.primitives.Bytes;
-import org.apache.thrift.TException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static org.apache.iotdb.db.utils.ErrorHandlingUtils.onIoTDBException;
 import static org.apache.iotdb.db.utils.ErrorHandlingUtils.onNPEOrUnexpectedException;
@@ -186,6 +186,9 @@ public class TSServiceImpl extends BasicServiceProvider implements TSIService.If
   private static final List<SqlArgument> sqlArgumentList = new ArrayList<>(MAX_SIZE);
 
   private long startTime = -1L;
+
+  private ForkJoinPool forkJoinPool =
+      new ForkJoinPool(Runtime.getRuntime().availableProcessors() << 1);
 
   public TSServiceImpl() throws QueryProcessException {
     super();
@@ -956,7 +959,13 @@ public class TSServiceImpl extends BasicServiceProvider implements TSIService.If
     //            .equalsIgnoreCase("en")
     ) {
       return executeSelectIntoStatementXianyi(
-          (UDTFPlan) queryPlan, this, statement, statementId, timeout, fetchSize, sessionId);
+          (RawDataQueryPlan) queryPlan,
+          this,
+          statement,
+          statementId,
+          timeout,
+          fetchSize,
+          sessionId);
     }
 
     final long startTime = System.currentTimeMillis();
@@ -987,19 +996,19 @@ public class TSServiceImpl extends BasicServiceProvider implements TSIService.If
   }
 
   boolean shouldSplit(QueryPlan queryPlan) {
-    if (!(queryPlan instanceof UDTFPlan)) {
+    if (!(queryPlan instanceof RawDataQueryPlan)) {
       return false;
     }
+    //
+    //    if (!queryPlan
+    //        .getResultColumns()
+    //        .get(0)
+    //        .getExpression()
+    //        .isTimeSeriesGeneratingFunctionExpression()) {
+    //      return false;
+    //    }
 
-    if (!queryPlan
-        .getResultColumns()
-        .get(0)
-        .getExpression()
-        .isTimeSeriesGeneratingFunctionExpression()) {
-      return false;
-    }
-
-    UDTFPlan udtfPlan = (UDTFPlan) queryPlan;
+    RawDataQueryPlan udtfPlan = (RawDataQueryPlan) queryPlan;
     IExpression iExpression = udtfPlan.getExpression();
     if (iExpression instanceof GlobalTimeExpression) {
       GlobalTimeExpression globalTimeExpression = (GlobalTimeExpression) iExpression;
@@ -1039,14 +1048,13 @@ public class TSServiceImpl extends BasicServiceProvider implements TSIService.If
   }
 
   private TSExecuteStatementResp executeSelectIntoStatementXianyi(
-      UDTFPlan udtfPlan,
+      RawDataQueryPlan udtfPlan,
       TSServiceImpl tsService,
       String statement,
       long statementId,
       long timeout,
       int fetchSize,
       long sessionId) {
-    ForkJoinPool forkJoinPool = new ForkJoinPool(Runtime.getRuntime().availableProcessors() << 1);
     List<ForkJoinTask<Void>> futures = new ArrayList<>();
     int id = 0;
     for (String subStatement : split(udtfPlan, statement)) {
@@ -1058,11 +1066,10 @@ public class TSServiceImpl extends BasicServiceProvider implements TSIService.If
     for (ForkJoinTask<Void> v : futures) {
       v.join();
     }
-    forkJoinPool.shutdown();
     return RpcUtils.getTSExecuteStatementResp(TSStatusCode.SUCCESS_STATUS);
   }
 
-  private List<String> split(UDTFPlan udtfPlan, String statement) {
+  private List<String> split(RawDataQueryPlan udtfPlan, String statement) {
     List<String> statements = new ArrayList<>();
 
     String prefix = statement.split("where")[0] + " where ";
@@ -1156,7 +1163,7 @@ public class TSServiceImpl extends BasicServiceProvider implements TSIService.If
         long sessionId,
         String statement,
         int taskId) {
-      LOGGER.info("InsertTabletPlanTask: {}", taskId);
+      LOGGER.info("InsertTabletPlanTask: {}-{}", statement, taskId);
       this.tsService = tsService;
       this.statementId = statementId;
       this.timeout = timeout;

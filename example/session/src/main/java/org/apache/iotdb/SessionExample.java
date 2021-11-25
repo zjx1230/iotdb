@@ -22,8 +22,6 @@ package org.apache.iotdb;
 import org.apache.iotdb.rpc.IoTDBConnectionException;
 import org.apache.iotdb.rpc.StatementExecutionException;
 import org.apache.iotdb.session.Session;
-import org.apache.iotdb.session.SessionDataSet;
-import org.apache.iotdb.session.SessionDataSet.DataIterator;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
@@ -58,12 +56,6 @@ public class SessionExample {
         new Session.Builder().host(LOCAL_HOST).port(6667).username("root").password("root").build();
     session.open(false);
 
-    long start = System.currentTimeMillis();
-    session.executeNonQueryStatement(
-        "select s1,s2,s3 into root.sg2.d1.s1,root.sg2.d1.s2,root.sg2.d1.s3"
-            + " from root.sg1.d1 where time>=2021-11-25T09:22:35.999+08:00 and time <= 2021-12-06T23:09:15.989+08:00");
-    System.out.println(System.currentTimeMillis() - start);
-
     //    try {
     //      session.setStorageGroup("root.sg1");
     //    } catch (StatementExecutionException e) {
@@ -76,7 +68,9 @@ public class SessionExample {
     //    createTimeseries();
     //    createMultiTimeseries();
     //    insertRecord();
-    //    insertTablet();
+    long start = System.currentTimeMillis();
+    insertTablet();
+    System.out.println(System.currentTimeMillis() - start);
     //    insertTabletWithNullValues();
     //    insertTablets();
     //    insertRecords();
@@ -102,6 +96,19 @@ public class SessionExample {
     //    insertRecord4Redirect();
     //    query4Redirect();
     //    sessionEnableRedirect.close();
+
+    start = System.currentTimeMillis();
+    session.executeNonQueryStatement(
+        "select s1,s2,s3 into root.sg2.d1.s1,root.sg2.d1.s2,root.sg2.d1.s3"
+            + " from root.sg1.d1 where time>=2021-11-25T09:22:35.999+08:00 and time <= 2021-12-26T23:09:15.989+08:00");
+    System.out.println(System.currentTimeMillis() - start);
+
+    start = System.currentTimeMillis();
+    session.executeNonQueryStatement(
+        "select sin(s1),sin(s2),sin(s3) into root.sg3.d1.s1,root.sg3.d1.s2,root.sg3.d1.s3"
+            + " from root.sg1.d1 where time>=2021-11-25T09:22:35.999+08:00 and time <= 2021-12-26T23:09:15.989+08:00");
+    System.out.println(System.currentTimeMillis() - start);
+
     session.close();
   }
 
@@ -395,7 +402,7 @@ public class SessionExample {
     // Method 1 to add tablet data
     long timestamp = System.currentTimeMillis();
 
-    for (long row = 0; row < 1_0000_0000; row++) {
+    for (long row = 0; row < 2_5920_0000; row++) {
       int rowIndex = tablet.rowSize++;
       tablet.addTimestamp(rowIndex, timestamp);
       for (int s = 0; s < 3; s++) {
@@ -584,19 +591,6 @@ public class SessionExample {
     }
   }
 
-  private static void selectInto() throws IoTDBConnectionException, StatementExecutionException {
-    session.executeNonQueryStatement(
-        "select s1, s2, s3 into into_s1, into_s2, into_s3 from root.sg1.d1");
-
-    try (SessionDataSet dataSet =
-        session.executeQueryStatement("select into_s1, into_s2, into_s3 from root.sg1.d1")) {
-      System.out.println(dataSet.getColumnNames());
-      while (dataSet.hasNext()) {
-        System.out.println(dataSet.next());
-      }
-    }
-  }
-
   private static void deleteData() throws IoTDBConnectionException, StatementExecutionException {
     String path = ROOT_SG1_D1_S1;
     long deleteTime = 99;
@@ -610,162 +604,6 @@ public class SessionExample {
     paths.add(ROOT_SG1_D1_S2);
     paths.add(ROOT_SG1_D1_S3);
     session.deleteTimeseries(paths);
-  }
-
-  private static void query() throws IoTDBConnectionException, StatementExecutionException {
-    try (SessionDataSet dataSet = session.executeQueryStatement("select * from root.sg1.d1")) {
-      System.out.println(dataSet.getColumnNames());
-      dataSet.setFetchSize(1024); // default is 10000
-      while (dataSet.hasNext()) {
-        System.out.println(dataSet.next());
-      }
-    }
-  }
-
-  private static void query4Redirect()
-      throws IoTDBConnectionException, StatementExecutionException {
-    String selectPrefix = "select * from root.redirect";
-    for (int i = 0; i < 6; i++) {
-      try (SessionDataSet dataSet =
-          sessionEnableRedirect.executeQueryStatement(selectPrefix + i + ".d1")) {
-
-        System.out.println(dataSet.getColumnNames());
-        dataSet.setFetchSize(1024); // default is 10000
-        while (dataSet.hasNext()) {
-          System.out.println(dataSet.next());
-        }
-      }
-    }
-
-    for (int i = 0; i < 6; i++) {
-      try (SessionDataSet dataSet =
-          sessionEnableRedirect.executeQueryStatement(
-              selectPrefix + i + ".d1 where time >= 1 and time < 10")) {
-
-        System.out.println(dataSet.getColumnNames());
-        dataSet.setFetchSize(1024); // default is 10000
-        while (dataSet.hasNext()) {
-          System.out.println(dataSet.next());
-        }
-      }
-    }
-
-    for (int i = 0; i < 6; i++) {
-      try (SessionDataSet dataSet =
-          sessionEnableRedirect.executeQueryStatement(
-              selectPrefix + i + ".d1 where time >= 1 and time < 10 align by device")) {
-
-        System.out.println(dataSet.getColumnNames());
-        dataSet.setFetchSize(1024); // default is 10000
-        while (dataSet.hasNext()) {
-          System.out.println(dataSet.next());
-        }
-      }
-    }
-
-    for (int i = 0; i < 6; i++) {
-      try (SessionDataSet dataSet =
-          sessionEnableRedirect.executeQueryStatement(
-              selectPrefix
-                  + i
-                  + ".d1 where time >= 1 and time < 10 and root.redirect"
-                  + i
-                  + ".d1.s1 > 1")) {
-        System.out.println(dataSet.getColumnNames());
-        dataSet.setFetchSize(1024); // default is 10000
-        while (dataSet.hasNext()) {
-          System.out.println(dataSet.next());
-        }
-      }
-    }
-  }
-
-  private static void queryWithTimeout()
-      throws IoTDBConnectionException, StatementExecutionException {
-    try (SessionDataSet dataSet =
-        session.executeQueryStatement("select * from root.sg1.d1", 2000)) {
-      System.out.println(dataSet.getColumnNames());
-      dataSet.setFetchSize(1024); // default is 10000
-      while (dataSet.hasNext()) {
-        System.out.println(dataSet.next());
-      }
-    }
-  }
-
-  private static void rawDataQuery() throws IoTDBConnectionException, StatementExecutionException {
-    List<String> paths = new ArrayList<>();
-    paths.add(ROOT_SG1_D1_S1);
-    paths.add(ROOT_SG1_D1_S2);
-    paths.add(ROOT_SG1_D1_S3);
-    long startTime = 10L;
-    long endTime = 200L;
-
-    try (SessionDataSet dataSet = session.executeRawDataQuery(paths, startTime, endTime)) {
-
-      System.out.println(dataSet.getColumnNames());
-      dataSet.setFetchSize(1024);
-      while (dataSet.hasNext()) {
-        System.out.println(dataSet.next());
-      }
-    }
-  }
-
-  private static void lastDataQuery() throws IoTDBConnectionException, StatementExecutionException {
-    List<String> paths = new ArrayList<>();
-    paths.add(ROOT_SG1_D1_S1);
-    paths.add(ROOT_SG1_D1_S2);
-    paths.add(ROOT_SG1_D1_S3);
-    try (SessionDataSet sessionDataSet = session.executeLastDataQuery(paths, 3)) {
-      System.out.println(sessionDataSet.getColumnNames());
-      sessionDataSet.setFetchSize(1024);
-      while (sessionDataSet.hasNext()) {
-        System.out.println(sessionDataSet.next());
-      }
-    }
-  }
-
-  private static void queryByIterator()
-      throws IoTDBConnectionException, StatementExecutionException {
-    try (SessionDataSet dataSet = session.executeQueryStatement("select * from root.sg1.d1")) {
-
-      DataIterator iterator = dataSet.iterator();
-      System.out.println(dataSet.getColumnNames());
-      dataSet.setFetchSize(1024); // default is 10000
-      while (iterator.next()) {
-        StringBuilder builder = new StringBuilder();
-        // get time
-        builder.append(iterator.getLong(1)).append(",");
-        // get second column
-        if (!iterator.isNull(2)) {
-          builder.append(iterator.getLong(2)).append(",");
-        } else {
-          builder.append("null").append(",");
-        }
-
-        // get third column
-        if (!iterator.isNull(ROOT_SG1_D1_S2)) {
-          builder.append(iterator.getLong(ROOT_SG1_D1_S2)).append(",");
-        } else {
-          builder.append("null").append(",");
-        }
-
-        // get forth column
-        if (!iterator.isNull(4)) {
-          builder.append(iterator.getLong(4)).append(",");
-        } else {
-          builder.append("null").append(",");
-        }
-
-        // get fifth column
-        if (!iterator.isNull(ROOT_SG1_D1_S4)) {
-          builder.append(iterator.getObject(ROOT_SG1_D1_S4));
-        } else {
-          builder.append("null");
-        }
-
-        System.out.println(builder);
-      }
-    }
   }
 
   private static void nonQuery() throws IoTDBConnectionException, StatementExecutionException {

@@ -340,10 +340,7 @@ public abstract class AbstractMemTable implements IMemTable {
 
   @Override
   public boolean reachTotalPointNumThreshold() {
-    if (totalPointsNum == 0) {
-      return false;
-    }
-    return totalPointsNum >= totalPointsNumThreshold;
+    return false;
   }
 
   @Override
