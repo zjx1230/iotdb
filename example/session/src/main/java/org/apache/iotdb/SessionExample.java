@@ -70,9 +70,9 @@ public class SessionExample {
     //    createTimeseries();
     //    createMultiTimeseries();
     //    insertRecord();
-    long start = System.currentTimeMillis();
-    insertTablet();
-    System.out.println(System.currentTimeMillis() - start);
+    //    long start = System.currentTimeMillis();
+    //    insertTablet();
+    //    System.out.println(System.currentTimeMillis() - start);
     //    insertTabletWithNullValues();
     //    insertTablets();
     //    insertRecords();
@@ -99,18 +99,26 @@ public class SessionExample {
     //    query4Redirect();
     //    sessionEnableRedirect.close();
 
-    start = System.currentTimeMillis();
-    session.executeNonQueryStatement(
-        "select s1,s2,s3 into root.sg2.d1.s1,root.sg2.d1.s2,root.sg2.d1.s3"
-            + " from root.sg1.d1 where time>=2021-11-25T09:22:35.999+08:00 and time <= 2021-12-26T23:09:15.989+08:00");
-    System.out.println(System.currentTimeMillis() - start);
+    //    long start = System.currentTimeMillis();
+    //    session.executeNonQueryStatement(
+    //        "select s1,s2,s3 into root.sg2.d1.s1,root.sg2.d1.s2,root.sg2.d1.s3"
+    //            + " from root.sg1.d1 where time>=2021-11-25T09:22:35.999+08:00 and time <=
+    // 2021-12-26T23:09:15.989+08:00");
+    //    System.out.println(System.currentTimeMillis() - start);
 
-    start = System.currentTimeMillis();
-    session.executeNonQueryStatement(
-        "select sin(s1),sin(s2),sin(s3) into root.sg3.d1.s1,root.sg3.d1.s2,root.sg3.d1.s3"
-            + " from root.sg1.d1 where time>=2021-11-25T09:22:35.999+08:00 and time <= 2021-12-26T23:09:15.989+08:00");
-    System.out.println(System.currentTimeMillis() - start);
-
+    //    long start = System.currentTimeMillis();
+    //    session.executeNonQueryStatement(args[0]);
+    //            "select sin(s1),sin(s2),sin(s3) into root.sg8.d1.s1,root.sg9.d1.s2,root.sg10.d1.s3
+    // from root.sg1.d1 where time>=2021-11-25T09:22:35.999+08:00 and time <=
+    // 2021-12-26T23:09:15.989+08:00");
+    //    System.out.println(System.currentTimeMillis() - start);
+    //
+    //    java -cp sql.jar org.apache.iotdb.SessionExample "select s1 into root.t1.d1.s1 from
+    // root.s1.d1 where time>=2021-11-25T09:22:35.999+08:00 and time <=
+    // 2021-12-26T23:09:15.989+08:00"
+    //    java -cp sql.jar org.apache.iotdb.SessionExample "select s1,s2,s3 into root.ss1.d1.s1,
+    // root.ss2.d1.s2, root.ss3.d1.s3 from root.sg1.d1 where time>=2021-11-25T09:22:35.999+08:00 and
+    // time <= 2021-12-26T23:09:15.989+08:00"
     session.close();
   }
 
