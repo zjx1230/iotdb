@@ -164,6 +164,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveTask;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.apache.iotdb.db.utils.ErrorHandlingUtils.onIoTDBException;
 import static org.apache.iotdb.db.utils.ErrorHandlingUtils.onNPEOrUnexpectedException;
@@ -204,7 +205,17 @@ public class TSServiceImpl extends BasicServiceProvider implements TSIService.If
         openSession(req.username, req.password, req.zoneId, req.client_protocol);
     TSStatus tsStatus = RpcUtils.getStatus(openSessionResp.getCode(), openSessionResp.getMessage());
     TSOpenSessionResp resp = new TSOpenSessionResp(tsStatus, CURRENT_RPC_VERSION);
-    return resp.setSessionId(openSessionResp.getSessionId());
+    return resp.setSessionId(openSessionResp.getSessionId()).setNodeList(genNodeList());
+  }
+
+  private List<EndPoint> genNodeList() {
+    return Stream.of(IoTDBDescriptor.getInstance().getConfig().getNodeList().split(","))
+        .map(
+            x -> {
+              String[] node = x.split(":");
+              return new EndPoint(node[0], Integer.parseInt(node[1]));
+            })
+        .collect(Collectors.toList());
   }
 
   @Override
