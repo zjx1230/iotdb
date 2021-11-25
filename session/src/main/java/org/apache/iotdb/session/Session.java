@@ -129,6 +129,7 @@ public class Session {
   protected volatile Map<EndPoint, SessionConnection> endPointToSessionConnection;
 
   protected boolean enableQueryRedirection = false;
+  protected List<EndPoint> nodeList;
 
   public Session(String host, int rpcPort) {
     this(
@@ -758,7 +759,7 @@ public class Session {
     }
   }
 
-  private SessionConnection getSessionConnection(String deviceId) {
+  protected SessionConnection getSessionConnection(String deviceId) {
     EndPoint endPoint;
     if (enableCacheLeader
         && !deviceIdToEndpoint.isEmpty()
@@ -2209,6 +2210,14 @@ public class Session {
       throws IoTDBConnectionException, StatementExecutionException {
     TSUnsetSchemaTemplateReq request = getTSUnsetSchemaTemplateReq(prefixPath, templateName);
     defaultSessionConnection.unsetSchemaTemplate(request);
+  }
+
+  public List<EndPoint> getNodeList() {
+    return nodeList;
+  }
+
+  public void setNodeList(List<EndPoint> nodeList) {
+    this.nodeList = nodeList;
   }
 
   private TSSetSchemaTemplateReq getTSSetSchemaTemplateReq(String templateName, String prefixPath) {
