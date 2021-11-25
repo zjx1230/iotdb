@@ -1048,11 +1048,12 @@ public class TSServiceImpl extends BasicServiceProvider implements TSIService.If
       long sessionId) {
     ForkJoinPool forkJoinPool = new ForkJoinPool(Runtime.getRuntime().availableProcessors() << 1);
     List<ForkJoinTask<Void>> futures = new ArrayList<>();
+    int id = 0;
     for (String subStatement : split(udtfPlan, statement)) {
       futures.add(
           forkJoinPool.submit(
               new InsertTabletPlanTask(
-                  tsService, statementId, timeout, fetchSize, sessionId, subStatement)));
+                  tsService, statementId, timeout, fetchSize, sessionId, subStatement, id++)));
     }
     for (ForkJoinTask<Void> v : futures) {
       v.join();
@@ -1153,7 +1154,9 @@ public class TSServiceImpl extends BasicServiceProvider implements TSIService.If
         long timeout,
         int fetchSize,
         long sessionId,
-        String statement) {
+        String statement,
+        int taskId) {
+      LOGGER.info("InsertTabletPlanTask: {}", taskId);
       this.tsService = tsService;
       this.statementId = statementId;
       this.timeout = timeout;

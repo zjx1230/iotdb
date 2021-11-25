@@ -58,8 +58,11 @@ public class SessionExample {
         new Session.Builder().host(LOCAL_HOST).port(6667).username("root").password("root").build();
     session.open(false);
 
-    // set session fetchSize
-    session.setFetchSize(10000);
+    long start = System.currentTimeMillis();
+    session.executeNonQueryStatement(
+        "select s1,s2,s3 into root.sg2.d1.s1,root.sg2.d1.s2,root.sg2.d1.s3"
+            + " from root.sg1.d1 where time>=2021-11-25T09:22:35.999+08:00 and time <= 2021-12-06T23:09:15.989+08:00");
+    System.out.println(System.currentTimeMillis() - start);
 
     //    try {
     //      session.setStorageGroup("root.sg1");
@@ -73,7 +76,7 @@ public class SessionExample {
     //    createTimeseries();
     //    createMultiTimeseries();
     //    insertRecord();
-    insertTablet();
+    //    insertTablet();
     //    insertTabletWithNullValues();
     //    insertTablets();
     //    insertRecords();
@@ -392,7 +395,7 @@ public class SessionExample {
     // Method 1 to add tablet data
     long timestamp = System.currentTimeMillis();
 
-    for (long row = 0; row < 1000; row++) {
+    for (long row = 0; row < 1_0000_0000; row++) {
       int rowIndex = tablet.rowSize++;
       tablet.addTimestamp(rowIndex, timestamp);
       for (int s = 0; s < 3; s++) {
@@ -403,7 +406,7 @@ public class SessionExample {
         session.insertTablet(tablet, true);
         tablet.reset();
       }
-      timestamp += 3600 * 1000;
+      timestamp += 10;
     }
 
     if (tablet.rowSize != 0) {
