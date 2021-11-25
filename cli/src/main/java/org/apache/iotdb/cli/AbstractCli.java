@@ -381,7 +381,7 @@ public abstract class AbstractCli {
     if (specialCmd.startsWith(SELECT_COUNT) && nodeList.size() != 0) {
       String[] paths = specialCmd.split(" ");
       String deviceId = paths[paths.length - 1];
-      EndPoint endpoint = nodeList.get(deviceId.hashCode() % nodeList.size());
+      EndPoint endpoint = nodeList.get(Math.abs(deviceId.hashCode()) % nodeList.size());
       if (endpoint.port == Integer.parseInt(port)) {
         executeQuery(connection, cmd);
       } else {
