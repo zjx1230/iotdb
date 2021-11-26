@@ -45,11 +45,11 @@ public class UDTFEn implements UDTF {
       return;
     }
 
-    double quadraticSum = 0;
+    long quadraticSum = 0;
     for (int i = 0; i < windowSize; ++i) {
-      double raw = rowWindow.getRow(i).getDouble(0);
+      long raw = rowWindow.getRow(i).getInt(0);
       quadraticSum += raw * raw;
     }
-    collector.putDouble(rowWindow.getRow(0).getTime(), quadraticSum / windowSize);
+    collector.putDouble(rowWindow.getRow(0).getTime(), (double) quadraticSum / windowSize);
   }
 }
