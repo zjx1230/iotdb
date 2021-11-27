@@ -77,7 +77,25 @@ public class ExtremeAggrResult extends AggregateResult {
 
   @Override
   public Object getResult() {
-    return hasCandidateResult() ? getValue() : null;
+    if (hasCandidateResult()) {
+      Object object = getValue();
+      switch (resultDataType) {
+        case BOOLEAN:
+        case TEXT:
+          return object;
+        case DOUBLE:
+          return Math.abs((Double) object);
+        case FLOAT:
+          return Math.abs((Float) object);
+        case INT32:
+          return Math.abs((Integer) object);
+        case INT64:
+          return Math.abs((Long) object);
+        default:
+          throw new UnSupportedDataTypeException(String.valueOf(resultDataType));
+      }
+    }
+    return null;
   }
 
   @Override

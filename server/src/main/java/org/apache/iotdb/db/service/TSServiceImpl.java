@@ -1033,7 +1033,7 @@ public class TSServiceImpl extends BasicServiceProvider implements TSIService.If
           andFilter.setRight(filter);
         }
 
-        final long dayTimeDelta = 24 * 60 * 60 * 1000;
+        final long dayTimeDelta = 24L * 60 * 60 * 1000 * 1000 * 1000;
 
         long left = 0, right = 0;
         if (andFilter.getLeft() instanceof Gt) {
@@ -1098,7 +1098,7 @@ public class TSServiceImpl extends BasicServiceProvider implements TSIService.If
           andFilter.setRight(filter);
         }
 
-        final long dayTimeDelta = 24 * 60 * 60 * 1000;
+        final long dayTimeDelta = 24L * 60 * 60 * 1000 * 1000 * 1000;
 
         if (andFilter.getLeft() instanceof Gt && andFilter.getRight() instanceof Lt) {
           long left = (Long) ((Gt) andFilter.getLeft()).getValue();
