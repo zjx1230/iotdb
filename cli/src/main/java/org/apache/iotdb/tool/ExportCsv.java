@@ -46,8 +46,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.time.Instant;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -301,19 +299,10 @@ public class ExportCsv extends AbstractCsvTool {
   }
 
   public static String timeTrans(Long time) {
-    String timestampPrecision = "ms";
-    switch (timeFormat) {
-      case "default":
-        return RpcUtils.parseLongToDateWithPrecision(
-            DateTimeFormatter.ISO_OFFSET_DATE_TIME, time, zoneId, timestampPrecision);
-      case "timestamp":
-      case "long":
-      case "number":
-        return String.valueOf(time);
-      default:
-        return ZonedDateTime.ofInstant(Instant.ofEpochMilli(time), zoneId)
-            .format(DateTimeFormatter.ofPattern(timeFormat));
-    }
+    return RpcUtils.parseLongToDateWithPrecision(
+                DateTimeFormatter.ISO_OFFSET_DATE_TIME, time, zoneId, "ns")
+            .substring(0, 26)
+        + "Z";
   }
 
   public static Boolean writeCsvFile(SessionDataSet sessionDataSet, String filePath)
@@ -323,6 +312,7 @@ public class ExportCsv extends AbstractCsvTool {
             .withFirstRecordAsHeader()
             .withEscape('\\')
             .withQuoteMode(QuoteMode.NONE)
+            .withDelimiter(' ')
             .print(new PrintWriter(filePath));
 
     List<Object> headers = new ArrayList<>();
