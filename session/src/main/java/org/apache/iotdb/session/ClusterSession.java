@@ -32,15 +32,16 @@ public class ClusterSession {
   Session[] sessions;
   ArrayBlockingQueue[] queues;
   List<EndPoint> nodeList;
+  private final int size = 3;
 
   public ClusterSession(String host, int rpcPort) throws IoTDBConnectionException {
     Session session = new Session(host, rpcPort);
     session.open();
     nodeList = new ArrayList<>();
     nodeList.addAll(session.getNodeList());
-    sessions = new Session[nodeList.size()];
-    queues = new ArrayBlockingQueue[nodeList.size()];
-    for (int i = 0; i < nodeList.size(); i++) {
+    sessions = new Session[size];
+    queues = new ArrayBlockingQueue[size];
+    for (int i = 0; i < size; i++) {
       sessions[i] = new Session(nodeList.get(i).ip, nodeList.get(i).port);
       sessions[i].open();
       queues[i] = new ArrayBlockingQueue<>(1000);
@@ -50,10 +51,9 @@ public class ClusterSession {
 
   public void insertTablet(Tablet tablet)
       throws StatementExecutionException, IoTDBConnectionException {
-    int hashVal = Math.abs(tablet.prefixPath.hashCode());
-    int index = hashVal % nodeList.size();
+    int index = Math.abs(tablet.prefixPath.hashCode()) % size;
     for (int i = 0; i < 2; i++) {
-      int j = (index + i) % nodeList.size();
+      int j = (index + i) % size;
       synchronized (queues[j]) {
         if (!queues[j].isEmpty()) {
           queues[j].add(tablet);
@@ -73,14 +73,13 @@ public class ClusterSession {
   }
 
   public SessionDataSet queryTablet(String sql, String deviceId) {
-    int hashVal = Math.abs(deviceId.hashCode());
-    int index = hashVal % nodeList.size();
+    int index = Math.abs(deviceId.hashCode()) % size;
     SessionDataSet sessionDataSet = null;
     try {
       sessionDataSet = sessions[index].executeQueryStatement(sql);
     } catch (Exception e) {
       try {
-        sessionDataSet = sessions[(index + 1) % nodeList.size()].executeQueryStatement(sql);
+        sessionDataSet = sessions[(index + 1) % size].executeQueryStatement(sql);
       } catch (Exception ex) {
         // never happen, once the node restart, it won't be killed anymore.
         e.printStackTrace();
