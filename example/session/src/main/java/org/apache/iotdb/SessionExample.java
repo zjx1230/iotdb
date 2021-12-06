@@ -73,9 +73,9 @@ public class SessionExample {
     }
 
     // createTemplate();
-    createTimeseries();
-    createMultiTimeseries();
-    insertRecord();
+    // createTimeseries();
+    // createMultiTimeseries();
+    // insertRecord();
     insertTablet();
     //    insertTabletWithNullValues();
     //    insertTablets();
@@ -99,9 +99,9 @@ public class SessionExample {
     // set session fetchSize
     sessionEnableRedirect.setFetchSize(10000);
 
-    insertRecord4Redirect();
-    query4Redirect();
-    sessionEnableRedirect.close();
+    //    insertRecord4Redirect();
+    //    query4Redirect();
+    //    sessionEnableRedirect.close();
     session.close();
   }
 
@@ -382,8 +382,9 @@ public class SessionExample {
 
     // Method 1 to add tablet data
     long timestamp = System.currentTimeMillis();
+    long curTime = System.nanoTime();
 
-    for (long row = 0; row < 100; row++) {
+    for (long row = 0; row < 1000000; row++) {
       int rowIndex = tablet.rowSize++;
       tablet.addTimestamp(rowIndex, timestamp);
       for (int s = 0; s < 3; s++) {
@@ -402,27 +403,31 @@ public class SessionExample {
       tablet.reset();
     }
 
+    long finishTime = System.nanoTime();
+
+    System.out.println("write finished time: " + (finishTime - curTime) / 1000 / 1000 + " ms.");
+
     // Method 2 to add tablet data
-    long[] timestamps = tablet.timestamps;
-    Object[] values = tablet.values;
-
-    for (long time = 0; time < 100; time++) {
-      int row = tablet.rowSize++;
-      timestamps[row] = time;
-      for (int i = 0; i < 3; i++) {
-        long[] sensor = (long[]) values[i];
-        sensor[row] = i;
-      }
-      if (tablet.rowSize == tablet.getMaxRowNumber()) {
-        session.insertTablet(tablet, true);
-        tablet.reset();
-      }
-    }
-
-    if (tablet.rowSize != 0) {
-      session.insertTablet(tablet);
-      tablet.reset();
-    }
+    //    long[] timestamps = tablet.timestamps;
+    //    Object[] values = tablet.values;
+    //
+    //    for (long time = 0; time < 100; time++) {
+    //      int row = tablet.rowSize++;
+    //      timestamps[row] = time;
+    //      for (int i = 0; i < 3; i++) {
+    //        long[] sensor = (long[]) values[i];
+    //        sensor[row] = i;
+    //      }
+    //      if (tablet.rowSize == tablet.getMaxRowNumber()) {
+    //        session.insertTablet(tablet, true);
+    //        tablet.reset();
+    //      }
+    //    }
+    //
+    //    if (tablet.rowSize != 0) {
+    //      session.insertTablet(tablet);
+    //      tablet.reset();
+    //    }
   }
 
   private static void insertTabletWithNullValues()

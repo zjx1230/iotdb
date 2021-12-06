@@ -93,6 +93,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.file.Files;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -290,6 +292,8 @@ public class StorageGroupProcessor {
 
   public static final long COMPACTION_TASK_SUBMIT_DELAY = 20L * 1000L;
 
+  private static MessageDigest md;
+
   /** get the direct byte buffer from pool, each fetch contains two ByteBuffer */
   public ByteBuffer[] getWalDirectByteBuffer() {
     ByteBuffer[] res = new ByteBuffer[2];
@@ -406,6 +410,11 @@ public class StorageGroupProcessor {
         config.getWalPoolTrimIntervalInMS(),
         TimeUnit.MILLISECONDS);
     recover();
+    try {
+      md = MessageDigest.getInstance("SHA-256");
+    } catch (NoSuchAlgorithmException e) {
+      e.printStackTrace();
+    }
   }
 
   public String getLogicalStorageGroupName() {
@@ -937,6 +946,12 @@ public class StorageGroupProcessor {
       throws BatchProcessException, TriggerExecutionException {
 
     writeLock("insertTablet");
+
+    // for test
+    String deviceID = insertTabletPlan.getDeviceId().toString();
+    md.digest(deviceID.getBytes());
+    md.reset();
+
     try {
       TSStatus[] results = new TSStatus[insertTabletPlan.getRowCount()];
       Arrays.fill(results, RpcUtils.SUCCESS_STATUS);

@@ -21,6 +21,8 @@ package org.apache.iotdb.tsfile;
 
 public class Constant {
 
+  public static final String SENSOR_ = "sensor_";
+
   private Constant() {}
 
   static final String SENSOR_1 = "sensor_1";
