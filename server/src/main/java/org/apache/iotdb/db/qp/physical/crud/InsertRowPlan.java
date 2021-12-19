@@ -407,36 +407,49 @@ public class InsertRowPlan extends InsertPlan {
   /** Make sure the values is already inited before calling this */
   public void fillValues(ByteBuffer buffer) throws QueryProcessException {
     for (int i = 0; i < measurements.length; i++) {
-      // types are not determined, the situation mainly occurs when the plan uses string values
-      // and is forwarded to other nodes
-      byte typeNum = (byte) ReadWriteIOUtils.read(buffer);
-      if (typeNum == TYPE_RAW_STRING) {
-        values[i] = ReadWriteIOUtils.readString(buffer);
-        continue;
-      }
+      byte typeNum = -2;
+      try {
+        // types are not determined, the situation mainly occurs when the plan uses string values
+        // and is forwarded to other nodes
+        typeNum = (byte) ReadWriteIOUtils.read(buffer);
+        if (typeNum == TYPE_RAW_STRING) {
+          values[i] = ReadWriteIOUtils.readString(buffer);
+          continue;
+        }
 
-      dataTypes[i] = TSDataType.values()[typeNum];
-      switch (dataTypes[i]) {
-        case BOOLEAN:
-          values[i] = ReadWriteIOUtils.readBool(buffer);
-          break;
-        case INT32:
-          values[i] = ReadWriteIOUtils.readInt(buffer);
-          break;
-        case INT64:
-          values[i] = ReadWriteIOUtils.readLong(buffer);
-          break;
-        case FLOAT:
-          values[i] = ReadWriteIOUtils.readFloat(buffer);
-          break;
-        case DOUBLE:
-          values[i] = ReadWriteIOUtils.readDouble(buffer);
-          break;
-        case TEXT:
-          values[i] = ReadWriteIOUtils.readBinary(buffer);
-          break;
-        default:
-          throw new QueryProcessException("Unsupported data type:" + dataTypes[i]);
+        dataTypes[i] = TSDataType.values()[typeNum];
+        switch (dataTypes[i]) {
+          case BOOLEAN:
+            values[i] = ReadWriteIOUtils.readBool(buffer);
+            break;
+          case INT32:
+            values[i] = ReadWriteIOUtils.readInt(buffer);
+            break;
+          case INT64:
+            values[i] = ReadWriteIOUtils.readLong(buffer);
+            break;
+          case FLOAT:
+            values[i] = ReadWriteIOUtils.readFloat(buffer);
+            break;
+          case DOUBLE:
+            values[i] = ReadWriteIOUtils.readDouble(buffer);
+            break;
+          case TEXT:
+            values[i] = ReadWriteIOUtils.readBinary(buffer);
+            break;
+          default:
+            throw new QueryProcessException("Unsupported data type:" + dataTypes[i]);
+        }
+      } catch (Exception e) {
+        logger.error(
+            "something wrong happened, while filling values, type is {}, current index is {}, values length is {}, dataTypes length is {}, measurements length is {}",
+            typeNum,
+            i,
+            values.length,
+            dataTypes.length,
+            measurements.length,
+            e);
+        throw e;
       }
     }
   }
