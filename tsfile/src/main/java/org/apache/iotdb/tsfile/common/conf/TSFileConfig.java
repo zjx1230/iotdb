@@ -20,6 +20,7 @@ package org.apache.iotdb.tsfile.common.conf;
 
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.file.metadata.metadataIndex.MetadataIndexType;
 import org.apache.iotdb.tsfile.fileSystem.FSType;
 
 import java.io.Serializable;
@@ -77,6 +78,8 @@ public class TSFileConfig implements Serializable {
   private int maxNumberOfPointsInPage = 1024 * 1024;
   /** The maximum degree of a metadataIndex node, default value is 256 */
   private int maxDegreeOfIndexNode = 256;
+  /** The type of MetadataIndex */
+  private MetadataIndexType metadataIndexType = MetadataIndexType.ORIGIN;
   /** Data type for input timestamp, TsFile supports INT64. */
   private TSDataType timeSeriesDataType = TSDataType.INT64;
   /** Max length limitation of input string. */
@@ -178,6 +181,14 @@ public class TSFileConfig implements Serializable {
 
   public void setMaxDegreeOfIndexNode(int maxDegreeOfIndexNode) {
     this.maxDegreeOfIndexNode = maxDegreeOfIndexNode;
+  }
+
+  public MetadataIndexType getMetadataIndexType() {
+    return metadataIndexType;
+  }
+
+  public void setMetadataIndexType(MetadataIndexType metadataIndexType) {
+    this.metadataIndexType = metadataIndexType;
   }
 
   public TSDataType getTimeSeriesDataType() {

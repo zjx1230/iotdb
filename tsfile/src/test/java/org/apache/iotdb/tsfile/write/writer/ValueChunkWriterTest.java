@@ -54,7 +54,7 @@ public class ValueChunkWriterTest {
 
     try {
       TestTsFileOutput testTsFileOutput = new TestTsFileOutput();
-      TsFileIOWriter writer = new TsFileIOWriter(testTsFileOutput, true);
+      TsFileIOWriter writer = new TsFileIOWriter(testTsFileOutput);
       chunkWriter.writeAllPagesOfChunkToTsFile(writer);
       PublicBAOS publicBAOS = testTsFileOutput.publicBAOS;
       ByteBuffer buffer = ByteBuffer.wrap(publicBAOS.getBuf(), 0, publicBAOS.size());
@@ -87,10 +87,9 @@ public class ValueChunkWriterTest {
     chunkWriter.sealCurrentPage();
     // two pages with statistics size: (69 + 41) * 2 + chunk header size: 9
     assertEquals(229L, chunkWriter.getCurrentChunkSize());
-
-    TestTsFileOutput testTsFileOutput = new TestTsFileOutput();
-    TsFileIOWriter writer = new TsFileIOWriter(testTsFileOutput, true);
     try {
+      TestTsFileOutput testTsFileOutput = new TestTsFileOutput();
+      TsFileIOWriter writer = new TsFileIOWriter(testTsFileOutput);
       chunkWriter.writeAllPagesOfChunkToTsFile(writer);
       PublicBAOS publicBAOS = testTsFileOutput.publicBAOS;
       ByteBuffer buffer = ByteBuffer.wrap(publicBAOS.getBuf(), 0, publicBAOS.size());

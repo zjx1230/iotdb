@@ -19,7 +19,11 @@
 
 package org.apache.iotdb.tsfile.file.metadata;
 
+import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
+import org.apache.iotdb.tsfile.file.metadata.metadataIndex.BPlusTreeNode;
+import org.apache.iotdb.tsfile.file.metadata.metadataIndex.MetadataIndexNode;
+import org.apache.iotdb.tsfile.file.metadata.metadataIndex.MetadataIndexType;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.BloomFilter;
 import org.apache.iotdb.tsfile.utils.ReadWriteForEncodingUtils;
@@ -33,10 +37,12 @@ import java.util.Set;
 /** TSFileMetaData collects all metadata info and saves in its data structure. */
 public class TsFileMetadata {
 
+  private static final TSFileConfig config = TSFileDescriptor.getInstance().getConfig();
+
   // bloom filter
   private BloomFilter bloomFilter;
 
-  // List of <name, offset, childMetadataIndexType>
+  // index of TimeseriesMetadataIndex
   private MetadataIndexNode metadataIndex;
 
   // offset of MetaMarker.SEPARATOR
@@ -52,11 +58,15 @@ public class TsFileMetadata {
     TsFileMetadata fileMetaData = new TsFileMetadata();
 
     // metadataIndex
-    fileMetaData.metadataIndex = MetadataIndexNode.deserializeFrom(buffer);
+    if (config.getMetadataIndexType().equals(MetadataIndexType.ORIGIN)) {
+      fileMetaData.metadataIndex = MetadataIndexNode.deserializeFrom(buffer);
 
-    // metaOffset
-    long metaOffset = ReadWriteIOUtils.readLong(buffer);
-    fileMetaData.setMetaOffset(metaOffset);
+      // metaOffset
+      long metaOffset = ReadWriteIOUtils.readLong(buffer);
+      fileMetaData.setMetaOffset(metaOffset);
+    } else if (config.getMetadataIndexType().equals(MetadataIndexType.B_PLUS_TREE)) {
+      fileMetaData.metadataIndex = BPlusTreeNode.deserializeFrom(buffer);
+    }
 
     // read bloom filter
     if (buffer.hasRemaining()) {
@@ -89,13 +99,11 @@ public class TsFileMetadata {
     // metadataIndex
     if (metadataIndex != null) {
       byteLen += metadataIndex.serializeTo(outputStream);
+      // metaOffset
+      byteLen += ReadWriteIOUtils.write(metaOffset, outputStream);
     } else {
       byteLen += ReadWriteIOUtils.write(0, outputStream);
     }
-
-    // metaOffset
-    byteLen += ReadWriteIOUtils.write(metaOffset, outputStream);
-
     return byteLen;
   }
 

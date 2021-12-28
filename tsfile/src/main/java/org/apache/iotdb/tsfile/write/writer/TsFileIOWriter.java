@@ -23,10 +23,19 @@ import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
 import org.apache.iotdb.tsfile.file.MetaMarker;
 import org.apache.iotdb.tsfile.file.header.ChunkGroupHeader;
 import org.apache.iotdb.tsfile.file.header.ChunkHeader;
-import org.apache.iotdb.tsfile.file.metadata.*;
+import org.apache.iotdb.tsfile.file.metadata.ChunkGroupMetadata;
+import org.apache.iotdb.tsfile.file.metadata.ChunkMetadata;
+import org.apache.iotdb.tsfile.file.metadata.IChunkMetadata;
+import org.apache.iotdb.tsfile.file.metadata.TimeseriesMetadata;
+import org.apache.iotdb.tsfile.file.metadata.TsFileMetadata;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.tsfile.file.metadata.metadataIndex.BPlusTreeConstructor;
+import org.apache.iotdb.tsfile.file.metadata.metadataIndex.BPlusTreeNode;
+import org.apache.iotdb.tsfile.file.metadata.metadataIndex.MetadataIndexConstructor;
+import org.apache.iotdb.tsfile.file.metadata.metadataIndex.MetadataIndexNode;
+import org.apache.iotdb.tsfile.file.metadata.metadataIndex.MetadataIndexType;
 import org.apache.iotdb.tsfile.file.metadata.statistics.Statistics;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.common.Chunk;
@@ -41,7 +50,13 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * TsFileIOWriter is used to construct metadata and write data stored in memory to output stream.
@@ -59,7 +74,10 @@ public class TsFileIOWriter {
     VERSION_NUMBER_BYTE = TSFileConfig.VERSION_NUMBER;
   }
 
-  protected TsFileOutput out;
+  // output of TsFile data area (.tsfile)
+  protected TsFileOutput tsFileOutput;
+  // output of TsFile index area (.tsfile.index)
+  protected TsFileOutput indexFileOutput;
   protected boolean canWrite = true;
   protected File file;
 
@@ -91,7 +109,10 @@ public class TsFileIOWriter {
    * @throws IOException if I/O error occurs
    */
   public TsFileIOWriter(File file) throws IOException {
-    this.out = FSFactoryProducer.getFileOutputFactory().getTsFileOutput(file.getPath(), false);
+    this.tsFileOutput =
+        FSFactoryProducer.getFileOutputFactory().getTsFileOutput(file.getPath(), false);
+    this.indexFileOutput =
+        FSFactoryProducer.getFileOutputFactory().getTsFileOutput(file.getPath() + ".index", false);
     this.file = file;
     if (resourceLogger.isDebugEnabled()) {
       resourceLogger.debug("{} writer is opened.", file.getName());
@@ -105,13 +126,8 @@ public class TsFileIOWriter {
    * @param output be used to output written data
    */
   public TsFileIOWriter(TsFileOutput output) throws IOException {
-    this.out = output;
+    this.tsFileOutput = output;
     startFile();
-  }
-
-  /** for test only */
-  public TsFileIOWriter(TsFileOutput output, boolean test) {
-    this.out = output;
   }
 
   /**
@@ -122,22 +138,22 @@ public class TsFileIOWriter {
    * @throws IOException if an I/O error occurs.
    */
   public void writeBytesToStream(PublicBAOS bytes) throws IOException {
-    bytes.writeTo(out.wrapAsStream());
+    bytes.writeTo(tsFileOutput.wrapAsStream());
   }
 
   protected void startFile() throws IOException {
-    out.write(MAGIC_STRING_BYTES);
-    out.write(VERSION_NUMBER_BYTE);
+    tsFileOutput.write(MAGIC_STRING_BYTES);
+    tsFileOutput.write(VERSION_NUMBER_BYTE);
   }
 
   public void startChunkGroup(String deviceId) throws IOException {
     this.currentChunkGroupDeviceId = deviceId;
     if (logger.isDebugEnabled()) {
-      logger.debug("start chunk group:{}, file position {}", deviceId, out.getPosition());
+      logger.debug("start chunk group:{}, file position {}", deviceId, tsFileOutput.getPosition());
     }
     chunkMetadataList = new ArrayList<>();
     ChunkGroupHeader chunkGroupHeader = new ChunkGroupHeader(currentChunkGroupDeviceId);
-    chunkGroupHeader.serializeTo(out.wrapAsStream());
+    chunkGroupHeader.serializeTo(tsFileOutput.wrapAsStream());
   }
 
   /**
@@ -151,7 +167,7 @@ public class TsFileIOWriter {
         new ChunkGroupMetadata(currentChunkGroupDeviceId, chunkMetadataList));
     currentChunkGroupDeviceId = null;
     chunkMetadataList = null;
-    out.flush();
+    tsFileOutput.flush();
   }
 
   /**
@@ -187,7 +203,7 @@ public class TsFileIOWriter {
       throws IOException {
 
     currentChunkMetadata =
-        new ChunkMetadata(measurementId, tsDataType, out.getPosition(), statistics);
+        new ChunkMetadata(measurementId, tsDataType, tsFileOutput.getPosition(), statistics);
     currentChunkMetadata.setMask((byte) mask);
 
     ChunkHeader header =
@@ -199,7 +215,7 @@ public class TsFileIOWriter {
             encodingType,
             numOfPages,
             mask);
-    header.serializeTo(out.wrapAsStream());
+    header.serializeTo(tsFileOutput.wrapAsStream());
   }
 
   /** Write a whole chunk in another file into this file. Providing fast merge for IoTDB. */
@@ -209,10 +225,10 @@ public class TsFileIOWriter {
         new ChunkMetadata(
             chunkHeader.getMeasurementID(),
             chunkHeader.getDataType(),
-            out.getPosition(),
+            tsFileOutput.getPosition(),
             chunkMetadata.getStatistics());
-    chunkHeader.serializeTo(out.wrapAsStream());
-    out.write(chunk.getData());
+    chunkHeader.serializeTo(tsFileOutput.wrapAsStream());
+    tsFileOutput.write(chunk.getData());
     endCurrentChunk();
     if (logger.isDebugEnabled()) {
       logger.debug(
@@ -235,10 +251,10 @@ public class TsFileIOWriter {
    */
   @SuppressWarnings("squid:S3776") // Suppress high Cognitive Complexity warning
   public void endFile() throws IOException {
-    long metaOffset = out.getPosition();
+    long metaOffset = tsFileOutput.getPosition();
 
     // serialize the SEPARATOR of MetaData
-    ReadWriteIOUtils.write(MetaMarker.SEPARATOR, out.wrapAsStream());
+    ReadWriteIOUtils.write(MetaMarker.SEPARATOR, tsFileOutput.wrapAsStream());
 
     // group ChunkMetadata by series
     Map<Path, List<IChunkMetadata>> chunkMetadataListMap = new TreeMap<>();
@@ -251,36 +267,45 @@ public class TsFileIOWriter {
       }
     }
 
-    MetadataIndexNode metadataIndex = flushMetadataIndex(chunkMetadataListMap);
     TsFileMetadata tsFileMetaData = new TsFileMetadata();
-    tsFileMetaData.setMetadataIndex(metadataIndex);
-    tsFileMetaData.setMetaOffset(metaOffset);
+    if (config.getMetadataIndexType().equals(MetadataIndexType.ORIGIN)) {
+      MetadataIndexNode metadataIndex = flushMetadataIndex(chunkMetadataListMap);
+      tsFileMetaData.setMetaOffset(metaOffset);
+      tsFileMetaData.setMetadataIndex(metadataIndex);
+    } else {
+      BPlusTreeNode bPlusTreeIndex = flushBTreeMetadataIndex(chunkMetadataListMap);
+      tsFileMetaData.setMetadataIndex(bPlusTreeIndex);
+    }
 
-    long footerIndex = out.getPosition();
+    long footerIndex = tsFileOutput.getPosition();
     if (logger.isDebugEnabled()) {
       logger.debug("start to flush the footer,file pos:{}", footerIndex);
     }
 
     // write TsFileMetaData
-    int size = tsFileMetaData.serializeTo(out.wrapAsStream());
+    int size = tsFileMetaData.serializeTo(indexFileOutput.wrapAsStream());
     if (logger.isDebugEnabled()) {
-      logger.debug("finish flushing the footer {}, file pos:{}", tsFileMetaData, out.getPosition());
+      logger.debug(
+          "finish flushing the footer {}, file pos:{}", tsFileMetaData, tsFileOutput.getPosition());
     }
 
     // write bloom filter
-    size += tsFileMetaData.serializeBloomFilter(out.wrapAsStream(), chunkMetadataListMap.keySet());
+    size +=
+        tsFileMetaData.serializeBloomFilter(
+            tsFileOutput.wrapAsStream(), chunkMetadataListMap.keySet());
     if (logger.isDebugEnabled()) {
-      logger.debug("finish flushing the bloom filter file pos:{}", out.getPosition());
+      logger.debug("finish flushing the bloom filter file pos:{}", tsFileOutput.getPosition());
     }
 
     // write TsFileMetaData size
-    ReadWriteIOUtils.write(size, out.wrapAsStream()); // write the size of the file metadata.
+    ReadWriteIOUtils.write(
+        size, tsFileOutput.wrapAsStream()); // write the size of the file metadata.
 
     // write magic string
-    out.write(MAGIC_STRING_BYTES);
+    tsFileOutput.write(MAGIC_STRING_BYTES);
 
     // close file
-    out.close();
+    tsFileOutput.close();
     if (resourceLogger.isDebugEnabled() && file != null) {
       resourceLogger.debug("{} writer is closed.", file.getName());
     }
@@ -305,7 +330,30 @@ public class TsFileIOWriter {
     }
 
     // construct TsFileMetadata and return
-    return MetadataIndexConstructor.constructMetadataIndex(deviceTimeseriesMetadataMap, out);
+    return MetadataIndexConstructor.constructMetadataIndex(
+        deviceTimeseriesMetadataMap, tsFileOutput, indexFileOutput);
+  }
+
+  /**
+   * Flush TsFileMetadata, including ChunkMetadataList and TimeseriesMetaData
+   *
+   * @param chunkMetadataListMap chunkMetadata that Path.mask == 0
+   * @return MetadataIndexEntry list in TsFileMetadata
+   */
+  private BPlusTreeNode flushBTreeMetadataIndex(
+      Map<Path, List<IChunkMetadata>> chunkMetadataListMap) throws IOException {
+
+    // convert ChunkMetadataList to this field
+    deviceTimeseriesMetadataMap = new LinkedHashMap<>();
+    // create device -> TimeseriesMetaDataList Map
+    for (Map.Entry<Path, List<IChunkMetadata>> entry : chunkMetadataListMap.entrySet()) {
+      // for ordinary path
+      flushOneChunkMetadata(entry.getKey(), entry.getValue());
+    }
+
+    // construct TsFileMetadata and return
+    return BPlusTreeConstructor.constructMetadataIndex(
+        deviceTimeseriesMetadataMap, tsFileOutput, indexFileOutput);
   }
 
   /**
@@ -353,7 +401,7 @@ public class TsFileIOWriter {
    * @throws IOException if I/O error occurs
    */
   public long getPos() throws IOException {
-    return out.getPosition();
+    return tsFileOutput.getPosition();
   }
 
   // device -> ChunkMetadataList
@@ -377,7 +425,7 @@ public class TsFileIOWriter {
   }
 
   public void reset() throws IOException {
-    out.truncate(markedPosition);
+    tsFileOutput.truncate(markedPosition);
   }
 
   /**
@@ -386,15 +434,15 @@ public class TsFileIOWriter {
    */
   public void close() throws IOException {
     canWrite = false;
-    out.close();
+    tsFileOutput.close();
   }
 
   void writeSeparatorMaskForTest() throws IOException {
-    out.write(new byte[] {MetaMarker.SEPARATOR});
+    tsFileOutput.write(new byte[] {MetaMarker.SEPARATOR});
   }
 
   void writeChunkGroupMarkerForTest() throws IOException {
-    out.write(new byte[] {MetaMarker.CHUNK_GROUP_HEADER});
+    tsFileOutput.write(new byte[] {MetaMarker.CHUNK_GROUP_HEADER});
   }
 
   public File getFile() {
@@ -440,10 +488,10 @@ public class TsFileIOWriter {
   }
 
   public void writePlanIndices() throws IOException {
-    ReadWriteIOUtils.write(MetaMarker.OPERATION_INDEX_RANGE, out.wrapAsStream());
-    ReadWriteIOUtils.write(minPlanIndex, out.wrapAsStream());
-    ReadWriteIOUtils.write(maxPlanIndex, out.wrapAsStream());
-    out.flush();
+    ReadWriteIOUtils.write(MetaMarker.OPERATION_INDEX_RANGE, tsFileOutput.wrapAsStream());
+    ReadWriteIOUtils.write(minPlanIndex, tsFileOutput.wrapAsStream());
+    ReadWriteIOUtils.write(maxPlanIndex, tsFileOutput.wrapAsStream());
+    tsFileOutput.flush();
   }
 
   /**
@@ -452,7 +500,7 @@ public class TsFileIOWriter {
    * @return TsFileOutput
    */
   public TsFileOutput getIOWriterOut() {
-    return out;
+    return tsFileOutput;
   }
 
   /**

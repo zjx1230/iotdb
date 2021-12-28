@@ -60,7 +60,7 @@ public class AlignedChunkWriterImplTest {
 
     try {
       TestTsFileOutput testTsFileOutput = new TestTsFileOutput();
-      TsFileIOWriter writer = new TsFileIOWriter(testTsFileOutput, true);
+      TsFileIOWriter writer = new TsFileIOWriter(testTsFileOutput);
       chunkWriter.writeToFileWriter(writer);
       PublicBAOS publicBAOS = testTsFileOutput.publicBAOS;
       ByteBuffer buffer = ByteBuffer.wrap(publicBAOS.getBuf(), 0, publicBAOS.size());
@@ -134,7 +134,7 @@ public class AlignedChunkWriterImplTest {
 
     try {
       TestTsFileOutput testTsFileOutput = new TestTsFileOutput();
-      TsFileIOWriter writer = new TsFileIOWriter(testTsFileOutput, true);
+      TsFileIOWriter writer = new TsFileIOWriter(testTsFileOutput);
       chunkWriter.writeToFileWriter(writer);
       PublicBAOS publicBAOS = testTsFileOutput.publicBAOS;
       ByteBuffer buffer = ByteBuffer.wrap(publicBAOS.getBuf(), 0, publicBAOS.size());
