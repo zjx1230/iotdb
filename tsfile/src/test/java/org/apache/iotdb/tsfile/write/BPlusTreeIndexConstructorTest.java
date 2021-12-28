@@ -24,9 +24,8 @@ import org.apache.iotdb.tsfile.common.constant.TsFileConstant;
 import org.apache.iotdb.tsfile.constant.TestConstant;
 import org.apache.iotdb.tsfile.file.metadata.TimeseriesMetadata;
 import org.apache.iotdb.tsfile.file.metadata.TsFileMetadata;
-import org.apache.iotdb.tsfile.file.metadata.enums.MetadataIndexNodeType;
+import org.apache.iotdb.tsfile.file.metadata.metadataIndex.BPlusTreeNode;
 import org.apache.iotdb.tsfile.file.metadata.metadataIndex.MetadataIndexEntry;
-import org.apache.iotdb.tsfile.file.metadata.metadataIndex.MetadataIndexNode;
 import org.apache.iotdb.tsfile.file.metadata.metadataIndex.MetadataIndexType;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.utils.FileGenerator;
@@ -40,23 +39,20 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import static org.apache.iotdb.tsfile.utils.FileGenerator.generateIndexString;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-/** test for MetadataIndexConstructor */
-public class MetadataIndexConstructorTest {
+/** test for BPlusTreeIndexConstructor */
+public class BPlusTreeIndexConstructorTest {
   private final TSFileConfig conf = TSFileDescriptor.getInstance().getConfig();
   private static final String FILE_PATH =
-      TestConstant.BASE_OUTPUT_PATH.concat("MetadataIndexConstructorTest.tsfile");
+      TestConstant.BASE_OUTPUT_PATH.concat("BPlusTreeIndexConstructorTest.tsfile");
 
   private static final String measurementPrefix = "sensor_";
+  private static final String vectorPrefix = "vector_";
   private int maxDegreeOfIndexNode;
   private MetadataIndexType metadataIndexType;
 
@@ -66,7 +62,7 @@ public class MetadataIndexConstructorTest {
     conf.setMaxDegreeOfIndexNode(10);
 
     metadataIndexType = conf.getMetadataIndexType();
-    conf.setMetadataIndexType(MetadataIndexType.ORIGIN);
+    conf.setMetadataIndexType(MetadataIndexType.B_PLUS_TREE);
   }
 
   @After
@@ -143,12 +139,12 @@ public class MetadataIndexConstructorTest {
   @Test
   public void singleIndexTest4() {
     int deviceNum = 150;
-    int measurementNum = 1;
+    int measurementNum = 150;
     String[] devices = new String[deviceNum];
     int[][] vectorMeasurement = new int[deviceNum][];
     String[][] singleMeasurement = new String[deviceNum][];
     for (int i = 0; i < deviceNum; i++) {
-      devices[i] = "d" + generateIndexString(i, deviceNum);
+      devices[i] = "d" + FileGenerator.generateIndexString(i, deviceNum);
       vectorMeasurement[i] = new int[0];
       singleMeasurement[i] = new String[measurementNum];
       for (int j = 0; j < measurementNum; j++) {
@@ -156,30 +152,6 @@ public class MetadataIndexConstructorTest {
             measurementPrefix + FileGenerator.generateIndexString(j, measurementNum);
       }
     }
-    test(devices, vectorMeasurement, singleMeasurement);
-  }
-
-  /** Example 5: 1 entities with 1 vector containing 9 measurements */
-  @Test
-  public void vectorIndexTest() {
-    String[] devices = {"d0"};
-    int[][] vectorMeasurement = {{9}};
-    test(devices, vectorMeasurement, null);
-  }
-
-  /**
-   * Example 6: 2 entities, measurements of entities are shown in the following table
-   *
-   * <p>d0.s0~s4 | d0.z0~z3 | d1.v0.(s0~s3)
-   */
-  @Test
-  public void compositeIndexTest() {
-    String[] devices = {"d0", "d1"};
-    int[][] vectorMeasurement = {{}, {4}};
-    String[][] singleMeasurement = {
-      {"s0", "s1", "s2", "s3", "s4", "z0", "z1", "z2", "z3"},
-      {}
-    };
     test(devices, vectorMeasurement, singleMeasurement);
   }
 
@@ -194,22 +166,33 @@ public class MetadataIndexConstructorTest {
     // 1. generate file
     FileGenerator.generateFile(FILE_PATH, devices, vectorMeasurement, singleMeasurement);
     // 2. read metadata from file
+    List<String> actualPaths = new ArrayList<>(); // contains all device by sequence
+    readMetaDataDFS(actualPaths);
+
     List<String> actualDevices = new ArrayList<>(); // contains all device by sequence
-    List<List<String>> actualMeasurements =
-        new ArrayList<>(); // contains all measurements group by device
-    readMetaDataDFS(actualDevices, actualMeasurements);
+    List<List<String>> actualMeasurements = new ArrayList<>(); // contains all device by sequence
+
+    String lastDevice = null;
+    for (String path : actualPaths) {
+      String device = path.split(TsFileConstant.PATH_SEPARATER_NO_REGEX)[0];
+      String measurement = path.split(TsFileConstant.PATH_SEPARATER_NO_REGEX)[1];
+      if (!device.equals(lastDevice)) {
+        actualDevices.add(device);
+        List<String> measurements = new ArrayList<>();
+        measurements.add(measurement);
+        actualMeasurements.add(measurements);
+      } else {
+        actualMeasurements.get(actualMeasurements.size() - 1).add(measurement);
+      }
+      lastDevice = device;
+    }
+
     // 3. generate correct result
     List<String> correctDevices = new ArrayList<>(); // contains all device by sequence
     List<List<String>> correctFirstMeasurements =
         new ArrayList<>(); // contains first measurements of every leaf, group by device
-    List<String> correctPaths = new ArrayList<>(); // contains all paths by sequence
     generateCorrectResult(
-        correctDevices,
-        correctFirstMeasurements,
-        correctPaths,
-        devices,
-        vectorMeasurement,
-        singleMeasurement);
+        correctDevices, correctFirstMeasurements, devices, vectorMeasurement, singleMeasurement);
     // 4. compare correct result with TsFile's metadata
     Arrays.sort(devices);
     // 4.1 make sure device in order
@@ -220,14 +203,6 @@ public class MetadataIndexConstructorTest {
     }
     // 4.2 make sure timeseries in order
     try (TsFileSequenceReader reader = new TsFileSequenceReader(FILE_PATH)) {
-      Iterator<Pair<String, Boolean>> iterator = reader.getAllDevicesIteratorWithIsAligned();
-      while (iterator.hasNext()) {
-        for (String correctDevice : correctDevices) {
-          assertEquals(correctDevice, iterator.next().left);
-        }
-      }
-      assertFalse(iterator.hasNext());
-
       Map<String, List<TimeseriesMetadata>> allTimeseriesMetadata =
           reader.getAllTimeseriesMetadata();
       for (int j = 0; j < actualDevices.size(); j++) {
@@ -241,7 +216,6 @@ public class MetadataIndexConstructorTest {
       e.printStackTrace();
       fail(e.getMessage());
     }
-
     // 4.3 make sure split leaf correctly
     for (int j = 0; j < actualDevices.size(); j++) {
       for (int i = 0; i < actualMeasurements.get(j).size(); i++) {
@@ -250,33 +224,18 @@ public class MetadataIndexConstructorTest {
             correctFirstMeasurements.get(j).get(i * conf.getMaxDegreeOfIndexNode()));
       }
     }
-    try (TsFileSequenceReader reader = new TsFileSequenceReader(FILE_PATH)) {
-      Iterator<List<Path>> iterator = reader.getPathsIterator();
-      int idx = 0;
-      while (iterator.hasNext()) {
-        for (Path actualPath : iterator.next()) {
-          assertEquals(actualPath.getFullPath(), correctPaths.get(idx));
-          idx++;
-        }
-      }
-      assertEquals(correctPaths.size(), idx);
-    } catch (IOException e) {
-      e.printStackTrace();
-      fail(e.getMessage());
-    }
   }
 
   /**
    * read TsFile metadata, load actual message in devices and measurements
    *
-   * @param devices load actual devices
-   * @param measurements load actual measurement(first of every leaf)
+   * @param paths load actual paths
    */
-  private void readMetaDataDFS(List<String> devices, List<List<String>> measurements) {
+  private void readMetaDataDFS(List<String> paths) {
     try (TsFileSequenceReader reader = new TsFileSequenceReader(FILE_PATH)) {
       TsFileMetadata tsFileMetaData = reader.readFileMetadata();
-      MetadataIndexNode metadataIndexNode = tsFileMetaData.getMetadataIndex();
-      deviceDFS(devices, measurements, reader, metadataIndexNode);
+      BPlusTreeNode metadataIndexNode = (BPlusTreeNode) tsFileMetaData.getMetadataIndex();
+      deviceDFS(paths, reader, metadataIndexNode);
     } catch (IOException e) {
       e.printStackTrace();
       fail(e.getMessage());
@@ -284,59 +243,20 @@ public class MetadataIndexConstructorTest {
   }
 
   /** DFS in device level load actual devices */
-  private void deviceDFS(
-      List<String> devices,
-      List<List<String>> measurements,
-      TsFileSequenceReader reader,
-      MetadataIndexNode node) {
+  private void deviceDFS(List<String> paths, TsFileSequenceReader reader, BPlusTreeNode node) {
     try {
-      assertTrue(
-          node.getNodeType().equals(MetadataIndexNodeType.LEAF_DEVICE)
-              || node.getNodeType().equals(MetadataIndexNodeType.INTERNAL_DEVICE));
       for (int i = 0; i < node.getChildren().size(); i++) {
         MetadataIndexEntry metadataIndexEntry = node.getChildren().get(i);
         long endOffset = node.getEndOffset();
         if (i != node.getChildren().size() - 1) {
           endOffset = node.getChildren().get(i + 1).getOffset();
         }
-        MetadataIndexNode subNode =
-            reader.getMetadataIndexNode(metadataIndexEntry.getOffset(), endOffset);
-        if (node.getNodeType().equals(MetadataIndexNodeType.LEAF_DEVICE)) {
-          devices.add(metadataIndexEntry.getName());
-          measurements.add(new ArrayList<>());
-          measurementDFS(devices.size() - 1, measurements, reader, subNode);
-        } else if (node.getNodeType().equals(MetadataIndexNodeType.INTERNAL_DEVICE)) {
-          deviceDFS(devices, measurements, reader, subNode);
-        }
-      }
-    } catch (IOException e) {
-      e.printStackTrace();
-      fail(e.getMessage());
-    }
-  }
-  /** DFS in measurement level load actual measurements */
-  private void measurementDFS(
-      int deviceIndex,
-      List<List<String>> measurements,
-      TsFileSequenceReader reader,
-      MetadataIndexNode node) {
-
-    try {
-      assertTrue(
-          node.getNodeType().equals(MetadataIndexNodeType.LEAF_MEASUREMENT)
-              || node.getNodeType().equals(MetadataIndexNodeType.INTERNAL_MEASUREMENT));
-      for (int i = 0; i < node.getChildren().size(); i++) {
-        MetadataIndexEntry metadataIndexEntry = node.getChildren().get(i);
-        long endOffset = node.getEndOffset();
-        if (i != node.getChildren().size() - 1) {
-          endOffset = node.getChildren().get(i + 1).getOffset();
-        }
-        if (node.getNodeType().equals(MetadataIndexNodeType.LEAF_MEASUREMENT)) {
-          measurements.get(deviceIndex).add(metadataIndexEntry.getName());
-        } else if (node.getNodeType().equals(MetadataIndexNodeType.INTERNAL_MEASUREMENT)) {
-          MetadataIndexNode subNode =
-              reader.getMetadataIndexNode(metadataIndexEntry.getOffset(), endOffset);
-          measurementDFS(deviceIndex, measurements, reader, subNode);
+        BPlusTreeNode subNode =
+            reader.getBPlusTreeIndexNode(metadataIndexEntry.getOffset(), endOffset);
+        if (node.isLeaf()) {
+          paths.add(metadataIndexEntry.getName());
+        } else {
+          deviceDFS(paths, reader, subNode);
         }
       }
     } catch (IOException e) {
@@ -358,7 +278,6 @@ public class MetadataIndexConstructorTest {
   private void generateCorrectResult(
       List<String> correctDevices,
       List<List<String>> correctMeasurements,
-      List<String> correctPaths,
       String[] devices,
       int[][] vectorMeasurement,
       String[][] singleMeasurement) {
@@ -369,22 +288,19 @@ public class MetadataIndexConstructorTest {
       List<String> measurements = new ArrayList<>();
       // single-variable measurement
       if (singleMeasurement != null) {
-        for (String measurement : singleMeasurement[i]) {
-          measurements.add(measurement);
-          correctPaths.add(new Path(device, measurement).getFullPath());
-        }
+        measurements.addAll(Arrays.asList(singleMeasurement[i]));
       }
       // multi-variable measurement
       for (int vectorIndex = 0; vectorIndex < vectorMeasurement[i].length; vectorIndex++) {
-        measurements.add("");
-        correctPaths.add(new Path(device, "").getFullPath());
+        String vectorName =
+            vectorPrefix + FileGenerator.generateIndexString(vectorIndex, vectorMeasurement.length);
+        measurements.add(vectorName);
         int measurementNum = vectorMeasurement[i][vectorIndex];
         for (int measurementIndex = 0; measurementIndex < measurementNum; measurementIndex++) {
           String measurementName =
               measurementPrefix
                   + FileGenerator.generateIndexString(measurementIndex, measurementNum);
-          measurements.add(TsFileConstant.PATH_SEPARATOR + measurementName);
-          correctPaths.add(new Path(device, measurementName).getFullPath());
+          measurements.add(vectorName + TsFileConstant.PATH_SEPARATOR + measurementName);
         }
       }
       Collections.sort(measurements);

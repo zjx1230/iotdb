@@ -16,20 +16,10 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.iotdb.tsfile.v2.file.metadata;
 
-import org.apache.iotdb.tsfile.file.metadata.metadataIndex.MetadataIndexEntry;
-import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
+package org.apache.iotdb.tsfile.file.metadata.metadataIndex;
 
-import java.nio.ByteBuffer;
-
-public class MetadataIndexEntryV2 {
-
-  private MetadataIndexEntryV2() {}
-
-  public static MetadataIndexEntry deserializeFrom(ByteBuffer buffer) {
-    String name = ReadWriteIOUtils.readString(buffer);
-    long offset = ReadWriteIOUtils.readLong(buffer);
-    return new MetadataIndexEntry(name, offset);
-  }
+public enum MetadataIndexType {
+  ORIGIN,
+  B_PLUS_TREE
 }
