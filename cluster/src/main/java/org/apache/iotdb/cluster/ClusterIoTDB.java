@@ -115,7 +115,7 @@ public class ClusterIoTDB implements ClusterIoTDBMBean {
 
   private final IoTDB iotdb = IoTDB.getInstance();
 
-  // Cluster IoTDB uses a individual registerManager with its parent.
+  // Cluster IoTDB uses an individual registerManager with its parent.
   private final RegisterManager registerManager = new RegisterManager();
 
   /**
