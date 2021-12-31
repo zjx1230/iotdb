@@ -47,10 +47,10 @@ As the analysis progresses, we think we should trade off between granularity of 
 
 # Solution
 
-Our idea is to group devices into buckets and chang the granularity of synchronization from storage group level to device buckets level.
+Our idea is to group devices into buckets and change the granularity of synchronization from storage group level to device buckets level.
 
 In detail, we use hash to group different devices into buckets called virtual storage group. 
-For example, one device called "root.sg.d" is belonged to virtual storage group NO (hash("root.sg.d") mod num_of_virtual_storage_group)
+For example, one device called "root.sg.d"(assume it's storage group is "root.sg") is belonged to virtual storage group "root.sg.[hash("root.sg.d") mod num_of_virtual_storage_group]"
 
 # Usage
 

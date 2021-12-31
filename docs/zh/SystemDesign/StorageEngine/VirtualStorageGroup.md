@@ -33,30 +33,29 @@
 在生产实践中，存储组的概念往往与特定真实世界实体相关（例如工厂，地点，国家等）。
 因此存储组的数量可能会比较小，这会导致IoTDB写入并行度不足。即使我们开再多的客户端写入线程，也无法走出这种困境。
 
-# Analyze
+# 分析
 
-In IoTDB, every kinds of ingestion interface can only insert timeseries of on device.
-One idea by intuition is changing the granularity of synchronization from storage group level to device level.
-However, one lock for one device may occupy lots of resource that beyond our expectation. One lock means about 100 bytes of memory and one kernel object.
-Sometimes the number of devices may reach one million and we can't afford such lock resource.
+在IoTDB中，每一种写入接口每次仅写入一个设备的时间序列的数据。
+一个简单的想法是，将同步的粒度从存储组级别改为设备级别。然而每一个设备一个锁可能会占用超出我们预期的资源，每个锁占用大概100字节的内存和一个内核对象。
+在设备数量达到百万级的场景下，锁带来的资源开销是我们不能接受的。
 
-As the analysis progresses, we think we should trade off between granularity of synchronization and resource occupation.
+随着分析的深入，我们发现我们需要在同步粒度和资源占用之间做权衡。
 
-# Solution
+# 解决方案
 
-Our idea is to group devices into buckets and chang the granularity of synchronization from storage group level to device buckets level.
+我们的方案是将一个存储组下的设备分为若干个设备组（称为虚拟存储组），将同步粒度从存储组级别改为虚拟存储组粒度。
 
-In detail, we use hash to group different devices into buckets called virtual storage group. 
-For example, one device called "root.sg.d" is belonged to virtual storage group NO (hash("root.sg.d") mod num_of_virtual_storage_group)
+更具体的，我们使用哈希将设备分到不同的虚拟存储组下，例如：
+对于一个名为"root.sg.d"的设备（假设其存储组为"root.sg"），它属于的虚拟存储组为"root.sg.[hash("root.sg.d") mod num_of_virtual_storage_group]"
 
-# Usage
+# 使用方法
 
-To use virtual storage group, you can set this config below:
+通过改变如下配置来设置每一个存储组下虚拟存储组的数量：
 
 ```
 virtual_storage_group_num
 ```
 
-Recommended value is [virtual storage group number] = [CPU core number] / [user-defined storage group number]
+推荐值为[virtual storage group number] = [CPU core number] / [user-defined storage group number]
 
-For more information, you can refer to [this page](../../UserGuide/Appendix/Config-Manual.md).
+参考[配置手册](../../UserGuide/Appendix/Config-Manual.md)以获取更多信息。
