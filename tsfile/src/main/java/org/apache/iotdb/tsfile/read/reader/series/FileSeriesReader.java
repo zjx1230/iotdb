@@ -24,6 +24,8 @@ import org.apache.iotdb.tsfile.file.metadata.IChunkMetadata;
 import org.apache.iotdb.tsfile.read.common.Chunk;
 import org.apache.iotdb.tsfile.read.controller.IChunkLoader;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
+import org.apache.iotdb.tsfile.read.filter.codegen.GenerableFilter;
+import org.apache.iotdb.tsfile.read.filter.codegen.Generator;
 import org.apache.iotdb.tsfile.read.reader.chunk.AlignedChunkReader;
 import org.apache.iotdb.tsfile.read.reader.chunk.ChunkReader;
 
@@ -39,7 +41,8 @@ public class FileSeriesReader extends AbstractFileSeriesReader {
 
   public FileSeriesReader(
       IChunkLoader chunkLoader, List<IChunkMetadata> chunkMetadataList, Filter filter) {
-    super(chunkLoader, chunkMetadataList, filter);
+    super(chunkLoader, chunkMetadataList, Generator.generate((GenerableFilter) filter));
+//    super(chunkLoader, chunkMetadataList, filter);
   }
 
   @Override

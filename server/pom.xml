@@ -232,6 +232,12 @@
             <artifactId>micrometer-metrics</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- Experimental -->
+        <dependency>
+            <groupId>org.codehaus.janino</groupId>
+            <artifactId>janino</artifactId>
+            <version>3.1.6</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>

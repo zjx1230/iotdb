@@ -18,13 +18,16 @@
  */
 package org.apache.iotdb.tsfile.read.filter.operator;
 
+import org.apache.calcite.linq4j.tree.Expression;
+import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.iotdb.tsfile.file.metadata.statistics.Statistics;
 import org.apache.iotdb.tsfile.read.filter.basic.BinaryFilter;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
+import org.apache.iotdb.tsfile.read.filter.codegen.GenerableFilter;
 import org.apache.iotdb.tsfile.read.filter.factory.FilterSerializeId;
 
 /** Both the left and right operators of AndExpression must satisfy the condition. */
-public class AndFilter extends BinaryFilter {
+public class AndFilter extends BinaryFilter implements GenerableFilter {
 
   private static final long serialVersionUID = -8212850098906044102L;
 
@@ -69,5 +72,19 @@ public class AndFilter extends BinaryFilter {
   @Override
   public FilterSerializeId getSerializeId() {
     return FilterSerializeId.AND;
+  }
+
+
+  @Override
+  public boolean canGenerate() {
+    return (left instanceof GenerableFilter) && (right instanceof GenerableFilter);
+  }
+
+  @Override
+  public Expression generate() {
+    if (!this.canGenerate()) {
+      throw new RuntimeException("Children are no generable filters!");
+    }
+    return Expressions.and(((GenerableFilter) left).generate(), ((GenerableFilter) right).generate());
   }
 }

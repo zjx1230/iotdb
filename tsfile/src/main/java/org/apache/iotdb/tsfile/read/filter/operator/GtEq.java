@@ -18,10 +18,14 @@
  */
 package org.apache.iotdb.tsfile.read.filter.operator;
 
+import org.apache.calcite.linq4j.tree.Expression;
+import org.apache.calcite.linq4j.tree.Expressions;
+import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.statistics.Statistics;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.apache.iotdb.tsfile.read.filter.basic.UnaryFilter;
+import org.apache.iotdb.tsfile.read.filter.codegen.GenerableFilter;
 import org.apache.iotdb.tsfile.read.filter.factory.FilterSerializeId;
 import org.apache.iotdb.tsfile.read.filter.factory.FilterType;
 
@@ -30,7 +34,7 @@ import org.apache.iotdb.tsfile.read.filter.factory.FilterType;
  *
  * @param <T> comparable data type
  */
-public class GtEq<T extends Comparable<T>> extends UnaryFilter<T> {
+public class GtEq<T extends Comparable<T>> extends UnaryFilter<T> implements GenerableFilter {
 
   private static final long serialVersionUID = -2088181659871608986L;
 
@@ -91,5 +95,26 @@ public class GtEq<T extends Comparable<T>> extends UnaryFilter<T> {
   @Override
   public FilterSerializeId getSerializeId() {
     return FilterSerializeId.GTEQ;
+  }
+
+  @Override
+  public boolean canGenerate() {
+    return true;
+  }
+
+  @Override
+  public Expression generate() {
+    if (filterType == FilterType.TIME_FILTER) {
+      return Expressions.greaterThanOrEqual(Expressions.parameter(Object.class, "time"), Expressions.constant(value));
+    } else if (filterType == FilterType.VALUE_FILTER) {
+      try {
+        // return this.value.compareTo((T) v) < 0;
+        return Expressions.lessThanOrEqual(Expressions.call(Expressions.box(Expressions.constant(value)), Comparable.class.getMethod("compareTo", Object.class), Expressions.parameter(Object.class, "v")),Expressions.constant(0));
+      } catch (NoSuchMethodException e) {
+        e.printStackTrace();
+        throw new IllegalStateException();
+      }
+    }
+    throw new NotImplementedException();
   }
 }

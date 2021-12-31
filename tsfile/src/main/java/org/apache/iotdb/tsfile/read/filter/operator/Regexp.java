@@ -18,8 +18,11 @@
  */
 package org.apache.iotdb.tsfile.read.filter.operator;
 
+import org.apache.calcite.linq4j.tree.Expression;
+import org.apache.calcite.linq4j.tree.Expressions;
 import org.apache.iotdb.tsfile.file.metadata.statistics.Statistics;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
+import org.apache.iotdb.tsfile.read.filter.codegen.GenerableFilter;
 import org.apache.iotdb.tsfile.read.filter.factory.FilterSerializeId;
 import org.apache.iotdb.tsfile.read.filter.factory.FilterType;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
@@ -27,6 +30,7 @@ import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -36,7 +40,7 @@ import java.util.regex.PatternSyntaxException;
  *
  * @param <T> comparable data type
  */
-public class Regexp<T extends Comparable<T>> implements Filter {
+public class Regexp<T extends Comparable<T>> implements Filter, GenerableFilter {
 
   protected String value;
 
@@ -123,5 +127,19 @@ public class Regexp<T extends Comparable<T>> implements Filter {
   @Override
   public FilterSerializeId getSerializeId() {
     return FilterSerializeId.REGEXP;
+  }
+
+  @Override
+  public boolean canGenerate() {
+    return true;
+  }
+
+  @Override
+  public Expression generate() {
+    // Simply access the delegate
+    return Expressions.call(Expressions.parameter(Filter.class, "delegate"), "satisfy", Arrays.asList(
+        Expressions.parameter(Long.TYPE, "time"),
+        Expressions.parameter(Object.class, "v")
+    ));
   }
 }

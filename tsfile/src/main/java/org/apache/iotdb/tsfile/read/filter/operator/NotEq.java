@@ -18,10 +18,14 @@
  */
 package org.apache.iotdb.tsfile.read.filter.operator;
 
+import org.apache.calcite.linq4j.tree.Expression;
+import org.apache.calcite.linq4j.tree.Expressions;
+import org.apache.iotdb.tsfile.exception.NotImplementedException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.statistics.Statistics;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.apache.iotdb.tsfile.read.filter.basic.UnaryFilter;
+import org.apache.iotdb.tsfile.read.filter.codegen.GenerableFilter;
 import org.apache.iotdb.tsfile.read.filter.factory.FilterSerializeId;
 import org.apache.iotdb.tsfile.read.filter.factory.FilterType;
 
@@ -30,7 +34,7 @@ import org.apache.iotdb.tsfile.read.filter.factory.FilterType;
  *
  * @param <T> comparable data type
  */
-public class NotEq<T extends Comparable<T>> extends UnaryFilter<T> {
+public class NotEq<T extends Comparable<T>> extends UnaryFilter<T> implements GenerableFilter {
 
   private static final long serialVersionUID = 2574090797476500965L;
 
@@ -93,5 +97,24 @@ public class NotEq<T extends Comparable<T>> extends UnaryFilter<T> {
   @Override
   public FilterSerializeId getSerializeId() {
     return FilterSerializeId.NEQ;
+  }
+
+  @Override
+  public boolean canGenerate() {
+    return true;
+  }
+
+  @Override
+  public Expression generate() {
+    if (filterType == FilterType.TIME_FILTER) {
+      return Expressions.notEqual(Expressions.parameter(Object.class, "time"), Expressions.constant(value));
+    } else if (filterType == FilterType.VALUE_FILTER) {
+      try {
+        return Expressions.negate(Expressions.call(Expressions.parameter(Object.class, "v"), Object.class.getMethod("equals", Object.class), Expressions.constant(value)));
+      } catch (NoSuchMethodException e) {
+        throw new IllegalStateException();
+      }
+    }
+    throw new NotImplementedException();
   }
 }
