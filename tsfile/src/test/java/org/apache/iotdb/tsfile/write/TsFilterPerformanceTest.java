@@ -157,6 +157,12 @@ public class TsFilterPerformanceTest {
     runTests(filters, true);
   }
 
+  /**
+   * Benchmark                                      Mode  Cnt      Score     Error  Units
+   * TsFilterPerformanceTest.getComplexUnoptimized  avgt   15  15053,562 ± 115,997  ms/op
+   * -> 12.3%
+   * @throws IOException
+   */
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
@@ -165,6 +171,21 @@ public class TsFilterPerformanceTest {
   public void getComplexUnoptimized() throws IOException {
     List<Filter> filters = getComplexFilters();
     runTests(filters, false);
+  }
+
+  /**
+   * Benchmark                                    Mode  Cnt      Score     Error  Units
+   * TsFilterPerformanceTest.getComplexOptimized  avgt   15  13196,650 ± 477,061  ms/op
+   * @throws IOException
+   */
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  @Warmup(iterations = 3)
+  @Fork(3)
+  public void getComplexOptimized() throws IOException {
+    List<Filter> filters = getComplexFilters();
+    runTests(filters, true);
   }
 
   @Test
