@@ -37,6 +37,7 @@ import org.apache.iotdb.tsfile.read.filter.ValueFilter;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
 import org.apache.iotdb.tsfile.read.filter.codegen.Generator;
 import org.apache.iotdb.tsfile.read.filter.factory.FilterFactory;
+import org.apache.iotdb.tsfile.read.query.dataset.DataSetWithTimeGenerator;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.apache.iotdb.tsfile.utils.FilePathUtils;
 import org.apache.iotdb.tsfile.utils.TsFileGeneratorForTest;
@@ -47,13 +48,20 @@ import org.apache.iotdb.tsfile.write.schema.UnaryMeasurementSchema;
 import org.junit.Assert;
 import org.junit.Test;
 import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.BenchmarkMode;
-import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Mode;
-import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jmh.results.RunResult;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.format.OutputFormat;
+import org.openjdk.jmh.runner.format.OutputFormatFactory;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
+import org.openjdk.jmh.runner.options.VerboseMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,26 +69,50 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+/**
+ * This class is a Benchmarking Tool for the evaluation of code generation.
+ * It makes heavy use of JMH.
+ *
+ * To start the Benchmarking, just run the main class.
+ */
 @State(Scope.Benchmark)
-public class TsFilterPerformanceTest {
+public class CodeGenBenchmark {
 
-  private static Logger logger = LoggerFactory.getLogger(TsFilterPerformanceTest.class);
+  private static Logger logger = LoggerFactory.getLogger(CodeGenBenchmark.class);
 
-  public static int runs = 1;
+  @Param("standard")
+  public String filter;
 
-  TsFileWriter writer = null;
+  @Param("1")
+  public int runs;
+
+//  @Param("false")
+//  public boolean optimizeFilters;
+//
+//  @Param("false")
+//  public boolean generateSeries;
+
+  @Param("false")
+  public boolean optimize;
+
+  @Param("100000000")
+  public int datapoints;
+
   String fileName = TsFileGeneratorForTest.getTestTsFilePath("root.sg1", 0, 0, 1);
   boolean closed = false;
 
-  String getFilename() {
+  static String getFilename() {
     String filePath =
         String.format(
             "/tmp/root.sg1/0/0/",
@@ -95,115 +127,32 @@ public class TsFilterPerformanceTest {
     return filePath.concat(fileName);
   }
 
-  /**
-   * Benchmark                                     Mode  Cnt      Score     Error  Units
-   * TsFilterPerformanceTest.getSimpleUnoptimized  avgt   15  10699,176 ± 511,309  ms/op
-   * @throws IOException
-   */
   @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  @Warmup(iterations = 3)
-  @Fork(3)
-  public void getSimpleUnoptimized() throws IOException {
-    List<Filter> filters = getSimpleFilters();
-    runTests(filters, false);
-  }
-
-  /**
-   * Benchmark                                   Mode  Cnt      Score     Error  Units
-   * TsFilterPerformanceTest.getSimpleOptimized  avgt   15  11084,838 ± 331,142  ms/op
-   * @throws IOException
-   */
-  @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  @Warmup(iterations = 3)
-  @Fork(3)
-  public void getSimpleOptimized() throws IOException {
-    List<Filter> filters = getSimpleFilters();
-    runTests(filters, true);
-  }
-
-
-  /**
-   * Benchmark                                       Mode  Cnt      Score     Error  Units
-   * TsFilterPerformanceTest.getStandardUnoptimized  avgt   15  10345,496 ± 571,557  ms/op
-   * @throws IOException
-   */
-  @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  @Warmup(iterations = 3)
-  @Fork(3)
-  public void getStandardUnoptimized() throws IOException {
-    List<Filter> filters = getStandardFilters();
-    runTests(filters, false);
-  }
-
-  /**
-   * Benchmark                                     Mode  Cnt     Score     Error  Units
-   * TsFilterPerformanceTest.getStandardOptimized  avgt   15  9864,581 ± 591,591  ms/op
-   * -> 4.6%
-   * @throws IOException
-   */
-  @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  @Warmup(iterations = 3)
-  @Fork(3)
-  public void getStandardOptimized() throws IOException {
-    List<Filter> filters = getStandardFilters();
-    runTests(filters, true);
-  }
-
-  /**
-   * Benchmark                                      Mode  Cnt      Score     Error  Units
-   * TsFilterPerformanceTest.getComplexUnoptimized  avgt   15  15053,562 ± 115,997  ms/op
-   * -> 12.3%
-   * @throws IOException
-   */
-  @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  @Warmup(iterations = 3)
-  @Fork(3)
-  public void getComplexUnoptimized() throws IOException {
-    List<Filter> filters = getComplexFilters();
-    runTests(filters, false);
-  }
-
-  /**
-   * Benchmark                                    Mode  Cnt      Score     Error  Units
-   * TsFilterPerformanceTest.getComplexOptimized  avgt   15  13196,650 ± 477,061  ms/op
-   * @throws IOException
-   */
-  @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  @Warmup(iterations = 3)
-  @Fork(3)
-  public void getComplexOptimized() throws IOException {
-    List<Filter> filters = getComplexFilters();
-    runTests(filters, true);
+  public void runBenchmark(Blackhole blackhole) throws IOException {
+    List<Filter> filters = getFilter();
+    // set optimizing parameters
+    Generator.active.set(this.optimize);
+    DataSetWithTimeGenerator.generate.set(this.optimize);
+    runTests(filters, blackhole);
   }
 
   @Test
   public void generate() throws IOException, WriteProcessException {
+    generate(100_000_000);
+  }
+
+  public static void generate(int datapoints) throws IOException, WriteProcessException {
     String filename = getFilename();
 
-    System.out.println("Writing to " + filename);
+    logger.info("Writing {} datapoints to {}", datapoints, filename);
     File f = new File(filename);
     if (!f.getParentFile().exists()) {
       Assert.assertTrue(f.getParentFile().mkdirs());
     }
-    writer = new TsFileWriter(f);
-    registerTimeseries();
+    TsFileWriter writer = new TsFileWriter(f);
+    registerTimeseries(writer);
 
-    for (long t = 0; t <= 100_000_000; t++) {
-      if (t % 100 == 0) {
-        System.out.println(t);
-      }
+    for (long t = 0; t <= datapoints; t++) {
       // normal
       TSRecord record = new TSRecord(t, "d1");
       record.addTuple(new FloatDataPoint("s1", (float) (100.0 * Math.random())));
@@ -214,56 +163,12 @@ public class TsFilterPerformanceTest {
     writer.close();
   }
 
+  private double runTests(List<Filter> filter, Blackhole blackhole) throws IOException {
 
-  /**
-   * Without optimization: 10798.055595900001 ms
-   * With: 9907.020887499999
-   * Improvement ~ 8%
-   */
-  @Test
-  public void readMany() throws IOException {
-    List<List<Filter>> scenarios = Arrays.asList(
-        getSimpleFilters(),
-        getStandardFilters(),
-        getComplexFilters()
-    );
-
-    ArrayList<Double> results = new ArrayList<>();
-
-    for (int scenarioCount = 0; scenarioCount < scenarios.size(); scenarioCount++) {
-      System.out.println("Starting Scenario " + scenarioCount);
-      List<Filter> filter = scenarios.get(scenarioCount);
-
-      // First, no optimizer
-      double noOptimizer = runTests(filter, false);
-      double optimizer = runTests(filter, true);
-      double improvement = 100.0 * (1 - optimizer / noOptimizer);
-
-      System.out.println("==========================");
-      System.out.println("Scenario " + scenarioCount);
-      System.out.println("==========================");
-      System.out.printf("Duration (no optimizer): %.2f ms\n", noOptimizer);
-      System.out.printf("Duration (optimizer): %.2f ms\n", optimizer);
-      System.out.printf("Improvement: %.2f %%\n\n", improvement);
-
-      results.add(improvement);
-    }
-
-    System.out.println("==========================");
-    System.out.println("Final Result");
-    System.out.println("==========================");
-    for (Double result : results) {
-      System.out.printf("Improvement: %.2f %%\n", result);
-    }
-    System.out.println("==========================");
-  }
-
-  private double runTests(List<Filter> filter, boolean optimizer) throws IOException {
-    Generator.active.set(optimizer);
     long start = System.nanoTime();
     for (int i = 1; i <= runs; i++) {
       logger.info("Round " + i);
-      read(filter);
+      read(filter, blackhole);
     }
     long end = System.nanoTime();
 
@@ -281,6 +186,17 @@ public class TsFilterPerformanceTest {
         filter, filter2, filter3
     );
     return filters;
+  }
+
+  private List<Filter> getFilter() {
+    if ("standard".equals(this.filter)){
+      return getStandardFilters();
+    } else if ("simple".equals(this.filter)) {
+      return getSimpleFilters();
+    } else if ("complex".equals(this.filter)) {
+      return getComplexFilters();
+    }
+    throw new IllegalStateException();
   }
 
   private List<Filter> getStandardFilters() {
@@ -315,7 +231,7 @@ public class TsFilterPerformanceTest {
     return filters;
   }
 
-  public void read(List<Filter> filters) throws IOException {
+  public void read(List<Filter> filters, Blackhole blackhole) throws IOException {
     TsFileSequenceReader fileSequenceReader = new TsFileSequenceReader(getFilename());
     TsFileReader fileReader = new TsFileReader(fileSequenceReader);
 
@@ -343,13 +259,14 @@ public class TsFilterPerformanceTest {
     int count = 0;
     while (dataSet.hasNext()) {
       RowRecord rowRecord = dataSet.next();
+      blackhole.consume(rowRecord);
       count++;
     }
 
     logger.debug("Iterartion done, " + count + " points");
   }
 
-  private void registerTimeseries() {
+  private static void registerTimeseries(TsFileWriter writer) {
     // register nonAligned timeseries "d1.s1","d1.s2","d1.s3"
     try {
       writer.registerTimeseries(
@@ -426,6 +343,104 @@ public class TsFilterPerformanceTest {
       e.printStackTrace();
       fail(e.getMessage());
     }*/
+  }
+
+  @Setup(Level.Trial)
+  public void setup() throws IOException, WriteProcessException {
+    generate(datapoints);
+  }
+
+  /**
+   * Benchmark                             (filter)  (generateSeries)  (optimizeFilters)  (runs)  Mode  Cnt      Score       Error  Units
+   * TsFilterPerformanceTest.runBenchmark  standard             false              false       1  avgt    5   8665,837 ±   703,708  ms/op
+   * TsFilterPerformanceTest.runBenchmark  standard             false              false       5  avgt    5  43861,836 ±  8981,774  ms/op
+   * TsFilterPerformanceTest.runBenchmark  standard             false              false      10  avgt    5  88036,981 ± 13661,095  ms/op
+   * @param args
+   * @throws RunnerException
+   */
+  public static void main(String[] args) throws RunnerException, IOException, WriteProcessException {
+      // Start with the execution
+      OptionsBuilder optionsBuilder = new OptionsBuilder();
+      optionsBuilder
+          .include("runBenchmark")
+          .forks(1)
+          .measurementIterations(3)
+          .warmupIterations(3)
+          .mode(Mode.AverageTime)
+          .timeUnit(TimeUnit.MILLISECONDS)
+          .param("datapoints", "100", "10000", "1000000", "100000000", "1000000000")
+          .param("optimize", "false", "true")
+          .param("filter", "simple", "standard", "complex")
+      //        .param("runs", "1")
+      ;
+      OutputFormat outputFormat = OutputFormatFactory.createFormatInstance(System.out, VerboseMode.NORMAL);
+      Runner runner = new Runner(optionsBuilder.build(), outputFormat);
+
+      Collection<RunResult> results = runner.run();
+
+      printResults(results);
+  }
+
+  private static void printResults(Collection<RunResult> results) {
+    // Prepare Output for csv
+    StringBuilder sb = new StringBuilder();
+    RunResult first = results.iterator().next();
+
+    ArrayList<String> orderedParameters = new ArrayList<>(first.getParams().getParamsKeys());
+
+    for (RunResult result : results) {
+      System.out.println("\n===================");
+      for (String paramsKey : result.getParams().getParamsKeys()) {
+        String paramValue = result.getParams().getParam(paramsKey);
+        System.out.printf("%s: %s\n", paramsKey, paramValue);
+      }
+
+      // Now calculate the baseline
+      double duration = result.getPrimaryResult().getScore();
+
+      // Now find the score of the base run with this parameters
+      Optional<RunResult> baseline = findBaselineForResult(results, result);
+
+      if (!baseline.isPresent()) {
+        System.out.println(" -- no baseline found -- ");
+        continue;
+      }
+
+      double baseLineDuration = baseline.get().getPrimaryResult().getScore();
+
+      double improvement = 100.0 * (1 - duration/baseLineDuration);
+
+      String scoreUnit = result.getPrimaryResult().getScoreUnit();
+      System.out.printf("Result: %.2f %s\n", duration, scoreUnit);
+      System.out.printf("Baseline: %.2f %s\n", baseLineDuration, scoreUnit);
+      System.out.printf("Improvement: %.2f %%\n", improvement);
+
+
+      // Create all Parameters
+      String prefix = orderedParameters.stream().map(key -> result.getParams().getParam(key)).collect(Collectors.joining(";"));
+
+      sb.append(String.format(Locale.ENGLISH, "%s;%f;%f;%f\n", prefix, duration, baseLineDuration, improvement/100.0));
+    }
+
+    System.out.println("Final Result");
+    System.out.println("==========");
+    System.out.println(sb);
+  }
+
+  private static Optional<RunResult> findBaselineForResult(Collection<RunResult> results, RunResult result) {
+    Optional<RunResult> baseline = results.stream().filter(new Predicate<RunResult>() {
+      @Override
+      public boolean test(RunResult runResult) {
+        boolean baseline = "false".equals(runResult.getParams().getParam("optimize"));
+
+        Set<String> compareKeys = result.getParams().getParamsKeys().stream().filter(key -> !Arrays.asList("optimize").contains(key)).collect(Collectors.toSet());
+
+        boolean same = compareKeys.stream().allMatch(key -> result.getParams().getParam(key).equals(runResult.getParams().getParam(key)));
+
+        return same && baseline;
+      }
+    }).findAny();
+    return baseline;
   }
 
 }
