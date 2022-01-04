@@ -183,10 +183,7 @@ public class NodeReport {
           + "ms ago"
           + ", logIncrement="
           + (lastLogIndex - prevLastLogIndex)
-          + transportCompressionReport
-          + ", \n timer: "
-          + Timer.getReport()
-          + '}';
+          + transportCompressionReport;
     }
   }
 

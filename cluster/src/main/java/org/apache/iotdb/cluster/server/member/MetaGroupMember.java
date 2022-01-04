@@ -163,7 +163,7 @@ public class MetaGroupMember extends RaftMember {
    * every "REPORT_INTERVAL_SEC" seconds, a reporter thread will print the status of all raft
    * members in this node
    */
-  private static final int REPORT_INTERVAL_SEC = 10;
+  private static final int REPORT_INTERVAL_SEC = 30;
 
   /**
    * every "REFRESH_CLIENT_SEC" seconds, a dataClientRefresher thread will try to refresh one thrift
@@ -535,9 +535,9 @@ public class MetaGroupMember extends RaftMember {
 
   private void generateNodeReport() {
     try {
-      if (logger.isDebugEnabled()) {
+      if (logger.isInfoEnabled()) {
         NodeReport report = genNodeReport();
-        logger.debug(report.toString());
+        logger.info(report.toString());
       }
     } catch (Exception e) {
       logger.error("{} exception occurred when generating node report", name, e);

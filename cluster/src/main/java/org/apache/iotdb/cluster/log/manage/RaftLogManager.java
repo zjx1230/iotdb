@@ -578,6 +578,10 @@ public abstract class RaftLogManager {
       return;
     }
 
+    if (entries.size() > 300) {
+      logger.info("{} committed too many entries, size {}", name, entries.size());
+    }
+
     long commitLogIndex = getCommitLogIndex();
     long firstLogIndex = entries.get(0).getCurrLogIndex();
     if (commitLogIndex >= firstLogIndex) {
@@ -853,6 +857,10 @@ public abstract class RaftLogManager {
         if (committedEntryManager.getTotalSize() <= minNumOfLogsInMem) {
           return;
         }
+        logger.info(
+            "{}: Start to delete committed entries, size {}",
+            name,
+            committedEntryManager.getTotalSize());
         innerDeleteLog(minNumOfLogsInMem);
       }
     } catch (Exception e) {
@@ -869,7 +877,7 @@ public abstract class RaftLogManager {
     long compactIndex =
         Math.min(committedEntryManager.getDummyIndex() + removeSize, maxHaveAppliedCommitIndex - 1);
     try {
-      logger.debug(
+      logger.info(
           "{}: Before compaction index {}-{}, compactIndex {}, removeSize {}, committedLogSize "
               + "{}, maxAppliedLog {}",
           name,
@@ -883,7 +891,7 @@ public abstract class RaftLogManager {
       if (ClusterDescriptor.getInstance().getConfig().isEnableRaftLogPersistence()) {
         getStableEntryManager().removeCompactedEntries(compactIndex);
       }
-      logger.debug(
+      logger.info(
           "{}: After compaction index {}-{}, committedLogSize {}",
           name,
           getFirstIndex(),
