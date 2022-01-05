@@ -298,7 +298,7 @@ public class TsFileIOWriter {
     // write bloom filter
     size +=
         tsFileMetaData.serializeBloomFilter(
-            tsFileOutput.wrapAsStream(), chunkMetadataListMap.keySet());
+            indexFileOutput.wrapAsStream(), chunkMetadataListMap.keySet());
     if (logger.isDebugEnabled()) {
       logger.debug("finish flushing the bloom filter file pos:{}", tsFileOutput.getPosition());
     }

@@ -142,8 +142,8 @@ public class MetadataQuerierByFileImpl implements IMetadataQuerier {
 
   @Override
   public TSDataType getDataType(Path path) throws IOException {
-    if (tsFileReader.getChunkMetadataList(path, true) == null
-        || tsFileReader.getChunkMetadataList(path, true).isEmpty()) {
+    if (tsFileReader.getChunkMetadataList(path) == null
+        || tsFileReader.getChunkMetadataList(path).isEmpty()) {
       return null;
     }
     return tsFileReader.getChunkMetadataList(path).get(0).getDataType();

@@ -977,16 +977,16 @@ public class TsFileSequenceReader implements AutoCloseable {
       readFileMetadata();
     }
     Map<String, List<TimeseriesMetadata>> timeseriesMetadataMap = new HashMap<>();
-    MetadataIndexNode metadataIndexNode = tsFileMetaData.getMetadataIndex();
-    List<MetadataIndexEntry> metadataIndexEntryList = metadataIndexNode.getChildren();
-    for (int i = 0; i < metadataIndexEntryList.size(); i++) {
-      MetadataIndexEntry metadataIndexEntry = metadataIndexEntryList.get(i);
-      long endOffset = tsFileMetaData.getMetadataIndex().getEndOffset();
-      if (i != metadataIndexEntryList.size() - 1) {
-        endOffset = metadataIndexEntryList.get(i + 1).getOffset();
-      }
-      ByteBuffer buffer = readData(metadataIndexEntry.getOffset(), endOffset, indexFileInput);
-      if (config.getMetadataIndexType().equals(MetadataIndexType.TWO_LEVEL)) {
+    if (config.getMetadataIndexType().equals(MetadataIndexType.TWO_LEVEL)) {
+      MetadataIndexNode metadataIndexNode = tsFileMetaData.getMetadataIndex();
+      List<MetadataIndexEntry> metadataIndexEntryList = metadataIndexNode.getChildren();
+      for (int i = 0; i < metadataIndexEntryList.size(); i++) {
+        MetadataIndexEntry metadataIndexEntry = metadataIndexEntryList.get(i);
+        long endOffset = tsFileMetaData.getMetadataIndex().getEndOffset();
+        if (i != metadataIndexEntryList.size() - 1) {
+          endOffset = metadataIndexEntryList.get(i + 1).getOffset();
+        }
+        ByteBuffer buffer = readData(metadataIndexEntry.getOffset(), endOffset, indexFileInput);
         generateMetadataIndex(
             metadataIndexEntry,
             buffer,
@@ -994,35 +994,20 @@ public class TsFileSequenceReader implements AutoCloseable {
             metadataIndexNode.getNodeType(),
             timeseriesMetadataMap,
             false);
-      } else if (config.getMetadataIndexType().equals(MetadataIndexType.B_PLUS_TREE)) {
+      }
+    } else if (config.getMetadataIndexType().equals(MetadataIndexType.B_PLUS_TREE)) {
+      BPlusTreeNode metadataIndexNode = (BPlusTreeNode) tsFileMetaData.getMetadataIndex();
+      List<MetadataIndexEntry> metadataIndexEntryList = metadataIndexNode.getChildren();
+      for (int i = 0; i < metadataIndexEntryList.size(); i++) {
+        MetadataIndexEntry metadataIndexEntry = metadataIndexEntryList.get(i);
+        long endOffset = tsFileMetaData.getMetadataIndex().getEndOffset();
+        if (i != metadataIndexEntryList.size() - 1) {
+          endOffset = metadataIndexEntryList.get(i + 1).getOffset();
+        }
+        ByteBuffer buffer = readData(metadataIndexEntry.getOffset(), endOffset, indexFileInput);
         generateMetadataIndex(
-            metadataIndexEntry,
-            buffer,
-            ((BPlusTreeNode) metadataIndexNode).isLeaf(),
-            timeseriesMetadataMap,
-            false);
+            metadataIndexEntry, buffer, metadataIndexNode.isLeaf(), timeseriesMetadataMap, false);
       }
-    }
-    return timeseriesMetadataMap;
-  }
-
-  public Map<String, List<TimeseriesMetadata>> getAllTimeseriesMetadataInBPlusTree()
-      throws IOException {
-    if (tsFileMetaData == null) {
-      readFileMetadata();
-    }
-    Map<String, List<TimeseriesMetadata>> timeseriesMetadataMap = new HashMap<>();
-    BPlusTreeNode metadataIndexNode = (BPlusTreeNode) tsFileMetaData.getMetadataIndex();
-    List<MetadataIndexEntry> metadataIndexEntryList = metadataIndexNode.getChildren();
-    for (int i = 0; i < metadataIndexEntryList.size(); i++) {
-      MetadataIndexEntry metadataIndexEntry = metadataIndexEntryList.get(i);
-      long endOffset = tsFileMetaData.getMetadataIndex().getEndOffset();
-      if (i != metadataIndexEntryList.size() - 1) {
-        endOffset = metadataIndexEntryList.get(i + 1).getOffset();
-      }
-      ByteBuffer buffer = readData(metadataIndexEntry.getOffset(), endOffset);
-      generateMetadataIndex(
-          metadataIndexEntry, buffer, metadataIndexNode.isLeaf(), timeseriesMetadataMap, false);
     }
     return timeseriesMetadataMap;
   }
