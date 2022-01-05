@@ -251,11 +251,11 @@ public class BPlusTreeIndexConstructorTest {
         if (i != node.getChildren().size() - 1) {
           endOffset = node.getChildren().get(i + 1).getOffset();
         }
-        BPlusTreeNode subNode =
-            reader.getBPlusTreeIndexNode(metadataIndexEntry.getOffset(), endOffset);
         if (node.isLeaf()) {
           paths.add(metadataIndexEntry.getName());
         } else {
+          BPlusTreeNode subNode =
+              reader.getBPlusTreeIndexNode(metadataIndexEntry.getOffset(), endOffset);
           deviceDFS(paths, reader, subNode);
         }
       }

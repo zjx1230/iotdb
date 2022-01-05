@@ -36,7 +36,7 @@ import static org.junit.Assert.assertTrue;
 public class TsFileRestorableReaderTest {
 
   private static final String FILE_PATH = TsFileGeneratorForTest.outputDataFile;
-  private FSFactory fsFactory = FSFactoryProducer.getFSFactory();
+  private final FSFactory fsFactory = FSFactoryProducer.getFSFactory();
 
   @Test
   public void testToReadDamagedFileAndRepair() throws IOException {

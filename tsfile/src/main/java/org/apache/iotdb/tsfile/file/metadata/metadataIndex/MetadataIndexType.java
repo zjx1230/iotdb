@@ -20,6 +20,6 @@
 package org.apache.iotdb.tsfile.file.metadata.metadataIndex;
 
 public enum MetadataIndexType {
-  ORIGIN,
+  TWO_LEVEL,
   B_PLUS_TREE
 }

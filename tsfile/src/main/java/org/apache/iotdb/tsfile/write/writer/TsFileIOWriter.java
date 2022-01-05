@@ -266,27 +266,33 @@ public class TsFileIOWriter {
         chunkMetadataListMap.computeIfAbsent(series, k -> new ArrayList<>()).add(chunkMetadata);
       }
     }
+    if (indexFileOutput == null) {
+      indexFileOutput =
+          FSFactoryProducer.getFileOutputFactory()
+              .getTsFileOutput(file.getPath() + ".index", false);
+    }
 
     TsFileMetadata tsFileMetaData = new TsFileMetadata();
-    if (config.getMetadataIndexType().equals(MetadataIndexType.ORIGIN)) {
+    if (config.getMetadataIndexType().equals(MetadataIndexType.TWO_LEVEL)) {
       MetadataIndexNode metadataIndex = flushMetadataIndex(chunkMetadataListMap);
-      tsFileMetaData.setMetaOffset(metaOffset);
       tsFileMetaData.setMetadataIndex(metadataIndex);
-    } else {
+    } else if (config.getMetadataIndexType().equals(MetadataIndexType.B_PLUS_TREE)) {
       BPlusTreeNode bPlusTreeIndex = flushBTreeMetadataIndex(chunkMetadataListMap);
       tsFileMetaData.setMetadataIndex(bPlusTreeIndex);
     }
-
     long footerIndex = tsFileOutput.getPosition();
     if (logger.isDebugEnabled()) {
       logger.debug("start to flush the footer,file pos:{}", footerIndex);
     }
 
+    long rootNodeOffset = indexFileOutput.getPosition();
     // write TsFileMetaData
     int size = tsFileMetaData.serializeTo(indexFileOutput.wrapAsStream());
     if (logger.isDebugEnabled()) {
       logger.debug(
-          "finish flushing the footer {}, file pos:{}", tsFileMetaData, tsFileOutput.getPosition());
+          "finish flushing the footer {}, file pos:{}",
+          tsFileMetaData,
+          indexFileOutput.getPosition());
     }
 
     // write bloom filter
@@ -300,7 +306,10 @@ public class TsFileIOWriter {
     // write TsFileMetaData size
     ReadWriteIOUtils.write(
         size, tsFileOutput.wrapAsStream()); // write the size of the file metadata.
+    ReadWriteIOUtils.write(rootNodeOffset, indexFileOutput.wrapAsStream());
+    indexFileOutput.close();
 
+    ReadWriteIOUtils.write(metaOffset, tsFileOutput.wrapAsStream());
     // write magic string
     tsFileOutput.write(MAGIC_STRING_BYTES);
 

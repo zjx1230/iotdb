@@ -29,7 +29,9 @@ import org.apache.iotdb.tsfile.file.metadata.metadataIndex.MetadataIndexEntry;
 import org.apache.iotdb.tsfile.file.metadata.metadataIndex.MetadataIndexNode;
 import org.apache.iotdb.tsfile.file.metadata.metadataIndex.MetadataIndexType;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
+import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.FileGenerator;
+import org.apache.iotdb.tsfile.utils.Pair;
 
 import org.junit.After;
 import org.junit.Before;
@@ -46,7 +48,6 @@ import java.util.Map;
 
 import static org.apache.iotdb.tsfile.utils.FileGenerator.generateIndexString;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -66,7 +67,7 @@ public class MetadataIndexConstructorTest {
     conf.setMaxDegreeOfIndexNode(10);
 
     metadataIndexType = conf.getMetadataIndexType();
-    conf.setMetadataIndexType(MetadataIndexType.ORIGIN);
+    conf.setMetadataIndexType(MetadataIndexType.TWO_LEVEL);
   }
 
   @After
@@ -226,7 +227,6 @@ public class MetadataIndexConstructorTest {
           assertEquals(correctDevice, iterator.next().left);
         }
       }
-      assertFalse(iterator.hasNext());
 
       Map<String, List<TimeseriesMetadata>> allTimeseriesMetadata =
           reader.getAllTimeseriesMetadata();

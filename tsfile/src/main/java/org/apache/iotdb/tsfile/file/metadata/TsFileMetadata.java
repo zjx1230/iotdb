@@ -58,7 +58,7 @@ public class TsFileMetadata {
     TsFileMetadata fileMetaData = new TsFileMetadata();
 
     // metadataIndex
-    if (config.getMetadataIndexType().equals(MetadataIndexType.ORIGIN)) {
+    if (config.getMetadataIndexType().equals(MetadataIndexType.TWO_LEVEL)) {
       fileMetaData.metadataIndex = MetadataIndexNode.deserializeFrom(buffer);
 
       // metaOffset
